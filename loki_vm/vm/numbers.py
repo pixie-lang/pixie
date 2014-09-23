@@ -10,6 +10,7 @@ class Number(object.Object):
 
 class Integer(Number):
     _type = object.Type("Integer")
+    _immutable_fields = "_int_val"
 
     def __init__(self, i_val):
         self._int_val = i_val

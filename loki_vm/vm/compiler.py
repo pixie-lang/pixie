@@ -7,12 +7,17 @@ import loki_vm.vm.code as code
 from rpython.rlib.rarithmetic import r_uint
 
 class Context(object):
-    def __init__(self, argc):
+    def __init__(self, argc, parent_locals):
+        locals = parent_locals.copy()
+        for x in locals:
+            locals[x] = Closure(locals[x])
+
         self.bytecode = []
         self.consts = []
-        self.locals = [{}]
+        self.locals = [locals]
         self.sp = argc + 3
         self.can_tail_call = False
+        self.closed_overs = []
 
     def to_code(self):
         return code.Code(self.bytecode, self.consts)
@@ -29,7 +34,17 @@ class Context(object):
 
 
     def get_local(self, s_name):
-        return self.locals[-1].get(s_name, None)
+        local = self.locals[-1].get(s_name, None)
+        if local is not None and isinstance(local, Closure):
+            idx = 0
+            for x in self.closed_overs:
+                if x is local:
+                    break
+                idx += 1
+            self.closed_overs.append(local.local)
+
+            return ClosureCell(idx)
+        return local
 
 
     def undef_local(self):
@@ -56,6 +71,13 @@ class Context(object):
     def disable_tail_call(self):
         self.can_tail_call = False
 
+    def pop(self):
+        self.bytecode.append(code.POP)
+        self.sp -= 1
+
+
+
+
 class LocalType(object):
     pass
 
@@ -65,6 +87,23 @@ class Arg(LocalType):
 
     def emit(self, ctx):
         ctx.push_arg(self.idx)
+
+class Closure(LocalType):
+    def __init__(self, local):
+        self.local = local
+
+class ClosureCell(LocalType):
+    def __init__(self, idx):
+        self.idx = r_uint(idx)
+
+    def emit(self, ctx):
+        ctx.bytecode.append(code.CLOSED_OVER)
+        ctx.bytecode.append(self.idx)
+        ctx.sp += 1
+
+
+
+
 
 
 
@@ -78,7 +117,9 @@ def compile_form(form, ctx):
     if isinstance(form, symbol.Symbol):
         loc = ctx.get_local(form._str)
         if loc is None:
-            raise Exception(form._str + " is not bound")
+            ctx.push_const(code.intern_var(form._str))
+            ctx.bytecode.append(code.DEREF_VAR)
+            return
         loc.emit(ctx)
         return
 
@@ -133,7 +174,7 @@ def compile_fn(form, ctx):
     assert isinstance(args, Cons) or args is nil
 
     body = form.next()
-    new_ctx = Context(count(args))
+    new_ctx = Context(count(args), ctx.locals[-1])
     add_args(args, new_ctx)
     bc = 0
 
@@ -149,7 +190,19 @@ def compile_fn(form, ctx):
         body = body.next()
 
     new_ctx.bytecode.append(code.RETURN)
-    ctx.push_const(new_ctx.to_code())
+    closed_overs = new_ctx.closed_overs
+    if len(closed_overs) == 0:
+        ctx.push_const(new_ctx.to_code())
+    else:
+        ctx.push_const(new_ctx.to_code())
+        for x in closed_overs:
+            x.emit(ctx)
+        ctx.bytecode.append(code.MAKE_CLOSURE)
+        ctx.bytecode.append(r_uint(len(closed_overs)))
+        ctx.sp -= len(closed_overs)
+
+
+
 
 
 def compile_if(form, ctx):
@@ -180,20 +233,56 @@ def compile_if(form, ctx):
 
     ctx.mark(else_lbl)
 
+def compile_def(form, ctx):
+    form = form.next()
+    name = form.first()
+    form = form.next()
+    val = form.first()
+
+    assert isinstance(name, symbol.Symbol)
+
+    var = code.intern_var(name._str)
+    ctx.push_const(var)
+    compile_form(val, ctx)
+    ctx.bytecode.append(code.SET_VAR)
+    ctx.sp -= 1
+
+def compile_do(form, ctx):
+    form = form.next()
+    assert form is not nil
+
+    while True:
+        compile_form(form.first(), ctx)
+        form = form.next()
+
+        if form is nil:
+            return
+        else:
+            ctx.pop()
+
+
+
 builtins = {"platform+": compile_platform_plus,
             "fn": compile_fn,
             "if": compile_if,
-            "platform=": compile_platform_eq}
+            "platform=": compile_platform_eq,
+            "def": compile_def,
+            "do": compile_do}
 
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
         return builtins[form.first()._str](form, ctx)
 
     cnt = r_uint(0)
+    ctc = ctx.can_tail_call
     while form is not nil:
+        ctx.disable_tail_call()
         compile_form(form.first(), ctx)
         cnt += 1
         form = form.next()
+
+    if ctc:
+        ctx.enable_tail_call()
 
     if ctx.can_tail_call:
         ctx.bytecode.append(code.TAIL_CALL)
@@ -204,7 +293,7 @@ def compile_cons(form, ctx):
 
 
 def compile(form):
-    ctx = Context(0)
+    ctx = Context(0, {})
     compile_form(form, ctx)
     ctx.bytecode.append(code.RETURN)
     return ctx.to_code()

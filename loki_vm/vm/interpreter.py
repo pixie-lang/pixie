@@ -2,27 +2,41 @@ import loki_vm.vm.code as code
 import loki_vm.vm.numbers as numbers
 from loki_vm.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint, intmask
+from rpython.rlib.jit import JitDriver, promote, elidable
 
+def get_location(ip, code_obj, bc):
+    return code.BYTECODES[bc[ip]]
+
+jitdriver = JitDriver(greens=["ip", "code_obj", "bc"], reds=["sp", "frame"], virtualizables=["frame"],
+                      get_printable_location=get_location)
 
 class Frame(object):
+    _virtualizable_ = ["stack[*]", "sp", "ip", "bc"]
     def __init__(self, code_obj):
         self.code_obj = code_obj
         self.sp = r_uint(0)
         self.ip = r_uint(0)
         self.stack = [None] * 24
         self.unpack_code_obj()
+        self.closed_overs = None
 
     def unpack_code_obj(self):
-        self.consts = self.code_obj._consts
-        self.bc = self.code_obj._bytecode
+        if isinstance(self.code_obj, code.Code):
+            self.consts = self.code_obj._consts
+            self.bc = self.code_obj._bytecode
+        elif isinstance(self.code_obj, code.Closure):
+            self.consts = self.code_obj._code._consts
+            self.bc = self.code_obj._code._bytecode
 
     def get_inst(self):
+        #assert 0 <= self.ip < len(self.bc)
         inst = self.bc[self.ip]
-        self.ip += 1
-        return inst
+        self.ip = self.ip + 1
+        return promote(inst)
 
     def push(self, val):
-        assert val is not None
+        #assert val is not None
+        #assert 0 <= self.sp < len(self.stack)
         self.stack[self.sp] = val
         self.sp += 1
 
@@ -69,6 +83,11 @@ class Frame(object):
 
         self.ip = w_ip.r_uint_val()
 
+    @staticmethod
+    @elidable
+    def get_const(consts, idx):
+        return consts[idx]
+
     def push_const(self, idx):
         self.push(self.consts[idx])
 
@@ -82,7 +101,13 @@ def interpret(code_obj):
     frame = Frame(code_obj)
 
     while True:
+        jitdriver.jit_merge_point(code_obj=frame.code_obj,
+                                  bc=frame.bc,
+                                  ip=frame.ip,
+                                  sp=frame.sp,
+                                  frame=frame)
         inst = frame.get_inst()
+
         print code.BYTECODES[inst]
 
         if inst == code.LOAD_CONST:
@@ -133,6 +158,11 @@ def interpret(code_obj):
             frame.unpack_code_obj()
             frame.ip = 0
 
+            jitdriver.can_enter_jit(code_obj=frame.code_obj,
+                                    bc=frame.bc,
+                                    frame=frame,
+                                    sp=frame.sp,
+                                    ip=frame.ip)
             continue
 
         if inst == code.DUP_NTH:
@@ -166,6 +196,44 @@ def interpret(code_obj):
             frame.push(numbers.eq(a, b))
             continue
 
+        if inst == code.MAKE_CLOSURE:
+            argc = frame.get_inst()
+
+            lst = [None] * argc
+
+            for idx in range(argc - 1, -1, -1):
+                lst[idx] = frame.pop()
+
+            cobj = frame.pop()
+            closure = code.Closure(cobj, lst)
+            frame.push(closure)
+
+            continue
+
+        if inst == code.CLOSED_OVER:
+            assert isinstance(frame.code_obj, code.Closure)
+            idx = frame.get_inst()
+            frame.push(frame.code_obj._closed_overs[idx])
+            continue
+
+        if inst == code.SET_VAR:
+            val = frame.pop()
+            var = frame.pop()
+
+            assert isinstance(var, code.Var)
+            var.set_root(val)
+            frame.push(var)
+            continue
+
+        if inst == code.POP:
+            frame.pop()
+            continue
+
+        if inst == code.DEREF_VAR:
+            var = frame.pop()
+            assert isinstance(var, code.Var)
+            frame.push(var.deref())
+            continue
 
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]
         raise Exception()

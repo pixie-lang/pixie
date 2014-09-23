@@ -5,7 +5,7 @@ from loki_vm.vm.numbers import Integer
 from loki_vm.vm.symbol import symbol, Symbol
 from loki_vm.vm.compiler import compile_form, compile
 from loki_vm.vm.interpreter import interpret
-from loki_vm.vm.code import Code
+from loki_vm.vm.code import Code, Var
 from loki_vm.vm.primitives import nil, true, false
 import unittest
 
@@ -62,3 +62,16 @@ def test_recursive():
     assert isinstance(retval, Integer)
     assert retval.int_val() == 10
 
+def test_closures():
+    retval = eval_string("""((fn (x) ((fn () x))) 42)""")
+
+    assert isinstance(retval, Integer)
+    assert retval.int_val() == 42
+
+
+def test_def():
+    retval = eval_string("""(def x 42)""")
+    assert isinstance(retval, Var)
+
+    retval = eval_string("""(do (def x 42) x)""")
+    assert isinstance(retval, Integer)
