@@ -9,7 +9,6 @@ from loki_vm.vm.symbol import symbol
 class PlatformReader(object.Object):
     _type = object.Type("PlatformReader")
 
-
 class StringReader(PlatformReader):
 
     def __init__(self, str):
@@ -18,7 +17,7 @@ class StringReader(PlatformReader):
 
     def read(self):
         if self._idx >= len(self._str):
-            return ""
+            raise EOFError()
         ch = self._str[self._idx]
         self._idx += 1
         return ch
@@ -71,22 +70,30 @@ handlers = {"(": ListReader(),
 
 def read_number(rdr, ch):
     acc = [ch]
-    while True:
-        ch = rdr.read()
-        if is_whitespace(ch) or ch in handlers:
-            rdr.unread(ch)
-            break
-        acc.append(ch)
+    try:
+        while True:
+            ch = rdr.read()
+            if is_whitespace(ch) or ch in handlers:
+                rdr.unread(ch)
+                break
+            acc.append(ch)
+    except EOFError:
+        pass
+
     return numbers.Integer(int("".join(acc)))
 
 def read_symbol(rdr, ch):
     acc = [ch]
-    while True:
-        ch = rdr.read()
-        if is_whitespace(ch) or ch in handlers:
-            rdr.unread(ch)
-            break
-        acc.append(ch)
+    try:
+        while True:
+            ch = rdr.read()
+            if is_whitespace(ch) or ch in handlers:
+                rdr.unread(ch)
+                break
+            acc.append(ch)
+    except EOFError:
+        pass
+
     sym_str = "".join(acc)
     if sym_str == "true":
         return true
@@ -96,8 +103,21 @@ def read_symbol(rdr, ch):
         return nil
     return symbol(sym_str)
 
+class EOF(object.Object):
+    _type = object.Type("EOF")
+
+
+eof = EOF()
+
 def read(rdr, error_on_eof):
-    eat_whitespace(rdr)
+    try:
+        eat_whitespace(rdr)
+    except EOFError as ex:
+        if error_on_eof:
+            raise ex
+        return eof
+
+
 
     ch = rdr.read()
 

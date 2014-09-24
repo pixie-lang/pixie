@@ -1,4 +1,4 @@
-from loki_vm.vm.reader import read, StringReader
+from loki_vm.vm.reader import read, StringReader, eof
 from loki_vm.vm.object import Object
 from loki_vm.vm.cons import Cons
 from loki_vm.vm.numbers import Integer
@@ -10,7 +10,7 @@ from loki_vm.vm.primitives import nil, true, false
 import unittest
 
 def read_code(s):
-    return read(StringReader(s), True)
+    return read(StringReader(s), False)
 
 def test_add_compilation():
     code = compile(read_code("(platform+ 1 2)"))
@@ -19,7 +19,14 @@ def test_add_compilation():
     #interpret(code)
 
 def eval_string(s):
-    return interpret(compile(read_code(s)))
+    rdr = StringReader(s)
+    result = nil
+    while True:
+        form = read(rdr, False)
+        if form is eof:
+            return result
+
+        result = interpret(compile(form))
 
 
 def test_fn():
@@ -75,3 +82,7 @@ def test_def():
 
     retval = eval_string("""(do (def x 42) x)""")
     assert isinstance(retval, Integer)
+
+    retval = eval_string("""(def y 42) y""")
+    assert isinstance(retval, Integer)
+    assert retval.int_val() == 42

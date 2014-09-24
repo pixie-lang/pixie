@@ -2,31 +2,26 @@ import loki_vm.vm.code as code
 import loki_vm.vm.numbers as numbers
 from loki_vm.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint, intmask
-from rpython.rlib.jit import JitDriver, promote, elidable
+from rpython.rlib.jit import JitDriver, promote, elidable, elidable_promote
 
-def get_location(ip, code_obj, bc):
+def get_location(ip, bc):
     return code.BYTECODES[bc[ip]]
 
-jitdriver = JitDriver(greens=["ip", "code_obj", "bc"], reds=["sp", "frame"], virtualizables=["frame"],
+jitdriver = JitDriver(greens=["ip", "bc"], reds=["sp", "frame"], virtualizables=["frame"],
                       get_printable_location=get_location)
 
 class Frame(object):
-    _virtualizable_ = ["stack[*]", "sp", "ip", "bc"]
+    _virtualizable_ = ["stack[*]", "sp", "ip", "bc", "code_obj"]
     def __init__(self, code_obj):
         self.code_obj = code_obj
         self.sp = r_uint(0)
         self.ip = r_uint(0)
         self.stack = [None] * 24
         self.unpack_code_obj()
-        self.closed_overs = None
 
     def unpack_code_obj(self):
-        if isinstance(self.code_obj, code.Code):
-            self.consts = self.code_obj._consts
-            self.bc = self.code_obj._bytecode
-        elif isinstance(self.code_obj, code.Closure):
-            self.consts = self.code_obj._code._consts
-            self.bc = self.code_obj._code._bytecode
+        self.bc = self.code_obj.get_bytecode()
+        self.consts = self.code_obj.get_consts()
 
     def get_inst(self):
         #assert 0 <= self.ip < len(self.bc)
@@ -83,11 +78,6 @@ class Frame(object):
 
         self.ip = w_ip.r_uint_val()
 
-    @staticmethod
-    @elidable
-    def get_const(consts, idx):
-        return consts[idx]
-
     def push_const(self, idx):
         self.push(self.consts[idx])
 
@@ -101,14 +91,13 @@ def interpret(code_obj):
     frame = Frame(code_obj)
 
     while True:
-        jitdriver.jit_merge_point(code_obj=frame.code_obj,
-                                  bc=frame.bc,
+        jitdriver.jit_merge_point(bc=frame.bc,
                                   ip=frame.ip,
                                   sp=frame.sp,
                                   frame=frame)
         inst = frame.get_inst()
 
-        print code.BYTECODES[inst]
+        #_print code.BYTECODES[inst]
 
         if inst == code.LOAD_CONST:
             arg = frame.get_inst()
@@ -158,8 +147,7 @@ def interpret(code_obj):
             frame.unpack_code_obj()
             frame.ip = 0
 
-            jitdriver.can_enter_jit(code_obj=frame.code_obj,
-                                    bc=frame.bc,
+            jitdriver.can_enter_jit(bc=frame.bc,
                                     frame=frame,
                                     sp=frame.sp,
                                     ip=frame.ip)

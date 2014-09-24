@@ -50,11 +50,18 @@ class Context(object):
     def undef_local(self):
         self.locals.pop()
 
-    def push_const(self, v):
-        idx = r_uint(len(self.consts))
+    def add_const(self, v):
+        for x in range(len(self.consts)):
+            if self.consts[x] is v:
+                return r_uint(x)
+
+        idx = len(self.consts)
         self.consts.append(v)
+        return r_uint(idx)
+
+    def push_const(self, v):
         self.bytecode.append(code.LOAD_CONST)
-        self.bytecode.append(idx)
+        self.bytecode.append(self.add_const(v))
         self.sp += 1
 
     def label(self):
