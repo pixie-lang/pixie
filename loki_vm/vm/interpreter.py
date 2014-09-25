@@ -1,3 +1,4 @@
+from loki_vm.vm.object import Object
 import loki_vm.vm.code as code
 import loki_vm.vm.numbers as numbers
 from loki_vm.vm.primitives import nil, true, false
@@ -10,18 +11,62 @@ def get_location(ip, bc):
 jitdriver = JitDriver(greens=["ip", "bc"], reds=["sp", "frame"], virtualizables=["frame"],
                       get_printable_location=get_location)
 
+class FrameMarkerBase(Object):
+
+    def unpack(self, frame):
+        raise NotImplementedError()
+
+class FrameMarker(FrameMarkerBase):
+    __immutable_fields__ = ["argc", "ip", "code_obj", "bytecode", "consts"]
+    def __init__(self, argc, ip, code_obj, bytecode, consts):
+        self.argc = argc
+        self.ip = ip
+        self.code_obj = code_obj
+        self.bytecode = bytecode
+        self.consts = consts
+
+    def unpack(self, frame):
+        frame.code_obj = self.code_obj
+        frame.consts = self.consts
+        frame.ip = self.ip
+        frame.bc = self.bytecode
+        frame.argc = self.argc
+
+class InstalledHandler(FrameMarkerBase):
+    _immutable_fields_ = ["_handler"]
+    def __init__(self, o):
+        self._handler = o
+
+    def unpack(self, frame):
+        parent = frame.pop()
+        parent.unpack(frame)
+
 class Frame(object):
-    _virtualizable_ = ["stack[*]", "sp", "ip", "bc", "code_obj"]
+    _virtualizable_ = ["stack[*]", "sp", "ip", "bc", "code_obj", "argc"]
     def __init__(self, code_obj):
         self.code_obj = code_obj
         self.sp = r_uint(0)
         self.ip = r_uint(0)
         self.stack = [None] * 24
         self.unpack_code_obj()
+        self.argc = 0
 
     def unpack_code_obj(self):
-        self.bc = self.code_obj.get_bytecode()
-        self.consts = self.code_obj.get_consts()
+        if isinstance(self.code_obj, code.StackSlice):
+            w_args = self.pop()
+            w_ip = self.pop()
+            w_code = self.pop()
+
+            assert isinstance(w_args, numbers.Integer) & w_args.int_val() == 2
+            arg = self.pop()
+            self.pop() # this is the stack slice
+
+            self.push(w_code)
+            self.push(w_ip)
+
+        else:
+            self.bc = self.code_obj.get_bytecode()
+            self.consts = self.code_obj.get_consts()
 
     def get_inst(self):
         #assert 0 <= self.ip < len(self.bc)
@@ -41,42 +86,15 @@ class Frame(object):
         self.stack[self.sp] = None
         return v
 
+    def pop_args(self):
+        for x in range(self.argc):
+            self.pop()
+
     def nth(self, delta):
         return self.stack[self.sp - delta - 1]
 
     def push_nth(self, delta):
         self.push(self.nth(delta))
-
-    def descend(self, code_obj, args):
-        self.push(self.code_obj)
-        self.push(numbers.Integer(intmask(self.ip)))
-        self.push(numbers.Integer(intmask(args)))
-
-        self.code_obj = code_obj
-        self.unpack_code_obj()
-        self.ip = r_uint(0)
-
-    def ascend(self):
-        ret_val = self.pop()
-        if self.sp == 0:
-            return ret_val
-
-        w_args = self.pop()
-        assert isinstance(w_args, numbers.Integer)
-
-        w_ip = self.pop()
-        assert isinstance(w_ip, numbers.Integer)
-        self.code_obj = self.pop()
-
-        for x in range(w_args.r_uint_val() - 1):
-            self.pop()
-
-        self.pop()
-
-        self.unpack_code_obj()
-        self.push(ret_val)
-
-        self.ip = w_ip.r_uint_val()
 
     def push_const(self, idx):
         self.push(self.consts[idx])
@@ -84,6 +102,23 @@ class Frame(object):
     def jump_rel(self, delta):
         self.ip += delta - 1
 
+
+    def pack_state(self):
+        return FrameMarker(self.argc, self.ip, self.code_obj, self.bc, self.consts)
+
+    def slice_stack(self, on):
+
+        for x in range(self.sp - 1, -1, -1):
+            o = self.nth(x)
+            if isinstance(o, InstalledHandler) and o._handler is on:
+                slice = [None] * x
+                for y in range(x):
+                    slice[x - y - 1] = self.pop()
+
+
+                return slice
+
+        raise ValueError()
 
 
 
@@ -112,40 +147,34 @@ def interpret(code_obj):
             frame.push(r)
             continue
 
+        if inst == code.INSTALL:
+            fn = frame.pop()
+            handler = frame.pop()
+
+            frame.push(frame.pack_state())
+            frame.push(InstalledHandler(handler))
+            frame.push(fn)
+            fn.invoke(frame, 1)
+
+            continue
+
         if inst == code.INVOKE:
             args = frame.get_inst()
             fn = frame.nth(args - 1)
 
-            assert isinstance(fn, code.Code)
-            frame.descend(fn, args)
+            assert isinstance(fn, code.BaseCode)
+
+            fn.invoke(frame, args)
 
             continue
 
         if inst == code.TAIL_CALL:
             args = frame.get_inst()
-            tmp_args = []
-            for x in range(args):
-                tmp_args.append(frame.pop())
+            fn = frame.nth(args - 1)
 
-            code_obj = tmp_args[args - 1]
+            assert isinstance(fn, code.BaseCode)
 
-            old_args_w = frame.pop()
-            assert isinstance(old_args_w, numbers.Integer)
-            old_ip = frame.pop()
-            old_code = frame.pop()
-
-            for x in range(old_args_w.r_uint_val()):
-                frame.pop()
-
-            for x in range(args - 1, -1, -1):
-                frame.push(tmp_args[x])
-
-            frame.push(old_code)
-            frame.push(old_ip)
-            frame.push(numbers.Integer(intmask(args)))
-            frame.code_obj = code_obj
-            frame.unpack_code_obj()
-            frame.ip = 0
+            fn.tail_call(frame, args)
 
             jitdriver.can_enter_jit(bc=frame.bc,
                                     frame=frame,
@@ -160,9 +189,20 @@ def interpret(code_obj):
             continue
 
         if inst == code.RETURN:
-            v = frame.ascend()
-            if v is not None:
-                return v
+            val = frame.pop()
+
+            frame.pop_args()
+
+            if frame.sp == 0:
+                return val
+            marker = frame.pop()
+
+            assert isinstance(marker, FrameMarkerBase)
+
+            marker.unpack(frame)
+
+            frame.push(val)
+
             continue
 
         if inst == code.COND_BR:

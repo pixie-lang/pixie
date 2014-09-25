@@ -5,6 +5,7 @@ from loki_vm.vm.cons import cons, Cons, count
 import loki_vm.vm.symbol as symbol
 import loki_vm.vm.code as code
 from rpython.rlib.rarithmetic import r_uint
+import loki_vm.vm.rt
 
 class Context(object):
     def __init__(self, argc, parent_locals):
@@ -15,7 +16,7 @@ class Context(object):
         self.bytecode = []
         self.consts = []
         self.locals = [locals]
-        self.sp = argc + 3
+        self.sp = argc
         self.can_tail_call = False
         self.closed_overs = []
 
@@ -267,6 +268,19 @@ def compile_do(form, ctx):
         else:
             ctx.pop()
 
+def compile_install_handler(form, ctx):
+    form = form.next()
+    assert count(form) == 2
+
+    handler = form.first()
+    form = form.next()
+    fn = form.first()
+
+    compile_form(handler, ctx)
+    compile_form(fn, ctx)
+    ctx.bytecode.append(code.INSTALL)
+    ctx.sp -= 1
+
 
 
 builtins = {"platform+": compile_platform_plus,
@@ -274,7 +288,8 @@ builtins = {"platform+": compile_platform_plus,
             "if": compile_if,
             "platform=": compile_platform_eq,
             "def": compile_def,
-            "do": compile_do}
+            "do": compile_do,
+            "platform_install_handler": compile_install_handler}
 
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
