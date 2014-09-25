@@ -8,7 +8,7 @@ from rpython.rlib.rarithmetic import r_uint
 import loki_vm.vm.rt
 
 class Context(object):
-    def __init__(self, argc, parent_locals):
+    def __init__(self, name, argc, parent_locals):
         locals = parent_locals.copy()
         for x in locals:
             locals[x] = Closure(locals[x])
@@ -19,9 +19,10 @@ class Context(object):
         self.sp = argc
         self.can_tail_call = False
         self.closed_overs = []
+        self.name = name
 
     def to_code(self):
-        return code.Code(self.bytecode, self.consts)
+        return code.Code(self.name, self.bytecode, self.consts)
 
     def push_arg(self, idx):
         self.bytecode.append(code.DUP_NTH)
@@ -138,6 +139,8 @@ def compile_form(form, ctx):
     raise Exception("Can't compile ")
 
 def compile_platform_plus(form, ctx):
+    ctc = ctx.can_tail_call
+    ctx.disable_tail_call()
     form = form.next()
     while form is not nil:
         compile_form(form.first(), ctx)
@@ -145,6 +148,8 @@ def compile_platform_plus(form, ctx):
 
     ctx.bytecode.append(code.ADD)
     ctx.sp -= 1
+    if ctc:
+        ctx.enable_tail_call()
     return ctx
 
 def compile_platform_eq(form, ctx):
@@ -176,13 +181,13 @@ def compile_fn(form, ctx):
         name = form.first()
         form = form.next()
     else:
-        name = None
+        name = symbol.symbol("unknown")
 
     args = form.first()
     assert isinstance(args, Cons) or args is nil
 
     body = form.next()
-    new_ctx = Context(count(args), ctx.locals[-1])
+    new_ctx = Context(name._str, count(args), ctx.locals[-1])
     add_args(args, new_ctx)
     bc = 0
 
@@ -191,9 +196,13 @@ def compile_fn(form, ctx):
         new_ctx.add_local(name._str, Arg(0))
 
 
-    new_ctx.enable_tail_call()
+    new_ctx.disable_tail_call()
     while body is not nil:
+        if body.next() is nil:
+            new_ctx.enable_tail_call()
         compile_form(body.first(), new_ctx)
+        if body.next() is not nil:
+            new_ctx.pop()
         bc += 1
         body = body.next()
 
@@ -312,10 +321,11 @@ def compile_cons(form, ctx):
         ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)
+    ctx.sp -= (cnt - 1)
 
 
 def compile(form):
-    ctx = Context(0, {})
+    ctx = Context("main", 0, {})
     compile_form(form, ctx)
     ctx.bytecode.append(code.RETURN)
     return ctx.to_code()

@@ -92,24 +92,26 @@ def eval_string(s):
 #     retval = eval_string("""(type 42)""")
 #     assert isinstance(retval, Type)
 #
-
-def test_handlers():
-    # retval = eval_string("""(def x 42)
-    #                         (platform_install_handler 42 (fn () 1))""")
-    # assert isinstance(retval, Integer) and retval.int_val() == 1
-
-    retval = eval_string("""(def pass (fn (x k) (k true)))
-                            (set-effect! pass true)
-                            (def handler 42)
-
-                            (platform_install_handler handler (fn () (pass handler)))""")
-
-    assert retval is true
+#
+# def test_handlers():
+#     # retval = eval_string("""(def x 42)
+#     #                         (platform_install_handler 42 (fn () 1))""")
+#     # assert isinstance(retval, Integer) and retval.int_val() == 1
+#
+#     retval = eval_string("""(def pass (fn (x k) (k true)))
+#                             (set-effect! pass true)
+#                             (def handler 42)
+#
+#                             (platform_install_handler handler (fn () (pass handler)))""")
+#
+#     assert retval is true
 
 def test_mult_call_handlers():
 
-    retval = eval_string("""(def pass (fn (x k) (platform+ (k 1) (k 2))))
+    retval = eval_string("""(def pass (fn pass (x k) (+ (k 1) (k 2))))
                             (set-effect! pass true)
                             (def handler 42)
 
-                            (platform_install_handler handler (fn () (pass handler) 42))""")
+                            (platform_install_handler handler (fn hfn () (pass handler) 42))""")
+
+    assert isinstance(retval, Integer) and retval.int_val() == 84

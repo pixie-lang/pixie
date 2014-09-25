@@ -99,6 +99,21 @@ class StackSlice(BaseCode):
         marker.unpack(frame)
         frame.push(arg)
 
+    def invoke(self, frame, argc):
+        assert argc == 2
+
+        arg = frame.pop()
+        slice = frame.pop()
+
+        frame.push(frame.pack_state())
+
+        for x in range(len(self._slice)):
+            frame.push(self._slice[x])
+
+        marker = frame.pop()
+        marker.unpack(frame)
+        frame.push(arg)
+
 
 
 
@@ -110,24 +125,34 @@ class Code(BaseCode):
     def type(self):
         return Code._type
 
-    def __init__(self, bytecode, consts):
+    def __init__(self, name, bytecode, consts):
         BaseCode.__init__(self)
         self._bytecode = bytecode
         self._consts = consts
+        self._name = name
 
     def invoke(self, frame, argc):
-        if self._is_effect:
-            pass
         args = [None] * argc
         for x in range(argc):
             args[x] = frame.pop()
 
-        f = frame.pack_state()
 
-        frame.push(f)
 
-        for x in range(argc - 1, -1, -1):
-            frame.push(args[x])
+        if self._is_effect:
+            handler = args[-2]
+            frame.push(frame.pack_state())
+            slice = frame.slice_stack(handler)
+
+            for x in range(argc -1, -1, -1):
+                frame.push(args[x])
+
+            frame.push(StackSlice(slice))
+            argc += 1
+        else:
+            f = frame.pack_state()
+            frame.push(f)
+            for x in range(argc - 1, -1, -1):
+                frame.push(args[x])
 
         frame.code_obj = self
         frame.argc = argc
@@ -152,7 +177,6 @@ class Code(BaseCode):
 
             frame.push(StackSlice(slice))
             argc += 1
-            pass
 
         else:
             # remove current frame args
