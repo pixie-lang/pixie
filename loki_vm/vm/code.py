@@ -51,6 +51,7 @@ class BaseCode(object.Object):
 
 
 class NativeFn(BaseCode):
+    """Wrapper for a native function"""
     _type = object.Type("NativeFn")
 
     def __init__(self):
@@ -60,14 +61,9 @@ class NativeFn(BaseCode):
         return NativeFn._type
 
     def invoke(self, frame, argc):
-        args = [None] * (argc - 1)
-        for x in range(argc - 2, -1, -1):
-            args[x] = frame.pop()
+        frame.push(self.inner_invoke(frame, argc))
 
-        frame.pop()
-        frame.push(self.inner_invoke(args))
-
-    def inner_invoke(self):
+    def inner_invoke(self, frame, argc):
         raise NotImplementedError()
 
     def tail_call(self, frame, argc):
@@ -75,6 +71,9 @@ class NativeFn(BaseCode):
 
 
 class StackSlice(BaseCode):
+    """A subsection of a stack created by a call to an effect,
+       this is handed to the handler and can be called. On being invoked, the slice will
+       be spliced back into the stack and execution will resume."""
     _type = object.Type("StackSlice")
 
     def type(self):
@@ -119,6 +118,7 @@ class StackSlice(BaseCode):
 
 
 class Code(BaseCode):
+    """Interpreted code block. Contains consts and """
     _type = object.Type("Code")
     _immutable_fields_ = ["_consts", "_bytecode"]
 
@@ -143,22 +143,27 @@ class Code(BaseCode):
             frame.push(frame.pack_state())
             slice = frame.slice_stack(handler)
 
-            for x in range(argc -1, -1, -1):
-                frame.push(args[x])
+            x = argc
+            while x != 0:
+                frame.push(args[x - 1])
+                x -= 1
 
             frame.push(StackSlice(slice))
             argc += 1
         else:
             f = frame.pack_state()
             frame.push(f)
-            for x in range(argc - 1, -1, -1):
-                frame.push(args[x])
+
+            x = argc
+            while x != 0:
+                frame.push(args[x - 1])
+                x -= 1
 
         frame.code_obj = self
         frame.argc = argc
         frame.consts = self._consts
         frame.bc = self._bytecode
-        frame.ip = 0
+        frame.ip = r_uint(0)
 
     def tail_call(self, frame, argc):
         args = [None] * argc
@@ -191,7 +196,7 @@ class Code(BaseCode):
         frame.argc = argc
         frame.consts = self._consts
         frame.bc = self._bytecode
-        frame.ip = 0
+        frame.ip = r_uint(0)
 
     @elidable
     def get_consts(self):
@@ -232,7 +237,7 @@ class Closure(BaseCode):
         return self._code.get_bytecode()
 
 class Var(object.Object):
-    type = object.Type("Var")
+    _type = object.Type("Var")
     _immutable_fields_ = ["_rev?"]
 
     def type(self):
@@ -280,8 +285,10 @@ def as_var(name):
     var = intern_var(name)
     def with_fn(fn):
         class FnWrapper(NativeFn):
-            def inner_invoke(self, args):
-                return fn(*args)
+            def inner_invoke(self, frame, argc):
+                val = fn(frame, argc)
+                frame.pop()
+                return val
         var.set_root(FnWrapper())
         return fn
     return with_fn

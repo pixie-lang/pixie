@@ -2,8 +2,8 @@ import loki_vm.vm.object as object
 from loki_vm.vm.primitives import nil, true, false
 import loki_vm.vm.numbers as numbers
 from loki_vm.vm.cons import cons
-from loki_vm.vm.symbol import symbol
-
+from loki_vm.vm.symbol import symbol, Symbol
+from loki_vm.vm.keyword import keyword
 
 
 class PlatformReader(object.Object):
@@ -42,7 +42,7 @@ def eat_whitespace(rdr):
         return
 
 
-class ReaderHandler(object.Object):
+class ReaderHandler(__builtins__.object):
     def invoke(self, rdr, ch):
         pass
 
@@ -63,10 +63,24 @@ class ListReader(ReaderHandler):
 
 class UnmachedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        raise SyntaxError();
+        raise SyntaxError()
+
+class QuoteReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        itm = read(rdr, True)
+        return cons(symbol("quote"), cons(itm))
+
+class KeywordReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        itm = read(rdr, True)
+        assert isinstance(itm, Symbol)
+
+        return keyword(itm._str)
 
 handlers = {"(": ListReader(),
-            ")": UnmachedListReader()}
+            ")": UnmachedListReader(),
+            "'": QuoteReader(),
+            ":": KeywordReader()}
 
 def read_number(rdr, ch):
     acc = [ch]
@@ -121,8 +135,8 @@ def read(rdr, error_on_eof):
 
     ch = rdr.read()
 
-    macro = handlers.get(ch, nil)
-    if macro is not nil:
+    macro = handlers.get(ch, None)
+    if macro is not None:
         return macro.invoke(rdr, ch)
 
     if is_digit(ch) or ch == "-":

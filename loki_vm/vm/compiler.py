@@ -4,6 +4,7 @@ import loki_vm.vm.numbers as numbers
 from loki_vm.vm.cons import cons, Cons, count
 import loki_vm.vm.symbol as symbol
 import loki_vm.vm.code as code
+from loki_vm.vm.keyword import Keyword
 from rpython.rlib.rarithmetic import r_uint
 import loki_vm.vm.rt
 
@@ -16,7 +17,7 @@ class Context(object):
         self.bytecode = []
         self.consts = []
         self.locals = [locals]
-        self.sp = argc
+        self.sp = r_uint(argc)
         self.can_tail_call = False
         self.closed_overs = []
         self.name = name
@@ -133,6 +134,10 @@ def compile_form(form, ctx):
         return
 
     if isinstance(form, Bool) or form is nil:
+        ctx.push_const(form)
+        return
+
+    if isinstance(form, Keyword):
         ctx.push_const(form)
         return
 
@@ -291,6 +296,9 @@ def compile_install_handler(form, ctx):
     ctx.sp -= 1
 
 
+def compile_quote(form, ctx):
+    data = form.next().first()
+    ctx.push_const(data)
 
 builtins = {"platform+": compile_platform_plus,
             "fn": compile_fn,
@@ -298,7 +306,8 @@ builtins = {"platform+": compile_platform_plus,
             "platform=": compile_platform_eq,
             "def": compile_def,
             "do": compile_do,
-            "platform_install_handler": compile_install_handler}
+            "platform_install_handler": compile_install_handler,
+            "quote": compile_quote}
 
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
@@ -321,7 +330,7 @@ def compile_cons(form, ctx):
         ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)
-    ctx.sp -= (cnt - 1)
+    ctx.sp -= r_uint(cnt - 1)
 
 
 def compile(form):

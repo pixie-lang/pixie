@@ -11,6 +11,9 @@ def get_location(ip, bc):
 jitdriver = JitDriver(greens=["ip", "bc"], reds=["sp", "frame"], virtualizables=["frame"],
                       get_printable_location=get_location)
 
+
+
+
 class FrameMarkerBase(Object):
 
     def unpack(self, frame):
@@ -42,7 +45,7 @@ class InstalledHandler(FrameMarkerBase):
         parent.unpack(frame)
 
 class Frame(object):
-    _virtualizable_ = ["stack[*]", "sp", "ip", "bc", "code_obj", "argc"]
+    _virtualizable_ = ["stack[*]", "sp", "ip", "bc"]
     def __init__(self, code_obj):
         self.code_obj = code_obj
         self.sp = r_uint(0)
@@ -131,8 +134,6 @@ def interpret(code_obj):
                                   sp=frame.sp,
                                   frame=frame)
         inst = frame.get_inst()
-
-        #_print code.BYTECODES[inst]
 
         if inst == code.LOAD_CONST:
             arg = frame.get_inst()
