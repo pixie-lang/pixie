@@ -3,6 +3,7 @@ from loki_vm.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.jit import elidable, elidable_promote, promote
 
+
 BYTECODES = ["LOAD_CONST",
              "ADD",
              "EQ",
@@ -61,13 +62,15 @@ class NativeFn(BaseCode):
         return NativeFn._type
 
     def invoke(self, frame, argc):
-        frame.push(self.inner_invoke(frame, argc))
+        frame.push(self.inner_invoke(frame, r_uint(argc)))
+        return frame
 
     def inner_invoke(self, frame, argc):
         raise NotImplementedError()
 
     def tail_call(self, frame, argc):
         self.invoke(frame, argc)
+        return frame
 
 
 class StackSlice(BaseCode):
@@ -79,9 +82,23 @@ class StackSlice(BaseCode):
     def type(self):
         return StackSlice._type
 
-    def __init__(self, slice):
+    def __init__(self, bottom_frame, top_frame):
         BaseCode.__init__(self)
-        self._slice = slice
+        self._bottom_frame = bottom_frame
+        self._top_frame = top_frame
+
+
+    def clone_slice(self):
+        new_top = self._top_frame.clone()
+        frame = new_top
+        prev_frame = None
+        while frame.prev_frame is not None:
+            prev_frame = frame
+            frame = frame.prev_frame
+            frame.clone()
+            prev_frame.prev_frame = frame
+
+        return (frame, new_top)
 
     def tail_call(self, frame, argc):
         assert argc == 2
@@ -89,14 +106,14 @@ class StackSlice(BaseCode):
         arg = frame.pop()
         slice = frame.pop()
 
-        frame.pop_args()
+        (bottom, new_frame) = self.clone_slice()
 
-        for x in range(len(self._slice)):
-            frame.push(self._slice[x])
+        bottom.prev_frame = frame
+        frame = new_frame
 
-        marker = frame.pop()
-        marker.unpack(frame)
         frame.push(arg)
+
+        return frame
 
     def invoke(self, frame, argc):
         assert argc == 2
@@ -104,14 +121,13 @@ class StackSlice(BaseCode):
         arg = frame.pop()
         slice = frame.pop()
 
-        frame.push(frame.pack_state())
+        (bottom, new_frame) = self.clone_slice()
+        bottom.prev_frame = frame
+        frame = new_frame
 
-        for x in range(len(self._slice)):
-            frame.push(self._slice[x])
-
-        marker = frame.pop()
-        marker.unpack(frame)
         frame.push(arg)
+
+        return frame
 
 
 
@@ -132,32 +148,24 @@ class Code(BaseCode):
         self._name = name
 
     def invoke(self, frame, argc):
-        args = [None] * argc
-        for x in range(argc):
-            args[x] = frame.pop()
-
+        args = frame.pop_n(argc)
 
 
         if self._is_effect:
             handler = args[-2]
-            frame.push(frame.pack_state())
-            slice = frame.slice_stack(handler)
 
-            x = argc
-            while x != 0:
-                frame.push(args[x - 1])
-                x -= 1
+            (frame, bottom_of_slice, top_of_slice) = frame.slice_stack(handler)
+            frame = frame.make_frame(self)
 
-            frame.push(StackSlice(slice))
+            frame.push_n(args, argc)
+
+
+            frame.push(StackSlice(bottom_of_slice, top_of_slice))
             argc += 1
         else:
-            f = frame.pack_state()
-            frame.push(f)
+            frame = frame.make_frame(self)
+            frame.push_n(args, argc)
 
-            x = argc
-            while x != 0:
-                frame.push(args[x - 1])
-                x -= 1
 
         frame.code_obj = self
         frame.argc = argc
@@ -165,31 +173,32 @@ class Code(BaseCode):
         frame.bc = self._bytecode
         frame.ip = r_uint(0)
 
-    def tail_call(self, frame, argc):
-        args = [None] * argc
+        return frame
 
-        # get args
-        for x in range(argc):
-            args[x] = frame.pop()
+    def tail_call(self, frame, argc):
+        args = frame.pop_n(argc)
 
         if self._is_effect:
             handler = args[-2]
-            frame.push(frame.pack_state())
-            slice = frame.slice_stack(handler)
 
-            for x in range(argc -1, -1, -1):
-                frame.push(args[x])
+            (frame, bottom_of_slice, top_of_slice) = frame.slice_stack(handler)
 
-            frame.push(StackSlice(slice))
+            frame.push_n(args, argc)
+
+
+            frame.push(StackSlice(bottom_of_slice, top_of_slice))
             argc += 1
 
         else:
             # remove current frame args
-            frame.pop_args()
+            if frame.prev_frame is not None:
+                frame = frame.prev_frame
+            else:
+                frame = frame.new(self)
 
             # replace args
-            for x in range(argc - 1, -1, -1):
-                frame.push(args[x])
+            frame.push_n(args, argc)
+
 
         # reset frame to our state
         frame.code_obj = self
@@ -197,6 +206,8 @@ class Code(BaseCode):
         frame.consts = self._consts
         frame.bc = self._bytecode
         frame.ip = r_uint(0)
+
+        return frame
 
     @elidable
     def get_consts(self):
@@ -217,12 +228,14 @@ class Closure(BaseCode):
         self._closed_overs = closed_overs
 
     def invoke(self, frame, argc):
-        self._code.invoke(frame, argc)
+        frame = self._code.invoke(frame, argc)
         frame.code_obj = self
+        return frame
 
     def tail_call(self, frame, argc):
-        self._code.tail_call(frame, argc)
+        frame = self._code.tail_call(frame, argc)
         frame.code_obj = self
+        return frame
 
     @elidable
     def get_closed_over(self, idx):

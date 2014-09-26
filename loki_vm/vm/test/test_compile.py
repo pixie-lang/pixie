@@ -59,13 +59,13 @@ def test_return_self():
 
 def test_recursive():
     retval = eval_string("""((fn rf (x)
-                               (if (platform= x 10)
+                               (if (platform= x 100)
                                    x
                                    (rf (platform+ x 1))))
-                              0)""")
+                               0)""")
 
     assert isinstance(retval, Integer)
-    assert retval.int_val() == 10
+    assert retval.int_val() == 100
 
 def test_closures():
     retval = eval_string("""((fn (x) ((fn () x))) 42)""")
@@ -90,9 +90,9 @@ def test_native():
     assert isinstance(retval, Type)
 
 def test_handlers():
-    # retval = eval_string("""(def x 42)
-    #                         (platform_install_handler 42 (fn () 1))""")
-    # assert isinstance(retval, Integer) and retval.int_val() == 1
+    retval = eval_string("""(def x 42)
+                            (platform_install_handler 42 (fn () 1))""")
+    assert isinstance(retval, Integer) and retval.int_val() == 1
     retval = eval_string("""(def pass (fn (x k) (k true)))
                             (set-effect! pass true)
                             (def handler 42)
@@ -100,37 +100,28 @@ def test_handlers():
     assert retval is true
 
 def test_mult_call_handlers():
-
     retval = eval_string("""(def pass (fn pass (x k) (+ (k 1) (k 2))))
                             (set-effect! pass true)
                             (def handler 42)
-
                             (platform_install_handler handler (fn hfn () (pass handler) 42))""")
 
     assert isinstance(retval, Integer) and retval.int_val() == 84
 
-
 def test_quoted():
     retval = eval_string("""'(1 2)""")
     assert isinstance(retval, Cons)
-
     retval = eval_string("""'type""")
     assert isinstance(retval, Symbol)
 
 def test_custom_type():
     retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
                             (new my-type 1 2)""")
-
     assert isinstance(retval, CustomTypeInstance)
-
     retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
                             (get-field (new my-type 1 2) :a)""")
-
     assert isinstance(retval, Integer) and retval.int_val() == 1
 
 def test_keyword():
     retval = eval_string(""":foo""")
     assert isinstance(retval, Keyword)
-
-
 

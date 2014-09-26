@@ -42,6 +42,7 @@ def make_type(frame, argc):
 
 @as_var("new")
 def new_(frame, argc):
+    assert argc >= 2
     tp = frame.nth(argc - 2)
     assert isinstance(tp, CustomType)
     new_inst = CustomTypeInstance(tp)
