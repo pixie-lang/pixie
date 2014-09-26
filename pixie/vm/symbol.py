@@ -1,5 +1,5 @@
-import loki_vm.vm.object as object
-from loki_vm.vm.primitives import nil, true, false
+import pixie.vm.object as object
+from pixie.vm.primitives import nil, true, false
 
 
 class Symbol(object.Object):

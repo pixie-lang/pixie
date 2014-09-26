@@ -1,5 +1,5 @@
-import loki_vm.vm.object as object
-from loki_vm.vm.primitives import nil, true, false
+import pixie.vm.object as object
+from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.jit import elidable, elidable_promote, promote
 
@@ -24,7 +24,7 @@ for x in range(len(BYTECODES)):
     globals()[BYTECODES[x]] = r_uint(x)
 
 class BaseCode(object.Object):
-
+    __immutable_fields__ = ["_is_effect?"]
     def __init__(self):
         self._is_effect = False
 
@@ -40,11 +40,9 @@ class BaseCode(object.Object):
     def tail_call(self, frame, argc):
         raise NotImplementedError()
 
-    @elidable
     def get_consts(self):
         raise NotImplementedError()
 
-    @elidable
     def get_bytecode(self):
         raise NotImplementedError()
 
@@ -62,7 +60,9 @@ class NativeFn(BaseCode):
         return NativeFn._type
 
     def invoke(self, frame, argc):
-        frame.push(self.inner_invoke(frame, r_uint(argc)))
+        result = self.inner_invoke(frame, r_uint(argc))
+        frame.pop()
+        frame.push(result)
         return frame
 
     def inner_invoke(self, frame, argc):
@@ -136,7 +136,7 @@ class StackSlice(BaseCode):
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
     _type = object.Type("Code")
-    _immutable_fields_ = ["_consts", "_bytecode"]
+    __immutable_fields__ = ["_consts[*]", "_bytecode"]
 
     def type(self):
         return Code._type
@@ -209,16 +209,15 @@ class Code(BaseCode):
 
         return frame
 
-    @elidable
     def get_consts(self):
         return self._consts
 
-    @elidable
     def get_bytecode(self):
         return self._bytecode
 
 class Closure(BaseCode):
     _type = object.Type("Closure")
+    __immutable_fields__ = ["_closed_overs[*]", "_code"]
     def type(self):
         return Closure._type
 
@@ -237,15 +236,12 @@ class Closure(BaseCode):
         frame.code_obj = self
         return frame
 
-    @elidable
     def get_closed_over(self, idx):
         return self._closed_overs[idx]
 
-    @elidable
     def get_consts(self):
         return self._code.get_consts()
 
-    @elidable
     def get_bytecode(self):
         return self._code.get_bytecode()
 
@@ -297,11 +293,7 @@ def intern_var(name):
 def as_var(name):
     var = intern_var(name)
     def with_fn(fn):
-        class FnWrapper(NativeFn):
-            def inner_invoke(self, frame, argc):
-                val = fn(frame, argc)
-                frame.pop()
-                return val
-        var.set_root(FnWrapper())
-        return fn
+        inst = type("W"+fn.__name__, (NativeFn,), {"inner_invoke": fn})()
+        var.set_root(inst)
+        return inst
     return with_fn

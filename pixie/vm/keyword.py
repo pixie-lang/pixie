@@ -1,5 +1,5 @@
-from loki_vm.vm.object import Object, Type
-from loki_vm.vm.primitives import nil, true, false
+from pixie.vm.object import Object, Type
+from pixie.vm.primitives import nil, true, false
 
 
 class Keyword(Object):

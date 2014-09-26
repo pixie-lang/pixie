@@ -1,12 +1,12 @@
-from loki_vm.vm.object import Object
-from loki_vm.vm.primitives import nil, true, false, Bool
-import loki_vm.vm.numbers as numbers
-from loki_vm.vm.cons import cons, Cons, count
-import loki_vm.vm.symbol as symbol
-import loki_vm.vm.code as code
-from loki_vm.vm.keyword import Keyword
+from pixie.vm.object import Object
+from pixie.vm.primitives import nil, true, false, Bool
+import pixie.vm.numbers as numbers
+from pixie.vm.cons import cons, Cons, count
+import pixie.vm.symbol as symbol
+import pixie.vm.code as code
+from pixie.vm.keyword import Keyword
 from rpython.rlib.rarithmetic import r_uint
-import loki_vm.vm.rt
+import pixie.vm.rt
 
 class Context(object):
     def __init__(self, name, argc, parent_locals):

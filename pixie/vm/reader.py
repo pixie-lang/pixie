@@ -1,9 +1,9 @@
-import loki_vm.vm.object as object
-from loki_vm.vm.primitives import nil, true, false
-import loki_vm.vm.numbers as numbers
-from loki_vm.vm.cons import cons
-from loki_vm.vm.symbol import symbol, Symbol
-from loki_vm.vm.keyword import keyword
+import pixie.vm.object as object
+from pixie.vm.primitives import nil, true, false
+import pixie.vm.numbers as numbers
+from pixie.vm.cons import cons
+from pixie.vm.symbol import symbol, Symbol
+from pixie.vm.keyword import keyword
 
 
 class PlatformReader(object.Object):
@@ -25,6 +25,25 @@ class StringReader(PlatformReader):
     def unread(self, ch):
         self._idx -= 1
 
+class StreamReader(PlatformReader):
+    def __init__(self, stream):
+        self._steam = stream
+        self._has_unread = False
+        self._unread_ch = None
+
+    def read(self):
+        if self._has_unread:
+            ch = self._unread_ch
+            if ch == "":
+                raise EOFError()
+            self._has_unread = False
+            return ch
+        return self._steam.read(0)
+
+    def unread(self, ch):
+        assert not self._has_unread
+        self._has_unread = True
+        self._unread_ch = ch
 
 
 def is_whitespace(ch):

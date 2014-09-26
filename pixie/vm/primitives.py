@@ -1,4 +1,4 @@
-import loki_vm.vm.object as object
+import pixie.vm.object as object
 
 
 class Nil(object.Object):

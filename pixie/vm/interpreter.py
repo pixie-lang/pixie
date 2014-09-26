@@ -1,9 +1,9 @@
-from loki_vm.vm.object import Object
-import loki_vm.vm.code as code
-import loki_vm.vm.numbers as numbers
-from loki_vm.vm.primitives import nil, true, false
+from pixie.vm.object import Object
+import pixie.vm.code as code
+import pixie.vm.numbers as numbers
+from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint, intmask
-from rpython.rlib.jit import JitDriver, promote, elidable, elidable_promote
+from rpython.rlib.jit import JitDriver, promote, elidable, elidable_promote, hint, unroll_safe
 
 def get_location(ip, sp, bc):
     return code.BYTECODES[bc[ip]]
@@ -11,16 +11,24 @@ def get_location(ip, sp, bc):
 jitdriver = JitDriver(greens=["ip", "sp", "bc"], reds=["frame"], virtualizables=["frame"],
                       get_printable_location=get_location)
 
+
+@elidable
+def get_inst_by_idx(bc, idx):
+    return bc[idx]
+
 class Frame(object):
-    _virtualizable_ = [#"stack[*]",
+    __immutable_fields__ = ["stack"]
+    _virtualizable_ = ["stack[*]",
                        "sp",
                        "ip",
                        "bc",
                        "consts",
                        "code_obj",
                        "argc",
-                       "prev_frame"]
+                       "prev_frame"
+]
     def __init__(self, code_obj, prev_frame=None, handler=None):
+        self = hint(self, access_directly=True, fresh_virtualizable=True)
         self.code_obj = code_obj
         self.sp = r_uint(0)
         self.ip = r_uint(0)
@@ -49,9 +57,11 @@ class Frame(object):
         self.bc = self.code_obj.get_bytecode()
         self.consts = self.code_obj.get_consts()
 
+
+
     def get_inst(self):
         assert 0 <= self.ip < len(self.bc)
-        inst = self.bc[self.ip]
+        inst = get_inst_by_idx(promote(self.bc), promote(self.ip))
         self.ip = self.ip + 1
         return promote(inst)
 
@@ -74,17 +84,21 @@ class Frame(object):
             self.pop()
 
     def nth(self, delta):
+        assert delta >= 0
+        assert self.sp - 1 >= delta
         return self.stack[self.sp - delta - 1]
 
     def push_nth(self, delta):
         self.push(self.nth(delta))
 
+    @unroll_safe
     def push_n(self, args, argc):
         x = argc
         while x != 0:
             self.push(args[x - 1])
             x -= 1
 
+    @unroll_safe
     def pop_n(self, argc):
         args = [None] * argc
         x = r_uint(0)
@@ -93,8 +107,11 @@ class Frame(object):
             x += 1
         return args
 
+    def get_const(self, idx):
+        return self.consts[idx]
+
     def push_const(self, idx):
-        self.push(self.consts[idx])
+        self.push(self.get_const(idx))
 
     def jump_rel(self, delta):
         self.ip += delta - 1
@@ -149,15 +166,15 @@ def interpret(code_obj):
             frame.push(r)
             continue
 
-        if inst == code.INSTALL:
-            fn = frame.pop()
-            handler = frame.pop()
-
-            frame = Frame(None, frame, handler)
-            frame.push(fn)
-            frame = fn.invoke(frame, 1)
-
-            continue
+        # if inst == code.INSTALL:
+        #     fn = frame.pop()
+        #     handler = frame.pop()
+        #
+        #     frame = Frame(None, frame, handler)
+        #     frame.push(fn)
+        #     frame = fn.invoke(frame, 1)
+        #
+        #     continue
 
         if inst == code.INVOKE:
             argc = frame.get_inst()

@@ -1,14 +1,14 @@
-from loki_vm.vm.reader import read, StringReader, eof
-from loki_vm.vm.object import Object, Type
-from loki_vm.vm.cons import Cons
-from loki_vm.vm.numbers import Integer
-from loki_vm.vm.symbol import symbol, Symbol
-from loki_vm.vm.keyword import Keyword
-from loki_vm.vm.compiler import compile_form, compile
-from loki_vm.vm.interpreter import interpret
-from loki_vm.vm.code import Code, Var
-from loki_vm.vm.primitives import nil, true, false
-from loki_vm.vm.custom_types import CustomTypeInstance
+from pixie.vm.reader import read, StringReader, eof
+from pixie.vm.object import Object, Type
+from pixie.vm.cons import Cons
+from pixie.vm.numbers import Integer
+from pixie.vm.symbol import symbol, Symbol
+from pixie.vm.keyword import Keyword
+from pixie.vm.compiler import compile_form, compile
+from pixie.vm.interpreter import interpret
+from pixie.vm.code import Code, Var
+from pixie.vm.primitives import nil, true, false
+from pixie.vm.custom_types import CustomTypeInstance
 import unittest
 
 def read_code(s):
@@ -125,3 +125,15 @@ def test_keyword():
     retval = eval_string(""":foo""")
     assert isinstance(retval, Keyword)
 
+
+def real_effec_test():
+    retval = eval_string("""
+
+    (do (def tp (make-type Foo '(:x)))
+        (def pass (fn (x) (get (make-type tp x) :x)))
+
+        ((fn r (x)
+            (if (platform= x 100000)
+              x
+              (r (+ 1 (pass x))))) 0))
+              """)

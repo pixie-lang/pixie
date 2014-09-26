@@ -1,20 +1,21 @@
-from loki_vm.vm.code import as_var
-import loki_vm.vm.object as object
-import loki_vm.vm.numbers as numbers
-from loki_vm.vm.code import BaseCode
-from loki_vm.vm.primitives import true, false, nil
-from loki_vm.vm.symbol import Symbol
-from loki_vm.vm.custom_types import CustomType, CustomTypeInstance
-from loki_vm.vm.keyword import Keyword
+from pixie.vm.code import as_var
+import pixie.vm.object as object
+import pixie.vm.numbers as numbers
+from pixie.vm.code import BaseCode
+from pixie.vm.primitives import true, false, nil
+from pixie.vm.symbol import Symbol
+from pixie.vm.custom_types import CustomType, CustomTypeInstance
+from pixie.vm.keyword import Keyword
+from rpython.rlib.jit import unroll_safe
 
 
 @as_var("type")
-def type(frame, _):
+def type(self, frame, _):
     return frame.pop().type()
 
 
 @as_var("set-effect!")
-def set_effect(frame, argc):
+def set_effect(self, frame, argc):
     assert argc == 3
     v = frame.pop()
     c = frame.pop()
@@ -23,7 +24,8 @@ def set_effect(frame, argc):
     return c
 
 @as_var("+")
-def plus(frame, argc):
+@unroll_safe
+def plus(self, frame, argc):
     acc = numbers.Integer(0)
     assert argc > 1
     for x in range(argc - 1):
@@ -32,7 +34,7 @@ def plus(frame, argc):
 
 
 @as_var("make-type")
-def make_type(frame, argc):
+def make_type(self, frame, argc):
     fields = frame.pop()
     name = frame.pop()
 
@@ -41,7 +43,7 @@ def make_type(frame, argc):
     return CustomType(name, fields)
 
 @as_var("new")
-def new_(frame, argc):
+def new_(self, frame, argc):
     assert argc >= 2
     tp = frame.nth(argc - 2)
     assert isinstance(tp, CustomType)
@@ -59,7 +61,7 @@ def new_(frame, argc):
 
 
 @as_var("get-field")
-def get_field(frame, argc):
+def get_field(self, frame, argc):
     assert argc == 3
 
     field_name = frame.pop()

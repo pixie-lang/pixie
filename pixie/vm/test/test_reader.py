@@ -1,8 +1,8 @@
-from loki_vm.vm.reader import read, StringReader
-from loki_vm.vm.object import Object
-from loki_vm.vm.cons import Cons
-from loki_vm.vm.numbers import Integer
-from loki_vm.vm.symbol import symbol, Symbol
+from pixie.vm.reader import read, StringReader
+from pixie.vm.object import Object
+from pixie.vm.cons import Cons
+from pixie.vm.numbers import Integer
+from pixie.vm.symbol import symbol, Symbol
 import unittest
 
 data = {"(1 2)": (1, 2,),

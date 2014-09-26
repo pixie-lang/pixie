@@ -1,7 +1,7 @@
-from loki_vm.vm.object import Object, Type
-from loki_vm.vm.primitives import nil, true, false
+from pixie.vm.object import Object, Type
+from pixie.vm.primitives import nil, true, false
 from rpython.rlib.jit import elidable, promote
-from loki_vm.vm.numbers import Integer
+from pixie.vm.numbers import Integer
 from rpython.rlib.rarithmetic import r_uint
 
 class CustomType(Type):
