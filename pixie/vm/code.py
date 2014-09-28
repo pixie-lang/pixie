@@ -23,21 +23,22 @@ BYTECODES = ["LOAD_CONST",
 for x in range(len(BYTECODES)):
     globals()[BYTECODES[x]] = r_uint(x)
 
+class TailCall(object.Object):
+    _type = object.Type("TailCall")
+    __immutable_fields_ = ["_f", "_args"]
+    def __init__(self, f, args):
+        self._f = f
+        self._args = args
+
+    def run(self):
+        return self._f._invoke(self._args)
+
+
 class BaseCode(object.Object):
-    __immutable_fields__ = ["_is_effect?"]
     def __init__(self):
-        self._is_effect = False
+        pass
 
-    def set_is_effect(self, arg):
-        self._is_effect = True if arg is true else False
-
-    def is_effect(self):
-        return self._is_effect
-
-    def invoke(self, frame, argc):
-        raise NotImplementedError()
-
-    def tail_call(self, frame, argc):
+    def _invoke(self, args):
         raise NotImplementedError()
 
     def get_consts(self):
@@ -45,6 +46,12 @@ class BaseCode(object.Object):
 
     def get_bytecode(self):
         raise NotImplementedError()
+
+    def invoke(self, args):
+        result = self._invoke(args)
+        while isinstance(result, TailCall):
+            result = result.run()
+        return result
 
 
 
@@ -59,78 +66,11 @@ class NativeFn(BaseCode):
     def type(self):
         return NativeFn._type
 
-    def invoke(self, frame, argc):
-        result = self.inner_invoke(frame, r_uint(argc))
-        frame.pop()
-        frame.push(result)
-        return frame
+    def _invoke(self, args):
+        return self.inner_invoke(args)
 
-    def inner_invoke(self, frame, argc):
+    def inner_invoke(self, args):
         raise NotImplementedError()
-
-    def tail_call(self, frame, argc):
-        self.invoke(frame, argc)
-        return frame
-
-
-class StackSlice(BaseCode):
-    """A subsection of a stack created by a call to an effect,
-       this is handed to the handler and can be called. On being invoked, the slice will
-       be spliced back into the stack and execution will resume."""
-    _type = object.Type("StackSlice")
-
-    def type(self):
-        return StackSlice._type
-
-    def __init__(self, bottom_frame, top_frame):
-        BaseCode.__init__(self)
-        self._bottom_frame = bottom_frame
-        self._top_frame = top_frame
-
-
-    def clone_slice(self):
-        new_top = self._top_frame.clone()
-        frame = new_top
-        prev_frame = None
-        while frame.prev_frame is not None:
-            prev_frame = frame
-            frame = frame.prev_frame
-            frame.clone()
-            prev_frame.prev_frame = frame
-
-        return (frame, new_top)
-
-    def tail_call(self, frame, argc):
-        assert argc == 2
-
-        arg = frame.pop()
-        slice = frame.pop()
-
-        (bottom, new_frame) = self.clone_slice()
-
-        bottom.prev_frame = frame
-        frame = new_frame
-
-        frame.push(arg)
-
-        return frame
-
-    def invoke(self, frame, argc):
-        assert argc == 2
-
-        arg = frame.pop()
-        slice = frame.pop()
-
-        (bottom, new_frame) = self.clone_slice()
-        bottom.prev_frame = frame
-        frame = new_frame
-
-        frame.push(arg)
-
-        return frame
-
-
-
 
 
 class Code(BaseCode):
@@ -147,67 +87,8 @@ class Code(BaseCode):
         self._consts = consts
         self._name = name
 
-    def invoke(self, frame, argc):
-        args = frame.pop_n(argc)
-
-
-        if self._is_effect:
-            handler = args[-2]
-
-            (frame, bottom_of_slice, top_of_slice) = frame.slice_stack(handler)
-            frame = frame.make_frame(self)
-
-            frame.push_n(args, argc)
-
-
-            frame.push(StackSlice(bottom_of_slice, top_of_slice))
-            argc += 1
-        else:
-            frame = frame.make_frame(self)
-            frame.push_n(args, argc)
-
-
-        frame.code_obj = self
-        frame.argc = argc
-        frame.consts = self._consts
-        frame.bc = self._bytecode
-        frame.ip = r_uint(0)
-
-        return frame
-
-    def tail_call(self, frame, argc):
-        args = frame.pop_n(argc)
-
-        if self._is_effect:
-            handler = args[-2]
-
-            (frame, bottom_of_slice, top_of_slice) = frame.slice_stack(handler)
-
-            frame.push_n(args, argc)
-
-
-            frame.push(StackSlice(bottom_of_slice, top_of_slice))
-            argc += 1
-
-        else:
-            # remove current frame args
-            if frame.prev_frame is not None:
-                frame = frame.prev_frame
-            else:
-                frame = frame.new(self)
-
-            # replace args
-            frame.push_n(args, argc)
-
-
-        # reset frame to our state
-        frame.code_obj = self
-        frame.argc = argc
-        frame.consts = self._consts
-        frame.bc = self._bytecode
-        frame.ip = r_uint(0)
-
-        return frame
+    def _invoke(self, args):
+        return interpret(self, args)
 
     def get_consts(self):
         return self._consts
@@ -215,7 +96,7 @@ class Code(BaseCode):
     def get_bytecode(self):
         return self._bytecode
 
-class Closure(BaseCode):
+class Closure(Code):
     _type = object.Type("Closure")
     __immutable_fields__ = ["_closed_overs[*]", "_code"]
     def type(self):
@@ -226,15 +107,8 @@ class Closure(BaseCode):
         self._code = code
         self._closed_overs = closed_overs
 
-    def invoke(self, frame, argc):
-        frame = self._code.invoke(frame, argc)
-        frame.code_obj = self
-        return frame
-
-    def tail_call(self, frame, argc):
-        frame = self._code.tail_call(frame, argc)
-        frame.code_obj = self
-        return frame
+    def _invoke(self, args):
+        return interpret(self, args)
 
     def get_closed_over(self, idx):
         return self._closed_overs[idx]
@@ -297,3 +171,5 @@ def as_var(name):
         var.set_root(inst)
         return inst
     return with_fn
+
+

@@ -3,6 +3,7 @@ from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 
 
+
 class Number(object.Object):
     pass
 

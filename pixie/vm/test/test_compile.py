@@ -28,7 +28,7 @@ def eval_string(s):
         if form is eof:
             return result
 
-        result = interpret(compile(form))
+        result = compile(form).invoke([])
 
 def test_fn():
     code = compile(read_code("((fn (x y) (platform+ x y)) 1 2)"))
@@ -59,13 +59,13 @@ def test_return_self():
 
 def test_recursive():
     retval = eval_string("""((fn rf (x)
-                               (if (platform= x 100)
+                               (if (platform= x 1000)
                                    x
                                    (rf (platform+ x 1))))
                                0)""")
 
     assert isinstance(retval, Integer)
-    assert retval.int_val() == 100
+    assert retval.int_val() == 1000
 
 def test_closures():
     retval = eval_string("""((fn (x) ((fn () x))) 42)""")
@@ -88,52 +88,80 @@ def test_def():
 def test_native():
     retval = eval_string("""(type 42)""")
     assert isinstance(retval, Type)
-
-def test_handlers():
-    retval = eval_string("""(def x 42)
-                            (platform_install_handler 42 (fn () 1))""")
-    assert isinstance(retval, Integer) and retval.int_val() == 1
-    retval = eval_string("""(def pass (fn (x k) (k true)))
-                            (set-effect! pass true)
-                            (def handler 42)
-                            (platform_install_handler handler (fn () (pass handler)))""")
-    assert retval is true
-
-def test_mult_call_handlers():
-    retval = eval_string("""(def pass (fn pass (x k) (+ (k 1) (k 2))))
-                            (set-effect! pass true)
-                            (def handler 42)
-                            (platform_install_handler handler (fn hfn () (pass handler) 42))""")
-
-    assert isinstance(retval, Integer) and retval.int_val() == 84
-
-def test_quoted():
-    retval = eval_string("""'(1 2)""")
-    assert isinstance(retval, Cons)
-    retval = eval_string("""'type""")
-    assert isinstance(retval, Symbol)
-
-def test_custom_type():
-    retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
-                            (new my-type 1 2)""")
-    assert isinstance(retval, CustomTypeInstance)
-    retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
-                            (get-field (new my-type 1 2) :a)""")
-    assert isinstance(retval, Integer) and retval.int_val() == 1
-
-def test_keyword():
-    retval = eval_string(""":foo""")
-    assert isinstance(retval, Keyword)
-
-
-def real_effec_test():
-    retval = eval_string("""
-
-    (do (def tp (make-type Foo '(:x)))
-        (def pass (fn (x) (get (make-type tp x) :x)))
-
-        ((fn r (x)
-            (if (platform= x 100000)
-              x
-              (r (+ 1 (pass x))))) 0))
-              """)
+#
+# def test_handlers():
+#     retval = eval_string("""(def x 42)
+#                             (platform_install_handler 42 (fn () 1))""")
+#     assert isinstance(retval, Integer) and retval.int_val() == 1
+#     retval = eval_string("""(def pass (fn (x k) (k true)))
+#                             (set-effect! pass true)
+#                             (def handler 42)
+#                             (platform_install_handler handler (fn () (pass handler)))""")
+#     assert retval is true
+#
+# def test_mult_call_handlers():
+#     retval = eval_string("""(def pass (fn pass (x k) (+ (k 1) (k 2))))
+#                             (set-effect! pass true)
+#                             (def handler 42)
+#                             (platform_install_handler handler (fn hfn () (pass handler) 42))""")
+#
+#     assert isinstance(retval, Integer) and retval.int_val() == 84
+#
+# def test_quoted():
+#     retval = eval_string("""'(1 2)""")
+#     assert isinstance(retval, Cons)
+#     retval = eval_string("""'type""")
+#     assert isinstance(retval, Symbol)
+#
+# def test_custom_type():
+#     retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
+#                             (new my-type 1 2)""")
+#     assert isinstance(retval, CustomTypeInstance)
+#     retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
+#                             (get-field (new my-type 1 2) :a)""")
+#     assert isinstance(retval, Integer) and retval.int_val() == 1
+#
+# def test_keyword():
+#     retval = eval_string(""":foo""")
+#     assert isinstance(retval, Keyword)
+#
+#
+# def test_real_effects():
+#     retval = eval_string("""
+#
+#     (do (def tp (make-type 'Foo '(:x)))
+#         (def pass (fn (x) (get-field (new tp x) :x)))
+#
+#         ((fn r (x)
+#             (if (platform= x 10000)
+#               x
+#               (r (+ 1 (pass x)))))
+#
+#         0))
+#               """)
+#
+#     assert isinstance(retval, Integer) and retval.int_val() == 1000
+#
+#
+# def test_real_effects():
+#     retval = eval_string("""
+#
+#
+#     (do (def tp (make-type 'Foo '(:x)))
+#         (def pass (fn (x) (get-field (new tp x) :x)))
+#         (def add (fn (h i k) (k (+ i 1))))
+#         (set-effect! add true)
+#         (def handler 0)
+#
+#         ((fn r (x)
+#             (if (platform= x 10000)
+#               x
+#               (r (platform_install_handler handler (fn () (add handler x))))))
+#
+#         0))
+#               """)
+#
+#     assert isinstance(retval, Integer) and retval.int_val() == 1000
+#
+#
+#

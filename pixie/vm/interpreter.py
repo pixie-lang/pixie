@@ -35,29 +35,10 @@ class Frame(object):
         self.stack = [None] * 24
         if code_obj is not None:
             self.unpack_code_obj()
-        self.argc = 0
-        self.prev_frame = prev_frame
-        self.handler = handler
-
-    def clone(self):
-        frame = Frame(self.code_obj, self.prev_frame, self.handler)
-        frame.sp = self.sp
-        frame.ip = self.ip
-
-        frame.stack = [None] * len(self.stack)
-        x = 0
-        #only copy what we need from the stack
-        while x < self.sp:
-            frame.stack[x] = self.stack[x]
-            x += 1
-        frame.argc = self.argc
-        return frame
 
     def unpack_code_obj(self):
         self.bc = self.code_obj.get_bytecode()
         self.consts = self.code_obj.get_consts()
-
-
 
     def get_inst(self):
         assert 0 <= self.ip < len(self.bc)
@@ -79,9 +60,6 @@ class Frame(object):
         self.stack[self.sp] = None
         return v
 
-    def pop_args(self):
-        for x in range(self.argc):
-            self.pop()
 
     def nth(self, delta):
         assert delta >= 0
@@ -116,34 +94,10 @@ class Frame(object):
     def jump_rel(self, delta):
         self.ip += delta - 1
 
-    def slice_stack(self, on):
-        frame = self
-        top_frame = frame
-        prev_frame = None
-        while frame is not nil:
-            if frame.handler is on:
-                new_top_frame = frame
-                frame = prev_frame
-                frame.prev_frame = None
-                return (new_top_frame, frame, top_frame)
-
-            prev_frame = frame
-            frame = frame.prev_frame
-
-
-        raise ValueError()
-
-    def make_frame(self, code_obj):
-        return Frame(code_obj, self)
-
-    def new(self, code_obj):
-        return Frame(code_obj)
-
-
-
-def interpret(code_obj):
+def interpret(code_obj, args=[]):
     frame = Frame(code_obj)
-
+    frame.push(code_obj)
+    frame.push_n(args, len(args))
     while True:
         jitdriver.jit_merge_point(bc=frame.bc,
                                   ip=frame.ip,
@@ -166,39 +120,29 @@ def interpret(code_obj):
             frame.push(r)
             continue
 
-        # if inst == code.INSTALL:
-        #     fn = frame.pop()
-        #     handler = frame.pop()
-        #
-        #     frame = Frame(None, frame, handler)
-        #     frame.push(fn)
-        #     frame = fn.invoke(frame, 1)
-        #
-        #     continue
-
         if inst == code.INVOKE:
             argc = frame.get_inst()
             fn = frame.nth(argc - 1)
 
             assert isinstance(fn, code.BaseCode)
 
-            frame = fn.invoke(frame, argc)
+            args = frame.pop_n(argc - 1)
+            frame.pop()
+
+            frame.push(fn.invoke(args))
 
             continue
 
         if inst == code.TAIL_CALL:
-            args = frame.get_inst()
-            fn = frame.nth(args - 1)
+            argc = frame.get_inst()
+            fn = frame.nth(argc - 1)
 
             assert isinstance(fn, code.BaseCode)
 
-            frame = fn.tail_call(frame, args)
+            args = frame.pop_n(argc - 1)
+            frame.pop()
 
-            jitdriver.can_enter_jit(bc=frame.bc,
-                                    frame=frame,
-                                    sp=frame.sp,
-                                    ip=frame.ip)
-            continue
+            return code.TailCall(fn, args)
 
         if inst == code.DUP_NTH:
             arg = frame.get_inst()
@@ -209,19 +153,7 @@ def interpret(code_obj):
         if inst == code.RETURN:
             val = frame.pop()
 
-            frame.pop_args()
-
-            if frame.prev_frame is None:
-                return val
-
-            frame = frame.prev_frame
-            if frame.handler is not None:
-                frame = frame.prev_frame
-
-
-            frame.push(val)
-
-            continue
+            return val
 
         if inst == code.COND_BR:
             v = frame.pop()
@@ -284,3 +216,6 @@ def interpret(code_obj):
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]
         raise Exception()
 
+
+## Hack to fixup recursive modules
+code.interpret = interpret
