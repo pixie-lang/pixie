@@ -7,6 +7,7 @@ import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
 from rpython.rlib.rarithmetic import r_uint
 import pixie.vm.rt
+from pixie.vm.util import *
 
 class Context(object):
     def __init__(self, name, argc, parent_locals):
@@ -21,13 +22,14 @@ class Context(object):
         self.can_tail_call = False
         self.closed_overs = []
         self.name = name
+        self.ns = "user"
 
     def to_code(self):
         return code.Code(self.name, self.bytecode, self.consts)
 
     def push_arg(self, idx):
-        self.bytecode.append(code.DUP_NTH)
-        self.bytecode.append(r_uint(self.sp - idx))
+        self.bytecode.append(code.ARG)
+        self.bytecode.append(r_uint(idx))
         self.sp += 1
 
 
@@ -88,6 +90,8 @@ class Context(object):
 
 
 
+
+
 class LocalType(object):
     pass
 
@@ -97,6 +101,14 @@ class Arg(LocalType):
 
     def emit(self, ctx):
         ctx.push_arg(self.idx)
+
+class Self(LocalType):
+    def __init__(self):
+        pass
+
+    def emit(self, ctx):
+        ctx.bytecode.append(code.PUSH_SELF)
+        ctx.sp += 1
 
 class Closure(LocalType):
     def __init__(self, local):
@@ -125,9 +137,17 @@ def compile_form(form, ctx):
         return
 
     if isinstance(form, symbol.Symbol):
-        loc = ctx.get_local(form._str)
+        name = form._str
+        loc = ctx.get_local(name)
         if loc is None:
-            ctx.push_const(code.intern_var(form._str))
+            var = code.get_var_if_defined(ctx.ns, name)
+            if var is None:
+                var = code.get_var_if_defined("pixie.stdlib", name)
+
+            if var is None:
+                var = code.intern_var(ctx.ns, name)
+
+            ctx.push_const(var)
             ctx.bytecode.append(code.DEREF_VAR)
             return
         loc.emit(ctx)
@@ -172,7 +192,7 @@ def add_args(args, ctx):
     for x in range(count(args)):
         arg = args.first()
         assert isinstance(arg, symbol.Symbol)
-        ctx.add_local(arg._str, Arg(x + 1)) # TOS is Code so + 1 for first arg
+        ctx.add_local(arg._str, Arg(x)) # TOS is Code so + 1 for first arg
         args = args.next()
 
 
@@ -181,24 +201,24 @@ def compile_fn(form, ctx):
     assert isinstance(form, Cons)
 
 
-    form = form.next()
+    form = next(form)
     if isinstance(form.first(), symbol.Symbol):
-        name = form.first()
-        form = form.next()
+        name = first(form)
+        form = next(form)
     else:
         name = symbol.symbol("unknown")
 
-    args = form.first()
+    args = first(form)
     assert isinstance(args, Cons) or args is nil
 
-    body = form.next()
+    body = next(form)
     new_ctx = Context(name._str, count(args), ctx.locals[-1])
     add_args(args, new_ctx)
     bc = 0
 
     if name is not None:
         assert isinstance(name, symbol.Symbol)
-        new_ctx.add_local(name._str, Arg(0))
+        new_ctx.add_local(name._str, Self())
 
 
     new_ctx.disable_tail_call()
@@ -263,7 +283,7 @@ def compile_def(form, ctx):
 
     assert isinstance(name, symbol.Symbol)
 
-    var = code.intern_var(name._str)
+    var = code.intern_var(ctx.ns, name._str)
     ctx.push_const(var)
     compile_form(val, ctx)
     ctx.bytecode.append(code.SET_VAR)
@@ -300,14 +320,30 @@ def compile_quote(form, ctx):
     data = form.next().first()
     ctx.push_const(data)
 
-builtins = {"platform+": compile_platform_plus,
-            "fn": compile_fn,
+def compile_recur(form, ctx):
+    form = form.next()
+    assert ctx.can_tail_call
+    ctx.disable_tail_call()
+    args = 0
+    while form is not nil:
+        compile_form(form.first(), ctx)
+        args += 1
+        form = form.next()
+
+    ctx.bytecode.append(code.RECUR)
+    ctx.bytecode.append(r_uint(args))
+    ctx.sp -= (args - 1)
+
+
+
+builtins = {"fn": compile_fn,
             "if": compile_if,
             "platform=": compile_platform_eq,
             "def": compile_def,
             "do": compile_do,
             "platform_install_handler": compile_install_handler,
-            "quote": compile_quote}
+            "quote": compile_quote,
+            "recur": compile_recur}
 
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
@@ -324,10 +360,10 @@ def compile_cons(form, ctx):
     if ctc:
         ctx.enable_tail_call()
 
-    if ctx.can_tail_call:
-        ctx.bytecode.append(code.TAIL_CALL)
-    else:
-        ctx.bytecode.append(code.INVOKE)
+    #if ctx.can_tail_call:
+    #    ctx.bytecode.append(code.TAIL_CALL)
+    #else:
+    ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)
     ctx.sp -= r_uint(cnt - 1)

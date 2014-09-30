@@ -9,9 +9,9 @@ from pixie.vm.keyword import Keyword
 from rpython.rlib.jit import unroll_safe
 
 
-@as_var("type")
-def type(self, args):
-    return args[0].type()
+@as_var("pixie.stdlib", "type")
+def type(o):
+    return o.type()
 
 
 # @as_var("set-effect!")
@@ -25,11 +25,12 @@ def type(self, args):
 
 @as_var("+")
 @unroll_safe
-def plus(self, args):
-    acc = numbers.Integer(0)
-    for x in range(len(args)):
-        acc = numbers.add(acc, args[x])
-    return acc
+def plus(a, b):
+    #acc = numbers.Integer(0)
+    #for x in range(len(args)):
+    #    acc = numbers.add(acc, args[x])
+    #return acc
+    return numbers._add.invoke([a, b])
 
 #
 # @as_var("make-type")

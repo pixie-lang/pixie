@@ -24,15 +24,15 @@ class Frame(object):
                        "bc",
                        "consts",
                        "code_obj",
-                       "argc",
-                       "prev_frame"
+                       "args[*]",
 ]
-    def __init__(self, code_obj, prev_frame=None, handler=None):
+    def __init__(self, code_obj, args=[]):
         self = hint(self, access_directly=True, fresh_virtualizable=True)
         self.code_obj = code_obj
         self.sp = r_uint(0)
         self.ip = r_uint(0)
         self.stack = [None] * 24
+        self.args = args
         if code_obj is not None:
             self.unpack_code_obj()
 
@@ -69,6 +69,9 @@ class Frame(object):
     def push_nth(self, delta):
         self.push(self.nth(delta))
 
+    def push_arg(self, idx):
+        self.push(self.args[idx])
+
     @unroll_safe
     def push_n(self, args, argc):
         x = argc
@@ -95,9 +98,7 @@ class Frame(object):
         self.ip += delta - 1
 
 def interpret(code_obj, args=[]):
-    frame = Frame(code_obj)
-    frame.push(code_obj)
-    frame.push_n(args, len(args))
+    frame = Frame(code_obj, args)
     while True:
         jitdriver.jit_merge_point(bc=frame.bc,
                                   ip=frame.ip,
@@ -110,14 +111,6 @@ def interpret(code_obj, args=[]):
         if inst == code.LOAD_CONST:
             arg = frame.get_inst()
             frame.push_const(arg)
-            continue
-
-        if inst == code.ADD:
-            a = frame.pop()
-            b = frame.pop()
-
-            r = numbers.add(a, b)
-            frame.push(r)
             continue
 
         if inst == code.INVOKE:
@@ -133,20 +126,20 @@ def interpret(code_obj, args=[]):
 
             continue
 
-        if inst == code.TAIL_CALL:
-            argc = frame.get_inst()
-            fn = frame.nth(argc - 1)
+        # if inst == code.TAIL_CALL:
+        #     argc = frame.get_inst()
+        #     fn = frame.nth(argc - 1)
+        #
+        #     assert isinstance(fn, code.BaseCode)
+        #
+        #     args = frame.pop_n(argc - 1)
+        #     frame.pop()
+        #
+        #     return code.TailCall(fn, args)
 
-            assert isinstance(fn, code.BaseCode)
-
-            args = frame.pop_n(argc - 1)
-            frame.pop()
-
-            return code.TailCall(fn, args)
-
-        if inst == code.DUP_NTH:
+        if inst == code.ARG:
             arg = frame.get_inst()
-            frame.push_nth(arg)
+            frame.push_arg(arg)
 
             continue
 
@@ -211,6 +204,22 @@ def interpret(code_obj, args=[]):
             var = frame.pop()
             assert isinstance(var, code.Var)
             frame.push(var.deref())
+            continue
+
+        if inst == code.RECUR:
+            argc = frame.get_inst()
+            args = frame.pop_n(argc)
+
+            frame = Frame(frame.code_obj, args)
+
+            jitdriver.can_enter_jit(bc=frame.bc,
+                                  ip=frame.ip,
+                                  sp=frame.sp,
+                                  frame=frame)
+            continue
+
+        if inst == code.PUSH_SELF:
+            frame.push(frame.code_obj)
             continue
 
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]

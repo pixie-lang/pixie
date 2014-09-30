@@ -4,7 +4,7 @@ import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons
 from pixie.vm.symbol import symbol, Symbol
 from pixie.vm.keyword import keyword
-
+from pixie.vm.protocols import *
 
 class PlatformReader(object.Object):
     _type = object.Type("PlatformReader")

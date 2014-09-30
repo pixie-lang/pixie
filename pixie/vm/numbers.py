@@ -1,7 +1,7 @@
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
-
+from pixie.vm.code import DoublePolymorphicFn, extend, Protocol
 
 
 class Number(object.Object):
@@ -25,12 +25,21 @@ class Integer(Number):
     def type(self):
         return Integer._type
 
-def add(a, b):
-    if isinstance(a, Integer):
-        if isinstance(b, Integer):
-            return Integer(a.int_val() + b.int_val())
+IMath = Protocol("IMath")
+_add = DoublePolymorphicFn("-add", IMath)
 
-    raise Exception("Add error")
+
+@extend(_add, Integer._type, Integer._type)
+def _add(a, b):
+    return Integer(a.int_val() + b.int_val())
+
+
+# def add(a, b):
+#     if isinstance(a, Integer):
+#         if isinstance(b, Integer):
+#             return Integer(a.int_val() + b.int_val())
+#
+#     raise Exception("Add error")
 
 def eq(a, b):
     if isinstance(a, Integer):

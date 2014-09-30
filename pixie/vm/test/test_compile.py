@@ -31,7 +31,7 @@ def eval_string(s):
         result = compile(form).invoke([])
 
 def test_fn():
-    code = compile(read_code("((fn (x y) (platform+ x y)) 1 2)"))
+    code = compile(read_code("((fn (x y) (+ x y)) 1 2)"))
     assert isinstance(code, Code)
     retval = interpret(code)
     assert isinstance(retval, Integer) and retval.int_val() == 3
@@ -61,7 +61,7 @@ def test_recursive():
     retval = eval_string("""((fn rf (x)
                                (if (platform= x 1000)
                                    x
-                                   (rf (platform+ x 1))))
+                                   (recur (+ x 1))))
                                0)""")
 
     assert isinstance(retval, Integer)

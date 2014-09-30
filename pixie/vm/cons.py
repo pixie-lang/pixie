@@ -1,10 +1,14 @@
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
-
+import pixie.vm.protocols as proto
+from  pixie.vm.code import extend
 
 
 class Cons(object.Object):
     _type = object.Type("Cons")
+
+    def type(self):
+        return Cons._type
 
     def __init__(self, head, tail, meta=nil):
         self._head = head
@@ -22,6 +26,15 @@ class Cons(object.Object):
 
     def with_meta(self, meta):
         return Cons(self._head, self._tail, meta)
+
+
+@extend(proto._first, Cons._type)
+def _first(x):
+    return x._head
+
+@extend(proto._next, Cons._type)
+def _next(x):
+    return x._tail
 
 
 def count(self):
