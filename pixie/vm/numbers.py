@@ -25,6 +25,9 @@ class Integer(Number):
     def type(self):
         return Integer._type
 
+zero_int = Integer(0)
+one_int = Integer(0)
+
 IMath = Protocol("IMath")
 _add = DoublePolymorphicFn("-add", IMath)
 

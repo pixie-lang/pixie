@@ -4,7 +4,10 @@ import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons
 from pixie.vm.symbol import symbol, Symbol
 from pixie.vm.keyword import keyword
-from pixie.vm.protocols import *
+import pixie.vm.rt as rt
+from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
+
+rt.init()
 
 class PlatformReader(object.Object):
     _type = object.Type("PlatformReader")
@@ -84,6 +87,22 @@ class UnmachedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
         raise SyntaxError()
 
+class VectorReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        acc = EMPTY_VECTOR
+        while True:
+            eat_whitespace(rdr)
+            ch = rdr.read()
+            if ch == "]":
+                return acc
+
+            rdr.unread(ch)
+            acc = rt.conj(acc, read(rdr, True))
+
+class UnmachedVectorReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        raise SyntaxError()
+
 class QuoteReader(ReaderHandler):
     def invoke(self, rdr, ch):
         itm = read(rdr, True)
@@ -98,6 +117,8 @@ class KeywordReader(ReaderHandler):
 
 handlers = {"(": ListReader(),
             ")": UnmachedListReader(),
+            "[": VectorReader(),
+            "]": UnmachedVectorReader(),
             "'": QuoteReader(),
             ":": KeywordReader()}
 

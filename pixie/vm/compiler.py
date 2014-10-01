@@ -1,13 +1,17 @@
 from pixie.vm.object import Object
 from pixie.vm.primitives import nil, true, false, Bool
+from pixie.vm.persistent_vector import EMPTY, PersistentVector
 import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons, Cons, count
 import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
 from rpython.rlib.rarithmetic import r_uint
-import pixie.vm.rt
+
+import pixie.vm.rt as rt
 from pixie.vm.util import *
+
+rt.init()
 
 class Context(object):
     def __init__(self, name, argc, parent_locals):
@@ -161,6 +165,13 @@ def compile_form(form, ctx):
         ctx.push_const(form)
         return
 
+    if isinstance(form, PersistentVector):
+        assert rt.count(form).int_val() == 0
+
+        ctx.push_const(EMPTY)
+        return
+
+
     raise Exception("Can't compile ")
 
 def compile_platform_plus(form, ctx):
@@ -179,7 +190,7 @@ def compile_platform_plus(form, ctx):
 
 def compile_platform_eq(form, ctx):
     form = form.next()
-    assert count(form) == 2
+    assert count(form).int_val() == 2
     while form is not nil:
         compile_form(form.first(), ctx)
         form = form.next()
@@ -189,11 +200,10 @@ def compile_platform_eq(form, ctx):
     return ctx
 
 def add_args(args, ctx):
-    for x in range(count(args)):
-        arg = args.first()
+    for x in range(count(args).int_val()):
+        arg = rt.nth(args, numbers.Integer(x))
         assert isinstance(arg, symbol.Symbol)
-        ctx.add_local(arg._str, Arg(x)) # TOS is Code so + 1 for first arg
-        args = args.next()
+        ctx.add_local(arg._str, Arg(x))
 
 
 
@@ -209,10 +219,10 @@ def compile_fn(form, ctx):
         name = symbol.symbol("unknown")
 
     args = first(form)
-    assert isinstance(args, Cons) or args is nil
+    assert isinstance(args, PersistentVector), "Args must be a vector"
 
     body = next(form)
-    new_ctx = Context(name._str, count(args), ctx.locals[-1])
+    new_ctx = Context(name._str, count(args).int_val(), ctx.locals[-1])
     add_args(args, new_ctx)
     bc = 0
 
@@ -249,7 +259,7 @@ def compile_fn(form, ctx):
 
 def compile_if(form, ctx):
     form = form.next()
-    assert count(form) == 3
+    assert count(form).int_val() == 3
 
     test = form.first()
     form = form.next()
@@ -302,20 +312,6 @@ def compile_do(form, ctx):
         else:
             ctx.pop()
 
-def compile_install_handler(form, ctx):
-    form = form.next()
-    assert count(form) == 2
-
-    handler = form.first()
-    form = form.next()
-    fn = form.first()
-
-    compile_form(handler, ctx)
-    compile_form(fn, ctx)
-    ctx.bytecode.append(code.INSTALL)
-    ctx.sp -= 1
-
-
 def compile_quote(form, ctx):
     data = form.next().first()
     ctx.push_const(data)
@@ -341,7 +337,6 @@ builtins = {"fn": compile_fn,
             "platform=": compile_platform_eq,
             "def": compile_def,
             "do": compile_do,
-            "platform_install_handler": compile_install_handler,
             "quote": compile_quote,
             "recur": compile_recur}
 

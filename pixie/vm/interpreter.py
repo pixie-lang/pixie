@@ -84,7 +84,7 @@ class Frame(object):
         args = [None] * argc
         x = r_uint(0)
         while x < argc:
-            args[x] = self.pop()
+            args[argc - x - 1] = self.pop()
             x += 1
         return args
 

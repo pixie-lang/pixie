@@ -120,6 +120,14 @@ class Closure(Code):
     def get_bytecode(self):
         return self._code.get_bytecode()
 
+class Undefined(object.Object):
+    _type = object.Type("Undefined")
+
+    def type(self):
+        return Undefined._type
+
+undefined = Undefined()
+
 class Var(object.Object):
     _type = object.Type("Var")
     _immutable_fields_ = ["_rev?"]
@@ -130,6 +138,7 @@ class Var(object.Object):
     def __init__(self, name):
         self._name = name
         self._rev = 0
+        self._root = undefined
 
     def set_root(self, o):
         self._rev += 1
@@ -143,7 +152,9 @@ class Var(object.Object):
 
     def deref(self):
         rev = promote(self._rev)
-        return self.get_root(rev)
+        val = self.get_root(rev)
+        assert val is not undefined
+        return val
 
 
 class Namespace(__builtins__.object):
@@ -234,9 +245,12 @@ class PolymorphicFn(BaseCode):
 
     def _invoke(self, args):
         a = args[0].type()
-        return self._dict[a].invoke(args)
+        fn = self._dict.get(a, None)
+        assert fn is not None, "No override for " + self._name + " for type " + a._name
+        return fn.invoke(args)
 
 class DoublePolymorphicFn(BaseCode):
+    """A function that is polymorphic on the first two arguments"""
     _type = object.Type("DoublePolymorphicFn")
 
     __immutable_fields__ = ["_rev?"]
@@ -277,6 +291,9 @@ def munge(s):
 
 import inspect
 def defprotocol(ns, name, methods):
+    """Define a protocol in the given namespace with the given name and methods, vars will
+       be created in the namespace for the protocol and methods. This function will dump
+       variables for the created protocols/methods in the globals() where this function is called."""
     gbls = inspect.currentframe().f_back.f_globals
     proto =  Protocol(name)
     intern_var(ns, name).set_root(proto)
@@ -290,12 +307,19 @@ def defprotocol(ns, name, methods):
 ## PYTHON FLAGS
 CO_VARARGS = 0x4
 def wrap_fn(fn):
+    """Converts a native Python function into a pixie function."""
     def as_native_fn(f):
         return type("W"+fn.__name__, (NativeFn,), {"inner_invoke": f})()
 
+    def as_variadic_fn(f):
+        return type("W"+fn.__name__[:len("__args")], (NativeFn,), {"inner_invoke": f})()
+
     code = fn.func_code
+    if fn.__name__.endswith("__args"):
+        return as_variadic_fn(lambda self, args: fn(args))
+
     if code.co_flags & CO_VARARGS:
-        pass
+        raise Exception("Variadic functions not supported by wrap")
     else:
         argc = code.co_argcount
         if argc == 0:
@@ -309,6 +333,8 @@ def wrap_fn(fn):
 
 
 def extend(pfn, tp1, tp2=None):
+    """Extends a protocol to the given Type (not python type), with the decorated function
+       wraps the decorated function"""
     def extend_inner(fn):
         if tp2 is None:
             pfn.extend(tp1, wrap_fn(fn))
@@ -322,6 +348,9 @@ def extend(pfn, tp1, tp2=None):
 
 
 def as_var(ns, name=None):
+    """Locates a var with the given name (defaulting to the namespace pixie.stdlib), sets
+       the root to the decorated function. If the function is not an instance of BaseCode it will
+       be wrapped. """
     if name is None:
         name = ns
         ns = "pixie.stdlib"

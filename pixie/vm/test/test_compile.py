@@ -31,7 +31,7 @@ def eval_string(s):
         result = compile(form).invoke([])
 
 def test_fn():
-    code = compile(read_code("((fn (x y) (+ x y)) 1 2)"))
+    code = compile(read_code("((fn [x y] (+ x y)) 1 2)"))
     assert isinstance(code, Code)
     retval = interpret(code)
     assert isinstance(retval, Integer) and retval.int_val() == 3
@@ -55,20 +55,20 @@ def test_if_eq():
     assert eval_string("(if (platform= 1 2) true false)") is false
 
 def test_return_self():
-    assert isinstance(eval_string("((fn r () r))"), Code)
+    assert isinstance(eval_string("((fn r [] r))"), Code)
 
 def test_recursive():
-    retval = eval_string("""((fn rf (x)
-                               (if (platform= x 1000)
+    retval = eval_string("""((fn rf [x]
+                               (if (platform= x 100)
                                    x
                                    (recur (+ x 1))))
                                0)""")
 
     assert isinstance(retval, Integer)
-    assert retval.int_val() == 1000
+    assert retval.int_val() == 100
 
 def test_closures():
-    retval = eval_string("""((fn (x) ((fn () x))) 42)""")
+    retval = eval_string("""((fn [x] ((fn [] x))) 42)""")
 
     assert isinstance(retval, Integer)
     assert retval.int_val() == 42
@@ -88,6 +88,25 @@ def test_def():
 def test_native():
     retval = eval_string("""(type 42)""")
     assert isinstance(retval, Type)
+
+
+def test_build_list():
+    retval = eval_string("""((fn [i lst]
+                              (if (platform= i 100)
+                                (count lst)
+                                (recur (+ i 1) (cons i lst)))) 0 nil)
+     """)
+
+    assert isinstance(retval, Integer) and retval.int_val() == 100
+
+def test_build_vector():
+    retval = eval_string("""((fn [i lst]
+                              (if (platform= i 100)
+                                (count lst)
+                                (recur (+ i 1) (conj lst i)))) 0 [])
+     """)
+
+    assert isinstance(retval, Integer) and retval.int_val() == 100
 #
 # def test_handlers():
 #     retval = eval_string("""(def x 42)

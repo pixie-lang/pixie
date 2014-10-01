@@ -10,7 +10,7 @@ class Object(object):
 class Type(Object):
 
     def __init__(self, name):
-        self.name = name
+        self._name = name
 
     def type(self):
         return Type._type
