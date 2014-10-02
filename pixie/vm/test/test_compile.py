@@ -59,13 +59,13 @@ def test_return_self():
 
 def test_recursive():
     retval = eval_string("""((fn rf [x]
-                               (if (platform= x 100)
+                               (if (platform= x 10)
                                    x
                                    (recur (+ x 1))))
                                0)""")
 
     assert isinstance(retval, Integer)
-    assert retval.int_val() == 100
+    assert retval.int_val() == 10
 
 def test_closures():
     retval = eval_string("""((fn [x] ((fn [] x))) 42)""")
@@ -92,21 +92,21 @@ def test_native():
 
 def test_build_list():
     retval = eval_string("""((fn [i lst]
-                              (if (platform= i 100)
+                              (if (platform= i 10)
                                 (count lst)
                                 (recur (+ i 1) (cons i lst)))) 0 nil)
      """)
 
-    assert isinstance(retval, Integer) and retval.int_val() == 100
+    assert isinstance(retval, Integer) and retval.int_val() == 10
 
 def test_build_vector():
     retval = eval_string("""((fn [i lst]
-                              (if (platform= i 100)
+                              (if (platform= i 10)
                                 (count lst)
                                 (recur (+ i 1) (conj lst i)))) 0 [])
      """)
 
-    assert isinstance(retval, Integer) and retval.int_val() == 100
+    assert isinstance(retval, Integer) and retval.int_val() == 10
 #
 # def test_handlers():
 #     retval = eval_string("""(def x 42)

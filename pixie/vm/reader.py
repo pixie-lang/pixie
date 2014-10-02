@@ -1,3 +1,4 @@
+py_object = object
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.numbers as numbers
@@ -64,7 +65,7 @@ def eat_whitespace(rdr):
         return
 
 
-class ReaderHandler(__builtins__.object):
+class ReaderHandler(py_object):
     def invoke(self, rdr, ch):
         pass
 

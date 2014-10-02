@@ -26,7 +26,7 @@ class Integer(Number):
         return Integer._type
 
 zero_int = Integer(0)
-one_int = Integer(0)
+one_int = Integer(1)
 
 IMath = Protocol("IMath")
 _add = DoublePolymorphicFn("-add", IMath)

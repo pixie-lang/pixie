@@ -1,3 +1,4 @@
+py_object = object
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
@@ -157,7 +158,7 @@ class Var(object.Object):
         return val
 
 
-class Namespace(__builtins__.object):
+class Namespace(py_object):
     def __init__(self, name):
         self._registry = {}
         self._name = name
@@ -173,7 +174,7 @@ class Namespace(__builtins__.object):
     def get(self, name, default):
         return self._registry.get(name, default)
 
-class NamespaceRegistry(__builtins__.object):
+class NamespaceRegistry(py_object):
     def __init__(self):
         self._registry = {}
 
