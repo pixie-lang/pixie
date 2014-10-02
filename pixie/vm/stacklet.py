@@ -12,11 +12,16 @@ import rpython.rlib.rstacklet as rstacklet
 
 th = rstacklet.StackletThread(None)
 
-class Box(py_object):
+class Box(object.Object):
+    _type = object.Type("Box")
     def __init__(self):
         self._val = None
 
+    def type(self):
+        return Box._type
+
 box = Box()
+box._val = None
 
 class WrappedHandler(BaseCode):
     _type = object.Type("Stacklet")
@@ -37,15 +42,19 @@ class WrappedHandler(BaseCode):
 
 def new_stacklet(f, val):
     global box
-    box = Box()
-    self_box = box
+    box._val = Box()
+    self_box = box._val
     def default_handler(h, o):
         global box
-        handler = WrappedHandler(h, box)
-        box = None
+        handler = WrappedHandler(h, box._val)
+        box._val = None
         handler._h = th.switch(handler._h)
         retval = f.invoke([handler, val])
         return handler._h
 
     h = th.new(default_handler)
     return WrappedHandler(h, self_box)
+
+@as_var("create-stacklet")
+def _new_stacklet(f):
+    return new_stacklet(f, nil)
