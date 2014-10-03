@@ -1,1 +1,1 @@
-../pypy/rpython/bin/rpython --opt=jit target.py
+../pypy/rpython/bin/rpython --opt=jit --continuation target.py

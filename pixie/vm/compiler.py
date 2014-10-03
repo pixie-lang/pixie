@@ -106,6 +106,15 @@ class Arg(LocalType):
     def emit(self, ctx):
         ctx.push_arg(self.idx)
 
+class LetBinding(LocalType):
+    def __init__(self, sp):
+        self.sp = sp
+
+    def emit(self, ctx):
+        ctx.bytecode.append(code.DUP_NTH)
+        ctx.bytecode.append(r_uint(ctx.sp - self.sp))
+        ctx.sp += 1
+
 class Self(LocalType):
     def __init__(self):
         pass
@@ -331,6 +340,42 @@ def compile_recur(form, ctx):
     ctx.sp -= (args - 1)
 
 
+def compile_let(form, ctx):
+    form = next(form)
+    bindings = first(form)
+    assert isinstance(bindings, PersistentVector)
+    body = next(form)
+
+    ctc = ctx.can_tail_call
+    ctx.disable_tail_call()
+
+    binding_count = 0
+    for i in range(0, count(bindings).int_val(), 2):
+        binding_count += 1
+        name = nth(bindings, numbers.Integer(i))
+        assert isinstance(name, symbol.Symbol)
+        bind = nth(bindings, numbers.Integer(i + 1))
+
+        compile_form(bind, ctx)
+
+        ctx.add_local(name._str, LetBinding(ctx.sp))
+
+    if ctc:
+        ctx.enable_tail_call()
+
+    while True:
+        compile_form(first(body), ctx)
+        body = next(body)
+
+        if body is nil:
+            break
+        else:
+            ctx.pop()
+
+    ctx.bytecode.append(code.POP_UP_N)
+    ctx.sp -= binding_count
+    ctx.bytecode.append(binding_count)
+
 
 builtins = {"fn": compile_fn,
             "if": compile_if,
@@ -338,7 +383,8 @@ builtins = {"fn": compile_fn,
             "def": compile_def,
             "do": compile_do,
             "quote": compile_quote,
-            "recur": compile_recur}
+            "recur": compile_recur,
+            "let": compile_let}
 
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:

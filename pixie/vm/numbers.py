@@ -30,11 +30,26 @@ one_int = Integer(1)
 
 IMath = Protocol("IMath")
 _add = DoublePolymorphicFn("-add", IMath)
+_sub = DoublePolymorphicFn("-sub", IMath)
+_mul = DoublePolymorphicFn("-mul", IMath)
+_div = DoublePolymorphicFn("-div", IMath)
 
 
 @extend(_add, Integer._type, Integer._type)
 def _add(a, b):
     return Integer(a.int_val() + b.int_val())
+
+@extend(_sub, Integer._type, Integer._type)
+def _sub(a, b):
+    return Integer(a.int_val() - b.int_val())
+
+@extend(_mul, Integer._type, Integer._type)
+def _mul(a, b):
+    return Integer(a.int_val() * b.int_val())
+
+@extend(_div, Integer._type, Integer._type)
+def _div(a, b):
+    return Integer(a.int_val() / b.int_val())
 
 
 # def add(a, b):

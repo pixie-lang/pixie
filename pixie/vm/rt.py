@@ -1,4 +1,4 @@
-
+__config__ = None
 
 def unwrap(fn):
     return lambda *args: fn.invoke(list(args))
@@ -20,6 +20,9 @@ def init():
             globals()[name] = unwrap(fn)
 
     globals()["__inited__"] = True
+
+
+
 
 
 

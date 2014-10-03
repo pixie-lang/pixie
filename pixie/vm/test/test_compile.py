@@ -115,6 +115,15 @@ def test_stacklets():
     """)
 
     assert isinstance(retval, Integer) and retval.int_val() == 42
+
+def test_let():
+    retval = eval_string(""" (let [x 42] x) """)
+
+    assert isinstance(retval, Integer) and retval.int_val() == 42
+
+    retval = eval_string(""" (let [x 42 y 1] (+ x y)) """)
+
+    assert isinstance(retval, Integer) and retval.int_val() == 43
 #
 # def test_handlers():
 #     retval = eval_string("""(def x 42)

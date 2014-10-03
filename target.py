@@ -37,7 +37,10 @@ def entry_point(argv):
     #     #    break
     #     val = read(StringReader(raw_input("user>")), True)
     #     print interpret(compile(val))
-    #interpret(compile(read(StringReader("((fn r (x) (if (platform= x 100000) x (r ((fn (x) (+ x 1)) x)))) 0)"), True)))
+    # interpret(compile(read(StringReader("""
+    #                          (do (def foo (fn [h v] (h 42)))
+    #                          ((create-stacklet foo) 0))
+    # """), True)))
     interpret(compile(read(StringReader(argv[1]), True)))
 
     return 0
@@ -91,7 +94,14 @@ def run_debug(argv):
 
 
 def target(*args):
+    import pixie.vm.rt as rt
+    rt.__config__ = args[0].config
+    import pixie.vm.stacklet
+
     return entry_point, None
+
+import rpython.config.translationoption
+print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
 

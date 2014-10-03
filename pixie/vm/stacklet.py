@@ -10,7 +10,17 @@ import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 import rpython.rlib.rstacklet as rstacklet
 
-th = rstacklet.StackletThread(None)
+class StackletThreadBox(py_object):
+    def __init__(self):
+        self._th = None
+
+
+th = StackletThreadBox()
+
+def init():
+    if th._th is None:
+        th._th = rstacklet.StackletThread(rt.__config__)
+
 
 class Box(object.Object):
     _type = object.Type("Box")
@@ -33,7 +43,7 @@ class WrappedHandler(BaseCode):
 
     def switch_to(self, val):
         self._box._val = val
-        self._h = th.switch(self._h)
+        self._h = th._th.switch(self._h)
         return self._box._val
 
     def _invoke(self, args):
@@ -41,9 +51,9 @@ class WrappedHandler(BaseCode):
         return self.switch_to(args[0])
 
 
-
 def new_stacklet(f, val):
     global box, fn_box, arg_box
+    init()
     box._val = Box()
     self_box = box._val
     fn_box._val = f
@@ -52,12 +62,12 @@ def new_stacklet(f, val):
         global box, fn_box, arg_box
         handler = WrappedHandler(h, box._val)
         box._val = None
-        handler._h = th.switch(handler._h)
+        handler._h = th._th.switch(handler._h)
         retval = fn_box._val.invoke([handler, arg_box._val])
 
         return handler._h
 
-    h = th.new(default_handler)
+    h = th._th.new(default_handler)
     return WrappedHandler(h, self_box)
 
 @as_var("create-stacklet")

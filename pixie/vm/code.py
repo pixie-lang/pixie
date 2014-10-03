@@ -22,7 +22,8 @@ BYTECODES = ["LOAD_CONST",
              "INSTALL",
              "RECUR",
              "ARG",
-             "PUSH_SELF"]
+             "PUSH_SELF",
+             "POP_UP_N"]
 
 for x in range(len(BYTECODES)):
     globals()[BYTECODES[x]] = r_uint(x)

@@ -222,6 +222,18 @@ def interpret(code_obj, args=[]):
             frame.push(frame.code_obj)
             continue
 
+        if inst == code.DUP_NTH:
+            n = frame.nth(frame.get_inst())
+            frame.push(n)
+            continue
+
+        if inst == code.POP_UP_N:
+            val = frame.pop()
+            num = frame.get_inst()
+            frame.pop_n(num)
+            frame.push(val)
+            continue
+
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]
         raise Exception()
 
