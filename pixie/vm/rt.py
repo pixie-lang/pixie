@@ -7,17 +7,17 @@ def init():
     if globals().has_key("__inited__"):
         return
 
-    import pixie.vm.protocols as proto
-    from pixie.vm.code import BaseCode
-    for name, fn in proto.__dict__.iteritems():
-        if isinstance(fn, BaseCode):
-            globals()[name] = unwrap(fn)
+    import pixie.vm.numbers
 
-    import pixie.vm.protocols as math
-    from pixie.vm.code import BaseCode
-    for name, fn in math.__dict__.iteritems():
-        if isinstance(fn, BaseCode):
-            globals()[name] = unwrap(fn)
+    from pixie.vm.code import _ns_registry, BaseCode, munge
+
+    for name, var in _ns_registry._registry["pixie.stdlib"]._registry.iteritems():
+        name = munge(name)
+        print name
+        if isinstance(var.deref(), BaseCode):
+            globals()[name] = unwrap(var)
+        else:
+            globals()[name] = var
 
     globals()["__inited__"] = True
 

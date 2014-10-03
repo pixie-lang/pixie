@@ -52,6 +52,9 @@ class BaseCode(object.Object):
     def get_bytecode(self):
         raise NotImplementedError()
 
+    def stack_size(self):
+        return 0
+
     def invoke(self, args):
         result = self._invoke(args)
         return result
@@ -84,11 +87,12 @@ class Code(BaseCode):
     def type(self):
         return Code._type
 
-    def __init__(self, name, bytecode, consts):
+    def __init__(self, name, bytecode, consts, stack_size):
         BaseCode.__init__(self)
         self._bytecode = bytecode
         self._consts = consts
         self._name = name
+        self._stack_size = stack_size
 
     def _invoke(self, args):
         return interpret(self, args)
@@ -98,6 +102,9 @@ class Code(BaseCode):
 
     def get_bytecode(self):
         return self._bytecode
+
+    def stack_size(self):
+        return self._stack_size
 
 class Closure(Code):
     _type = object.Type("Closure")
@@ -122,6 +129,9 @@ class Closure(Code):
     def get_bytecode(self):
         return self._code.get_bytecode()
 
+    def stack_size(self):
+        return self._code._stack_size
+
 class Undefined(object.Object):
     _type = object.Type("Undefined")
 
@@ -130,7 +140,7 @@ class Undefined(object.Object):
 
 undefined = Undefined()
 
-class Var(object.Object):
+class Var(BaseCode):
     _type = object.Type("Var")
     _immutable_fields_ = ["_rev?"]
 
@@ -157,6 +167,9 @@ class Var(object.Object):
         val = self.get_root(rev)
         assert val is not undefined
         return val
+
+    def _invoke(self, args):
+        return self.deref().invoke(args)
 
 
 class Namespace(py_object):
@@ -358,7 +371,7 @@ def as_var(ns, name=None):
         ns = "pixie.stdlib"
     var = intern_var(ns, name)
     def with_fn(fn):
-        if not isinstance(fn, BaseCode):
+        if not isinstance(fn, object.Object):
             fn = wrap_fn(fn)
         var.set_root(fn)
         return fn

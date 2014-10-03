@@ -31,7 +31,7 @@ class Frame(object):
         self.code_obj = code_obj
         self.sp = r_uint(0)
         self.ip = r_uint(0)
-        self.stack = [None] * 24
+        self.stack = [None] * code_obj.stack_size()
         self.args = args
         if code_obj is not None:
             self.unpack_code_obj()

@@ -1,5 +1,5 @@
 from pixie.vm.compiler import compile
-from pixie.vm.reader import StringReader, read, StreamReader, eof
+from pixie.vm.reader import StringReader, read, eof, PromptReader
 from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
@@ -24,7 +24,8 @@ class Policy(JitPolicy, AnnotatorPolicy):
 def jitpolicy(driver):
     return JitPolicy(jithookiface=DebugIFace())
 
-def entry_point(argv):
+def entry_point(foo=None):
+    print "Pixie 0.1 - Interactive REPL"
     #try:
     #    code = argv[1]
     #except IndexError:
@@ -41,7 +42,11 @@ def entry_point(argv):
     #                          (do (def foo (fn [h v] (h 42)))
     #                          ((create-stacklet foo) 0))
     # """), True)))
-    interpret(compile(read(StringReader(argv[1]), True)))
+    from pixie.vm.keyword import keyword
+    while True:
+        val = interpret(compile(read(PromptReader(), True)))
+        if val is keyword("exit-repl"):
+            break
 
     return 0
 
@@ -106,4 +111,4 @@ print rpython.config.translationoption.get_combined_translation_config()
 if __name__ == "__main__":
 
     #run_debug(sys.argv)
-    entry_point(sys.argv)
+    entry_point()

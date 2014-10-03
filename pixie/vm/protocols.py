@@ -19,15 +19,15 @@ defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
 #_first = PolymorphicFn("-first")
 #_next = PolymorphicFn("-next")
 
-@as_var("pixie.stdlib", "first")
+@as_var("first")
 def first(x):
     return rt._first(x)
 
-@as_var("pixie.stdlib", "next")
+@as_var("next")
 def next(x):
     return rt._next(x)
 
-@as_var("pixie.stdlib", "seq")
+@as_var("seq")
 def seq(x):
     return rt._seq(x)
 

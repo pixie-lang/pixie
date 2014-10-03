@@ -1,7 +1,7 @@
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
-from pixie.vm.code import DoublePolymorphicFn, extend, Protocol
+from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var
 
 
 class Number(object.Object):
@@ -28,11 +28,11 @@ class Integer(Number):
 zero_int = Integer(0)
 one_int = Integer(1)
 
-IMath = Protocol("IMath")
-_add = DoublePolymorphicFn("-add", IMath)
-_sub = DoublePolymorphicFn("-sub", IMath)
-_mul = DoublePolymorphicFn("-mul", IMath)
-_div = DoublePolymorphicFn("-div", IMath)
+IMath = as_var("IMath")(Protocol("IMath"))
+_add = as_var("-add")(DoublePolymorphicFn("-add", IMath))
+_sub = as_var("-sub")(DoublePolymorphicFn("-sub", IMath))
+_mul = as_var("-mul")(DoublePolymorphicFn("-mul", IMath))
+_div = as_var("-div")(DoublePolymorphicFn("-div", IMath))
 
 
 @extend(_add, Integer._type, Integer._type)

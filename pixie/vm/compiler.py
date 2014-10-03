@@ -22,19 +22,33 @@ class Context(object):
         self.bytecode = []
         self.consts = []
         self.locals = [locals]
-        self.sp = r_uint(argc)
+        self._sp = r_uint(argc)
+        self._max_sp = r_uint(argc)
         self.can_tail_call = False
         self.closed_overs = []
         self.name = name
         self.ns = "user"
 
+    def sp(self):
+        return self._sp
+
+    def add_sp(self, v):
+        self._sp += v
+        if self._max_sp < self._sp:
+            self._max_sp = self._sp
+
+    def sub_sp(self, v):
+        self._sp -= v
+        if self._max_sp < self._sp:
+            self._max_sp = self._sp
+
     def to_code(self):
-        return code.Code(self.name, self.bytecode, self.consts)
+        return code.Code(self.name, self.bytecode, self.consts, self._max_sp + 1)
 
     def push_arg(self, idx):
         self.bytecode.append(code.ARG)
         self.bytecode.append(r_uint(idx))
-        self.sp += 1
+        self.add_sp(1)
 
 
     def add_local(self, name, arg):
@@ -71,7 +85,7 @@ class Context(object):
     def push_const(self, v):
         self.bytecode.append(code.LOAD_CONST)
         self.bytecode.append(self.add_const(v))
-        self.sp += 1
+        self.add_sp(1)
 
     def label(self):
         lbl = len(self.bytecode)
@@ -89,7 +103,7 @@ class Context(object):
 
     def pop(self):
         self.bytecode.append(code.POP)
-        self.sp -= 1
+        self.sub_sp(1)
 
 
 
@@ -112,8 +126,8 @@ class LetBinding(LocalType):
 
     def emit(self, ctx):
         ctx.bytecode.append(code.DUP_NTH)
-        ctx.bytecode.append(r_uint(ctx.sp - self.sp))
-        ctx.sp += 1
+        ctx.bytecode.append(r_uint(ctx.sp() - self.sp))
+        ctx.add_sp(1)
 
 class Self(LocalType):
     def __init__(self):
@@ -121,7 +135,7 @@ class Self(LocalType):
 
     def emit(self, ctx):
         ctx.bytecode.append(code.PUSH_SELF)
-        ctx.sp += 1
+        ctx.add_sp(1)
 
 class Closure(LocalType):
     def __init__(self, local):
@@ -134,7 +148,7 @@ class ClosureCell(LocalType):
     def emit(self, ctx):
         ctx.bytecode.append(code.CLOSED_OVER)
         ctx.bytecode.append(self.idx)
-        ctx.sp += 1
+        ctx.add_sp(1)
 
 
 
@@ -192,7 +206,7 @@ def compile_platform_plus(form, ctx):
         form = form.next()
 
     ctx.bytecode.append(code.ADD)
-    ctx.sp -= 1
+    ctx.sub_sp(1)
     if ctc:
         ctx.enable_tail_call()
     return ctx
@@ -205,7 +219,7 @@ def compile_platform_eq(form, ctx):
         form = form.next()
 
     ctx.bytecode.append(code.EQ)
-    ctx.sp -= 1
+    ctx.sub_sp(1)
     return ctx
 
 def add_args(args, ctx):
@@ -260,7 +274,7 @@ def compile_fn(form, ctx):
             x.emit(ctx)
         ctx.bytecode.append(code.MAKE_CLOSURE)
         ctx.bytecode.append(r_uint(len(closed_overs)))
-        ctx.sp -= len(closed_overs)
+        ctx.sub_sp(len(closed_overs))
 
 
 
@@ -279,14 +293,14 @@ def compile_if(form, ctx):
     ctx.disable_tail_call()
     compile_form(test, ctx)
     ctx.bytecode.append(code.COND_BR)
-    ctx.sp -= 1
+    ctx.sub_sp(1)
     cond_lbl = ctx.label()
 
     ctx.enable_tail_call()
 
     compile_form(then, ctx)
     ctx.bytecode.append(code.JMP)
-    ctx.sp -= 1
+    ctx.sub_sp(1)
     else_lbl = ctx.label()
 
     ctx.mark(cond_lbl)
@@ -306,7 +320,7 @@ def compile_def(form, ctx):
     ctx.push_const(var)
     compile_form(val, ctx)
     ctx.bytecode.append(code.SET_VAR)
-    ctx.sp -= 1
+    ctx.sub_sp(1)
 
 def compile_do(form, ctx):
     form = form.next()
@@ -337,7 +351,8 @@ def compile_recur(form, ctx):
 
     ctx.bytecode.append(code.RECUR)
     ctx.bytecode.append(r_uint(args))
-    ctx.sp -= (args - 1)
+    assert args > 0, "Can't call an empty sexp"
+    ctx.sub_sp((args - 1))
 
 
 def compile_let(form, ctx):
@@ -358,7 +373,7 @@ def compile_let(form, ctx):
 
         compile_form(bind, ctx)
 
-        ctx.add_local(name._str, LetBinding(ctx.sp))
+        ctx.add_local(name._str, LetBinding(ctx.sp()))
 
     if ctc:
         ctx.enable_tail_call()
@@ -373,7 +388,7 @@ def compile_let(form, ctx):
             ctx.pop()
 
     ctx.bytecode.append(code.POP_UP_N)
-    ctx.sp -= binding_count
+    ctx.sub_sp(binding_count)
     ctx.bytecode.append(binding_count)
 
 
@@ -390,7 +405,7 @@ def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
         return builtins[form.first()._str](form, ctx)
 
-    cnt = r_uint(0)
+    cnt = 0
     ctc = ctx.can_tail_call
     while form is not nil:
         ctx.disable_tail_call()
@@ -407,7 +422,7 @@ def compile_cons(form, ctx):
     ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)
-    ctx.sp -= r_uint(cnt - 1)
+    ctx.sub_sp(cnt - 1)
 
 
 def compile(form):

@@ -7,6 +7,7 @@ from pixie.vm.symbol import symbol, Symbol
 from pixie.vm.keyword import keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
+from pixie.vm.libs.readline import _readline
 
 rt.init()
 
@@ -29,25 +30,23 @@ class StringReader(PlatformReader):
     def unread(self, ch):
         self._idx -= 1
 
-class StreamReader(PlatformReader):
-    def __init__(self, stream):
-        self._steam = stream
-        self._has_unread = False
-        self._unread_ch = None
+class PromptReader(PlatformReader):
+    def __init__(self):
+        self._string_reader = None
 
     def read(self):
-        if self._has_unread:
-            ch = self._unread_ch
-            if ch == "":
-                raise EOFError()
-            self._has_unread = False
-            return ch
-        return self._steam.read(0)
+        if self._string_reader is None:
+            self._string_reader = StringReader(_readline(">>") + "\n")
+
+        try:
+            return self._string_reader.read()
+        except EOFError:
+            self._string_reader = None
+            return self.read()
 
     def unread(self, ch):
-        assert not self._has_unread
-        self._has_unread = True
-        self._unread_ch = ch
+        assert self._string_reader is not None
+        self._string_reader.unread(ch)
 
 
 def is_whitespace(ch):

@@ -11,6 +11,8 @@ from pixie.vm.primitives import nil, true, false
 from pixie.vm.custom_types import CustomTypeInstance
 import unittest
 
+import pixie.vm.libs.readline
+
 def read_code(s):
     return read(StringReader(s), False)
 
@@ -111,7 +113,7 @@ def test_build_vector():
 def test_stacklets():
     retval = eval_string("""
                              (do (def foo (fn [h v] (h 42)))
-                             ((create-stacklet foo) 0))
+                                 ((create-stacklet foo) 0))
     """)
 
     assert isinstance(retval, Integer) and retval.int_val() == 42
