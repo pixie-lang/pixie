@@ -22,6 +22,8 @@ class Box(object.Object):
 
 box = Box()
 box._val = None
+fn_box = Box()
+arg_box = Box()
 
 class WrappedHandler(BaseCode):
     _type = object.Type("Stacklet")
@@ -41,15 +43,18 @@ class WrappedHandler(BaseCode):
 
 
 def new_stacklet(f, val):
-    global box
+    global box, fn_box, arg_box
     box._val = Box()
     self_box = box._val
+    fn_box._val = f
+    arg_box._val = val
     def default_handler(h, o):
-        global box
+        global box, fn_box, arg_box
         handler = WrappedHandler(h, box._val)
         box._val = None
         handler._h = th.switch(handler._h)
-        retval = f.invoke([handler, val])
+        retval = fn_box._val.invoke([handler, arg_box._val])
+
         return handler._h
 
     h = th.new(default_handler)
