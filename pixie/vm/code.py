@@ -64,7 +64,7 @@ class BaseCode(object.Object):
 
 class NativeFn(BaseCode):
     """Wrapper for a native function"""
-    _type = object.Type("NativeFn")
+    _type = object.Type(u"NativeFn")
 
     def __init__(self):
         BaseCode.__init__(self)
@@ -81,7 +81,7 @@ class NativeFn(BaseCode):
 
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
-    _type = object.Type("Code")
+    _type = object.Type(u"Code")
     __immutable_fields__ = ["_consts[*]", "_bytecode"]
 
     def type(self):
@@ -107,7 +107,7 @@ class Code(BaseCode):
         return self._stack_size
 
 class Closure(Code):
-    _type = object.Type("Closure")
+    _type = object.Type(u"Closure")
     __immutable_fields__ = ["_closed_overs[*]", "_code"]
     def type(self):
         return Closure._type
@@ -133,7 +133,7 @@ class Closure(Code):
         return self._code._stack_size
 
 class Undefined(object.Object):
-    _type = object.Type("Undefined")
+    _type = object.Type(u"Undefined")
 
     def type(self):
         return Undefined._type
@@ -141,7 +141,7 @@ class Undefined(object.Object):
 undefined = Undefined()
 
 class Var(BaseCode):
-    _type = object.Type("Var")
+    _type = object.Type(u"Var")
     _immutable_fields_ = ["_rev?"]
 
     def type(self):
@@ -229,11 +229,11 @@ class DefaultProtocolFn(NativeFn):
     def _invoke(self, args):
         from pixie.vm.string import String
         tp = args[0].type()._name
-        raise Exception("No override for " + tp + " on " + self._pfn._name + " in protocol " + self._pfn._protocol._name)
+        raise Exception(u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
 
 
 class Protocol(object.Object):
-    _type = object.Type("Protocol")
+    _type = object.Type(u"Protocol")
 
     def __init__(self, name):
         self._name = name
@@ -252,7 +252,7 @@ class Protocol(object.Object):
 
 
 class PolymorphicFn(BaseCode):
-    _type = object.Type("PolymorphicFn")
+    _type = object.Type(u"PolymorphicFn")
 
     __immutable_fields__ = ["_rev?"]
     def __init__(self, name, protocol):
@@ -279,7 +279,7 @@ class PolymorphicFn(BaseCode):
 
 class DoublePolymorphicFn(BaseCode):
     """A function that is polymorphic on the first two arguments"""
-    _type = object.Type("DoublePolymorphicFn")
+    _type = object.Type(u"DoublePolymorphicFn")
 
     __immutable_fields__ = ["_rev?"]
     def __init__(self, name, protocol):

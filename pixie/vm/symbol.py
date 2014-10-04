@@ -3,7 +3,7 @@ from pixie.vm.primitives import nil, true, false
 
 
 class Symbol(object.Object):
-    _type = object.Type("Symbol")
+    _type = object.Type(u"Symbol")
 
     def __init__(self, s):
         assert isinstance(s, unicode)

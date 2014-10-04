@@ -4,7 +4,7 @@ from pixie.vm.code import extend, as_var
 import pixie.vm.protocols as proto
 
 class String(Object):
-    _type = Type("pixie.stdlib.String")
+    _type = Type(u"pixie.stdlib.String")
 
     def type(self):
         return String._type
@@ -19,4 +19,4 @@ def _str(x):
 
 @extend(proto._repr, String._type)
 def _repr(self):
-    return "\"" + self._str + "\""
+    return String(u"\"" + self._str + u"\"")

@@ -392,14 +392,14 @@ def compile_let(form, ctx):
     ctx.bytecode.append(binding_count)
 
 
-builtins = {"fn": compile_fn,
-            "if": compile_if,
-            "platform=": compile_platform_eq,
-            "def": compile_def,
-            "do": compile_do,
-            "quote": compile_quote,
-            "recur": compile_recur,
-            "let": compile_let}
+builtins = {u"fn": compile_fn,
+            u"if": compile_if,
+            u"platform=": compile_platform_eq,
+            u"def": compile_def,
+            u"do": compile_do,
+            u"quote": compile_quote,
+            u"recur": compile_recur,
+            u"let": compile_let}
 
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
@@ -426,7 +426,7 @@ def compile_cons(form, ctx):
 
 
 def compile(form):
-    ctx = Context("main", 0, {})
+    ctx = Context(u"main", 0, {})
     compile_form(form, ctx)
     ctx.bytecode.append(code.RETURN)
     return ctx.to_code()

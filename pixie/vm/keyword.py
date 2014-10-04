@@ -3,7 +3,7 @@ from pixie.vm.primitives import nil, true, false
 
 
 class Keyword(Object):
-    _type = Type("Keyword")
+    _type = Type(u"Keyword")
 
     def __init__(self, name):
         self._name = name

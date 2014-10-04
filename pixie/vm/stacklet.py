@@ -23,7 +23,7 @@ def init():
 
 
 class Box(object.Object):
-    _type = object.Type("Box")
+    _type = object.Type(u"Box")
     def __init__(self):
         self._val = None
 
@@ -36,7 +36,7 @@ fn_box = Box()
 arg_box = Box()
 
 class WrappedHandler(BaseCode):
-    _type = object.Type("Stacklet")
+    _type = object.Type(u"Stacklet")
     def __init__(self, h, box):
         self._h = h
         self._box = box

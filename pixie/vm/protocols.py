@@ -22,7 +22,7 @@ defprotocol("pixie.stdlib", "IObject", ["-hash", "-eq", "-str", "-repr"])
 def default_str(x):
     from pixie.vm.string import String
 
-    return String("<inst " + x.type()._name + ">")
+    return String(u"<inst " + x.type()._name + u">")
 
 _str.set_default_fn(wrap_fn(default_str))
 _repr.set_default_fn(wrap_fn(default_str))

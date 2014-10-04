@@ -12,13 +12,13 @@ from pixie.vm.libs.readline import _readline
 rt.init()
 
 class PlatformReader(object.Object):
-    _type = object.Type("PlatformReader")
+    _type = object.Type(u"PlatformReader")
 
 class StringReader(PlatformReader):
 
-    def __init__(self, str):
-        assert isinstance(str, unicode)
-        self._str = str
+    def __init__(self, s):
+        assert isinstance(s, unicode)
+        self._str = s
         self._idx = 0
 
     def read(self):
@@ -37,7 +37,7 @@ class PromptReader(PlatformReader):
 
     def read(self):
         if self._string_reader is None:
-            self._string_reader = StringReader(_readline(">>") + "\n")
+            self._string_reader = StringReader(_readline(">>") + u"\n")
 
         try:
             return self._string_reader.read()
@@ -51,10 +51,10 @@ class PromptReader(PlatformReader):
 
 
 def is_whitespace(ch):
-    return ch in "\r\n\t ," or ch == ""
+    return ch in u"\r\n\t ," or ch == u""
 
 def is_digit(ch):
-    return ch in "0123456789"
+    return ch in u"0123456789"
 
 def eat_whitespace(rdr):
     while True:
@@ -75,7 +75,7 @@ class ListReader(ReaderHandler):
         while True:
             eat_whitespace(rdr)
             ch = rdr.read()
-            if ch == ")":
+            if ch == u")":
                 acc = nil
                 for x in range(len(lst) - 1, -1, -1):
                     acc = cons(lst[x], acc)
@@ -94,7 +94,7 @@ class VectorReader(ReaderHandler):
         while True:
             eat_whitespace(rdr)
             ch = rdr.read()
-            if ch == "]":
+            if ch == u"]":
                 return acc
 
             rdr.unread(ch)
@@ -107,7 +107,7 @@ class UnmachedVectorReader(ReaderHandler):
 class QuoteReader(ReaderHandler):
     def invoke(self, rdr, ch):
         itm = read(rdr, True)
-        return cons(symbol("quote"), cons(itm))
+        return cons(symbol(u"quote"), cons(itm))
 
 class KeywordReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -116,12 +116,12 @@ class KeywordReader(ReaderHandler):
 
         return keyword(itm._str)
 
-handlers = {"(": ListReader(),
-            ")": UnmachedListReader(),
-            "[": VectorReader(),
-            "]": UnmachedVectorReader(),
-            "'": QuoteReader(),
-            ":": KeywordReader()}
+handlers = {u"(": ListReader(),
+            u")": UnmachedListReader(),
+            u"[": VectorReader(),
+            u"]": UnmachedVectorReader(),
+            u"'": QuoteReader(),
+            u":": KeywordReader()}
 
 def read_number(rdr, ch):
     acc = [ch]
@@ -135,7 +135,7 @@ def read_number(rdr, ch):
     except EOFError:
         pass
 
-    return numbers.Integer(int("".join(acc)))
+    return numbers.Integer(int(u"".join(acc)))
 
 def read_symbol(rdr, ch):
     acc = [ch]
@@ -150,16 +150,16 @@ def read_symbol(rdr, ch):
         pass
 
     sym_str = u"".join(acc)
-    if sym_str == "true":
+    if sym_str == u"true":
         return true
-    if sym_str == "false":
+    if sym_str == u"false":
         return false
-    if sym_str == "nil":
+    if sym_str == u"nil":
         return nil
     return symbol(sym_str)
 
 class EOF(object.Object):
-    _type = object.Type("EOF")
+    _type = object.Type(u"EOF")
 
 
 eof = EOF()
@@ -180,7 +180,7 @@ def read(rdr, error_on_eof):
     if macro is not None:
         return macro.invoke(rdr, ch)
 
-    if is_digit(ch) or ch == "-":
+    if is_digit(ch) or ch == u"-":
         return read_number(rdr, ch)
 
     return read_symbol(rdr, ch)

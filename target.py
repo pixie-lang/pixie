@@ -49,7 +49,7 @@ def entry_point(foo=None):
     rdr = PromptReader()
     while True:
         val = interpret(compile(read(rdr, True)))
-        if val is keyword("exit-repl"):
+        if val is keyword(u"exit-repl"):
             break
         val = rt.str(val)
         assert isinstance(val, String), "str should always return a string"

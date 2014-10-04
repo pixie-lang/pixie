@@ -10,7 +10,7 @@ class Number(object.Object):
 
 
 class Integer(Number):
-    _type = object.Type("Integer")
+    _type = object.Type(u"Integer")
     _immutable_fields_ = ["_int_val"]
 
     def __init__(self, i_val):
@@ -28,11 +28,11 @@ class Integer(Number):
 zero_int = Integer(0)
 one_int = Integer(1)
 
-IMath = as_var("IMath")(Protocol("IMath"))
-_add = as_var("-add")(DoublePolymorphicFn("-add", IMath))
-_sub = as_var("-sub")(DoublePolymorphicFn("-sub", IMath))
-_mul = as_var("-mul")(DoublePolymorphicFn("-mul", IMath))
-_div = as_var("-div")(DoublePolymorphicFn("-div", IMath))
+IMath = as_var("IMath")(Protocol(u"IMath"))
+_add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
+_sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))
+_mul = as_var("-mul")(DoublePolymorphicFn(u"-mul", IMath))
+_div = as_var("-div")(DoublePolymorphicFn(u"-div", IMath))
 
 
 @extend(_add, Integer._type, Integer._type)
@@ -73,10 +73,10 @@ def init():
 
     @extend(proto._str, Integer._type)
     def _str(i):
-        return String(str(i.int_val()))
+        return String(unicode(str(i.int_val())))
 
     @extend(proto._repr, Integer._type)
     def _repr(i):
-        return String(str(i.int_val()))
+        return String(unicode(str(i.int_val())))
 
 
