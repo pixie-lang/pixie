@@ -2,7 +2,7 @@ from pixie.vm.object import Object
 from pixie.vm.primitives import nil, true, false, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
 import pixie.vm.numbers as numbers
-from pixie.vm.cons import cons, Cons, count
+from pixie.vm.cons import cons, Cons
 import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
@@ -27,7 +27,7 @@ class Context(object):
         self.can_tail_call = False
         self.closed_overs = []
         self.name = name
-        self.ns = "user"
+        self.ns = u"user"
 
     def sp(self):
         return self._sp
@@ -169,7 +169,7 @@ def compile_form(form, ctx):
         if loc is None:
             var = code.get_var_if_defined(ctx.ns, name)
             if var is None:
-                var = code.get_var_if_defined("pixie.stdlib", name)
+                var = code.get_var_if_defined(u"pixie.stdlib", name)
 
             if var is None:
                 var = code.intern_var(ctx.ns, name)
@@ -213,7 +213,7 @@ def compile_platform_plus(form, ctx):
 
 def compile_platform_eq(form, ctx):
     form = form.next()
-    assert count(form).int_val() == 2
+    assert rt.count(form).int_val() == 2
     while form is not nil:
         compile_form(form.first(), ctx)
         form = form.next()
@@ -223,7 +223,7 @@ def compile_platform_eq(form, ctx):
     return ctx
 
 def add_args(args, ctx):
-    for x in range(count(args).int_val()):
+    for x in range(rt.count(args).int_val()):
         arg = rt.nth(args, numbers.Integer(x))
         assert isinstance(arg, symbol.Symbol)
         ctx.add_local(arg._str, Arg(x))
@@ -236,16 +236,16 @@ def compile_fn(form, ctx):
 
     form = next(form)
     if isinstance(form.first(), symbol.Symbol):
-        name = first(form)
+        name = rt.first(form)
         form = next(form)
     else:
-        name = symbol.symbol("unknown")
+        name = symbol.symbol(u"unknown")
 
-    args = first(form)
+    args = rt.first(form)
     assert isinstance(args, PersistentVector), "Args must be a vector"
 
     body = next(form)
-    new_ctx = Context(name._str, count(args).int_val(), ctx.locals[-1])
+    new_ctx = Context(name._str, rt.count(args).int_val(), ctx.locals[-1])
     add_args(args, new_ctx)
     bc = 0
 
@@ -282,7 +282,7 @@ def compile_fn(form, ctx):
 
 def compile_if(form, ctx):
     form = form.next()
-    assert count(form).int_val() == 3
+    assert rt.count(form).int_val() == 3
 
     test = form.first()
     form = form.next()
@@ -357,7 +357,7 @@ def compile_recur(form, ctx):
 
 def compile_let(form, ctx):
     form = next(form)
-    bindings = first(form)
+    bindings = rt.first(form)
     assert isinstance(bindings, PersistentVector)
     body = next(form)
 
@@ -365,11 +365,11 @@ def compile_let(form, ctx):
     ctx.disable_tail_call()
 
     binding_count = 0
-    for i in range(0, count(bindings).int_val(), 2):
+    for i in range(0, rt.count(bindings).int_val(), 2):
         binding_count += 1
-        name = nth(bindings, numbers.Integer(i))
+        name = rt.nth(bindings, numbers.Integer(i))
         assert isinstance(name, symbol.Symbol)
-        bind = nth(bindings, numbers.Integer(i + 1))
+        bind = rt.nth(bindings, numbers.Integer(i + 1))
 
         compile_form(bind, ctx)
 
@@ -379,7 +379,7 @@ def compile_let(form, ctx):
         ctx.enable_tail_call()
 
     while True:
-        compile_form(first(body), ctx)
+        compile_form(rt.first(body), ctx)
         body = next(body)
 
         if body is nil:

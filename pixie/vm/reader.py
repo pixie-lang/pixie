@@ -17,6 +17,7 @@ class PlatformReader(object.Object):
 class StringReader(PlatformReader):
 
     def __init__(self, str):
+        assert isinstance(str, unicode)
         self._str = str
         self._idx = 0
 
@@ -148,7 +149,7 @@ def read_symbol(rdr, ch):
     except EOFError:
         pass
 
-    sym_str = "".join(acc)
+    sym_str = u"".join(acc)
     if sym_str == "true":
         return true
     if sym_str == "false":

@@ -6,6 +6,7 @@ class Symbol(object.Object):
     _type = object.Type("Symbol")
 
     def __init__(self, s):
+        assert isinstance(s, unicode)
         self._str = s
 
     def type(self):

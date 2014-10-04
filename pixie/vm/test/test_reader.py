@@ -8,14 +8,14 @@ import pixie.vm.rt as rt
 import unittest
 
 
-data = {"(1 2)": (1, 2,),
-        "(foo)": (symbol("foo"),),
-        "foo": symbol("foo"),
-        "1": 1,
-        "2": 2,
-        "((42))": ((42,),),
-        "(platform+ 1 2)": (symbol("platform+"), 1, 2),
-        "[42 43 44]": [42, 43, 44]}
+data = {u"(1 2)": (1, 2,),
+        u"(foo)": (symbol(u"foo"),),
+        u"foo": symbol(u"foo"),
+        u"1": 1,
+        u"2": 2,
+        u"((42))": ((42,),),
+        u"(platform+ 1 2)": (symbol(u"platform+"), 1, 2),
+        u"[42 43 44]": [42, 43, 44]}
 
 class TestReader(unittest.TestCase):
     def _compare(self, frm, to):

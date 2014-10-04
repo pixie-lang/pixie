@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from pixie.vm.object import Object, Type
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend
 from types import MethodType
@@ -94,6 +95,11 @@ def nth(a, b):
 @as_var("str")
 def str(a):
     return rt._str(a)
+
+@as_var("print")
+def _print(a):
+    print rt._str(a)._str
+    return nil
 
 import pixie.vm.rt as rt
 

@@ -14,16 +14,16 @@ import unittest
 import pixie.vm.libs.readline
 
 def read_code(s):
-    return read(StringReader(s), False)
+    return read(StringReader(unicode(s)), False)
 
 def test_add_compilation():
-    code = compile(read_code("(platform+ 1 2)"))
+    code = compile(read_code(u"(platform+ 1 2)"))
     assert isinstance(code, Code)
 
     #interpret(code)
 
 def eval_string(s):
-    rdr = StringReader(s)
+    rdr = StringReader(unicode(s))
     result = nil
     while True:
         form = read(rdr, False)
@@ -50,8 +50,8 @@ def test_if():
     assert isinstance(retval, Integer) and retval.int_val() == 3
 
 def test_eq():
-    assert eval_string("(platform= 1 2)") is false
-    assert eval_string("(platform= 1 1)") is true
+    assert eval_string(u"(platform= 1 2)") is false
+    assert eval_string(u"(platform= 1 1)") is true
 
 def test_if_eq():
     assert eval_string("(if (platform= 1 2) true false)") is false

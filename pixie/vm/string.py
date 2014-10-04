@@ -10,6 +10,7 @@ class String(Object):
         return String._type
 
     def __init__(self, s):
+        assert isinstance(s, unicode)
         self._str = s
 
 @extend(proto._str, String._type)

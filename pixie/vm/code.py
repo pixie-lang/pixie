@@ -178,7 +178,7 @@ class Namespace(py_object):
         self._name = name
 
     def intern_or_make(self, name):
-        assert isinstance(name, str)
+        assert isinstance(name, unicode)
         v = self._registry.get(name, None)
         if v is None:
             v = Var(name).set_root(nil)
@@ -193,7 +193,7 @@ class NamespaceRegistry(py_object):
         self._registry = {}
 
     def find_or_make(self, name):
-        assert isinstance(name, str)
+        assert isinstance(name, unicode), name + " is not unicode"
         v = self._registry.get(name, None)
         if v is None:
             v = Namespace(name)
@@ -209,7 +209,7 @@ _ns_registry = NamespaceRegistry()
 def intern_var(ns, name=None):
     if name is None:
         name = ns
-        ns = ""
+        ns = u""
 
     return _ns_registry.find_or_make(ns).intern_or_make(name)
 
@@ -322,6 +322,9 @@ def defprotocol(ns, name, methods):
     """Define a protocol in the given namespace with the given name and methods, vars will
        be created in the namespace for the protocol and methods. This function will dump
        variables for the created protocols/methods in the globals() where this function is called."""
+    ns = unicode(ns)
+    name = unicode(name)
+    methods = map(unicode, methods)
     gbls = inspect.currentframe().f_back.f_globals
     proto =  Protocol(name)
     intern_var(ns, name).set_root(proto)
@@ -334,7 +337,7 @@ def defprotocol(ns, name, methods):
 
 ## PYTHON FLAGS
 CO_VARARGS = 0x4
-def wrap_fn(fn):
+def wrap_fn(fn, tp=object.Object):
     """Converts a native Python function into a pixie function."""
     def as_native_fn(f):
         return type("W"+fn.__name__, (NativeFn,), {"inner_invoke": f})()
@@ -363,11 +366,17 @@ def wrap_fn(fn):
 def extend(pfn, tp1, tp2=None):
     """Extends a protocol to the given Type (not python type), with the decorated function
        wraps the decorated function"""
+    if isinstance(tp1, type):
+        assert_tp = tp1
+        tp1 = tp1._type
+    else:
+        assert_tp = object.Object
+
     def extend_inner(fn):
         if tp2 is None:
-            pfn.extend(tp1, wrap_fn(fn))
+            pfn.extend(tp1, wrap_fn(fn, assert_tp))
         else:
-            pfn.extend2(tp1, tp2, wrap_fn(fn))
+            pfn.extend2(tp1, tp2, wrap_fn(fn, assert_tp))
 
         return pfn
 
@@ -382,6 +391,10 @@ def as_var(ns, name=None):
     if name is None:
         name = ns
         ns = "pixie.stdlib"
+
+    name = name if isinstance(name, unicode) else unicode(name)
+    ns = ns if isinstance(ns, unicode) else unicode(ns)
+
     var = intern_var(ns, name)
     def with_fn(fn):
         if not isinstance(fn, object.Object):

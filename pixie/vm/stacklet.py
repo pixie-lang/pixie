@@ -50,6 +50,9 @@ class WrappedHandler(BaseCode):
         assert len(args) == 1
         return self.switch_to(args[0])
 
+    def type(self):
+        return WrappedHandler._type
+
 
 def new_stacklet(f, val):
     global box, fn_box, arg_box
