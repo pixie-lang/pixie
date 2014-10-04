@@ -8,6 +8,9 @@ class Keyword(Object):
     def __init__(self, name):
         self._name = name
 
+    def type(self):
+        return Keyword._type
+
 
 class KeywordCache(object):
     def __init__(self):

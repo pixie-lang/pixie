@@ -2,7 +2,7 @@ from pixie.vm.object import Object, Type
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
-from pixie.vm.numbers import Integer, zero_int, _add
+import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
 import rpython.rlib.rstacklet as rstacklet
 
@@ -15,6 +15,16 @@ defprotocol("pixie.stdlib", "ICounted", ["-count"])
 defprotocol("pixie.stdlib", "IIndexed", ["-nth"])
 
 defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
+
+defprotocol("pixie.stdlib", "IObject", ["-hash", "-eq", "-str", "-repr"])
+
+def default_str(x):
+    from pixie.vm.string import String
+
+    return String("<inst " + x.type()._name + ">")
+
+_str.set_default_fn(wrap_fn(default_str))
+_repr.set_default_fn(wrap_fn(default_str))
 
 #_first = PolymorphicFn("-first")
 #_next = PolymorphicFn("-next")
@@ -51,7 +61,7 @@ def _seq(_):
 
 @extend(_count, nil._type)
 def _count(_):
-    return zero_int
+    return numbers.zero_int
 
 
 _count_driver = jit.JitDriver(name="pixie.stdlib.count",
@@ -63,7 +73,7 @@ def count(x):
     while True:
         _count_driver.jit_merge_point(tp=rt.type(x))
         if ICounted.satisfies(rt.type(x)):
-           return rt._add(Integer(acc), rt._count(x))
+           return rt._add(numbers.Integer(acc), rt._count(x))
         acc += 1
         x = rt.next(rt.seq(x))
 
@@ -81,5 +91,10 @@ def nth(a, b):
     return rt._nth(a, b)
 
 
+@as_var("str")
+def str(a):
+    return rt._str(a)
 
 import pixie.vm.rt as rt
+
+

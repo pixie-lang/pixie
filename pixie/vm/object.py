@@ -5,7 +5,7 @@ class Object(object):
     """
 
     def type(self):
-        assert False;
+        assert False, str(self)
 
 class Type(Object):
 

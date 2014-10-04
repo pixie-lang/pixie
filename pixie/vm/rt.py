@@ -7,7 +7,8 @@ def init():
     if globals().has_key("__inited__"):
         return
 
-    import pixie.vm.numbers
+    import pixie.vm.numbers as numbers
+    numbers.init()
 
     from pixie.vm.code import _ns_registry, BaseCode, munge
 

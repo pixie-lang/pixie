@@ -43,10 +43,17 @@ def entry_point(foo=None):
     #                          ((create-stacklet foo) 0))
     # """), True)))
     from pixie.vm.keyword import keyword
+    import pixie.vm.rt as rt
+    from pixie.vm.string import String
+
+    rdr = PromptReader()
     while True:
-        val = interpret(compile(read(PromptReader(), True)))
+        val = interpret(compile(read(rdr, True)))
         if val is keyword("exit-repl"):
             break
+        val = rt.str(val)
+        assert isinstance(val, String), "str should always return a string"
+        print val._str
 
     return 0
 

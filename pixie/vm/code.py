@@ -222,6 +222,14 @@ def get_var_if_defined(ns, name):
 
 
 
+class DefaultProtocolFn(NativeFn):
+    def __init__(self, pfn):
+        self._pfn = pfn
+
+    def _invoke(self, args):
+        from pixie.vm.string import String
+        tp = args[0].type()._name
+        raise Exception("No override for " + tp + " on " + self._pfn._name + " in protocol " + self._pfn._protocol._name)
 
 
 class Protocol(object.Object):
@@ -231,6 +239,7 @@ class Protocol(object.Object):
         self._name = name
         self._polyfns = {}
         self._satisfies = {}
+
 
     def add_method(self, pfn):
         self._polyfns[pfn] = pfn
@@ -251,6 +260,7 @@ class PolymorphicFn(BaseCode):
         self._dict = {}
         self._rev = 0
         self._protocol = protocol
+        self._default_fn = DefaultProtocolFn(self)
         protocol.add_method(self)
 
     def extend(self, tp, fn):
@@ -258,10 +268,13 @@ class PolymorphicFn(BaseCode):
         self._rev += 1
         self._protocol.add_satisfies(tp)
 
+    def set_default_fn(self, fn):
+        self._default_fn = fn
+        self._rev += 1
+
     def _invoke(self, args):
         a = args[0].type()
-        fn = self._dict.get(a, None)
-        assert fn is not None, "No override for " + self._name + " for type " + a._name
+        fn = self._dict.get(a, self._default_fn)
         return fn.invoke(args)
 
 class DoublePolymorphicFn(BaseCode):

@@ -66,3 +66,17 @@ def eq(a, b):
 
     raise Exception("Add error")
 
+
+def init():
+    import pixie.vm.protocols as proto
+    from pixie.vm.string import String
+
+    @extend(proto._str, Integer._type)
+    def _str(i):
+        return String(str(i.int_val()))
+
+    @extend(proto._repr, Integer._type)
+    def _repr(i):
+        return String(str(i.int_val()))
+
+
