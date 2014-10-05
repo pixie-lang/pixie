@@ -69,6 +69,18 @@ def test_recursive():
     assert isinstance(retval, Integer)
     assert retval.int_val() == 10
 
+def test_loop():
+    retval = eval_string("""
+      (loop [x 0]
+        (if (platform= x 10)
+          x
+          (recur (+ x 1))))
+
+    """)
+
+    assert isinstance(retval, Integer)
+    assert retval.int_val() == 10
+
 def test_closures():
     retval = eval_string("""((fn [x] ((fn [] x))) 42)""")
 

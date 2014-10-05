@@ -234,6 +234,18 @@ def interpret(code_obj, args=[]):
             frame.push(val)
             continue
 
+        if inst == code.LOOP_RECUR:
+            argc = frame.get_inst()
+            stack_depth = frame.get_inst()
+            ip = frame.get_inst()
+
+            args = frame.pop_n(argc)
+            frame.pop_n(stack_depth)
+            frame.pop_n(argc)
+            frame.push_n(args, argc)
+            frame.ip = ip
+            continue
+
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]
         raise Exception()
 

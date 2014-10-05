@@ -21,6 +21,7 @@ BYTECODES = ["LOAD_CONST",
              "DEREF_VAR",
              "INSTALL",
              "RECUR",
+             "LOOP_RECUR",
              "ARG",
              "PUSH_SELF",
              "POP_UP_N"]

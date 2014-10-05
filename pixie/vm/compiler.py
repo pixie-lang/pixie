@@ -28,6 +28,7 @@ class Context(object):
         self.closed_overs = []
         self.name = name
         self.ns = u"user"
+        self.recur_points = []
 
     def sp(self):
         return self._sp
@@ -41,6 +42,15 @@ class Context(object):
         self._sp -= v
         if self._max_sp < self._sp:
             self._max_sp = self._sp
+
+    def get_recur_point(self):
+        return self.recur_points[-1]
+
+    def push_recur_point(self, point):
+        self.recur_points.append(point)
+
+    def pop_recur_point(self):
+        self.recur_points.pop()
 
     def to_code(self):
         return code.Code(self.name, self.bytecode, self.consts, self._max_sp + 1)
@@ -107,7 +117,28 @@ class Context(object):
 
 
 
+class RecurPoint(object):
+    pass
 
+class FunctionRecurPoint(RecurPoint):
+    def __init__(self):
+        pass
+
+    def emit(self, ctx, argc):
+        ctx.bytecode.append(code.RECUR)
+        ctx.bytecode.append(argc)
+
+class LoopRecurPoint(RecurPoint):
+    def __init__(self, argc, ctx):
+        self._argc = argc
+        self._ip = len(ctx.bytecode)
+
+    def emit(self, ctx, argc):
+        assert self._argc == argc
+        ctx.bytecode.append(code.LOOP_RECUR)
+        ctx.bytecode.append(argc)
+        ctx.bytecode.append(ctx.sp() - argc - self._argc)
+        ctx.bytecode.append(self._ip)
 
 
 class LocalType(object):
@@ -253,6 +284,7 @@ def compile_fn(form, ctx):
         assert isinstance(name, symbol.Symbol)
         new_ctx.add_local(name._str, Self())
 
+    new_ctx.push_recur_point(FunctionRecurPoint())
 
     new_ctx.disable_tail_call()
     while body is not nil:
@@ -349,8 +381,9 @@ def compile_recur(form, ctx):
         args += 1
         form = form.next()
 
-    ctx.bytecode.append(code.RECUR)
-    ctx.bytecode.append(r_uint(args))
+    #ctx.bytecode.append(code.RECUR)
+    #ctx.bytecode.append(r_uint(args))
+    ctx.get_recur_point().emit(ctx, args)
     assert args > 0, "Can't call an empty sexp"
     ctx.sub_sp((args - 1))
 
@@ -391,6 +424,44 @@ def compile_let(form, ctx):
     ctx.sub_sp(binding_count)
     ctx.bytecode.append(binding_count)
 
+def compile_loop(form, ctx):
+    form = next(form)
+    bindings = rt.first(form)
+    assert isinstance(bindings, PersistentVector)
+    body = next(form)
+
+    ctc = ctx.can_tail_call
+    ctx.disable_tail_call()
+
+    binding_count = 0
+    for i in range(0, rt.count(bindings).int_val(), 2):
+        binding_count += 1
+        name = rt.nth(bindings, numbers.Integer(i))
+        assert isinstance(name, symbol.Symbol)
+        bind = rt.nth(bindings, numbers.Integer(i + 1))
+
+        compile_form(bind, ctx)
+
+        ctx.add_local(name._str, LetBinding(ctx.sp()))
+
+    if ctc:
+        ctx.enable_tail_call()
+
+    ctx.push_recur_point(LoopRecurPoint(binding_count, ctx))
+    while True:
+        compile_form(rt.first(body), ctx)
+        body = next(body)
+
+        if body is nil:
+            break
+        else:
+            ctx.pop()
+
+    ctx.pop_recur_point()
+    ctx.bytecode.append(code.POP_UP_N)
+    ctx.sub_sp(binding_count)
+    ctx.bytecode.append(binding_count)
+
 
 builtins = {u"fn": compile_fn,
             u"if": compile_if,
@@ -399,7 +470,8 @@ builtins = {u"fn": compile_fn,
             u"do": compile_do,
             u"quote": compile_quote,
             u"recur": compile_recur,
-            u"let": compile_let}
+            u"let": compile_let,
+            u"loop": compile_loop}
 
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
