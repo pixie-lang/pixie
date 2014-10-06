@@ -244,6 +244,11 @@ def interpret(code_obj, args=[]):
             frame.pop_n(argc)
             frame.push_n(args, argc)
             frame.ip = ip
+
+            jitdriver.can_enter_jit(bc=frame.bc,
+                                  ip=frame.ip,
+                                  sp=frame.sp,
+                                  frame=frame)
             continue
 
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]

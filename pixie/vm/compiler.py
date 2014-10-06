@@ -6,6 +6,7 @@ from pixie.vm.cons import cons, Cons
 import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
+from pixie.vm.string import String
 from rpython.rlib.rarithmetic import r_uint
 
 import pixie.vm.rt as rt
@@ -225,6 +226,9 @@ def compile_form(form, ctx):
         ctx.push_const(EMPTY)
         return
 
+    if isinstance(form, String):
+        ctx.push_const(form)
+        return
 
     raise Exception("Can't compile ")
 

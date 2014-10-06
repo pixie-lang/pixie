@@ -8,6 +8,7 @@ from pixie.vm.keyword import keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
+from pixie.vm.string import String
 
 rt.init()
 
@@ -116,12 +117,28 @@ class KeywordReader(ReaderHandler):
 
         return keyword(itm._str)
 
+class LiteralStringReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        acc = []
+
+        # TODO: implement escape characters
+        while True:
+            try:
+                v = rdr.read()
+            except EOFError:
+                raise Exception("unmatched quote")
+            if v == "\"":
+                return String(u"".join(acc))
+            acc.append(v)
+
+
 handlers = {u"(": ListReader(),
             u")": UnmachedListReader(),
             u"[": VectorReader(),
             u"]": UnmachedVectorReader(),
             u"'": QuoteReader(),
-            u":": KeywordReader()}
+            u":": KeywordReader(),
+            u"\"": LiteralStringReader()}
 
 def read_number(rdr, ch):
     acc = [ch]
