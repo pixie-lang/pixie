@@ -45,6 +45,7 @@ def entry_point(foo=None):
     from pixie.vm.keyword import keyword
     import pixie.vm.rt as rt
     from pixie.vm.string import String
+    rt.load_file(String(u"pixie/stdlib.lisp"))
 
     rdr = PromptReader()
     while True:

@@ -19,6 +19,8 @@ defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
 
 defprotocol("pixie.stdlib", "IObject", ["-hash", "-eq", "-str", "-repr"])
 
+defprotocol("pixie.stdlib", "IReduce", ["-reduce"])
+
 def default_str(x):
     from pixie.vm.string import String
 
@@ -111,3 +113,18 @@ def _instance(o, proto):
 import pixie.vm.rt as rt
 
 
+@as_var("load_file")
+def load_file(filename):
+    import pixie.vm.reader as reader
+    import pixie.vm.compiler as compiler
+    f = open(filename._str)
+    data = f.read()
+    f.close()
+    rdr = reader.StringReader(unicode(data))
+    result = nil
+    while True:
+        form = reader.read(rdr, False)
+        if form is reader.eof:
+            return result
+
+        result = compiler.compile(form).invoke([])

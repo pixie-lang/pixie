@@ -121,6 +121,19 @@ def _nth(self, idx):
 def _conj(self, v):
     return self.conj(v)
 
+@extend(proto._reduce, PersistentVector._type)
+def _reduce(self, f, init):
+    assert isinstance(self, PersistentVector)
+    i = 0
+    while i < self._cnt:
+        array = self.array_for(i)
+        for j in range(len(array)):
+            init = f.invoke([init, array[j]])
+        step = len(array)
+        i += step
+    return init
+
+
 @as_var("vector")
 def vector__args(args):
     acc = EMPTY

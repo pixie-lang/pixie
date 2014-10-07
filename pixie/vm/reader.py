@@ -197,8 +197,17 @@ def read(rdr, error_on_eof):
     if macro is not None:
         return macro.invoke(rdr, ch)
 
-    if is_digit(ch) or ch == u"-":
+    if is_digit(ch):
         return read_number(rdr, ch)
+
+    if ch == u"-":
+        ch2 = rdr.read()
+        if is_digit(ch2):
+            rdr.unread(ch2)
+            return read_number(rdr, ch)
+        else:
+            rdr.unread(ch2)
+            return read_symbol(rdr, ch)
 
     return read_symbol(rdr, ch)
 

@@ -15,10 +15,14 @@ from pixie.vm.util import *
 rt.init()
 
 class Context(object):
-    def __init__(self, name, argc, parent_locals):
-        locals = parent_locals.copy()
-        for x in locals:
-            locals[x] = Closure(locals[x])
+    def __init__(self, name, argc, parent_ctx):
+        if parent_ctx is not None:
+            assert isinstance(parent_ctx, Context)
+            locals = parent_ctx.locals[-1].copy()
+            for x in locals:
+                locals[x] = Closure(locals[x], parent_ctx)
+        else:
+            locals = {}
 
         self.bytecode = []
         self.consts = []
@@ -75,7 +79,10 @@ class Context(object):
                 if x is local:
                     break
                 idx += 1
-            self.closed_overs.append(local.local)
+            if isinstance(local.local, Closure):
+                self.closed_overs.append(local.ctx.get_local(s_name))
+            else:
+                self.closed_overs.append(local.local)
 
             return ClosureCell(idx)
         return local
@@ -170,8 +177,9 @@ class Self(LocalType):
         ctx.add_sp(1)
 
 class Closure(LocalType):
-    def __init__(self, local):
+    def __init__(self, local, ctx):
         self.local = local
+        self.ctx = ctx
 
 class ClosureCell(LocalType):
     def __init__(self, idx):
@@ -300,7 +308,7 @@ def compile_fn(form, ctx):
 
 def compile_fn_body(name, args, body, ctx):
     print args
-    new_ctx = Context(name._str, rt.count(args).int_val(), ctx.locals[-1])
+    new_ctx = Context(name._str, rt.count(args).int_val(), ctx)
     add_args(args, new_ctx)
     bc = 0
 
@@ -520,7 +528,7 @@ def compile_cons(form, ctx):
 
 
 def compile(form):
-    ctx = Context(u"main", 0, {})
+    ctx = Context(u"main", 0, None)
     compile_form(form, ctx)
     ctx.bytecode.append(code.RETURN)
     return ctx.to_code()
