@@ -131,6 +131,9 @@ class LiteralStringReader(ReaderHandler):
                 return String(u"".join(acc))
             acc.append(v)
 
+class DerefReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        return rt.cons(symbol(u"-deref"), rt.cons(read(rdr, True), nil))
 
 handlers = {u"(": ListReader(),
             u")": UnmachedListReader(),
@@ -138,7 +141,8 @@ handlers = {u"(": ListReader(),
             u"]": UnmachedVectorReader(),
             u"'": QuoteReader(),
             u":": KeywordReader(),
-            u"\"": LiteralStringReader()}
+            u"\"": LiteralStringReader(),
+            u"@": DerefReader()}
 
 def read_number(rdr, ch):
     acc = [ch]

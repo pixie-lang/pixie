@@ -98,6 +98,18 @@ def test_loop():
     assert isinstance(retval, Integer)
     assert retval.int_val() == 10
 
+    retval = eval_string("""
+      (loop [x 0
+             max 10]
+        (if (platform= x max)
+          x
+          (recur (+ x 1) max)))
+
+    """)
+
+    assert isinstance(retval, Integer)
+    assert retval.int_val() == 10
+
 def test_closures():
     retval = eval_string("""((fn [x] ((fn [] x))) 42)""")
 

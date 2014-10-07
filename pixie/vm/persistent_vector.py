@@ -9,7 +9,7 @@ import rpython.rlib.jit as jit
 
 
 class Node(object.Object):
-    _type = object.Type(u"PersistentVectorNode")
+    _type = object.Type(u"pixie.stdlib.PersistentVectorNode")
     def type(self):
         return Node._type
 
@@ -22,7 +22,7 @@ EMPTY_NODE = Node(None)
 
 
 class PersistentVector(object.Object):
-    _type = object.Type(u"PersistentVector")
+    _type = object.Type(u"pixie.stdlib.PersistentVector")
 
     def type(self):
         return PersistentVector._type

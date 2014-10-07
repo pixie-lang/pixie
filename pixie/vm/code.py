@@ -263,6 +263,9 @@ class DefaultProtocolFn(NativeFn):
 class Protocol(object.Object):
     _type = object.Type(u"Protocol")
 
+    def type(self):
+        return Protocol._type
+
     def __init__(self, name):
         self._name = name
         self._polyfns = {}
@@ -281,6 +284,8 @@ class Protocol(object.Object):
 
 class PolymorphicFn(BaseCode):
     _type = object.Type(u"PolymorphicFn")
+    def type(self):
+        return PolymorphicFn._type
 
     __immutable_fields__ = ["_rev?"]
     def __init__(self, name, protocol):
@@ -300,14 +305,22 @@ class PolymorphicFn(BaseCode):
         self._default_fn = fn
         self._rev += 1
 
+    @elidable
+    def get_protocol_fn(self, tp, rev):
+        fn = self._dict.get(tp, self._default_fn)
+        return promote(fn)
+
     def _invoke(self, args):
         a = args[0].type()
-        fn = self._dict.get(a, self._default_fn)
+        fn = self.get_protocol_fn(a, self._rev)
         return fn.invoke(args)
 
 class DoublePolymorphicFn(BaseCode):
     """A function that is polymorphic on the first two arguments"""
     _type = object.Type(u"DoublePolymorphicFn")
+
+    def type(self):
+        return DefaultProtocolFn._type
 
     __immutable_fields__ = ["_rev?"]
     def __init__(self, name, protocol):
@@ -343,7 +356,7 @@ class DoublePolymorphicFn(BaseCode):
         return fn.invoke(args)
 
 def munge(s):
-    return s.replace("-", "_").replace("?", "_QMARK_")
+    return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
 
 import inspect
 def defprotocol(ns, name, methods):
@@ -388,7 +401,7 @@ def wrap_fn(fn, tp=object.Object):
         if argc == 2:
             return as_native_fn(lambda self, args: fn(args[0], args[1]))
         if argc == 3:
-            return as_native_fn(lambda self, args: fn(args[0], args[1]))
+            return as_native_fn(lambda self, args: fn(args[0], args[1], args[2]))
 
 
 def extend(pfn, tp1, tp2=None):

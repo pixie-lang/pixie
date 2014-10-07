@@ -25,7 +25,7 @@ class Frame(object):
                        "bc",
                        "consts",
                        "code_obj",
-                       "args[*]",
+                       "args",
 ]
     def __init__(self, code_obj, args=[]):
         self = hint(self, access_directly=True, fresh_virtualizable=True)
@@ -75,10 +75,10 @@ class Frame(object):
 
     @unroll_safe
     def push_n(self, args, argc):
-        x = argc
-        while x != 0:
-            self.push(args[x - 1])
-            x -= 1
+        x = r_uint(0)
+        while x < argc:
+            self.push(args[x])
+            x += 1
 
     @unroll_safe
     def pop_n(self, argc):
@@ -255,6 +255,7 @@ def interpret(code_obj, args=[]):
             frame.push_n(args, argc)
             frame.ip = ip
 
+
             jitdriver.can_enter_jit(bc=frame.bc,
                                   ip=frame.ip,
                                   sp=frame.sp,
@@ -262,7 +263,6 @@ def interpret(code_obj, args=[]):
             continue
 
         if inst == code.MAKE_MULTI_ARITY:
-            print frame.bc
             frame.push(make_multi_arity(frame, frame.get_inst()))
 
             continue

@@ -315,7 +315,6 @@ def compile_fn(form, ctx):
 
 
 def compile_fn_body(name, args, body, ctx):
-    print args
     new_ctx = Context(name._str, rt.count(args).int_val(), ctx)
     add_args(args, new_ctx)
     bc = 0

@@ -45,7 +45,7 @@ def entry_point(foo=None):
     from pixie.vm.keyword import keyword
     import pixie.vm.rt as rt
     from pixie.vm.string import String
-    rt.load_file(String(u"pixie/stdlib.lisp"))
+    #rt.load_file(String(u"pixie/stdlib.lisp"))
 
     rdr = PromptReader()
     while True:
@@ -111,12 +111,19 @@ def target(*args):
     rt.__config__ = args[0].config
     import pixie.vm.stacklet
 
+    import pixie.vm.rt as rt
+    from pixie.vm.string import String
+    rt.load_file(String(u"pixie/stdlib.lisp"))
+
+
     return entry_point, None
 
 import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-
+    import pixie.vm.rt as rt
+    from pixie.vm.string import String
+    rt.load_file(String(u"pixie/stdlib.lisp"))
     #run_debug(sys.argv)
     entry_point()

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type
+from pixie.vm.object import Object, Type, _type_registry
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
@@ -20,6 +20,10 @@ defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
 defprotocol("pixie.stdlib", "IObject", ["-hash", "-eq", "-str", "-repr"])
 
 defprotocol("pixie.stdlib", "IReduce", ["-reduce"])
+
+defprotocol("pixie.stdlib", "IDeref", ["-deref"])
+
+defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
 def default_str(x):
     from pixie.vm.string import String
@@ -140,7 +144,7 @@ import pixie.vm.rt as rt
 def load_file(filename):
     import pixie.vm.reader as reader
     import pixie.vm.compiler as compiler
-    f = open(filename._str)
+    f = open(str(filename._str))
     data = f.read()
     f.close()
     rdr = reader.StringReader(unicode(data))
@@ -151,3 +155,21 @@ def load_file(filename):
             return result
 
         result = compiler.compile(form).invoke([])
+
+@as_var("extend")
+def extend(proto_fn, tp, fn):
+    assert isinstance(proto_fn, PolymorphicFn), "First argument to extend should be a PolymorphicFn"
+    assert isinstance(tp, Type), "Second argument to extend must be a Type"
+    assert isinstance(fn, BaseCode), "Last argument to extend must be a function"
+    proto_fn.extend(tp, fn)
+    return nil
+
+@as_var("type-by-name")
+def type_by_name(nm):
+    import pixie.vm.string as string
+    assert isinstance(nm, string.String)
+    return _type_registry.get_by_name(nm._str)
+
+@as_var("deref")
+def deref(x):
+    return rt._deref(x)
