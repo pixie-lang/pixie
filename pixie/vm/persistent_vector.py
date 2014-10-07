@@ -138,7 +138,7 @@ def _reduce(self, f, init):
 def vector__args(args):
     acc = EMPTY
     for x in range(len(args)):
-        x = acc.conj(args[x])
+        acc = acc.conj(args[x])
     return acc
 
 

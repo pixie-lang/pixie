@@ -95,8 +95,31 @@ def nth(a, b):
 
 
 @as_var("str")
-def str(a):
-    return rt._str(a)
+def str__args(args):
+    from pixie.vm.string import String
+    acc = []
+    for x in args:
+        acc.append(rt._str(x)._str)
+    return String(u"".join(acc))
+
+@as_var("apply")
+def apply__args(args):
+    last_itm = args[-1]
+    if rt.instance_QMARK_(last_itm, rt.IIndexed.deref()) is false or \
+        rt.instance_QMARK_(last_itm, rt.ICounted.deref()) is false:
+        raise ValueError("Last item to apply must be bost IIndexed and ICounted")
+
+    fn = args[0]
+    out_args = []
+
+    for x in range(len(args) - 2):
+        out_args.append(args[x + 1])
+
+    for x in range(rt.count(last_itm).int_val()):
+        out_args.append(rt.nth(last_itm, numbers.Integer(x)))
+
+    return fn.invoke(out_args)
+
 
 @as_var("print")
 def _print(a):

@@ -7,6 +7,7 @@ import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
 from pixie.vm.string import String
+import pixie.vm.protocols as proto
 from rpython.rlib.rarithmetic import r_uint
 
 import pixie.vm.rt as rt
@@ -229,9 +230,16 @@ def compile_form(form, ctx):
         return
 
     if isinstance(form, PersistentVector):
-        assert rt.count(form).int_val() == 0
+        vector_var = rt.vector()
+        size = rt.count(form).int_val()
+        #assert rt.count(form).int_val() == 0
+        ctx.push_const(code.intern_var(u"pixie.stdlib", u"vector"))
+        for x in range(size):
+            compile_form(rt.nth(form, numbers.Integer(x)), ctx)
 
-        ctx.push_const(EMPTY)
+        ctx.bytecode.append(code.INVOKE)
+        ctx.bytecode.append(r_uint(size + 1))
+        ctx.sub_sp(size)
         return
 
     if isinstance(form, String):
