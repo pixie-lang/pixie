@@ -24,7 +24,8 @@ BYTECODES = ["LOAD_CONST",
              "LOOP_RECUR",
              "ARG",
              "PUSH_SELF",
-             "POP_UP_N"]
+             "POP_UP_N",
+             "MAKE_MULTI_ARITY"]
 
 for x in range(len(BYTECODES)):
     globals()[BYTECODES[x]] = r_uint(x)
@@ -59,6 +60,32 @@ class BaseCode(object.Object):
     def invoke(self, args):
         result = self._invoke(args)
         return result
+
+
+class MultiArityFn(BaseCode):
+    _type = object.Type(u"pixie.stdlib.MultiArityFn")
+
+    _immutable_fields_ = ["_arities", "_required_arity", "_rest_fn"]
+
+    def type(self):
+        return MultiArityFn._type
+
+    def __init__(self, arities, required_arity = 0, rest_fn=None):
+        self._arities = arities
+        self._required_arity = required_arity
+        self._rest_fn = rest_fn
+
+    @elidable
+    def get_fn(self, arity):
+        f = self._arities.get(arity, None)
+        if f is not None:
+            return promote(f)
+        if self.rest_fn is not None and arity >= self._rest_fn:
+            return promote(self._rest_fn)
+        raise AssertionError("Wrong number of args to fn")
+
+    def _invoke(self, args):
+        return self.get_fn(len(args)).invoke(args)
 
 
 
@@ -316,7 +343,7 @@ class DoublePolymorphicFn(BaseCode):
         return fn.invoke(args)
 
 def munge(s):
-    return s.replace("-", "_")
+    return s.replace("-", "_").replace("?", "_QMARK_")
 
 import inspect
 def defprotocol(ns, name, methods):

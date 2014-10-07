@@ -269,17 +269,37 @@ def compile_fn(form, ctx):
     assert isinstance(form, Cons)
 
 
-    form = next(form)
-    if isinstance(form.first(), symbol.Symbol):
+    form = rt.next(form)
+    if isinstance(rt.first(form), symbol.Symbol):
         name = rt.first(form)
-        form = next(form)
+        form = rt.next(form)
     else:
         name = symbol.symbol(u"unknown")
 
-    args = rt.first(form)
-    assert isinstance(args, PersistentVector), "Args must be a vector"
 
-    body = next(form)
+    if rt.instance_QMARK_(rt.first(form), rt.ISeq.deref()) is true:
+        arities = []
+        while form is not nil:
+            argc = compile_fn_body(name, rt.first(rt.first(form)), rt.next(rt.first(form)), ctx)
+            arities.append(argc)
+            form = rt.next(form)
+
+        ctx.bytecode.append(code.MAKE_MULTI_ARITY)
+        ctx.bytecode.append(r_uint(len(arities)))
+        arities.reverse()
+        for x in arities:
+            ctx.bytecode.append(r_uint(x))
+
+        ctx.sub_sp(len(arities))
+
+    else:
+        compile_fn_body(name, rt.first(form), rt.next(form), ctx)
+
+
+
+
+def compile_fn_body(name, args, body, ctx):
+    print args
     new_ctx = Context(name._str, rt.count(args).int_val(), ctx.locals[-1])
     add_args(args, new_ctx)
     bc = 0
@@ -292,13 +312,13 @@ def compile_fn(form, ctx):
 
     new_ctx.disable_tail_call()
     while body is not nil:
-        if body.next() is nil:
+        if rt.next(body) is nil:
             new_ctx.enable_tail_call()
-        compile_form(body.first(), new_ctx)
-        if body.next() is not nil:
+        compile_form(rt.first(body), new_ctx)
+        if rt.next(body) is not nil:
             new_ctx.pop()
         bc += 1
-        body = body.next()
+        body = rt.next(body)
 
     new_ctx.bytecode.append(code.RETURN)
     closed_overs = new_ctx.closed_overs
@@ -312,9 +332,7 @@ def compile_fn(form, ctx):
         ctx.bytecode.append(r_uint(len(closed_overs)))
         ctx.sub_sp(len(closed_overs))
 
-
-
-
+    return rt.count(args).int_val()
 
 def compile_if(form, ctx):
     form = form.next()

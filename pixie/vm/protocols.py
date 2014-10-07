@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Object, Type
-from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend
+from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
@@ -100,6 +100,13 @@ def str(a):
 def _print(a):
     print rt._str(a)._str
     return nil
+
+@as_var("instance?")
+def _instance(o, proto):
+    assert isinstance(proto, Protocol), "proto must be a Protocol"
+
+    return true if proto.satisfies(o.type()) else false
+
 
 import pixie.vm.rt as rt
 

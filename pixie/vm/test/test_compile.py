@@ -38,6 +38,23 @@ def test_fn():
     retval = interpret(code)
     assert isinstance(retval, Integer) and retval.int_val() == 3
 
+def test_multiarity_fn():
+    retval = eval_string("""(let [v 1
+                                      f (fn ([] v)
+                                            ([x] (+ v x)))]
+                                 (f))
+
+                                  """)
+    assert isinstance(retval, Integer) and retval.int_val() == 1
+
+    retval = eval_string("""(let [v 1
+                                      f (fn ([] v)
+                                            ([x] (+ v x)))]
+                                 (f 2))
+
+                                  """)
+    assert isinstance(retval, Integer) and retval.int_val() == 3
+
 def test_if():
     code = compile(read_code("(if 1 2 3)"))
     assert  isinstance(code, Code)

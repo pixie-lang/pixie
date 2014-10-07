@@ -4,6 +4,7 @@ import pixie.vm.numbers as numbers
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint, intmask
 from rpython.rlib.jit import JitDriver, promote, elidable, elidable_promote, hint, unroll_safe
+import rpython.rlib.jit as jit
 
 def get_location(ip, sp, bc):
     return code.BYTECODES[bc[ip]]
@@ -96,6 +97,15 @@ class Frame(object):
 
     def jump_rel(self, delta):
         self.ip += delta - 1
+
+@jit.unroll_safe
+def make_multi_arity(frame, argc):
+    d = {}
+    for i in range(argc):
+        a = frame.get_inst()
+        fn = frame.pop()
+        d[a] = fn
+    return code.MultiArityFn(d)
 
 def interpret(code_obj, args=[]):
     frame = Frame(code_obj, args)
@@ -250,6 +260,13 @@ def interpret(code_obj, args=[]):
                                   sp=frame.sp,
                                   frame=frame)
             continue
+
+        if inst == code.MAKE_MULTI_ARITY:
+            print frame.bc
+            frame.push(make_multi_arity(frame, frame.get_inst()))
+
+            continue
+
 
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]
         raise Exception()
