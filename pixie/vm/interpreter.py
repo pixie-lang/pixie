@@ -57,6 +57,7 @@ class Frame(object):
     def pop(self):
         #print type(self.sp), self.sp
         self.sp -= 1
+        assert 0 <= self.sp < len(self.stack), "Stack out of range: " + str(self.sp)
         v = self.stack[self.sp]
         self.stack[self.sp] = None
         return v
@@ -127,7 +128,7 @@ def interpret(code_obj, args=[]):
             argc = frame.get_inst()
             fn = frame.nth(argc - 1)
 
-            assert isinstance(fn, code.BaseCode)
+            assert isinstance(fn, code.BaseCode), "Expected callable, got " + str(fn)
 
             args = frame.pop_n(argc - 1)
             frame.pop()

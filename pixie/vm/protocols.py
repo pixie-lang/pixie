@@ -70,6 +70,10 @@ def _seq(_):
 def _count(_):
     return numbers.zero_int
 
+@as_var("hash")
+def _hash(x):
+    return rt._hash(x)
+
 
 _count_driver = jit.JitDriver(name="pixie.stdlib.count",
                               greens=["tp"],
@@ -173,3 +177,7 @@ def type_by_name(nm):
 @as_var("deref")
 def deref(x):
     return rt._deref(x)
+
+@as_var("identical?")
+def identical(a, b):
+    return true if a is b else false

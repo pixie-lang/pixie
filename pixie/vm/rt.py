@@ -10,6 +10,8 @@ def init():
     import pixie.vm.numbers as numbers
     import pixie.vm.stacklet
     import pixie.vm.atom
+    import pixie.vm.reduced
+    import pixie.vm.util
     numbers.init()
 
     from pixie.vm.code import _ns_registry, BaseCode, munge

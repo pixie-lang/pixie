@@ -110,6 +110,32 @@ def test_loop():
     assert isinstance(retval, Integer)
     assert retval.int_val() == 10
 
+def test_loop():
+    retval = eval_string("""
+      (loop [x 0]
+        (if (platform= x 10)
+          x
+          (recur (+ x 1))))
+
+    """)
+
+    assert isinstance(retval, Integer)
+    assert retval.int_val() == 10
+
+    retval = eval_string("""
+      (loop [x 0
+             max 10]
+        (if (platform= x max)
+          x
+          (if (platform= x max)
+            false
+            (recur (+ x 1) max))))
+
+    """)
+
+    assert isinstance(retval, Integer)
+    assert retval.int_val() == 10
+
 def test_closures():
     retval = eval_string("""((fn [x] ((fn [] x))) 42)""")
 
@@ -186,19 +212,19 @@ def test_let():
 #
 #     assert isinstance(retval, Integer) and retval.int_val() == 84
 #
-# def test_quoted():
-#     retval = eval_string("""'(1 2)""")
-#     assert isinstance(retval, Cons)
-#     retval = eval_string("""'type""")
-#     assert isinstance(retval, Symbol)
-#
-# def test_custom_type():
-#     retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
-#                             (new my-type 1 2)""")
-#     assert isinstance(retval, CustomTypeInstance)
-#     retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
-#                             (get-field (new my-type 1 2) :a)""")
-#     assert isinstance(retval, Integer) and retval.int_val() == 1
+def test_quoted():
+     retval = eval_string("""'(1 2)""")
+     assert isinstance(retval, Cons)
+     retval = eval_string("""'type""")
+     assert isinstance(retval, Symbol)
+
+#def test_custom_type():
+#    retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
+#                            (new my-type 1 2)""")
+#    assert isinstance(retval, CustomTypeInstance)
+#    retval = eval_string("""(def my-type (make-type 'my-type '(:a :b)))
+#                            (get-field (new my-type 1 2) :a)""")
+#    assert isinstance(retval, Integer) and retval.int_val() == 1
 #
 # def test_keyword():
 #     retval = eval_string(""":foo""")

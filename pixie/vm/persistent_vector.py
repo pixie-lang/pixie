@@ -5,6 +5,7 @@ import pixie.vm.protocols as proto
 from  pixie.vm.code import extend, as_var
 from rpython.rlib.rarithmetic import r_uint as r_uint32, intmask, widen
 import rpython.rlib.jit as jit
+import pixie.vm.rt as rt
 
 
 
@@ -129,6 +130,9 @@ def _reduce(self, f, init):
         array = self.array_for(i)
         for j in range(len(array)):
             init = f.invoke([init, array[j]])
+            if rt.reduced_QMARK_(init) is true:
+                return rt.deref(init)
+
         step = len(array)
         i += step
     return init

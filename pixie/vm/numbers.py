@@ -10,7 +10,7 @@ class Number(object.Object):
 
 
 class Integer(Number):
-    _type = object.Type(u"Integer")
+    _type = object.Type(u"pixie.stdlib.Integer")
     _immutable_fields_ = ["_int_val"]
 
     def __init__(self, i_val):

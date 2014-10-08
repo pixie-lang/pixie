@@ -193,7 +193,7 @@ class Var(BaseCode):
     def deref(self):
         rev = promote(self._rev)
         val = self.get_root(rev)
-        assert val is not undefined
+        assert val is not undefined, u"Var " + self._name + u" is undefined"
         return val
 
     def _invoke(self, args):
@@ -209,7 +209,7 @@ class Namespace(py_object):
         assert isinstance(name, unicode)
         v = self._registry.get(name, None)
         if v is None:
-            v = Var(name).set_root(nil)
+            v = Var(name)
             self._registry[name] = v
         return v
 

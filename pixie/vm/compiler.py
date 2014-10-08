@@ -28,7 +28,7 @@ class Context(object):
         self.bytecode = []
         self.consts = []
         self.locals = [locals]
-        self._sp = r_uint(argc)
+        self._sp = r_uint(0)
         self._max_sp = r_uint(argc)
         self.can_tail_call = False
         self.closed_overs = []
@@ -363,6 +363,7 @@ def compile_if(form, ctx):
     compile_form(test, ctx)
     ctx.bytecode.append(code.COND_BR)
     ctx.sub_sp(1)
+    sp1 = ctx.sp()
     cond_lbl = ctx.label()
 
     ctx.enable_tail_call()
@@ -370,6 +371,7 @@ def compile_if(form, ctx):
     compile_form(then, ctx)
     ctx.bytecode.append(code.JMP)
     ctx.sub_sp(1)
+    assert ctx.sp() == sp1
     else_lbl = ctx.label()
 
     ctx.mark(cond_lbl)
@@ -422,7 +424,7 @@ def compile_recur(form, ctx):
     #ctx.bytecode.append(r_uint(args))
     ctx.get_recur_point().emit(ctx, args)
     assert args > 0, "Can't call an empty sexp"
-    ctx.sub_sp((args - 1))
+    ctx.sub_sp(args)
 
 
 def compile_let(form, ctx):
@@ -462,6 +464,7 @@ def compile_let(form, ctx):
     ctx.bytecode.append(binding_count)
 
 def compile_loop(form, ctx):
+    print "<<<<<", ctx.sp()
     form = next(form)
     bindings = rt.first(form)
     assert isinstance(bindings, PersistentVector)

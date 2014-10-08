@@ -5,7 +5,7 @@ from  pixie.vm.code import extend, as_var
 
 
 class Cons(object.Object):
-    _type = object.Type(u"Cons")
+    _type = object.Type(u"pixie.stdlib.Cons")
 
     def type(self):
         return Cons._type
