@@ -58,8 +58,11 @@ class Context(object):
     def pop_recur_point(self):
         self.recur_points.pop()
 
-    def to_code(self):
-        return code.Code(self.name, self.bytecode, self.consts, self._max_sp + 1)
+    def to_code(self, required_args=-1):
+        if required_args != -1:
+            return code.VariadicCode(self.name, self.bytecode, self.consts, self._max_sp + 1, required_args)
+        else:
+            return code.Code(self.name, self.bytecode, self.consts, self._max_sp + 1)
 
     def push_arg(self, idx):
         self.bytecode.append(code.ARG)
@@ -141,12 +144,14 @@ class LoopRecurPoint(RecurPoint):
     def __init__(self, argc, ctx):
         self._argc = argc
         self._ip = len(ctx.bytecode)
+        self._old_sp = ctx.sp() - argc
 
     def emit(self, ctx, argc):
+        print argc, self._argc, ctx.sp(), self._old_sp
         assert self._argc == argc
         ctx.bytecode.append(code.LOOP_RECUR)
         ctx.bytecode.append(argc)
-        ctx.bytecode.append(ctx.sp() - argc - self._argc)
+        ctx.bytecode.append(ctx.sp() - argc - self._argc - self._old_sp)
         ctx.bytecode.append(self._ip)
 
 
@@ -274,11 +279,18 @@ def compile_platform_eq(form, ctx):
     return ctx
 
 def add_args(args, ctx):
+    required_args = -1
+    local_idx = 0
     for x in range(rt.count(args).int_val()):
         arg = rt.nth(args, numbers.Integer(x))
         assert isinstance(arg, symbol.Symbol)
-        ctx.add_local(arg._str, Arg(x))
+        if arg._str == u"&":
 
+            required_args = x
+            continue
+        ctx.add_local(arg._str, Arg(local_idx))
+        local_idx += 1
+    return required_args
 
 
 def compile_fn(form, ctx):
@@ -296,8 +308,8 @@ def compile_fn(form, ctx):
     if rt.instance_QMARK_(rt.first(form), rt.ISeq.deref()) is true:
         arities = []
         while form is not nil:
-            argc = compile_fn_body(name, rt.first(rt.first(form)), rt.next(rt.first(form)), ctx)
-            arities.append(argc)
+            required_arity, argc = compile_fn_body(name, rt.first(rt.first(form)), rt.next(rt.first(form)), ctx)
+            arities.append(argc if required_arity == -1 else required_arity & 256)
             form = rt.next(form)
 
         ctx.bytecode.append(code.MAKE_MULTI_ARITY)
@@ -316,7 +328,7 @@ def compile_fn(form, ctx):
 
 def compile_fn_body(name, args, body, ctx):
     new_ctx = Context(name._str, rt.count(args).int_val(), ctx)
-    add_args(args, new_ctx)
+    required_args = add_args(args, new_ctx)
     bc = 0
 
     if name is not None:
@@ -338,16 +350,16 @@ def compile_fn_body(name, args, body, ctx):
     new_ctx.bytecode.append(code.RETURN)
     closed_overs = new_ctx.closed_overs
     if len(closed_overs) == 0:
-        ctx.push_const(new_ctx.to_code())
+        ctx.push_const(new_ctx.to_code(required_args))
     else:
-        ctx.push_const(new_ctx.to_code())
+        ctx.push_const(new_ctx.to_code(required_args))
         for x in closed_overs:
             x.emit(ctx)
         ctx.bytecode.append(code.MAKE_CLOSURE)
         ctx.bytecode.append(r_uint(len(closed_overs)))
         ctx.sub_sp(len(closed_overs))
 
-    return rt.count(args).int_val()
+    return required_args, rt.count(args).int_val()
 
 def compile_if(form, ctx):
     form = form.next()
@@ -464,7 +476,6 @@ def compile_let(form, ctx):
     ctx.bytecode.append(binding_count)
 
 def compile_loop(form, ctx):
-    print "<<<<<", ctx.sp()
     form = next(form)
     bindings = rt.first(form)
     assert isinstance(bindings, PersistentVector)

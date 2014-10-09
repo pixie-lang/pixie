@@ -72,7 +72,19 @@
                         (recur (f init (first coll))
                                (next coll)))))))
 
+(def indexed-reduce (fn indexed-reduce
+                      [coll f init]
+                      (let [max (count coll)]
+                      (loop [init init
+                             i 0]
+                        (if (reduced? init)
+                          @init
+                          (if (-eq i max)
+                            init
+                            (recur (f init (nth coll i)) (+ i 1))))))))
+
 (extend -reduce (type-by-name "pixie.stdlib.Cons") seq-reduce)
+(extend -reduce (type-by-name "pixie.stdlib.Array") indexed-reduce)
 
 (extend -str (type-by-name "pixie.stdlib.Bool")
   (fn [x]
@@ -83,6 +95,8 @@
 (extend -str (type-by-name "pixie.stdlib.Nil") (fn [x] "nil"))
 
 (extend -hash (type-by-name "pixie.stdlib.Integer") hash-int)
+
+(extend -eq (type-by-name "pixie.stdlib.Integer") -num-eq)
 
 (def ordered-hash-reducing-fn
   (fn ordered-hash-reducing-fn
@@ -98,3 +112,6 @@
 (extend -hash (type-by-name "pixie.stdlib.PersistentVector")
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+
+(def + (fn + [& rest] (reduce -add 0 rest)))

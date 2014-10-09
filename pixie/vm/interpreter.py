@@ -102,11 +102,19 @@ class Frame(object):
 @jit.unroll_safe
 def make_multi_arity(frame, argc):
     d = {}
+    required_arity = 0
+    rest_fn = None
     for i in range(argc):
         a = frame.get_inst()
-        fn = frame.pop()
-        d[a] = fn
-    return code.MultiArityFn(d)
+        if a & 256:
+            assert rest_fn is None, "Can't have multiple rest_fns"
+            required_arity = a & 0xFF
+            rest_fn = frame.pop()
+        else:
+            fn = frame.pop()
+            d[a] = fn
+
+    return code.MultiArityFn(d, required_arity, rest_fn)
 
 def interpret(code_obj, args=[]):
     frame = Frame(code_obj, args)

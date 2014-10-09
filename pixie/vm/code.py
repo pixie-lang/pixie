@@ -134,6 +134,24 @@ class Code(BaseCode):
     def stack_size(self):
         return self._stack_size
 
+class VariadicCode(Code):
+    def __init__(self, name, bytecode, consts, stack_size, required_arity):
+        Code.__init__(self, name, bytecode, consts, stack_size)
+        self._required_arity = required_arity
+
+    def _invoke(self, args):
+        from pixie.vm.array import array
+        argc = len(args)
+        if argc == self._required_arity:
+            args.append(array([]))
+            return super(VariadicCode, self)._invoke(args)
+        elif argc > self._required_arity:
+            start = args[:self._required_arity]
+            rest = args[self._required_arity:]
+            start.append(array(rest))
+            return super(VariadicCode, self)._invoke(start)
+        raise ValueError("Wrong number of args")
+
 class Closure(Code):
     _type = object.Type(u"Closure")
     __immutable_fields__ = ["_closed_overs[*]", "_code"]
@@ -329,6 +347,7 @@ class DoublePolymorphicFn(BaseCode):
         self._dict = {}
         self._rev = 0
         self._protocol = protocol
+        self._default_fn = DefaultProtocolFn(self)
         protocol.add_method(self)
 
     def extend2(self, tp1, tp2, fn):
@@ -340,12 +359,16 @@ class DoublePolymorphicFn(BaseCode):
         self._rev += 1
         self._protocol.add_satisfies(tp1)
 
+    def set_default_fn(self, fn):
+        self._default_fn = fn
+        self._rev += 1
 
     @elidable
     def get_fn(self, tp1, tp2, _rev):
         d1 = self._dict.get(tp1, None)
-        assert d1
-        fn = d1.get(tp2, None)
+        if d1 is None:
+            return self._default_fn
+        fn = d1.get(tp2, self._default_fn)
         return promote(fn)
 
     def _invoke(self, args):

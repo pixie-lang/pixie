@@ -193,6 +193,12 @@ def test_let():
     retval = eval_string(""" (let [x 42 y 1] (+ x y)) """)
 
     assert isinstance(retval, Integer) and retval.int_val() == 43
+
+def test_variadic_fn():
+    from pixie.vm.array import Array
+    retval = eval_string(""" ((fn [& rest] rest) 1 2 3 4) """)
+    print retval
+    assert isinstance(retval, Array) and len(retval._list) == 4
 #
 # def test_handlers():
 #     retval = eval_string("""(def x 42)

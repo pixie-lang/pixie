@@ -12,6 +12,7 @@ def init():
     import pixie.vm.atom
     import pixie.vm.reduced
     import pixie.vm.util
+    import pixie.vm.array
     numbers.init()
 
     from pixie.vm.code import _ns_registry, BaseCode, munge
