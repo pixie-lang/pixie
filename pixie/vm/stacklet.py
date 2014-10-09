@@ -10,69 +10,131 @@ import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 import rpython.rlib.rstacklet as rstacklet
 
-class StackletThreadBox(py_object):
+
+OP_NEW = 0x01
+OP_SWITCH = 0x02
+OP_CONTINUE = 0x03
+OP_EXIT = 0x04
+
+class GlobalState(py_object):
     def __init__(self):
         self._th = None
+        self._val = None
+        self._ex = None
+        self._to = None
+        self._op = None
+        self._h = None
+        self._fn = None
+        self._init_fn = None
+        self._from = None
+
+    def switch_back(self):
+        tmp = self._from
+        self._from = self._to
+        self._to = tmp
 
 
-th = StackletThreadBox()
+global_state = GlobalState()
 
 def init():
-    if th._th is None:
-        th._th = rstacklet.StackletThread(rt.__config__)
+    if global_state._th is None:
+        global_state._th = rstacklet.StackletThread(rt.__config__)
 
-
-class Box(object.Object):
-    _type = object.Type(u"Box")
-    def __init__(self):
-        self._val = None
-
-    def type(self):
-        return Box._type
-
-box = Box()
-box._val = None
-fn_box = Box()
-arg_box = Box()
 
 class WrappedHandler(BaseCode):
     _type = object.Type(u"Stacklet")
-    def __init__(self, h, box):
+    def __init__(self, h):
         self._h = h
-        self._box = box
-
-    def switch_to(self, val):
-        self._box._val = val
-        self._h = th._th.switch(self._h)
-        return self._box._val
-
-    def _invoke(self, args):
-        assert len(args) == 1
-        return self.switch_to(args[0])
 
     def type(self):
         return WrappedHandler._type
 
+    def _invoke(self, args):
+        assert len(args) == 1, "Only one arg to continuation allowed"
+        global_state._from = global_state._to
+        global_state._to = self
+        global_state._op = OP_SWITCH
+        global_state._val = args[0]
+        global_state._h = global_state._th.switch(global_state._h)
 
-def new_stacklet(f, val):
-    global box, fn_box, arg_box
+        return global_state._val
+
+
+def new_stacklet(f):
+    global_state._op = OP_NEW
+    global_state._val = f
+    global_state.switch_back()
+    global_state._h = global_state._th.switch(global_state._h)
+    val = global_state._val
+    return val
+
+
+def new_handler(h, o):
+    global_state._h = h
+
+    assert global_state._val is not None
+    f = global_state._val
+    global_state._val = None
+
+
+
+    global_state._op = OP_SWITCH
+    global_state.switch_back()
+    global_state._h = global_state._th.switch(h)
+
+
+    f.invoke([global_state._from])
+
+
+
+    return global_state._h
+
+
+def init_handler(h, o):
+    global_state._h = h
+
+    assert global_state._init_fn is not None
+    f = global_state._init_fn
+    global_state._init_fn = None
+
+
+
+    f.invoke([])
+    global_state._op = OP_EXIT
+    return global_state._h
+
+
+def with_stacklets(f):
+
     init()
-    box._val = Box()
-    self_box = box._val
-    fn_box._val = f
-    arg_box._val = val
-    def default_handler(h, o):
-        global box, fn_box, arg_box
-        handler = WrappedHandler(h, box._val)
-        box._val = None
-        handler._h = th._th.switch(handler._h)
-        retval = fn_box._val.invoke([handler, arg_box._val])
+    global_state._init_fn = f
 
-        return handler._h
+    main_h = global_state._th.new(init_handler)
+    global_state._from = WrappedHandler(main_h)
 
-    h = th._th.new(default_handler)
-    return WrappedHandler(h, self_box)
+    while True:
+        print global_state._op
+        if global_state._op == OP_NEW:
+            wh = WrappedHandler(None)
+            global_state._to = wh
+            wh._h = global_state._th.new(new_handler)
+            global_state._val = wh
+            continue
+
+        elif global_state._op == OP_SWITCH:
+            to = global_state._to
+            to._h = global_state._th.switch(global_state._to._h)
+            continue
+
+        elif global_state._op == OP_EXIT:
+            return global_state._val
+
+        else:
+            break
+
+    return None
 
 @as_var("create-stacklet")
 def _new_stacklet(f):
     return new_stacklet(f, nil)
+

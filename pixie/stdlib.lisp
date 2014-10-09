@@ -115,3 +115,9 @@
 
 
 (def + (fn + [& rest] (reduce -add 0 rest)))
+
+
+(def doit (fn []
+            (let [a (create-stacklet (fn [h v] (h 42)))
+                  b (create-stacklet (fn [h v] (h (a 0))))]
+                  (b 4))))

@@ -177,13 +177,13 @@ def test_build_vector():
 
     assert isinstance(retval, Integer) and retval.int_val() == 10
 
-def test_stacklets():
-    retval = eval_string("""
-                             (do (def foo (fn [h v] (h 42)))
-                                 ((create-stacklet foo) 0))
-    """)
-
-    assert isinstance(retval, Integer) and retval.int_val() == 42
+#def test_stacklets():
+#    retval = eval_string("""
+#                             (do (def foo (fn [h v] (h 42)))
+#                                 ((create-stacklet foo) 0))
+#    """)
+#
+#    assert isinstance(retval, Integer) and retval.int_val() == 42
 
 def test_let():
     retval = eval_string(""" (let [x 42] x) """)
