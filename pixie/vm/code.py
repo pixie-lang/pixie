@@ -70,7 +70,7 @@ class MultiArityFn(BaseCode):
     def type(self):
         return MultiArityFn._type
 
-    def __init__(self, arities, required_arity = 0, rest_fn=None):
+    def __init__(self, arities, required_arity=0, rest_fn=None):
         self._arities = arities
         self._required_arity = required_arity
         self._rest_fn = rest_fn
@@ -80,8 +80,8 @@ class MultiArityFn(BaseCode):
         f = self._arities.get(arity, None)
         if f is not None:
             return promote(f)
-        #if self.rest_fn is not None and arity >= self._rest_fn:
-        #    return promote(self._rest_fn)
+        if self._rest_fn is not None and arity >= self._required_arity:
+            return promote(self._rest_fn)
         raise AssertionError("Wrong number of args to fn")
 
     def _invoke(self, args):

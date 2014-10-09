@@ -147,7 +147,6 @@ class LoopRecurPoint(RecurPoint):
         self._old_sp = ctx.sp() - argc
 
     def emit(self, ctx, argc):
-        print argc, self._argc, ctx.sp(), self._old_sp
         assert self._argc == argc
         ctx.bytecode.append(code.LOOP_RECUR)
         ctx.bytecode.append(argc)
@@ -309,7 +308,7 @@ def compile_fn(form, ctx):
         arities = []
         while form is not nil:
             required_arity, argc = compile_fn_body(name, rt.first(rt.first(form)), rt.next(rt.first(form)), ctx)
-            arities.append(argc if required_arity == -1 else required_arity & 256)
+            arities.append(argc if required_arity == -1 else required_arity | 256)
             form = rt.next(form)
 
         ctx.bytecode.append(code.MAKE_MULTI_ARITY)
