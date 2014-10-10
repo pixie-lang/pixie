@@ -4,6 +4,8 @@ from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
 from rpython.annotator.policy import AnnotatorPolicy
+from pixie.vm.code import wrap_fn
+from pixie.vm.stacklet import with_stacklets
 
 import sys
 
@@ -24,6 +26,22 @@ class Policy(JitPolicy, AnnotatorPolicy):
 def jitpolicy(driver):
     return JitPolicy(jithookiface=DebugIFace())
 
+
+@wrap_fn
+def repl():
+    from pixie.vm.keyword import keyword
+    import pixie.vm.rt as rt
+    from pixie.vm.string import String
+
+    rdr = PromptReader()
+    while True:
+        val = interpret(compile(read(rdr, True)))
+        if val is keyword(u"exit-repl"):
+            break
+        val = rt.str(val)
+        assert isinstance(val, String), "str should always return a string"
+        print val._str
+
 def entry_point(foo=None):
     print "Pixie 0.1 - Interactive REPL"
     #try:
@@ -42,19 +60,11 @@ def entry_point(foo=None):
     #                          (do (def foo (fn [h v] (h 42)))
     #                          ((create-stacklet foo) 0))
     # """), True)))
-    from pixie.vm.keyword import keyword
-    import pixie.vm.rt as rt
-    from pixie.vm.string import String
     #rt.load_file(String(u"pixie/stdlib.lisp"))
 
-    rdr = PromptReader()
-    while True:
-        val = interpret(compile(read(rdr, True)))
-        if val is keyword(u"exit-repl"):
-            break
-        val = rt.str(val)
-        assert isinstance(val, String), "str should always return a string"
-        print val._str
+
+
+    with_stacklets(repl)
 
     return 0
 

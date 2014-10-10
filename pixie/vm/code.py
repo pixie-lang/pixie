@@ -137,19 +137,19 @@ class Code(BaseCode):
 class VariadicCode(Code):
     def __init__(self, name, bytecode, consts, stack_size, required_arity):
         Code.__init__(self, name, bytecode, consts, stack_size)
-        self._required_arity = required_arity
+        self._required_arity = r_uint(required_arity)
 
     def _invoke(self, args):
         from pixie.vm.array import array
         argc = len(args)
         if argc == self._required_arity:
             args.append(array([]))
-            return super(VariadicCode, self)._invoke(args)
+            return Code._invoke(self, args)
         elif argc > self._required_arity:
             start = args[:self._required_arity]
             rest = args[self._required_arity:]
             start.append(array(rest))
-            return super(VariadicCode, self)._invoke(start)
+            return Code._invoke(self, start)
         raise ValueError("Wrong number of args")
 
 class Closure(Code):

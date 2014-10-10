@@ -22,8 +22,8 @@ class GlobalState(py_object):
         self._val = None
         self._ex = None
         self._to = None
-        self._op = None
-        self._h = None
+        self._op = 0x00
+        #self._h = None
         self._fn = None
         self._init_fn = None
         self._from = None
@@ -113,9 +113,8 @@ def with_stacklets(f):
     global_state._from = WrappedHandler(main_h)
 
     while True:
-        print global_state._op
         if global_state._op == OP_NEW:
-            wh = WrappedHandler(None)
+            wh = WrappedHandler(global_state._th.get_null_handle())
             global_state._to = wh
             wh._h = global_state._th.new(new_handler)
             global_state._val = wh
@@ -136,5 +135,5 @@ def with_stacklets(f):
 
 @as_var("create-stacklet")
 def _new_stacklet(f):
-    return new_stacklet(f, nil)
+    return new_stacklet(f)
 
