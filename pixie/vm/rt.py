@@ -1,7 +1,9 @@
 __config__ = None
+py_list = list
+
 
 def unwrap(fn):
-    return lambda *args: fn.invoke(list(args))
+    return lambda *args: fn.invoke(py_list(args))
 
 def init():
     if globals().has_key("__inited__"):
@@ -13,6 +15,8 @@ def init():
     import pixie.vm.reduced
     import pixie.vm.util
     import pixie.vm.array
+    import pixie.vm.lazy_seq
+    import pixie.vm.persistent_list
     numbers.init()
 
     from pixie.vm.code import _ns_registry, BaseCode, munge

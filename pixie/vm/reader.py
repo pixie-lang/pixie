@@ -135,6 +135,71 @@ class DerefReader(ReaderHandler):
     def invoke(self, rdr, ch):
         return rt.cons(symbol(u"-deref"), rt.cons(read(rdr, True), nil))
 
+
+QUOTE = symbol(u"quote")
+UNQUOTE = symbol(u"unquote")
+UNQUOTE_SPLICING = symbol(u"unquote-splicing")
+APPLY = symbol(u"apply")
+CONCAT = symbol(u"concat")
+SEQ = symbol(u"seq")
+
+def is_unquote(form):
+    return True if rt.instance_QMARK_(form, rt.ISeq.deref()) is true \
+                   and rt.eq(rt.first(form), UNQUOTE) is true \
+           else False
+
+def is_unquote_splicing(form):
+    return True if rt.instance_QMARK_(form, rt.ISeq.deref()) is true \
+                   and rt.eq(rt.first(form), UNQUOTE_SPLICING) is true \
+           else False
+
+class SyntaxQuoteReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        form = read(rdr, True)
+        return self.syntax_quote(form)
+
+    def syntax_quote(self, form):
+        if isinstance(form, Symbol):
+            ret = rt.list(QUOTE, form)
+        elif is_unquote(form):
+            ret = rt.first(rt.next(form))
+        elif is_unquote_splicing(form):
+            raise Exception("Unquote splicing not used inside list")
+        elif rt.vector_QMARK_(form) is true:
+            ret = rt.cons(CONCAT, self.expand_list(rt.seq(form)))
+        elif rt.seq_QMARK_(form) is true:
+            ret = rt.list(SEQ, rt.cons(CONCAT, self.expand_list(rt.seq(form))))
+        else:
+            ret = rt.list(QUOTE, form)
+        print rt._str(ret)._str
+        return ret
+
+    def expand_list(self, form):
+        ret = EMPTY_VECTOR
+        while form is not nil:
+            item = rt.first(form)
+            if is_unquote(item):
+                ret = rt.conj(ret, rt.vector(rt.first(rt.next(item))))
+            elif is_unquote_splicing(item):
+                ret = rt.conj(ret, rt.first(rt.next(item)))
+            else:
+                ret = rt.conj(ret, rt.vector(self.syntax_quote(item)))
+
+            form = rt.next(form)
+        return rt.seq(ret)
+
+class UnquoteReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        ch = rdr.read()
+        sym = UNQUOTE
+        if ch == "@":
+            sym = UNQUOTE_SPLICING
+        else:
+            rdr.unread(ch)
+
+        form = read(rdr, True)
+        return rt.list(sym, form)
+
 handlers = {u"(": ListReader(),
             u")": UnmachedListReader(),
             u"[": VectorReader(),
@@ -142,7 +207,9 @@ handlers = {u"(": ListReader(),
             u"'": QuoteReader(),
             u":": KeywordReader(),
             u"\"": LiteralStringReader(),
-            u"@": DerefReader()}
+            u"@": DerefReader(),
+            u"`": SyntaxQuoteReader(),
+            u"~": UnquoteReader()}
 
 def read_number(rdr, ch):
     acc = [ch]

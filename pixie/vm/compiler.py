@@ -1,4 +1,4 @@
-from pixie.vm.object import Object
+from pixie.vm.object import Object, _type_registry
 from pixie.vm.primitives import nil, true, false, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
 import pixie.vm.numbers as numbers
@@ -15,6 +15,10 @@ from pixie.vm.util import *
 
 rt.init()
 
+
+
+
+
 class Context(object):
     def __init__(self, name, argc, parent_ctx):
         if parent_ctx is not None:
@@ -29,7 +33,7 @@ class Context(object):
         self.consts = []
         self.locals = [locals]
         self._sp = r_uint(0)
-        self._max_sp = r_uint(argc)
+        self._max_sp = 0
         self.can_tail_call = False
         self.closed_overs = []
         self.name = name
@@ -45,9 +49,10 @@ class Context(object):
             self._max_sp = self._sp
 
     def sub_sp(self, v):
-        self._sp -= v
         if self._max_sp < self._sp:
             self._max_sp = self._sp
+        self._sp -= v
+
 
     def get_recur_point(self):
         return self.recur_points[-1]
@@ -202,7 +207,7 @@ class ClosureCell(LocalType):
 
 
 def compile_form(form, ctx):
-    if isinstance(form, Cons):
+    if rt.instance_QMARK_(form, rt.ISeq.deref()) is true and form is not nil:
         return compile_cons(form, ctx)
     if isinstance(form, numbers.Integer):
         ctx.push_const(form)
@@ -217,9 +222,25 @@ def compile_form(form, ctx):
                 var = code.get_var_if_defined(u"pixie.stdlib", name)
 
             if var is None:
+                var = _type_registry.get_by_name(name, None)
+                if var is not None:
+                    ctx.push_const(var)
+                    return
+                var = None
+
+            if var is None:
+                var = _type_registry.get_by_name(u"pixie.stdlib." + name, None)
+                if var is not None:
+                    ctx.push_const(var)
+                    return
+
+            if var is None:
                 var = code.intern_var(ctx.ns, name)
 
+
+
             ctx.push_const(var)
+
             ctx.bytecode.append(code.DEREF_VAR)
             return
         loc.emit(ctx)
@@ -382,7 +403,7 @@ def compile_if(form, ctx):
     compile_form(then, ctx)
     ctx.bytecode.append(code.JMP)
     ctx.sub_sp(1)
-    assert ctx.sp() == sp1
+    assert ctx.sp() == sp1, "If branches unequal " + str(ctx.sp()) + ", " + str(sp1)
     else_lbl = ctx.label()
 
     ctx.mark(cond_lbl)
@@ -424,6 +445,7 @@ def compile_quote(form, ctx):
 def compile_recur(form, ctx):
     form = form.next()
     assert ctx.can_tail_call
+    ctc = ctx.can_tail_call
     ctx.disable_tail_call()
     args = 0
     while form is not nil:
@@ -434,8 +456,9 @@ def compile_recur(form, ctx):
     #ctx.bytecode.append(code.RECUR)
     #ctx.bytecode.append(r_uint(args))
     ctx.get_recur_point().emit(ctx, args)
-    assert args > 0, "Can't call an empty sexp"
-    ctx.sub_sp(args)
+    if ctc:
+        ctx.enable_tail_call()
+    ctx.sub_sp(args - 1)
 
 
 def compile_let(form, ctx):
@@ -531,9 +554,9 @@ def compile_cons(form, ctx):
     ctc = ctx.can_tail_call
     while form is not nil:
         ctx.disable_tail_call()
-        compile_form(form.first(), ctx)
+        compile_form(rt.first(form), ctx)
         cnt += 1
-        form = form.next()
+        form = rt.next(form)
 
     if ctc:
         ctx.enable_tail_call()

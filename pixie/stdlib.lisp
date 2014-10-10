@@ -64,13 +64,13 @@
 (def seq-reduce (fn seq-reduce
                   [coll f init]
                   (loop [init init
-                         coll coll]
+                         coll (seq coll)]
                     (if (reduced? init)
                       @init
-                      (if (identical? coll nil)
-                        init
+                      (if (seq coll)
                         (recur (f init (first coll))
-                               (next coll)))))))
+                               (seq (next coll)))
+                        init)))))
 
 (def indexed-reduce (fn indexed-reduce
                       [coll f init]
@@ -83,20 +83,23 @@
                             init
                             (recur (f init (nth coll i)) (+ i 1))))))))
 
-(extend -reduce (type-by-name "pixie.stdlib.Cons") seq-reduce)
-(extend -reduce (type-by-name "pixie.stdlib.Array") indexed-reduce)
+(extend -reduce Cons seq-reduce)
+(extend -reduce PersistentList seq-reduce)
+(extend -reduce LazySeq seq-reduce)
 
-(extend -str (type-by-name "pixie.stdlib.Bool")
+(extend -reduce Array indexed-reduce)
+
+(extend -str Bool
   (fn [x]
     (if (identical? x true)
       "true"
       "false")))
 
-(extend -str (type-by-name "pixie.stdlib.Nil") (fn [x] "nil"))
+(extend -str Nil (fn [x] "nil"))
 
-(extend -hash (type-by-name "pixie.stdlib.Integer") hash-int)
+(extend -hash Integer hash-int)
 
-(extend -eq (type-by-name "pixie.stdlib.Integer") -num-eq)
+(extend -eq Integer -num-eq)
 
 (def ordered-hash-reducing-fn
   (fn ordered-hash-reducing-fn
@@ -105,19 +108,61 @@
     ([state itm] (update-hash-ordered! state itm))))
 
 
-(extend -str (type-by-name "pixie.stdlib.PersistentVector")
+(extend -str PersistentVector
   (fn [v]
     (apply str "[" (conj (transduce (interpose ", ") conj v) "]"))))
 
-(extend -hash (type-by-name "pixie.stdlib.PersistentVector")
+
+
+
+(extend -str Cons
+  (fn [v]
+    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+
+(extend -str PersistentList
+  (fn [v]
+    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+
+(extend -str LazySeq
+  (fn [v]
+    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+
+(extend -hash PersistentVector
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
 
 
 (def + (fn + [& rest] (reduce -add 0 rest)))
 
+(def inc (fn [x] (+ x 1)))
 
-(def doit (fn []
-            (let [a (create-stacklet (fn [h v] (h 42)))
-                  b (create-stacklet (fn [h v] (h (a 0))))]
-                  (b 4))))
+(def dec (fn [x] (- x 1)))
+
+(def stacklet->lazy-seq
+  (fn [f]
+    (let [val (f nil)]
+      (if (identical? val :end)
+        nil
+        (cons val (lazy-seq* (fn [] (stacklet->lazy-seq f))))))))
+
+(def sequence
+  (fn
+    ([data]
+       (let [f (create-stacklet
+                 (fn [h]
+                   (reduce (fn ([h item] (h item) h)) h data)
+                   (h :end)))]
+          (stacklet->lazy-seq f)))
+    ([xform data]
+        (let [f (create-stacklet
+                 (fn [h]
+                   (transduce xform
+                              (fn ([] h)
+                                ([h item] (h item) h)
+                                ([h] (h :end)))
+                              data)))]
+          (stacklet->lazy-seq f)))))
+
+(extend -seq PersistentVector sequence)
+
+(def concat (fn [& args] (transduce cat conj args)))

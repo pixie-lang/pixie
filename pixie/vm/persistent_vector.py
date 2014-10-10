@@ -146,6 +146,6 @@ def vector__args(args):
     return acc
 
 
-
+proto.IVector.add_satisfies(PersistentVector._type)
 
 EMPTY = PersistentVector(None, r_uint32(0), r_uint32(5), EMPTY_NODE, [])

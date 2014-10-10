@@ -18,12 +18,15 @@ defprotocol("pixie.stdlib", "IIndexed", ["-nth"])
 defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
 
 defprotocol("pixie.stdlib", "IObject", ["-hash", "-eq", "-str", "-repr"])
+_eq.set_default_fn(wrap_fn(lambda a, b: false))
 
 defprotocol("pixie.stdlib", "IReduce", ["-reduce"])
 
 defprotocol("pixie.stdlib", "IDeref", ["-deref"])
 
 defprotocol("pixie.stdlib", "IReset", ["-reset!"])
+
+IVector = as_var("pixie.stdlib", "IVector")(Protocol("IVector"))
 
 def default_str(x):
     from pixie.vm.string import String
@@ -42,16 +45,25 @@ def first(x):
 
 @as_var("next")
 def next(x):
-    return rt._next(x)
+    return rt.seq(rt._next(x))
 
 @as_var("seq")
 def seq(x):
     return rt._seq(x)
 
+@as_var("seq?")
+def seq_QMARK_(x):
+    return rt.instance_QMARK_(x, rt.ISeq.deref())
+
 
 @as_var("type")
 def type(x):
     return x.type()
+
+@extend(_str, Type._type)
+def _str(tp):
+    import pixie.vm.string as string
+    return string.String(u"<type " + tp._name + u">")
 
 
 @extend(_first, nil._type)
@@ -172,7 +184,7 @@ def extend(proto_fn, tp, fn):
 def type_by_name(nm):
     import pixie.vm.string as string
     assert isinstance(nm, string.String)
-    return _type_registry.get_by_name(nm._str)
+    return _type_registry.get_by_name(nm._str, nil)
 
 @as_var("deref")
 def deref(x):
@@ -181,3 +193,15 @@ def deref(x):
 @as_var("identical?")
 def identical(a, b):
     return true if a is b else false
+
+@as_var("vector?")
+def vector_QMARK_(a):
+    return rt.instance_QMARK_(a, rt.IVector.deref())
+
+
+@as_var("eq")
+def eq(a, b):
+    if a is b:
+        return true
+    else:
+        return rt._eq(a, b)

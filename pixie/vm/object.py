@@ -14,9 +14,8 @@ class TypeRegistry(object):
     def register_type(self, nm, tp):
         self._types[nm] = tp
 
-    def get_by_name(self, nm):
-        from pixie.vm.primitives import nil
-        return self._types.get(nm, nil)
+    def get_by_name(self, nm, default=None):
+        return self._types.get(nm, default)
 
 _type_registry = TypeRegistry()
 
