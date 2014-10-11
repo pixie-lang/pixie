@@ -3,6 +3,7 @@ import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.jit import elidable, elidable_promote, promote
+import rpython.rlib.jit as jit
 
 
 BYTECODES = ["LOAD_CONST",
@@ -29,6 +30,44 @@ BYTECODES = ["LOAD_CONST",
 
 for x in range(len(BYTECODES)):
     globals()[BYTECODES[x]] = r_uint(x)
+
+
+@jit.unroll_safe
+def resize_list(lst, new_size):
+    """'Resizes' a list, via reallocation and copy"""
+    assert len(lst) < new_size, "New list must be larger than old list"
+    new_list = [None] * new_size
+    i = r_uint(0)
+    while i < len(lst):
+        new_list[i] = lst[i]
+        i += 1
+    return new_list
+
+@jit.unroll_safe
+def list_copy(from_lst, from_loc, to_list, to_loc, count):
+    from_loc = r_uint(from_loc)
+    to_loc = r_uint(to_loc)
+    count = r_uint(count)
+
+    i = r_uint(0)
+    while i < count:
+        to_list[to_loc + i] = from_lst[from_loc+i]
+        i += 1
+    return to_list
+
+@jit.unroll_safe
+def slice_to_end(from_list, start_pos):
+    start_pos = r_uint(start_pos)
+    items_to_copy = len(from_list) - start_pos
+    new_lst = [None] * items_to_copy
+    list_copy(from_list, start_pos, new_lst, 0, items_to_copy)
+    return new_lst
+
+@jit.unroll_safe
+def slice_from_start(from_list, count, extra=r_uint(0)):
+    new_lst = [None] * (count + extra)
+    list_copy(from_list, 0, new_lst, 0, count)
+    return new_lst
 
 # class TailCall(object.Object):
 #     _type = object.Type("TailCall")
@@ -60,6 +99,7 @@ class BaseCode(object.Object):
     def get_bytecode(self):
         raise NotImplementedError()
 
+    @elidable_promote
     def stack_size(self):
         return 0
 
@@ -71,7 +111,7 @@ class BaseCode(object.Object):
 class MultiArityFn(BaseCode):
     _type = object.Type(u"pixie.stdlib.MultiArityFn")
 
-    _immutable_fields_ = ["_arities", "_required_arity", "_rest_fn"]
+    _immutable_fields_ = ["_arities[*]", "_required_arity", "_rest_fn"]
 
     def type(self):
         return MultiArityFn._type
@@ -86,9 +126,9 @@ class MultiArityFn(BaseCode):
     def get_fn(self, arity):
         f = self._arities.get(arity, None)
         if f is not None:
-            return promote(f)
+            return f
         if self._rest_fn is not None and arity >= self._required_arity:
-            return promote(self._rest_fn)
+            return self._rest_fn
         raise AssertionError("Wrong number of args to fn")
 
     def _invoke(self, args):
@@ -117,7 +157,7 @@ class NativeFn(BaseCode):
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
     _type = object.Type(u"Code")
-    __immutable_fields__ = ["_consts[*]", "_bytecode"]
+    __immutable_fields__ = ["_consts[*]", "_bytecode", "_stack_size"]
 
     def type(self):
         return Code._type
@@ -138,6 +178,7 @@ class Code(BaseCode):
     def get_bytecode(self):
         return self._bytecode
 
+    @elidable_promote()
     def stack_size(self):
         return self._stack_size
 
@@ -149,13 +190,16 @@ class VariadicCode(Code):
     def _invoke(self, args):
         from pixie.vm.array import array
         argc = len(args)
+        if self._required_arity == 0:
+            return Code._invoke(self, [array(args)])
         if argc == self._required_arity:
-            args.append(array([]))
-            return Code._invoke(self, args)
+            new_args = resize_list(args, len(args) + 1)
+            new_args[len(args)] = array([])
+            return Code._invoke(self, new_args)
         elif argc > self._required_arity:
-            start = args[:self._required_arity]
-            rest = args[self._required_arity:]
-            start.append(array(rest))
+            start = slice_from_start(args, self._required_arity, 1)
+            rest = slice_to_end(args, self._required_arity)
+            start[self._required_arity] = array(rest)
             return Code._invoke(self, start)
         raise ValueError("Wrong number of args")
 
@@ -182,6 +226,7 @@ class Closure(Code):
     def get_bytecode(self):
         return self._code.get_bytecode()
 
+    @elidable_promote()
     def stack_size(self):
         return self._code._stack_size
 
@@ -212,14 +257,13 @@ class Var(BaseCode):
 
     @elidable_promote()
     def get_root(self, rev):
-        return promote(self._root)
+        return self._root
 
 
     def deref(self):
-        rev = promote(self._rev)
-        val = self.get_root(rev)
+        val = self.get_root(self._rev)
         assert val is not undefined, u"Var " + self._name + u" is undefined"
-        return promote(val)
+        return val
 
     def is_defined(self):
         return self._root is not undefined

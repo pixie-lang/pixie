@@ -18,16 +18,15 @@ def get_inst_by_idx(bc, idx):
     return bc[idx]
 
 class Frame(object):
-    __immutable_fields__ = ["stack"]
     _virtualizable_ = ["stack[*]",
                        "sp",
                        "ip",
                        "bc",
                        "consts",
                        "code_obj",
-                       "args",
+                       "args[*]",
 ]
-    def __init__(self, code_obj, args=[]):
+    def __init__(self, code_obj, args):
         self = hint(self, access_directly=True, fresh_virtualizable=True)
         self.code_obj = code_obj
         self.sp = r_uint(0)
@@ -72,7 +71,8 @@ class Frame(object):
         self.push(self.nth(delta))
 
     def push_arg(self, idx):
-        self.push(self.args[idx])
+        assert 0 <= idx < len(self.args)
+        self.push(self.args[r_uint(idx)])
 
     @unroll_safe
     def push_n(self, args, argc):

@@ -132,12 +132,6 @@
     (transduce ordered-hash-reducing-fn v)))
 
 
-(def + (fn + [& rest] (reduce -add 0 rest)))
-
-(def inc (fn [x] (+ x 1)))
-
-(def dec (fn [x] (- x 1)))
-
 (def stacklet->lazy-seq
   (fn [f]
     (let [val (f nil)]
@@ -175,3 +169,15 @@
        (set-macro! ~nm)
        ~nm))
 (set-macro! defmacro)
+
+
+(defn +
+  ([] 0)
+  ([x] x)
+  ([x y] (-add x y))
+  ([x y z] (-add x (-add y z)))
+  ([x y z & rest] (-add x (-add y (-add z (reduce -add 0 rest))))))
+
+(def inc (fn [x] (+ x 1)))
+
+(def dec (fn [x] (- x 1)))

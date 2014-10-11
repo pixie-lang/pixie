@@ -228,10 +228,12 @@ def is_macro_call(form, ctx):
 
 def call_macro(var, form, ctx):
     form = rt.next(form)
-    args = []
+    args = [None] * rt.count(form).int_val()
+    i = 0
     while form is not nil:
-        args.append(rt.first(form))
+        args[i] = rt.first(form)
         form = rt.next(form)
+        i += 1
     return var.invoke(args)
 
 def compile_form(form, ctx):

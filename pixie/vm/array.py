@@ -9,6 +9,7 @@ import pixie.vm.protocols as proto
 
 class Array(object.Object):
     _type = object.Type(u"pixie.stdlib.Array")
+    __immutable_fields__ = ["_list[*]"]
     def type(self):
         return Array._type
 

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Object, Type, _type_registry
-from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var
+from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
+                          resize_list, list_copy
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
 import rpython.rlib.rstacklet as rstacklet
+from rpython.rlib.rarithmetic import r_uint
 
 
 defprotocol("pixie.stdlib", "ISeq", ["-first", "-next"])
@@ -123,20 +125,21 @@ def str__args(args):
     return String(u"".join(acc))
 
 @as_var("apply")
+@jit.unroll_safe
 def apply__args(args):
-    last_itm = args[-1]
+    last_itm = args[len(args) - 1]
     if rt.instance_QMARK_(last_itm, rt.IIndexed.deref()) is false or \
         rt.instance_QMARK_(last_itm, rt.ICounted.deref()) is false:
         raise ValueError("Last item to apply must be bost IIndexed and ICounted")
 
     fn = args[0]
-    out_args = []
+    argc = r_uint(len(args) - 2)
+    out_args = [None] * (argc + r_uint(rt.count(last_itm).int_val()))
 
-    for x in range(len(args) - 2):
-        out_args.append(args[x + 1])
+    list_copy(args, 1, out_args, 0, argc)
 
     for x in range(rt.count(last_itm).int_val()):
-        out_args.append(rt.nth(last_itm, numbers.Integer(x)))
+        out_args[argc + x] = rt.nth(last_itm, numbers.Integer(x))
 
     return fn.invoke(out_args)
 
