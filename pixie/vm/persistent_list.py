@@ -3,7 +3,7 @@ from pixie.vm.primitives import nil, true, false
 import pixie.vm.protocols as proto
 from  pixie.vm.code import extend, as_var
 from pixie.vm.numbers import Integer
-
+from rpython.rlib.rarithmetic import r_uint, intmask
 
 class PersistentList(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentList")
@@ -44,7 +44,7 @@ def _seq(x):
 
 @extend(proto._count, PersistentList._type)
 def _count(self):
-    return Integer(self._cnt)
+    return Integer(intmask(self._cnt))
 
 @extend(proto._conj, PersistentList._type)
 def _conj(self, itm):
@@ -59,7 +59,7 @@ def count(self):
 
 @as_var("list")
 def list__args(args):
-    i = len(args)
+    i = r_uint(len(args))
     acc = nil
     while i > 0:
         acc = PersistentList(args[i - 1], acc, i, nil)

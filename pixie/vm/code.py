@@ -46,7 +46,7 @@ class BaseCode(object.Object):
         self._is_macro = False
 
     def set_macro(self):
-        self._is_macro = true
+        self._is_macro = True
 
     def is_macro(self):
         return self._is_macro
@@ -82,7 +82,7 @@ class MultiArityFn(BaseCode):
         self._required_arity = required_arity
         self._rest_fn = rest_fn
 
-    @elidable
+    @elidable_promote()
     def get_fn(self, arity):
         f = self._arities.get(arity, None)
         if f is not None:
@@ -195,7 +195,7 @@ undefined = Undefined()
 
 class Var(BaseCode):
     _type = object.Type(u"Var")
-    _immutable_fields_ = ["_rev?", "_is_macro?"]
+    _immutable_fields_ = ["_rev?"]
 
     def type(self):
         return Var._type
@@ -210,16 +210,16 @@ class Var(BaseCode):
         self._root = o
         return self
 
-    @elidable
+    @elidable_promote()
     def get_root(self, rev):
-        return self._root
+        return promote(self._root)
 
 
     def deref(self):
         rev = promote(self._rev)
         val = self.get_root(rev)
         assert val is not undefined, u"Var " + self._name + u" is undefined"
-        return val
+        return promote(val)
 
     def is_defined(self):
         return self._root is not undefined
@@ -336,7 +336,7 @@ class PolymorphicFn(BaseCode):
         self._default_fn = fn
         self._rev += 1
 
-    @elidable
+    @elidable_promote()
     def get_protocol_fn(self, tp, rev):
         fn = self._dict.get(tp, self._default_fn)
         return promote(fn)
@@ -376,7 +376,7 @@ class DoublePolymorphicFn(BaseCode):
         self._default_fn = fn
         self._rev += 1
 
-    @elidable
+    @elidable_promote()
     def get_fn(self, tp1, tp2, _rev):
         d1 = self._dict.get(tp1, None)
         if d1 is None:

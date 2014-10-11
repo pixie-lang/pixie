@@ -9,7 +9,7 @@ from rpython.rlib.rarithmetic import r_uint as r_uint32, intmask, widen
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 import rpython.rlib.rstacklet as rstacklet
-
+from rpython.rtyper.lltypesystem import lltype, rffi
 
 OP_NEW = 0x01
 OP_SWITCH = 0x02
@@ -18,12 +18,14 @@ OP_EXIT = 0x04
 
 class GlobalState(py_object):
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self._th = None
         self._val = None
         self._ex = None
         self._to = None
         self._op = 0x00
-        #self._h = None
         self._fn = None
         self._init_fn = None
         self._from = None
@@ -39,7 +41,12 @@ global_state = GlobalState()
 def init():
     if global_state._th is None:
         global_state._th = rstacklet.StackletThread(rt.__config__)
+        global_state._h = global_state._th.get_null_handle()
 
+def shutdown():
+    global_state._h = global_state._th.get_null_handle()
+
+    global_state.reset()
 
 class WrappedHandler(BaseCode):
     _type = object.Type(u"Stacklet")
@@ -126,11 +133,13 @@ def with_stacklets(f):
             continue
 
         elif global_state._op == OP_EXIT:
+            shutdown()
             return global_state._val
 
         else:
             break
 
+    shutdown()
     return None
 
 @as_var("create-stacklet")

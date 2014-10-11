@@ -6,6 +6,7 @@ from rpython.rlib.jit import JitHookInterface, Counters
 from rpython.annotator.policy import AnnotatorPolicy
 from pixie.vm.code import wrap_fn
 from pixie.vm.stacklet import with_stacklets
+import pixie.vm.stacklet as stacklet
 
 import sys
 
@@ -122,15 +123,16 @@ def run_debug(argv):
     CodeWriter.debug = True
     run_child(globals(), locals())
 
+# run bootstrap
+with_stacklets(bootstrap)
+# reset the stacklet state so we can translate with different settings
+stacklet.global_state = stacklet.GlobalState()
 
 def target(*args):
     import pixie.vm.rt as rt
     rt.__config__ = args[0].config
-    import pixie.vm.stacklet
 
-    import pixie.vm.rt as rt
-    from pixie.vm.string import String
-    rt.load_file(String(u"pixie/stdlib.lisp"))
+
 
 
     return entry_point, None
@@ -140,5 +142,5 @@ print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
     #run_debug(sys.argv)
-    with_stacklets(bootstrap)
+    #with_stacklets(bootstrap)
     entry_point()

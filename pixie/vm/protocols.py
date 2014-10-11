@@ -26,7 +26,7 @@ defprotocol("pixie.stdlib", "IDeref", ["-deref"])
 
 defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
-IVector = as_var("pixie.stdlib", "IVector")(Protocol("IVector"))
+IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
 def default_str(x):
     from pixie.vm.string import String
