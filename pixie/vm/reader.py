@@ -171,7 +171,6 @@ class SyntaxQuoteReader(ReaderHandler):
             ret = rt.list(SEQ, rt.cons(CONCAT, self.expand_list(rt.seq(form))))
         else:
             ret = rt.list(QUOTE, form)
-        print rt._str(ret)._str
         return ret
 
     def expand_list(self, form):

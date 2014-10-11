@@ -68,6 +68,13 @@ def entry_point(foo=None):
 
     return 0
 
+@wrap_fn
+def bootstrap():
+    import pixie.vm.rt as rt
+    from pixie.vm.string import String
+    rt.load_file(String(u"pixie/stdlib.lisp"))
+
+
 from rpython.rtyper.lltypesystem import lltype
 from rpython.jit.metainterp import warmspot
 
@@ -132,8 +139,6 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    import pixie.vm.rt as rt
-    from pixie.vm.string import String
-    rt.load_file(String(u"pixie/stdlib.lisp"))
     #run_debug(sys.argv)
+    with_stacklets(bootstrap)
     entry_point()

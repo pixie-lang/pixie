@@ -43,7 +43,13 @@ for x in range(len(BYTECODES)):
 
 class BaseCode(object.Object):
     def __init__(self):
-        pass
+        self._is_macro = False
+
+    def set_macro(self):
+        self._is_macro = true
+
+    def is_macro(self):
+        return self._is_macro
 
     def _invoke(self, args):
         raise NotImplementedError()
@@ -71,6 +77,7 @@ class MultiArityFn(BaseCode):
         return MultiArityFn._type
 
     def __init__(self, arities, required_arity=0, rest_fn=None):
+        BaseCode.__init__(self)
         self._arities = arities
         self._required_arity = required_arity
         self._rest_fn = rest_fn
@@ -188,7 +195,7 @@ undefined = Undefined()
 
 class Var(BaseCode):
     _type = object.Type(u"Var")
-    _immutable_fields_ = ["_rev?"]
+    _immutable_fields_ = ["_rev?", "_is_macro?"]
 
     def type(self):
         return Var._type
@@ -214,8 +221,13 @@ class Var(BaseCode):
         assert val is not undefined, u"Var " + self._name + u" is undefined"
         return val
 
+    def is_defined(self):
+        return self._root is not undefined
+
     def _invoke(self, args):
         return self.deref().invoke(args)
+
+
 
 
 class Namespace(py_object):
@@ -307,6 +319,7 @@ class PolymorphicFn(BaseCode):
 
     __immutable_fields__ = ["_rev?"]
     def __init__(self, name, protocol):
+        BaseCode.__init__(self)
         self._name = name
         self._dict = {}
         self._rev = 0

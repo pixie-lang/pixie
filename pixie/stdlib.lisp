@@ -166,3 +166,12 @@
 (extend -seq PersistentVector sequence)
 
 (def concat (fn [& args] (transduce cat conj args)))
+
+(def defn (fn [nm & rest] `(def ~nm (fn ~nm ~@rest))))
+(set-macro! defn)
+
+(defn defmacro [nm & rest]
+  `(do (defn ~nm ~@rest)
+       (set-macro! ~nm)
+       ~nm))
+(set-macro! defmacro)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Object, Type, _type_registry
-from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol
+from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
@@ -205,3 +205,9 @@ def eq(a, b):
         return true
     else:
         return rt._eq(a, b)
+
+@as_var("set-macro!")
+def set_macro(f):
+    assert isinstance(f, BaseCode)
+    f.set_macro()
+    return f

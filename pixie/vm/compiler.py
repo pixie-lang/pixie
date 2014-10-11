@@ -203,8 +203,36 @@ class ClosureCell(LocalType):
 
 
 
+def resolve_var(ctx, name):
+    var = code.get_var_if_defined(ctx.ns, name)
+    if var is None:
+        var = code.get_var_if_defined(u"pixie.stdlib", name)
+    return var
+
+def resolve_local(ctx, name):
+    return ctx.get_local(name)
 
 
+def is_macro_call(form, ctx):
+    if rt.seq_QMARK_(form) is true and isinstance(rt.first(form), symbol.Symbol):
+        name = rt.first(form)._str
+        if resolve_local(ctx, name):
+            return None
+        var = resolve_var(ctx, name)
+
+        if var and var.is_defined():
+            val = var.deref()
+            if isinstance(val, code.BaseCode) and val.is_macro():
+                return val
+    return None
+
+def call_macro(var, form, ctx):
+    form = rt.next(form)
+    args = []
+    while form is not nil:
+        args.append(rt.first(form))
+        form = rt.next(form)
+    return var.invoke(args)
 
 def compile_form(form, ctx):
     if rt.instance_QMARK_(form, rt.ISeq.deref()) is true and form is not nil:
@@ -215,12 +243,9 @@ def compile_form(form, ctx):
 
     if isinstance(form, symbol.Symbol):
         name = form._str
-        loc = ctx.get_local(name)
+        loc = resolve_local(ctx, name)
         if loc is None:
-            var = code.get_var_if_defined(ctx.ns, name)
-            if var is None:
-                var = code.get_var_if_defined(u"pixie.stdlib", name)
-
+            var = resolve_var(ctx, name)
             if var is None:
                 var = _type_registry.get_by_name(name, None)
                 if var is not None:
@@ -412,10 +437,10 @@ def compile_if(form, ctx):
     ctx.mark(else_lbl)
 
 def compile_def(form, ctx):
-    form = form.next()
-    name = form.first()
-    form = form.next()
-    val = form.first()
+    form = rt.next(form)
+    name = rt.first(form)
+    form = rt.next(form)
+    val = rt.first(form)
 
     assert isinstance(name, symbol.Symbol)
 
@@ -426,12 +451,12 @@ def compile_def(form, ctx):
     ctx.sub_sp(1)
 
 def compile_do(form, ctx):
-    form = form.next()
+    form = rt.next(form)
     assert form is not nil
 
     while True:
-        compile_form(form.first(), ctx)
-        form = form.next()
+        compile_form(rt.first(form), ctx)
+        form = rt.next(form)
 
         if form is nil:
             return
@@ -546,9 +571,14 @@ builtins = {u"fn": compile_fn,
             u"let": compile_let,
             u"loop": compile_loop}
 
+
 def compile_cons(form, ctx):
     if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
         return builtins[form.first()._str](form, ctx)
+
+    macro = is_macro_call(form, ctx)
+    if macro:
+        return compile_cons(call_macro(macro, form, ctx), ctx)
 
     cnt = 0
     ctc = ctx.can_tail_call
