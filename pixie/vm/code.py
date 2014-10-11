@@ -172,6 +172,7 @@ class Code(BaseCode):
     def _invoke(self, args):
         return interpret(self, args)
 
+    @elidable_promote()
     def get_consts(self):
         return self._consts
 
@@ -220,6 +221,7 @@ class Closure(Code):
     def get_closed_over(self, idx):
         return self._closed_overs[idx]
 
+    @elidable_promote()
     def get_consts(self):
         return self._code.get_consts()
 

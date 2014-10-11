@@ -91,6 +91,7 @@ class Frame(object):
         return args
 
     def get_const(self, idx):
+        assert 0 <= idx < len(self.consts)
         return self.consts[idx]
 
     def push_const(self, idx):

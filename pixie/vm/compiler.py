@@ -16,6 +16,14 @@ from pixie.vm.util import *
 rt.init()
 
 
+def clone(lst):
+    arr = [None] * len(lst)
+    i = 0
+    while i < len(lst):
+        arr[i] = lst[i]
+        i += 1
+
+    return arr
 
 
 
@@ -65,9 +73,9 @@ class Context(object):
 
     def to_code(self, required_args=-1):
         if required_args != -1:
-            return code.VariadicCode(self.name, self.bytecode, self.consts, self._max_sp + 1, required_args)
+            return code.VariadicCode(self.name, self.bytecode, clone(self.consts), self._max_sp + 1, required_args)
         else:
-            return code.Code(self.name, self.bytecode, self.consts, self._max_sp + 1)
+            return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1)
 
     def push_arg(self, idx):
         self.bytecode.append(code.ARG)
