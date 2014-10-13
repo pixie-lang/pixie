@@ -25,6 +25,7 @@ class Frame(object):
                        "consts",
                        "code_obj",
                        "args[*]",
+                       "closed_overs[*]"
 ]
     def __init__(self, code_obj, args):
         self = hint(self, access_directly=True, fresh_virtualizable=True)
@@ -39,6 +40,10 @@ class Frame(object):
     def unpack_code_obj(self):
         self.bc = self.code_obj.get_bytecode()
         self.consts = self.code_obj.get_consts()
+        if isinstance(self.code_obj, code.Closure):
+            self.closed_overs = self.code_obj.get_closed_overs()
+        else:
+            self.closed_overs = []
 
     def get_inst(self):
         assert 0 <= self.ip < len(self.bc)
@@ -99,6 +104,10 @@ class Frame(object):
 
     def jump_rel(self, delta):
         self.ip += delta - 1
+
+    def push_closed_over(self, idx):
+        assert 0 <= idx < len(self.closed_overs)
+        self.push(self.closed_overs[idx])
 
 @jit.unroll_safe
 def make_multi_arity(frame, argc):
@@ -204,7 +213,7 @@ def interpret(code_obj, args=[]):
         if inst == code.CLOSED_OVER:
             assert isinstance(frame.code_obj, code.Closure)
             idx = frame.get_inst()
-            frame.push(frame.code_obj._closed_overs[idx])
+            frame.push_closed_over(idx)
             continue
 
         if inst == code.SET_VAR:

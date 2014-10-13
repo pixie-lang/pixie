@@ -99,7 +99,7 @@ class BaseCode(object.Object):
     def get_bytecode(self):
         raise NotImplementedError()
 
-    @elidable_promote
+    @elidable_promote()
     def stack_size(self):
         return 0
 
@@ -176,6 +176,7 @@ class Code(BaseCode):
     def get_consts(self):
         return self._consts
 
+    @elidable_promote()
     def get_bytecode(self):
         return self._bytecode
 
@@ -204,7 +205,7 @@ class VariadicCode(Code):
             return Code._invoke(self, start)
         raise ValueError("Wrong number of args")
 
-class Closure(Code):
+class Closure(BaseCode):
     _type = object.Type(u"Closure")
     __immutable_fields__ = ["_closed_overs[*]", "_code"]
     def type(self):
@@ -212,6 +213,7 @@ class Closure(Code):
 
     def __init__(self, code, closed_overs):
         BaseCode.__init__(self)
+        assert isinstance(code, BaseCode)
         self._code = code
         self._closed_overs = closed_overs
 
@@ -221,16 +223,17 @@ class Closure(Code):
     def get_closed_over(self, idx):
         return self._closed_overs[idx]
 
-    @elidable_promote()
     def get_consts(self):
         return self._code.get_consts()
 
     def get_bytecode(self):
         return self._code.get_bytecode()
 
-    @elidable_promote()
     def stack_size(self):
-        return self._code._stack_size
+        return self._code.stack_size()
+
+    def get_closed_overs(self):
+        return self._closed_overs
 
 class Undefined(object.Object):
     _type = object.Type(u"Undefined")
