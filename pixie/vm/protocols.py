@@ -97,6 +97,8 @@ _count_driver = jit.JitDriver(name="pixie.stdlib.count",
 @as_var("count")
 def count(x):
     acc = 0
+    if ICounted.satisfies(rt.type(x)):
+        return rt._count(x)
     while True:
         _count_driver.jit_merge_point(tp=rt.type(x))
         if ICounted.satisfies(rt.type(x)):
@@ -226,17 +228,22 @@ def namespace(s):
     return rt._namespace(s)
 
 @as_var("-try-catch")
-def _try_catch(main_fn, ex, catch_fn, final):
+def _try_catch(main_fn, catch_fn, final):
     try:
         return main_fn.invoke([])
     except Exception as ex:
-        if not isinstance(Exception, WrappedException):
-            ex = RuntimeException(ex.message)
+        if not isinstance(ex, WrappedException):
+            from pixie.vm.string import String
+            if isinstance(ex, Exception):
+                ex = RuntimeException(String(u"Some error"))
+            else:
+                ex = RuntimeException(nil)
             return catch_fn.invoke([ex])
         else:
             return catch_fn.invoke([ex._ex])
     finally:
-        final.invoke([])
+        if final is not nil:
+            final.invoke([])
 
 @as_var("throw")
 def _trow(ex):
