@@ -26,7 +26,8 @@ BYTECODES = ["LOAD_CONST",
              "ARG",
              "PUSH_SELF",
              "POP_UP_N",
-             "MAKE_MULTI_ARITY"]
+             "MAKE_MULTI_ARITY",
+             "MAKE_VARIADIC"]
 
 for x in range(len(BYTECODES)):
     globals()[BYTECODES[x]] = r_uint(x)
@@ -184,25 +185,27 @@ class Code(BaseCode):
     def stack_size(self):
         return self._stack_size
 
-class VariadicCode(Code):
-    def __init__(self, name, bytecode, consts, stack_size, required_arity):
-        Code.__init__(self, name, bytecode, consts, stack_size)
+class VariadicCode(BaseCode):
+    __immutable_fields__ = ["_required_arity", "_code"]
+    def __init__(self, code, required_arity):
+        BaseCode.__init__(self)
         self._required_arity = r_uint(required_arity)
+        self._code = code
 
     def _invoke(self, args):
         from pixie.vm.array import array
         argc = len(args)
         if self._required_arity == 0:
-            return Code._invoke(self, [array(args)])
+            return self._code.invoke([array(args)])
         if argc == self._required_arity:
             new_args = resize_list(args, len(args) + 1)
             new_args[len(args)] = array([])
-            return Code._invoke(self, new_args)
+            return self._code.invoke(new_args)
         elif argc > self._required_arity:
             start = slice_from_start(args, self._required_arity, 1)
             rest = slice_to_end(args, self._required_arity)
             start[self._required_arity] = array(rest)
-            return Code._invoke(self, start)
+            return self._code.invoke(start)
         raise ValueError("Wrong number of args")
 
 class Closure(BaseCode):
@@ -213,7 +216,7 @@ class Closure(BaseCode):
 
     def __init__(self, code, closed_overs):
         BaseCode.__init__(self)
-        assert isinstance(code, BaseCode)
+        assert isinstance(code, Code)
         self._code = code
         self._closed_overs = closed_overs
 
@@ -342,6 +345,7 @@ class DefaultProtocolFn(NativeFn):
 class Protocol(object.Object):
     _type = object.Type(u"Protocol")
 
+    __immutable_fields__ = ["_rev?"]
     def type(self):
         return Protocol._type
 
@@ -349,6 +353,7 @@ class Protocol(object.Object):
         self._name = name
         self._polyfns = {}
         self._satisfies = {}
+        self._rev = 0
 
 
     def add_method(self, pfn):
@@ -356,9 +361,14 @@ class Protocol(object.Object):
 
     def add_satisfies(self, tp):
         self._satisfies[tp] = tp
+        self._rev += 1
+
+    @elidable_promote()
+    def _get_satisfies(self, tp, rev):
+        return tp in self._satisfies
 
     def satisfies(self, tp):
-        return tp in self._satisfies
+        return self._get_satisfies(tp, self._rev)
 
 
 class PolymorphicFn(BaseCode):
@@ -460,6 +470,9 @@ def defprotocol(ns, name, methods):
         intern_var(ns, method).set_root(poly)
         gbls[munge(method)] = poly
 
+def assert_type(x, tp):
+    assert isinstance(x, tp), "Fatal Error, this should never happen"
+    return x
 
 ## PYTHON FLAGS
 CO_VARARGS = 0x4
@@ -482,11 +495,11 @@ def wrap_fn(fn, tp=object.Object):
         if argc == 0:
             return as_native_fn(lambda self, args: fn())
         if argc == 1:
-            return as_native_fn(lambda self, args: fn(args[0]))
+            return as_native_fn(lambda self, args: fn(assert_type(args[0], tp)))
         if argc == 2:
-            return as_native_fn(lambda self, args: fn(args[0], args[1]))
+            return as_native_fn(lambda self, args: fn(assert_type(args[0], tp), args[1]))
         if argc == 3:
-            return as_native_fn(lambda self, args: fn(args[0], args[1], args[2]))
+            return as_native_fn(lambda self, args: fn(assert_type(args[0], tp), args[1], args[2]))
 
 
 def extend(pfn, tp1, tp2=None):

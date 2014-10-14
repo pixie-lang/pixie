@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type, _type_registry
+from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           resize_list, list_copy
 from types import MethodType
@@ -27,6 +27,8 @@ defprotocol("pixie.stdlib", "IReduce", ["-reduce"])
 defprotocol("pixie.stdlib", "IDeref", ["-deref"])
 
 defprotocol("pixie.stdlib", "IReset", ["-reset!"])
+
+defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
 
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
@@ -62,7 +64,7 @@ def seq_QMARK_(x):
 def type(x):
     return x.type()
 
-@extend(_str, Type._type)
+@extend(_str, Type)
 def _str(tp):
     import pixie.vm.string as string
     return string.String(u"<type " + tp._name + u">")
@@ -214,3 +216,31 @@ def set_macro(f):
     assert isinstance(f, BaseCode)
     f.set_macro()
     return f
+
+@as_var("name")
+def name(s):
+    return rt._name(s)
+
+@as_var("namespace")
+def namespace(s):
+    return rt._namespace(s)
+
+@as_var("-try-catch")
+def _try_catch(main_fn, ex, catch_fn, final):
+    try:
+        return main_fn.invoke([])
+    except Exception as ex:
+        if not isinstance(Exception, WrappedException):
+            ex = RuntimeException(ex.message)
+            return catch_fn.invoke([ex])
+        else:
+            return catch_fn.invoke([ex._ex])
+    finally:
+        final.invoke([])
+
+@as_var("throw")
+def _trow(ex):
+    if isinstance(ex, RuntimeException):
+        raise WrappedException(ex)
+    raise WrappedException(RuntimeException(ex))
+

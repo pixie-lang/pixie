@@ -1,6 +1,7 @@
 import pixie.vm.rt as rt
 from pixie.vm.object import Object, Type
 from pixie.vm.code import extend, as_var
+from pixie.vm.primitives import nil
 import pixie.vm.protocols as proto
 import pixie.vm.numbers as numbers
 
@@ -15,20 +16,20 @@ class String(Object):
         self._str = s
 
 
-@extend(proto._str, String._type)
+@extend(proto._str, String)
 def _str(x):
     return x
 
-@extend(proto._repr, String._type)
+@extend(proto._repr, String)
 def _repr(self):
     return String(u"\"" + self._str + u"\"")
 
 
-@extend(proto._count, String._type)
+@extend(proto._count, String)
 def _count(self):
     return numbers.Integer(len(self._str))
 
-@extend(proto._nth, String._type)
+@extend(proto._nth, String)
 def _nth(self, idx):
     i = idx.int_val()
     if 0 <= i < len(self._str):
@@ -52,16 +53,25 @@ class Character(Object):
 
 
 
-@extend(proto._str, Character._type)
+@extend(proto._str, Character)
 def _str(self):
     cv = self.char_val()
     if cv < 128:
         return String(u"\\"+unicode(chr(cv)))
     return String(u"\\u"+unicode(str(cv)))
 
-@extend(proto._repr, Character._type)
+@extend(proto._repr, Character)
 def _repr(self):
     cv = self.char_val()
     if cv < 128:
         return String(u"\\"+unicode(chr(cv)))
     return String(u"\\u"+unicode(str(cv)))
+
+
+@extend(proto._name, String)
+def _name(self):
+    return self
+
+@extend(proto._namespace, String)
+def _namespace(self):
+    return nil

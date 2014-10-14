@@ -30,23 +30,23 @@ class PersistentList(object.Object):
         return PersistentList(self._first, self._next, meta)
 
 
-@extend(proto._first, PersistentList._type)
+@extend(proto._first, PersistentList)
 def _first(x):
     return x._first
 
-@extend(proto._next, PersistentList._type)
+@extend(proto._next, PersistentList)
 def _next(x):
     return x._next
 
-@extend(proto._seq, PersistentList._type)
+@extend(proto._seq, PersistentList)
 def _seq(x):
     return x
 
-@extend(proto._count, PersistentList._type)
+@extend(proto._count, PersistentList)
 def _count(self):
     return Integer(intmask(self._cnt))
 
-@extend(proto._conj, PersistentList._type)
+@extend(proto._conj, PersistentList)
 def _conj(self, itm):
     return PersistentList(itm, self, self._cnt + 1, nil)
 

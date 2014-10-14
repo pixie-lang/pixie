@@ -16,12 +16,12 @@ class Atom(object.Object):
 
 
 
-@extend(proto._reset_BANG_, Atom._type)
+@extend(proto._reset_BANG_, Atom)
 def _reset(self, v):
     self._boxed_value = v
     return self
 
-@extend(proto._deref, Atom._type)
+@extend(proto._deref, Atom)
 def _deref(self):
     return self._boxed_value
 

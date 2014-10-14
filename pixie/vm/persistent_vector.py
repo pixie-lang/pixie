@@ -110,19 +110,19 @@ class PersistentVector(object.Object):
 
 
 
-@extend(proto._count, PersistentVector._type)
+@extend(proto._count, PersistentVector)
 def _count(self):
     return Integer(intmask(self._cnt))
 
-@extend(proto._nth, PersistentVector._type)
+@extend(proto._nth, PersistentVector)
 def _nth(self, idx):
     return self.nth(idx.int_val())
 
-@extend(proto._conj, PersistentVector._type)
+@extend(proto._conj, PersistentVector)
 def _conj(self, v):
     return self.conj(v)
 
-@extend(proto._reduce, PersistentVector._type)
+@extend(proto._reduce, PersistentVector)
 def _reduce(self, f, init):
     assert isinstance(self, PersistentVector)
     i = 0

@@ -286,6 +286,13 @@ def interpret(code_obj, args=[]):
 
             continue
 
+        if inst == code.MAKE_VARIADIC:
+            code_object = frame.pop()
+            required_arity = frame.get_inst()
+            frame.push(code.VariadicCode(code_object, required_arity))
+
+            continue
+
 
         print "NO DISPATCH FOR: " + code.BYTECODES[inst]
         raise Exception()

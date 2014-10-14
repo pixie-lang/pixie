@@ -1,1 +1,1 @@
-../pypy/rpython/bin/rpython --opt=jit --continuation target.py
+../pypy/rpython/bin/rpython --opt=jit --continuation --no-shared target.py

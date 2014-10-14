@@ -29,6 +29,20 @@ class Type(Object):
     def type(self):
         return Type._type
 
+
 Type._type = Type(u"Type")
+
+class RuntimeException(Object):
+    _type = Type(u"pixie.stdlib.RuntimeException")
+    def __init__(self, data):
+        self._data = data
+
+class WrappedException(Exception):
+    def __init__(self, ex):
+        assert isinstance(ex, RuntimeException)
+        self._ex = ex
+
+
+
 
 

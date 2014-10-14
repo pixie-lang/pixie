@@ -72,10 +72,11 @@ class Context(object):
         self.recur_points.pop()
 
     def to_code(self, required_args=-1):
-        if required_args != -1:
-            return code.VariadicCode(self.name, self.bytecode, clone(self.consts), self._max_sp + 1, required_args)
-        else:
-            return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1)
+        return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1)
+        #if required_args != -1:
+        #    return code.VariadicCode(self.name, self.bytecode, clone(self.consts), self._max_sp + 1, required_args)
+        #else:
+        #    return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1)
 
     def push_arg(self, idx):
         self.bytecode.append(code.ARG)
@@ -414,6 +415,10 @@ def compile_fn_body(name, args, body, ctx):
         ctx.bytecode.append(r_uint(len(closed_overs)))
         ctx.sub_sp(len(closed_overs))
 
+    if required_args >= 0:
+        ctx.bytecode.append(code.MAKE_VARIADIC)
+        ctx.bytecode.append(r_uint(required_args))
+
     return required_args, rt.count(args).int_val()
 
 def compile_if(form, ctx):
@@ -521,7 +526,7 @@ def compile_let(form, ctx):
 
     while True:
         compile_form(rt.first(body), ctx)
-        body = next(body)
+        body = rt.next(body)
 
         if body is nil:
             break
@@ -570,6 +575,8 @@ def compile_loop(form, ctx):
     ctx.sub_sp(binding_count)
     ctx.bytecode.append(binding_count)
 
+def compile_comment(form, ctx):
+    ctx.push_const(nil)
 
 builtins = {u"fn": compile_fn,
             u"if": compile_if,
@@ -579,7 +586,8 @@ builtins = {u"fn": compile_fn,
             u"quote": compile_quote,
             u"recur": compile_recur,
             u"let": compile_let,
-            u"loop": compile_loop}
+            u"loop": compile_loop,
+            u"comment": compile_comment}
 
 
 def compile_cons(form, ctx):

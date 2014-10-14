@@ -17,11 +17,11 @@ class Array(object.Object):
         self._list = lst
 
 
-@extend(proto._count, Array._type)
+@extend(proto._count, Array)
 def _count(self):
     return Integer(len(self._list))
 
-@extend(proto._nth, Array._type)
+@extend(proto._nth, Array)
 def _nth(self, idx):
     return self._list[idx.int_val()]
 

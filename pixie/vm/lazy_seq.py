@@ -26,21 +26,21 @@ class LazySeq(object.Object):
 
 
 
-@extend(proto._first, LazySeq._type)
+@extend(proto._first, LazySeq)
 def _first(self):
     assert isinstance(self, LazySeq)
     rt.seq(self)
     print "first"
     return rt.first(self._s)
 
-@extend(proto._next, LazySeq._type)
+@extend(proto._next, LazySeq)
 def _next(self):
     assert isinstance(self, LazySeq)
     rt.seq(self)
     print "next"
     return rt.next(self._s)
 
-@extend(proto._seq, LazySeq._type)
+@extend(proto._seq, LazySeq)
 def _seq(self):
     assert isinstance(self, LazySeq)
     self.sval()

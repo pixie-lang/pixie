@@ -191,3 +191,27 @@
 
 (defn get-val [inst]
   (get-field inst :val))
+
+(comment (defn comp
+  ([f] f)
+  ([f1 f2]
+     (fn [arg]
+       (f1 (f2 arg))))
+  ([f1 f2 f3]
+     (fn [arg]
+       (f1 (f2 (f3 arg)))))))
+
+(comment
+(defmacro deftype [nm fields & body]
+  (let [type-decl `(def ~nm (create-type ~(keyword (name nm))))
+        field-syms (transduce (map (comp symbol name)) conj fields)
+        ctor `(defn ~nm ~field-syms
+                (let [inst (new ~nm)]
+                  ~@(transduce
+                     (map (fn [field]
+                            `(set-field! inst ~field ~(symbol (name field)))))
+                     conj
+                     fields)
+                  ~inst))]
+    `(do ~type-decl
+         ~ctor))))
