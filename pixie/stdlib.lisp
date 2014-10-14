@@ -181,3 +181,13 @@
 (def inc (fn [x] (+ x 1)))
 
 (def dec (fn [x] (- x 1)))
+
+
+(def slot-tp (create-type :slot [:val]))
+
+(defn ->Slot [x]
+  (let [inst (new slot-tp)]
+    (set-field! inst :val x)))
+
+(defn get-val [inst]
+  (get-field inst :val))

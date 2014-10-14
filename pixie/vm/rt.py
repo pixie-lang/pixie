@@ -17,6 +17,7 @@ def init():
     import pixie.vm.array
     import pixie.vm.lazy_seq
     import pixie.vm.persistent_list
+    import pixie.vm.custom_types
     numbers.init()
 
     from pixie.vm.code import _ns_registry, BaseCode, munge
