@@ -7,6 +7,7 @@ from rpython.annotator.policy import AnnotatorPolicy
 from pixie.vm.code import wrap_fn
 from pixie.vm.stacklet import with_stacklets
 import pixie.vm.stacklet as stacklet
+from pixie.vm.object import RuntimeException, WrappedException
 
 import sys
 
@@ -36,7 +37,11 @@ def repl():
 
     rdr = PromptReader()
     while True:
-        val = interpret(compile(read(rdr, True)))
+        try:
+            val = interpret(compile(read(rdr, True)))
+        except WrappedException as ex:
+            print "Error: ", ex._ex.__repr__()
+            continue
         if val is keyword(u"exit-repl"):
             break
         val = rt.str(val)

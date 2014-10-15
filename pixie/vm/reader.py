@@ -1,5 +1,6 @@
 py_object = object
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons
@@ -18,7 +19,7 @@ class PlatformReader(object.Object):
 class StringReader(PlatformReader):
 
     def __init__(self, s):
-        assert isinstance(s, unicode)
+        affirm(isinstance(s, unicode), u"StringReader requires unicode")
         self._str = s
         self._idx = 0
 
@@ -113,7 +114,7 @@ class QuoteReader(ReaderHandler):
 class KeywordReader(ReaderHandler):
     def invoke(self, rdr, ch):
         itm = read(rdr, True)
-        assert isinstance(itm, Symbol)
+        affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
 
         return keyword(itm._str)
 

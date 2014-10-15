@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException
+from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           resize_list, list_copy
 from types import MethodType
@@ -155,7 +155,7 @@ def _print(a):
 
 @as_var("instance?")
 def _instance(o, proto):
-    assert isinstance(proto, Protocol), "proto must be a Protocol"
+    affirm(isinstance(proto, Protocol), u"proto must be a Protocol")
 
     return true if proto.satisfies(o.type()) else false
 
@@ -181,16 +181,16 @@ def load_file(filename):
 
 @as_var("extend")
 def extend(proto_fn, tp, fn):
-    assert isinstance(proto_fn, PolymorphicFn), "First argument to extend should be a PolymorphicFn"
-    assert isinstance(tp, Type), "Second argument to extend must be a Type"
-    assert isinstance(fn, BaseCode), "Last argument to extend must be a function"
+    affirm(isinstance(proto_fn, PolymorphicFn), u"First argument to extend should be a PolymorphicFn")
+    affirm(isinstance(tp, Type), u"Second argument to extend must be a Type")
+    affirm(isinstance(fn, BaseCode), u"Last argument to extend must be a function")
     proto_fn.extend(tp, fn)
     return nil
 
 @as_var("type-by-name")
 def type_by_name(nm):
     import pixie.vm.string as string
-    assert isinstance(nm, string.String)
+    affirm(isinstance(nm, string.String), u"type name must be string")
     return _type_registry.get_by_name(nm._str, nil)
 
 @as_var("deref")
@@ -215,7 +215,7 @@ def eq(a, b):
 
 @as_var("set-macro!")
 def set_macro(f):
-    assert isinstance(f, BaseCode)
+    affirm(isinstance(f, BaseCode), u"Only code objects can be macros")
     f.set_macro()
     return f
 

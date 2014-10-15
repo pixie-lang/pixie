@@ -1,4 +1,5 @@
 from rpython.rlib.rarithmetic import r_uint, LONG_BIT, intmask
+from pixie.vm.object import affirm
 
 seed = 0
 C1 = 0xcc9e2d51
@@ -103,17 +104,17 @@ def new_hash_state():
 
 @as_var("update-hash-ordered!")
 def update_hash_ordered(acc, val):
-    assert isinstance(acc, HashingState)
+    affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
     return acc.update_hash_ordered(val)
 
 @as_var("update-hash-unordered!")
 def update_hash_ordered(acc, val):
-    assert isinstance(acc, HashingState)
+    affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
     return acc.update_hash_unordered(val)
 
 @as_var("finish-hash-state")
 def finish_hash_state(acc):
-    assert isinstance(acc, HashingState)
+    affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
     return acc.finish()
 
 @as_var("hash-int")

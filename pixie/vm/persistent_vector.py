@@ -124,7 +124,6 @@ def _conj(self, v):
 
 @extend(proto._reduce, PersistentVector)
 def _reduce(self, f, init):
-    assert isinstance(self, PersistentVector)
     i = 0
     while i < self._cnt:
         array = self.array_for(i)

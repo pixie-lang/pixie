@@ -1,5 +1,6 @@
 py_object = object
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.code import BaseCode
 from pixie.vm.numbers import Integer
@@ -57,7 +58,7 @@ class WrappedHandler(BaseCode):
         return WrappedHandler._type
 
     def _invoke(self, args):
-        assert len(args) == 1, "Only one arg to continuation allowed"
+        affirm(len(args) == 1, u"Only one arg to continuation allowed")
         global_state._from = global_state._to
         global_state._to = self
         global_state._op = OP_SWITCH
@@ -79,7 +80,7 @@ def new_stacklet(f):
 def new_handler(h, o):
     global_state._h = h
 
-    assert global_state._val is not None
+    affirm(global_state._val is not None, u"Internal Stacklet Error")
     f = global_state._val
     global_state._val = None
 
@@ -100,7 +101,7 @@ def new_handler(h, o):
 def init_handler(h, o):
     global_state._h = h
 
-    assert global_state._init_fn is not None
+    affirm(global_state._init_fn is not None, u"Internal Stacklet error")
     f = global_state._init_fn
     global_state._init_fn = None
 

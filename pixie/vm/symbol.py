@@ -1,4 +1,5 @@
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.protocols as proto
 from pixie.vm.code import extend, as_var
@@ -56,7 +57,7 @@ def _namespace(self):
 
 @as_var("symbol")
 def _symbol(s):
-    assert isinstance(s, String), "Symbol name must be a string"
+    affirm(isinstance(s, String), u"Symbol name must be a string")
     return symbol(s._str)
 
 
