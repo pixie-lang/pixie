@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, affirm
+from pixie.vm.object import Object, affirm, affirm_fn
 import pixie.vm.code as code
 import pixie.vm.numbers as numbers
 from pixie.vm.primitives import nil, true, false
@@ -61,7 +61,7 @@ class Frame(object):
     def pop(self):
         #print type(self.sp), self.sp
         self.sp -= 1
-        assert 0 <= self.sp < len(self.stack), "Stack out of range: " + str(self.sp)
+        affirm_fn(0 <= self.sp < len(self.stack), lambda: u"Stack out of range: " + unicode(str(self.sp)))
         v = self.stack[self.sp]
         self.stack[self.sp] = None
         return v

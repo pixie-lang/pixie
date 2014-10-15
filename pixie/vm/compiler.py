@@ -73,10 +73,6 @@ class Context(object):
 
     def to_code(self, required_args=-1):
         return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1)
-        #if required_args != -1:
-        #    return code.VariadicCode(self.name, self.bytecode, clone(self.consts), self._max_sp + 1, required_args)
-        #else:
-        #    return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1)
 
     def push_arg(self, idx):
         self.bytecode.append(code.ARG)
@@ -396,14 +392,17 @@ def compile_fn_body(name, args, body, ctx):
     new_ctx.push_recur_point(FunctionRecurPoint())
 
     new_ctx.disable_tail_call()
-    while body is not nil:
-        if rt.next(body) is nil:
-            new_ctx.enable_tail_call()
-        compile_form(rt.first(body), new_ctx)
-        if rt.next(body) is not nil:
-            new_ctx.pop()
-        bc += 1
-        body = rt.next(body)
+    if body is nil:
+        compile_form(body, new_ctx)
+    else:
+        while body is not nil:
+            if rt.next(body) is nil:
+                new_ctx.enable_tail_call()
+            compile_form(rt.first(body), new_ctx)
+            if rt.next(body) is not nil:
+                new_ctx.pop()
+            bc += 1
+            body = rt.next(body)
 
     new_ctx.bytecode.append(code.RETURN)
     closed_overs = new_ctx.closed_overs

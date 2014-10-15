@@ -38,6 +38,9 @@ class RuntimeException(Object):
         self._data = data
         self._trace = []
 
+    def type(self):
+        return RuntimeException._type
+
     def __repr__(self):
         import pixie.vm.rt as rt
         return u"RuntimeException(" + rt._str(self._data)._str + u") \n" + u"\n".join(self._trace)
@@ -57,6 +60,13 @@ def affirm(val, msg):
     """Works a lot like assert except it throws RuntimeExceptions"""
     assert isinstance(msg, unicode)
     if not val:
+        from pixie.vm.string import String
+        raise WrappedException(RuntimeException(String(msg)))
+
+def affirm_fn(val, fn):
+    if not val:
+        msg = fn()
+        assert isinstance(msg, unicode)
         from pixie.vm.string import String
         raise WrappedException(RuntimeException(String(msg)))
 

@@ -237,23 +237,27 @@
 
 (defmacro try [& body]
   (loop [catch nil
+         catch-sym nil
          body-items []
          finally nil
          body (seq body)]
     (let [form (first body)]
       (if form
         (if (not (seq? form))
-          (recur catch (conj body-items form) finally (next body))
+          (recur catch catch-sym (conj body-items form) finally (next body))
           (let [head (first form)]
             (cond
              (= head 'catch) (if catch
                                (throw "Can only have one catch clause per try")
-                               (recur (next form) body-items finally (next body)))
+                               (recur (next (next form)) (first (next form)) body-items finally (next body)))
              (= head 'finally) (if finally
                                  (throw "Can only have one finally clause per try")
-                                 (recur catch body-items (next form) (next body)))
-             :else (recur catch (conj body-items form) finally (next body)))))
+                                 (recur catch catch-sym body-items (next form) (next body)))
+             :else (recur catch catch-sym (conj body-items form) finally (next body)))))
         `(-try-catch
           (fn [] ~@body-items)
-          (fn [ex] ~@catch)
+          ~(if catch
+             `(fn [~catch-sym] ~@catch)
+             `(fn [] nil))
+
           (fn [] ~@finally))))))
