@@ -74,11 +74,6 @@ def entry_point(foo=None):
 
     return 0
 
-@wrap_fn
-def bootstrap():
-    import pixie.vm.rt as rt
-    from pixie.vm.string import String
-    rt.load_file(String(u"pixie/stdlib.lisp"))
 
 
 from rpython.rtyper.lltypesystem import lltype
@@ -128,10 +123,9 @@ def run_debug(argv):
     CodeWriter.debug = True
     run_child(globals(), locals())
 
-# run bootstrap
-with_stacklets(bootstrap)
-# reset the stacklet state so we can translate with different settings
-stacklet.global_state = stacklet.GlobalState()
+import pixie.vm.rt as rt
+rt.init()
+import pixie.vm.bootstrap
 
 def target(*args):
     import pixie.vm.rt as rt

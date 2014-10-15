@@ -86,12 +86,12 @@ class HashingState(Object):
 
     def update_hash_ordered(self, itm):
         self._n += 1
-        self._hash = 31 * self._hash + rt.hash(itm).r_uint_val()
+        self._hash = 31 * self._hash + rt.hash(itm)
         return self
 
     def update_hash_unordered(self, itm):
         self._n += 1
-        self._hash += rt.hash(itm).r_uint_val()
+        self._hash += rt.hash(itm)
         return self
 
     def finish(self):

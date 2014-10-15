@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
-                          resize_list, list_copy
+                          resize_list, list_copy, returns
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
@@ -29,6 +29,8 @@ defprotocol("pixie.stdlib", "IDeref", ["-deref"])
 defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
 defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
+
+defprotocol("pixie.stdlib", "ILookup", ["-val-at"])
 
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
@@ -86,6 +88,7 @@ def _seq(_):
 def _count(_):
     return numbers.zero_int
 
+@returns(r_uint)
 @as_var("hash")
 def _hash(x):
     return rt._hash(x)
@@ -205,7 +208,7 @@ def identical(a, b):
 def vector_QMARK_(a):
     return rt.instance_QMARK_(a, rt.IVector.deref())
 
-
+@returns(bool)
 @as_var("eq")
 def eq(a, b):
     if a is b:

@@ -55,7 +55,6 @@ class PersistentVector(object.Object):
 
         raise IndexError()
 
-    @jit.dont_look_inside
     def nth(self, i, not_found=nil):
         if 0 <= i < self._cnt:
             node = self.array_for(r_uint32(i))
@@ -63,7 +62,6 @@ class PersistentVector(object.Object):
 
         return not_found
 
-    @jit.dont_look_inside
     def conj(self, val):
         assert self._cnt < 0xFFFFFFFF
         i = self._cnt

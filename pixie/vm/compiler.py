@@ -13,8 +13,6 @@ from rpython.rlib.rarithmetic import r_uint
 import pixie.vm.rt as rt
 from pixie.vm.util import *
 
-rt.init()
-
 
 def clone(lst):
     arr = [None] * len(lst)
@@ -444,7 +442,7 @@ def compile_if(form, ctx):
     compile_form(then, ctx)
     ctx.bytecode.append(code.JMP)
     ctx.sub_sp(1)
-    affirm(ctx.sp() == sp1, u"If branches stacks are unequal " + unicode(str(ctx.sp())) + ", " + unicode(str(sp1)))
+    affirm(ctx.sp() == sp1, u"If branches stacks are unequal " + unicode(str(ctx.sp())) + u", " + unicode(str(sp1)))
     else_lbl = ctx.label()
 
     ctx.mark(cond_lbl)

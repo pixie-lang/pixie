@@ -63,12 +63,6 @@ def affirm(val, msg):
         from pixie.vm.string import String
         raise WrappedException(RuntimeException(String(msg)))
 
-def affirm_fn(val, fn):
-    if not val:
-        msg = fn()
-        assert isinstance(msg, unicode)
-        from pixie.vm.string import String
-        raise WrappedException(RuntimeException(String(msg)))
 
 
 

@@ -550,3 +550,12 @@ def as_var(ns, name=None):
         var.set_root(fn)
         return fn
     return with_fn
+
+
+def returns(type):
+    """Tags a var as for unwrapping in rt. When rt imports this var it will be automatically converted to this type"""
+    def with_fn(fn):
+        fn._returns = type
+        print "registered", fn
+        return fn
+    return with_fn

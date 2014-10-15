@@ -11,8 +11,6 @@ from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
 from pixie.vm.string import String
 
-rt.init()
-
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
 
