@@ -1,4 +1,4 @@
-from pixie.vm.object import Object
+from pixie.vm.object import Object, affirm
 import pixie.vm.code as code
 import pixie.vm.numbers as numbers
 from pixie.vm.primitives import nil, true, false
@@ -117,7 +117,7 @@ def make_multi_arity(frame, argc):
     for i in range(argc):
         a = frame.get_inst()
         if a & 256:
-            assert rest_fn is None, "Can't have multiple rest_fns"
+            affirm(rest_fn is None, u"Can't have multiple rest_fns")
             required_arity = a & 0xFF
             rest_fn = frame.pop()
         else:
@@ -220,7 +220,7 @@ def interpret(code_obj, args=[]):
             val = frame.pop()
             var = frame.pop()
 
-            assert isinstance(var, code.Var)
+            affirm(isinstance(var, code.Var), u"Can't set the value of a non-var")
             var.set_root(val)
             frame.push(var)
             continue

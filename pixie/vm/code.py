@@ -1,5 +1,6 @@
 py_object = object
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.jit import elidable, elidable_promote, promote
@@ -36,7 +37,7 @@ for x in range(len(BYTECODES)):
 @jit.unroll_safe
 def resize_list(lst, new_size):
     """'Resizes' a list, via reallocation and copy"""
-    assert len(lst) < new_size, "New list must be larger than old list"
+    affirm(len(lst) < new_size, u"New list must be larger than old list")
     new_list = [None] * new_size
     i = r_uint(0)
     while i < len(lst):
@@ -130,7 +131,7 @@ class MultiArityFn(BaseCode):
             return f
         if self._rest_fn is not None and arity >= self._required_arity:
             return self._rest_fn
-        raise AssertionError("Wrong number of args to fn")
+        affirm(False, u"Wrong number of args to fn")
 
     def _invoke(self, args):
         return self.get_fn(len(args)).invoke(args)
@@ -171,7 +172,11 @@ class Code(BaseCode):
         self._stack_size = stack_size
 
     def _invoke(self, args):
-        return interpret(self, args)
+        try:
+            return interpret(self, args)
+        except object.WrappedException as ex:
+            ex._ex._trace.append(self._name)
+            raise
 
     @elidable_promote()
     def get_consts(self):
@@ -206,7 +211,7 @@ class VariadicCode(BaseCode):
             rest = slice_to_end(args, self._required_arity)
             start[self._required_arity] = array(rest)
             return self._code.invoke(start)
-        raise ValueError("Wrong number of args")
+        affirm(False, u"Got " + unicode(str(argc)) + u" arg(s) need at least " + unicode(str(self._required_arity)))
 
 class Closure(BaseCode):
     _type = object.Type(u"Closure")
@@ -216,7 +221,7 @@ class Closure(BaseCode):
 
     def __init__(self, code, closed_overs):
         BaseCode.__init__(self)
-        assert isinstance(code, Code)
+        affirm(isinstance(code, Code), u"Code argument to Closure must be an instance of Code")
         self._code = code
         self._closed_overs = closed_overs
 
@@ -270,7 +275,7 @@ class Var(BaseCode):
 
     def deref(self):
         val = self.get_root(self._rev)
-        assert val is not undefined, u"Var " + self._name + u" is undefined"
+        affirm(val is not undefined, u"Var " + self._name + u" is undefined")
         return val
 
     def is_defined(self):
@@ -288,7 +293,7 @@ class Namespace(py_object):
         self._name = name
 
     def intern_or_make(self, name):
-        assert isinstance(name, unicode)
+        affirm(isinstance(name, unicode), u"Var names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
             v = Var(name)
@@ -303,7 +308,7 @@ class NamespaceRegistry(py_object):
         self._registry = {}
 
     def find_or_make(self, name):
-        assert isinstance(name, unicode), name + " is not unicode"
+        affirm(isinstance(name, unicode), u"Namespace names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
             v = Namespace(name)
@@ -339,7 +344,7 @@ class DefaultProtocolFn(NativeFn):
     def _invoke(self, args):
         from pixie.vm.string import String
         tp = args[0].type()._name
-        raise Exception(u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
+        affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
 
 
 class Protocol(object.Object):
@@ -403,7 +408,11 @@ class PolymorphicFn(BaseCode):
     def _invoke(self, args):
         a = args[0].type()
         fn = self.get_protocol_fn(a, self._rev)
-        return fn.invoke(args)
+        try:
+            return fn.invoke(args)
+        except object.WrappedException as ex:
+            ex._ex._trace.append(self._name)
+            raise
 
 class DoublePolymorphicFn(BaseCode):
     """A function that is polymorphic on the first two arguments"""
@@ -444,7 +453,7 @@ class DoublePolymorphicFn(BaseCode):
         return promote(fn)
 
     def _invoke(self, args):
-        assert len(args) >= 2
+        affirm(len(args) >= 2, u"DoublePolymorphicFunctions take at least two args")
         a = args[0].type()
         b = args[1].type()
         fn = self.get_fn(a, b, self._rev)
@@ -471,7 +480,7 @@ def defprotocol(ns, name, methods):
         gbls[munge(method)] = poly
 
 def assert_type(x, tp):
-    assert isinstance(x, tp), "Fatal Error, this should never happen"
+    affirm(isinstance(x, tp), u"Fatal Error, this should never happen")
     return x
 
 ## PYTHON FLAGS

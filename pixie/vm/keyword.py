@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, Type
+from pixie.vm.object import Object, Type, affirm
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.string import String
 import pixie.vm.protocols as proto
@@ -60,5 +60,5 @@ def _namespace(self):
 
 @as_var("keyword")
 def _keyword(s):
-    assert isinstance(s, String), "Symbol name must be a string"
+    affirm(isinstance(s, String), u"Symbol name must be a string")
     return keyword(s._str)

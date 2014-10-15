@@ -30,14 +30,12 @@ class LazySeq(object.Object):
 def _first(self):
     assert isinstance(self, LazySeq)
     rt.seq(self)
-    print "first"
     return rt.first(self._s)
 
 @extend(proto._next, LazySeq)
 def _next(self):
     assert isinstance(self, LazySeq)
     rt.seq(self)
-    print "next"
     return rt.next(self._s)
 
 @extend(proto._seq, LazySeq)

@@ -246,7 +246,7 @@ def _try_catch(main_fn, catch_fn, final):
             final.invoke([])
 
 @as_var("throw")
-def _trow(ex):
+def _throw(ex):
     if isinstance(ex, RuntimeException):
         raise WrappedException(ex)
     raise WrappedException(RuntimeException(ex))

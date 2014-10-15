@@ -96,6 +96,7 @@
       "false")))
 
 (extend -str Nil (fn [x] "nil"))
+(extend -reduce Nil (fn [self f init] init))
 
 (extend -hash Integer hash-int)
 
@@ -158,6 +159,7 @@
           (stacklet->lazy-seq f)))))
 
 (extend -seq PersistentVector sequence)
+(extend -seq Array sequence)
 
 (def concat (fn [& args] (transduce cat conj args)))
 
@@ -177,6 +179,13 @@
   ([x y] (-add x y))
   ([x y z] (-add x (-add y z)))
   ([x y z & rest] (-add x (-add y (-add z (reduce -add 0 rest))))))
+
+(defn =
+  ([x] true)
+  ([x y] (eq x y))
+  ([x y & rest] (if (eq x y)
+                  (apply = y rest)
+                  false)))
 
 (def inc (fn [x] (+ x 1)))
 
@@ -215,3 +224,36 @@
                   ~inst))]
     `(do ~type-decl
          ~ctor))))
+
+(defn not [x]
+  (if x false true))
+
+(defmacro cond
+  ([] nil)
+  ([test then & clauses]
+      `(if ~test
+         ~then
+         (cond ~@clauses))))
+
+(defmacro try [& body]
+  (loop [catch nil
+         body-items []
+         finally nil
+         body (seq body)]
+    (let [form (first body)]
+      (if form
+        (if (not (seq? form))
+          (recur catch (conj body-items form) finally (next body))
+          (let [head (first form)]
+            (cond
+             (= head 'catch) (if catch
+                               (throw "Can only have one catch clause per try")
+                               (recur (next form) body-items finally (next body)))
+             (= head 'finally) (if finally
+                                 (throw "Can only have one finally clause per try")
+                                 (recur catch body-items (next form) (next body)))
+             :else (recur catch (conj body-items form) finally (next body)))))
+        `(-try-catch
+          (fn [] ~@body-items)
+          (fn [ex] ~@catch)
+          (fn [] ~@finally))))))

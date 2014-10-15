@@ -9,6 +9,9 @@ def init():
     if globals().has_key("__inited__"):
         return
 
+    import sys
+    sys.setrecursionlimit(10000) # Yeah we blow the stack sometimes, we promise it's not a bug
+
     import pixie.vm.numbers as numbers
     import pixie.vm.stacklet
     import pixie.vm.atom

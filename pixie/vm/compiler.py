@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, _type_registry
+from pixie.vm.object import Object, _type_registry, affirm
 from pixie.vm.primitives import nil, true, false, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
 import pixie.vm.numbers as numbers
@@ -30,7 +30,7 @@ def clone(lst):
 class Context(object):
     def __init__(self, name, argc, parent_ctx):
         if parent_ctx is not None:
-            assert isinstance(parent_ctx, Context)
+            affirm(isinstance(parent_ctx, Context), u"Parent Context must be a Context")
             locals = parent_ctx.locals[-1].copy()
             for x in locals:
                 locals[x] = Closure(locals[x], parent_ctx)
@@ -161,7 +161,7 @@ class LoopRecurPoint(RecurPoint):
         self._old_sp = ctx.sp() - argc
 
     def emit(self, ctx, argc):
-        assert self._argc == argc
+        affirm(self._argc == argc, u"Recur must have same number of forms as matching loop")
         ctx.bytecode.append(code.LOOP_RECUR)
         ctx.bytecode.append(argc)
         ctx.bytecode.append(ctx.sp() - argc - self._argc - self._old_sp)
@@ -246,6 +246,10 @@ def call_macro(var, form, ctx):
     return var.invoke(args)
 
 def compile_form(form, ctx):
+    if form is nil:
+        ctx.push_const(nil)
+        return
+
     if rt.instance_QMARK_(form, rt.ISeq.deref()) is true and form is not nil:
         return compile_cons(form, ctx)
     if isinstance(form, numbers.Integer):
@@ -325,7 +329,8 @@ def compile_platform_plus(form, ctx):
 
 def compile_platform_eq(form, ctx):
     form = form.next()
-    assert rt.count(form).int_val() == 2
+
+    affirm(rt.count(form).int_val() == 2, u"TODO: REMOVE")
     while form is not nil:
         compile_form(form.first(), ctx)
         form = form.next()
@@ -339,7 +344,7 @@ def add_args(args, ctx):
     local_idx = 0
     for x in range(rt.count(args).int_val()):
         arg = rt.nth(args, numbers.Integer(x))
-        assert isinstance(arg, symbol.Symbol)
+        affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
         if arg._str == u"&":
 
             required_args = x
@@ -350,9 +355,6 @@ def add_args(args, ctx):
 
 
 def compile_fn(form, ctx):
-    assert isinstance(form, Cons)
-
-
     form = rt.next(form)
     if isinstance(rt.first(form), symbol.Symbol):
         name = rt.first(form)
@@ -388,8 +390,8 @@ def compile_fn_body(name, args, body, ctx):
     bc = 0
 
     if name is not None:
-        assert isinstance(name, symbol.Symbol)
-        new_ctx.add_local(name._str, Self())
+        affirm(isinstance(name, symbol.Symbol), u"Function names must be symbols")
+        #new_ctx.add_local(name._str, Self())
 
     new_ctx.push_recur_point(FunctionRecurPoint())
 
@@ -423,13 +425,13 @@ def compile_fn_body(name, args, body, ctx):
 
 def compile_if(form, ctx):
     form = form.next()
-    assert rt.count(form).int_val() == 3
+    affirm(2 <= rt.count(form).int_val() <= 3, u"If must have either 2 or 3 forms")
 
-    test = form.first()
-    form = form.next()
-    then = form.first()
-    form = form.next()
-    els = form.first()
+    test = rt.first(form)
+    form = rt.next(form)
+    then = rt.first(form)
+    form = rt.next(form)
+    els = rt.first(form)
 
     ctx.disable_tail_call()
     compile_form(test, ctx)
@@ -443,7 +445,7 @@ def compile_if(form, ctx):
     compile_form(then, ctx)
     ctx.bytecode.append(code.JMP)
     ctx.sub_sp(1)
-    assert ctx.sp() == sp1, "If branches unequal " + str(ctx.sp()) + ", " + str(sp1)
+    affirm(ctx.sp() == sp1, u"If branches stacks are unequal " + unicode(str(ctx.sp())) + ", " + unicode(str(sp1)))
     else_lbl = ctx.label()
 
     ctx.mark(cond_lbl)
@@ -457,7 +459,8 @@ def compile_def(form, ctx):
     form = rt.next(form)
     val = rt.first(form)
 
-    assert isinstance(name, symbol.Symbol)
+
+    affirm(isinstance(name, symbol.Symbol), u"Def'd name must be a symbol")
 
     var = code.intern_var(ctx.ns, name._str)
     ctx.push_const(var)
@@ -467,7 +470,6 @@ def compile_def(form, ctx):
 
 def compile_do(form, ctx):
     form = rt.next(form)
-    assert form is not nil
 
     while True:
         compile_form(rt.first(form), ctx)
@@ -484,7 +486,7 @@ def compile_quote(form, ctx):
 
 def compile_recur(form, ctx):
     form = form.next()
-    assert ctx.can_tail_call
+    affirm(ctx.can_tail_call, u"Can't recur in non-tail position")
     ctc = ctx.can_tail_call
     ctx.disable_tail_call()
     args = 0
@@ -504,7 +506,7 @@ def compile_recur(form, ctx):
 def compile_let(form, ctx):
     form = next(form)
     bindings = rt.first(form)
-    assert isinstance(bindings, PersistentVector)
+    affirm(isinstance(bindings, PersistentVector), u"Bindings must be a vector")
     body = next(form)
 
     ctc = ctx.can_tail_call
@@ -514,7 +516,7 @@ def compile_let(form, ctx):
     for i in range(0, rt.count(bindings).int_val(), 2):
         binding_count += 1
         name = rt.nth(bindings, numbers.Integer(i))
-        assert isinstance(name, symbol.Symbol)
+        affirm(isinstance(name, symbol.Symbol), u"Let locals must be symbols")
         bind = rt.nth(bindings, numbers.Integer(i + 1))
 
         compile_form(bind, ctx)
@@ -540,7 +542,7 @@ def compile_let(form, ctx):
 def compile_loop(form, ctx):
     form = next(form)
     bindings = rt.first(form)
-    assert isinstance(bindings, PersistentVector)
+    affirm(isinstance(bindings, PersistentVector), u"Loop bindings must be a vector")
     body = next(form)
 
     ctc = ctx.can_tail_call
@@ -550,7 +552,7 @@ def compile_loop(form, ctx):
     for i in range(0, rt.count(bindings).int_val(), 2):
         binding_count += 1
         name = rt.nth(bindings, numbers.Integer(i))
-        assert isinstance(name, symbol.Symbol)
+        affirm(isinstance(name, symbol.Symbol), u"Loop must bindings must be symbols")
         bind = rt.nth(bindings, numbers.Integer(i + 1))
 
         compile_form(bind, ctx)
@@ -596,7 +598,7 @@ def compile_cons(form, ctx):
 
     macro = is_macro_call(form, ctx)
     if macro:
-        return compile_cons(call_macro(macro, form, ctx), ctx)
+        return compile_form(call_macro(macro, form, ctx), ctx)
 
     cnt = 0
     ctc = ctx.can_tail_call

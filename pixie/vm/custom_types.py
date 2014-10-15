@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, Type
+from pixie.vm.object import Object, Type, affirm
 from pixie.vm.primitives import nil, true, false
 import rpython.rlib.jit as jit
 from pixie.vm.numbers import Integer
@@ -27,7 +27,7 @@ class CustomType(Type):
 class CustomTypeInstance(Object):
     __immutable_fields__ = ["_type"]
     def __init__(self, type):
-        assert isinstance(type, CustomType)
+        affirm(isinstance(type, CustomType), u"Can't create a instance of a non custom type")
         self._type = type
         self._fields = [None] * self._type.get_num_slots()
 
@@ -44,20 +44,20 @@ class CustomTypeInstance(Object):
         return self._fields[idx]
 
     def set_field_by_idx(self, idx, val):
-        assert isinstance(idx, r_uint)
+        affirm(isinstance(idx, r_uint), u"idx must be a r_uint")
         self._fields[idx] = val
         return self
 
 
 @as_var("create-type")
 def create_type(type_name, fields):
-    assert isinstance(type_name, Keyword), "Type name must be a keyword"
+    affirm(isinstance(type_name, Keyword), u"Type name must be a keyword")
 
     field_count = rt.count(fields).int_val()
     acc = {}
     for i in range(rt.count(fields).int_val()):
         val = rt.nth(fields, Integer(i))
-        assert isinstance(val, Keyword), "Field names must be keywords"
+        affirm(isinstance(val, Keyword), u"Field names must be keywords")
         acc[val] = i
 
 
@@ -65,19 +65,19 @@ def create_type(type_name, fields):
 
 @as_var("new")
 def _new(tp):
-    assert isinstance(tp, CustomType), "Can only create a new instance of a custom type"
+    affirm(isinstance(tp, CustomType), u"Can only create a new instance of a custom type")
     return CustomTypeInstance(tp)
 
 @as_var("set-field!")
 def set_field(inst, field, val):
-    assert isinstance(inst, CustomTypeInstance), "Can only set fields on CustomType instances"
-    assert isinstance(field, Keyword), "Field must be a keyword"
+    affirm(isinstance(inst, CustomTypeInstance), u"Can only set fields on CustomType instances")
+    affirm(isinstance(field, Keyword), u"Field must be a keyword")
     inst.set_field(field, val)
     return inst
 
 @as_var("get-field")
 def get_field(inst, field):
-    assert isinstance(inst, CustomTypeInstance), "Can only get fields on CustomType instances"
-    assert isinstance(field, Keyword), "Field must be a keyword"
+    affirm(isinstance(inst, CustomTypeInstance), u"Can only get fields on CustomType instances")
+    affirm(isinstance(field, Keyword), u"Field must be a keyword")
     return inst.get_field(field)
 
