@@ -502,7 +502,7 @@ def compile_do(form, ctx):
             ctx.pop()
 
 def compile_quote(form, ctx):
-    data = form.next().first()
+    data = rt.first(rt.next(form))
     ctx.push_const(data)
 
 def compile_recur(form, ctx):
@@ -601,6 +601,19 @@ def compile_loop(form, ctx):
 def compile_comment(form, ctx):
     ctx.push_const(nil)
 
+def compile_ns(form, ctx):
+    affirm(rt.count(form).int_val() == 2, u"ns only takes one argument, a symbol")
+
+    nm = rt.first(rt.next(form))
+
+    affirm(isinstance(nm, symbol.Symbol), u"Namespace name must be a symbol")
+
+    str_name = rt.name(nm)._str
+
+    ctx.ns = str_name
+    ctx.push_const(nil)
+
+
 builtins = {u"fn": compile_fn,
             u"if": compile_if,
             u"platform=": compile_platform_eq,
@@ -610,7 +623,8 @@ builtins = {u"fn": compile_fn,
             u"recur": compile_recur,
             u"let": compile_let,
             u"loop": compile_loop,
-            u"comment": compile_comment}
+            u"comment": compile_comment,
+            u"ns": compile_ns}
 
 
 def compile_cons(form, ctx):

@@ -265,6 +265,24 @@ class Undefined(object.Object):
 
 undefined = Undefined()
 
+class DynamicVars(py_object):
+    def __init__(self):
+        self._vars = [{}]
+
+    def push_binding_frame(self):
+        self._vars.append(self._vars[-1].copy())
+
+    def pop_binding_frame(self):
+        self._vars.pop()
+
+    def get_var_value(self, var, not_found):
+        return self._vars[-1].get(var, not_found)
+
+    def set_var_value(self, var, val):
+        self._vars[-1][var] = val
+
+_dynamic_vars = DynamicVars()
+
 class Var(BaseCode):
     _type = object.Type(u"Var")
     _immutable_fields_ = ["_rev?"]
@@ -276,11 +294,29 @@ class Var(BaseCode):
         self._name = name
         self._rev = 0
         self._root = undefined
+        self._dynamic = False
 
     def set_root(self, o):
         self._rev += 1
         self._root = o
         return self
+
+    def set_value(self, val):
+        affirm(self._dynamic, u"Can't set the value of a non-dynamic var")
+        _dynamic_vars.set_var_value(self, val)
+        return self
+
+
+    def set_dynamic(self):
+        self._dynamic = True
+        self._rev += 1
+
+    def get_dynamic_value(self):
+        return _dynamic_vars.get_var_value(self, self._root)
+
+    @elidable_promote()
+    def is_dynamic(self, rev):
+        return self._dynamic
 
     @elidable_promote()
     def get_root(self, rev):
@@ -288,9 +324,12 @@ class Var(BaseCode):
 
 
     def deref(self):
-        val = self.get_root(self._rev)
-        affirm(val is not undefined, u"Var " + self._name + u" is undefined")
-        return val
+        if self.is_dynamic(self._rev):
+            return self.get_dynamic_value()
+        else:
+            val = self.get_root(self._rev)
+            affirm(val is not undefined, u"Var " + self._name + u" is undefined")
+            return val
 
     def is_defined(self):
         return self._root is not undefined
@@ -342,11 +381,11 @@ def intern_var(ns, name=None):
 
     return _ns_registry.find_or_make(ns).intern_or_make(name)
 
-def get_var_if_defined(ns, name):
+def get_var_if_defined(ns, name, els=None):
     w_ns = _ns_registry.get(ns, None)
     if w_ns is None:
-        return None
-    return w_ns.get(name, None)
+        return els
+    return w_ns.get(name, els)
 
 
 

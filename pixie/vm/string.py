@@ -4,6 +4,7 @@ from pixie.vm.code import extend, as_var
 from pixie.vm.primitives import nil
 import pixie.vm.protocols as proto
 import pixie.vm.numbers as numbers
+import pixie.vm.util as util
 
 class String(Object):
     _type = Type(u"pixie.stdlib.String")
@@ -75,3 +76,7 @@ def _name(self):
 @extend(proto._namespace, String)
 def _namespace(self):
     return nil
+
+@extend(proto._hash, String)
+def _hash(self):
+    return numbers.Integer(util.hash_unencoded_chars(self._str))

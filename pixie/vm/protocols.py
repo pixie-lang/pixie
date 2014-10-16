@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
-                          resize_list, list_copy, returns
+                          resize_list, list_copy, returns, get_var_if_defined
+import pixie.vm.code as code
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
@@ -96,7 +97,7 @@ def _count(_):
 
 @returns(r_uint)
 @as_var("hash")
-def _hash(x):
+def __hash(x):
     return rt._hash(x)
 
 
@@ -264,4 +265,29 @@ def _throw(ex):
         raise WrappedException(ex)
     raise WrappedException(RuntimeException(ex))
 
+@as_var("resolve")
+def _var(nm):
+    var = get_var_if_defined(rt.namespace(nm)._str, rt.name(nm)._str, nil)
+    return var
 
+@as_var("set-dynamic!")
+def set_dynamic(var):
+    affirm(isinstance(var, Var), u"set-dynamic! expects a var as an argument")
+    var.set_dynamic()
+    return var
+
+@as_var("set!")
+def set(var, val):
+    affirm(isinstance(var, Var), u"Can only set the dynamic value of a var")
+    var.set_value(val)
+    return var
+
+@as_var("push-binding-frame!")
+def push_binding_frame():
+    code._dynamic_vars.push_binding_frame()
+    return nil
+
+@as_var("pop-binding-frame!")
+def pop_binding_frame():
+    code._dynamic_vars.pop_binding_frame()
+    return nil

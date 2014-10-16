@@ -1,3 +1,5 @@
+(ns pixie.stdlib)
+
 (def reset! -reset!)
 
 (def map (fn map [f]
@@ -97,6 +99,7 @@
 
 (extend -str Nil (fn [x] "nil"))
 (extend -reduce Nil (fn [self f init] init))
+(extend -hash Nil (fn [self] 100000))
 
 (extend -hash Integer hash-int)
 
@@ -125,6 +128,10 @@
 (extend -str Cons
   (fn [v]
     (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+
+(extend -hash Cons
+        (fn [v]
+          (transduce ordered-hash-reducing-fn v)))
 
 (extend -str PersistentList
   (fn [v]
@@ -308,9 +315,38 @@
         (fn [v]
           (transduce cat unordered-hash-reducing-fn v)))
 
+(extend -hash Symbol
+        (fn [v]
+          (hash [(namespace v) (name v)])))
+
 
 (defn get
   ([mp k]
      (get mp k nil))
   ([mp k not-found]
      (-val-at mp k not-found)))
+
+(defmacro assert
+  ([test]
+     `(if ~test
+        nil
+        (throw "Assert failed")))
+  ([test msg]
+     `(if ~test
+        nil
+        (throw (str "Assert failed " ~msg)))))
+
+
+(defmacro with-bindings [binds & body]
+  `(do (push-binding-frame!)
+       (reduce (fn [_ map-entry]
+                 (set! (resolve (key map-entry)) (val map-entry)))
+               nil
+               (apply hashmap ~binds))
+       (let [ret (do ~@body)]
+         (pop-binding-frame!)
+         ret)))
+
+(def foo 42)
+(set-dynamic! (resolve 'pixie.stdlib/foo))
+

@@ -1,9 +1,11 @@
-from rpython.rlib.rarithmetic import r_uint, LONG_BIT, intmask
+from rpython.rlib.rarithmetic import r_uint, LONG_BIT, intmask, LONG_MASK
 from pixie.vm.object import affirm
 
 seed = 0
 C1 = 0xcc9e2d51
 C2 = 0x1b873593
+
+
 
 def rotr(value, shift):
     return (value >> shift) | (value << (LONG_BIT - shift))
@@ -37,13 +39,13 @@ def hash_unencoded_chars(u):
 
     # step through the CharSequence 2 chars at a time
     for i in range(1, len(u), 2):
-        k1 = ord(u[i-1]) | ord(u[i])
+        k1 = r_uint(ord(u[i-1]) | ord(u[i]))
         k1 = mix_k1(k1)
         h1 = mix_h1(h1, k1)
 
     # deal with any remaining characters
     if (len(u) & 1) == 1:
-        k1 = ord(u[(len(u) - 1)])
+        k1 = r_uint(ord(u[(len(u) - 1)]))
         k1 = mix_k1(k1)
         h1 ^= k1
 
