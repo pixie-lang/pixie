@@ -102,7 +102,7 @@ class BitmapIndexedNode(INode):
             return BitmapIndexedNode(None, self._bitmap,
                 clone_and_set2(self._array,
                                2 * idx, None,
-                               2 * idx + 1, self.create_node(shift+ 5, key_or_null, val_or_node, hash_val, key, val)))
+                               2 * idx + 1, create_node(shift+ 5, key_or_null, val_or_node, hash_val, key, val)))
         else:
             n = bit_count(self._bitmap)
             if n >= 16:
@@ -144,13 +144,13 @@ class BitmapIndexedNode(INode):
         return not_found
 
     def reduce_inode(self, f, init):
-        for x in range(0, 32, 2):
+        for x in range(0, len(self._array), 2):
             key_or_none = self._array[x]
             val_or_node = self._array[x + 1]
-            if key_or_none is None:
+            if key_or_none is None and val_or_node is not None:
                 init = init.reduce_inode(f, init)
             else:
-                init = f.invoke([rt.map_entry(key_or_none, val_or_node)])
+                init = f.invoke([init, rt.map_entry(key_or_none, val_or_node)])
             if rt.reduced_QMARK_(init):
                 return init
         return init
@@ -186,13 +186,52 @@ class ArrayNode(INode):
 
     def reduce_inode(self, f, init):
         for x in range(len(self._array)):
-            init = self._array[x].reduce_inode(f, init)
-            if rt.reduced_QMARK_(init):
-                return init
+            node = self._array[x]
+            if node is not None:
+                init = node.reduce_inode(f, init)
+                if rt.reduced_QMARK_(init):
+                    return init
 
         return init
 
+class HashCollisionNode(INode):
+    def __init__(self, edit, hash, array):
+        self._hash = hash
+        self._edit = edit
+        self._array = array
 
+    def assoc_inode(self, shift, hash_val, key, val, added_leaf):
+        assert False
+
+    def find(self, shift, hash_val, key, not_found):
+        for x in range(0, len(self._array), 2):
+            key_or_nil = self._array[x]
+            if key_or_nil is not None and rt.eq(key_or_nil, key):
+                return self._array[x + 1]
+
+        return not_found
+
+    def reduce_inode(self, f, init):
+        for x in range(0, len(self._array), 2):
+            key_or_nil = self._array[x]
+            if key_or_nil is None:
+                continue
+
+            val = self._array[x + 1]
+            init = f.invoke([init, val])
+            if rt.reduced_QMARK_(init):
+                return init
+        return init
+
+
+
+def create_node(shift, key1, val1, key2hash, key2, val2):
+    key1hash = rt.hash(key1)
+    if key1hash == key2hash:
+        return HashCollisionNode(None, key1hash, [key1, val1, key2, val2])
+    added_leaf = Box()
+    return BitmapIndexedNode_EMPTY.assoc_inode(shift, key1hash, key1, val1, added_leaf) \
+                                  .assoc_inode(shift, key1hash, key1, val1, added_leaf)
 
 def bit_count(i):
     assert isinstance(i, r_uint)
@@ -257,6 +296,28 @@ def hashmap__args(args):
 
     return acc
 
+
+
 @extend(proto._val_at, PersistentHashMap)
 def _val_at(self, key, not_found):
     return self.val_at(key, not_found)
+
+@extend(proto._reduce, PersistentHashMap)
+def _reduce(self, f, init):
+    if self._root is None:
+        return init
+    val = self._root.reduce_inode(f, init)
+    if rt.reduced_QMARK_(val):
+        return rt.deref(val)
+
+    return val
+
+@extend(proto._assoc, PersistentHashMap)
+def _assoc(self, key, val):
+    return self.assoc(key, val)
+
+proto.IMap.add_satisfies(PersistentHashMap._type)
+
+@extend(proto._count, PersistentHashMap)
+def _count(self):
+    return Integer(intmask(self._cnt))

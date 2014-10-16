@@ -125,7 +125,7 @@ def run_debug(argv):
 
 import pixie.vm.rt as rt
 rt.init()
-import pixie.vm.bootstrap
+stacklet.global_state = stacklet.GlobalState()
 
 def target(*args):
     import pixie.vm.rt as rt

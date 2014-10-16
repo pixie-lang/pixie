@@ -11,6 +11,7 @@ from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
 from pixie.vm.string import String
 from pixie.vm.code import wrap_fn
+from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
@@ -104,6 +105,25 @@ class VectorReader(ReaderHandler):
 class UnmachedVectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
         raise SyntaxError()
+
+class MapReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        acc = EMPTY_MAP
+        while True:
+            eat_whitespace(rdr)
+            ch = rdr.read()
+            if ch == u"}":
+                return acc
+
+            rdr.unread(ch)
+            k = read(rdr, True)
+            v = read(rdr, False)
+            acc = rt._assoc(acc, k, v)
+        return acc
+
+class UnmachedMapReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        affirm(False, u"Unmatched Map brace")
 
 class QuoteReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -205,6 +225,8 @@ handlers = {u"(": ListReader(),
             u")": UnmachedListReader(),
             u"[": VectorReader(),
             u"]": UnmachedVectorReader(),
+            u"{": MapReader(),
+            u"}": UnmachedMapReader(),
             u"'": QuoteReader(),
             u":": KeywordReader(),
             u"\"": LiteralStringReader(),

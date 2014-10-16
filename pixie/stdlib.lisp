@@ -54,7 +54,7 @@
 (def cat
   (fn cat [rf]
     (let [rrf (preserving-reduced rf)]
-      (fn
+      (fn cat-inner
         ([] (rf))
         ([result] (rf result))
         ([result input]
@@ -87,7 +87,7 @@
 (extend -reduce PersistentList seq-reduce)
 (extend -reduce LazySeq seq-reduce)
 
-(extend -reduce Array indexed-reduce)
+(comment (extend -reduce Array indexed-reduce))
 
 (extend -str Bool
   (fn [x]
@@ -107,6 +107,12 @@
     ([] (new-hash-state))
     ([state] (finish-hash-state state))
     ([state itm] (update-hash-ordered! state itm))))
+
+(def unordered-hash-reducing-fn
+  (fn unordered-hash-reducing-fn
+    ([] (new-hash-state))
+    ([state] (finish-hash-state state))
+    ([state itm] (update-hash-unordered! state itm))))
 
 
 (extend -str PersistentVector
@@ -210,14 +216,14 @@
 (defn get-val [inst]
   (get-field inst :val))
 
-(comment (defn comp
+(defn comp
   ([f] f)
   ([f1 f2]
-     (fn [arg]
-       (f1 (f2 arg))))
+     (fn [& args]
+       (f1 (apply f2 args))))
   ([f1 f2 f3]
-     (fn [arg]
-       (f1 (f2 (f3 arg)))))))
+     (fn [& args]
+       (f1 (f2 (apply f3 args))))))
 
 (comment
 (defmacro deftype [nm fields & body]
@@ -278,6 +284,12 @@
                                 (= idx 1) (-val self)
                                 :else not-found)))
 
+(defn key [x]
+  (-key x))
+
+(defn val [x]
+  (-val x))
+
 (extend -reduce MapEntry indexed-reduce)
 
 (extend -str MapEntry
@@ -287,3 +299,18 @@
 (extend -hash MapEntry
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+(extend -str PersistentHashMap
+        (fn [v]
+            (apply str "{" (conj (transduce (comp cat (interpose " ")) conj v) "}"))))
+
+(extend -hash PersistentHashMap
+        (fn [v]
+          (transduce cat unordered-hash-reducing-fn v)))
+
+
+(defn get
+  ([mp k]
+     (get mp k nil))
+  ([mp k not-found]
+     (-val-at mp k not-found)))

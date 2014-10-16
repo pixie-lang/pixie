@@ -198,6 +198,11 @@ class Code(BaseCode):
 
 class VariadicCode(BaseCode):
     __immutable_fields__ = ["_required_arity", "_code"]
+    _type = object.Type(u"pixie.stdlib.VariadicCode")
+
+    def type(self):
+        return VariadicCode._type
+
     def __init__(self, code, required_arity):
         BaseCode.__init__(self)
         self._required_arity = r_uint(required_arity)

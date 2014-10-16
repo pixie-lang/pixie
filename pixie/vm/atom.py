@@ -7,7 +7,7 @@ import pixie.vm.protocols as proto
 import pixie.vm.protocols as proto
 
 class Atom(object.Object):
-    _type = object.Type(u"pixie.stdlib.Type")
+    _type = object.Type(u"pixie.stdlib.Atom")
     def type(self):
         return Atom._type
 

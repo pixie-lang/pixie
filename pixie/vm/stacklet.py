@@ -107,10 +107,10 @@ def init_handler(h, o):
     f = global_state._init_fn
     global_state._init_fn = None
 
-    try:
-        f.invoke([])
-    except Exception as ex:
-        print "Uncaught Exception" + str(ex)
+    #try:
+    f.invoke([])
+    #except Exception as ex:
+    #    print "Uncaught Exception" + str(ex)
 
     global_state._op = OP_EXIT
     return global_state._h

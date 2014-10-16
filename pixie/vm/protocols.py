@@ -30,11 +30,15 @@ defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
 defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
 
+defprotocol("pixie.stdlib", "IAssociative", ["-assoc"])
+
 defprotocol("pixie.stdlib", "ILookup", ["-val-at"])
 
 defprotocol("pixie.stdlib", "IMapEntry", ["-key", "-val"])
 
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
+
+IMap = as_var("pixie.stdlib", "IMap")(Protocol(u"IMap"))
 
 def default_str(x):
     from pixie.vm.string import String
@@ -259,4 +263,5 @@ def _throw(ex):
     if isinstance(ex, RuntimeException):
         raise WrappedException(ex)
     raise WrappedException(RuntimeException(ex))
+
 

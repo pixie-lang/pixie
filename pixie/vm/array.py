@@ -46,7 +46,7 @@ def _count(self):
 def _nth(self, idx):
     return self._list[idx.int_val()]
 
-#@extend(proto._reduce, Array)
+@extend(proto._reduce, Array)
 def reduce(self, f, init):
     if len(self._list) > UNROLL_IF_SMALLER_THAN:
         return self.reduce_large(f, init)

@@ -239,6 +239,26 @@ def call_macro(var, form, ctx):
         i += 1
     return var.invoke(args)
 
+class CompileMapRf(code.NativeFn):
+    def __init__(self, ctx):
+        self._ctx = ctx
+    def _invoke(self, args):
+        map_entry = args[1]
+        compile_form(rt.key(map_entry), self._ctx)
+        compile_form(rt.val(map_entry), self._ctx)
+        return nil
+
+def compile_map_literal(form, ctx):
+    ctx.push_const(code.intern_var(u"pixie.stdlib", u"hashmap"))
+
+    rt.reduce(CompileMapRf(ctx), nil, form)
+
+    size = rt.count(form).int_val() * 2
+    ctx.bytecode.append(code.INVOKE)
+    ctx.bytecode.append(r_uint(size) + 1)
+
+
+
 def compile_form(form, ctx):
     if form is nil:
         ctx.push_const(nil)
@@ -299,6 +319,10 @@ def compile_form(form, ctx):
         ctx.bytecode.append(code.INVOKE)
         ctx.bytecode.append(r_uint(size + 1))
         ctx.sub_sp(size)
+        return
+
+    if rt.instance_QMARK_(rt.IMap.deref(), form):
+        compile_map_literal(form, ctx)
         return
 
     if isinstance(form, String):
