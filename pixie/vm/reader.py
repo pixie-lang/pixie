@@ -10,6 +10,7 @@ import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
 from pixie.vm.string import String
+from pixie.vm.code import wrap_fn
 
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
@@ -141,15 +142,16 @@ UNQUOTE_SPLICING = symbol(u"unquote-splicing")
 APPLY = symbol(u"apply")
 CONCAT = symbol(u"concat")
 SEQ = symbol(u"seq")
+LIST = symbol(u"list")
 
 def is_unquote(form):
-    return True if rt.instance_QMARK_(form, rt.ISeq.deref()) is true \
-                   and rt.eq(rt.first(form), UNQUOTE) is true \
+    return True if rt.instance_QMARK_(rt.ISeq.deref(), form) \
+                   and rt.eq(rt.first(form), UNQUOTE) \
            else False
 
 def is_unquote_splicing(form):
-    return True if rt.instance_QMARK_(form, rt.ISeq.deref()) is true \
-                   and rt.eq(rt.first(form), UNQUOTE_SPLICING) is true \
+    return True if rt.instance_QMARK_(rt.ISeq.deref(), form) \
+                   and rt.eq(rt.first(form), UNQUOTE_SPLICING) \
            else False
 
 class SyntaxQuoteReader(ReaderHandler):
@@ -157,7 +159,8 @@ class SyntaxQuoteReader(ReaderHandler):
         form = read(rdr, True)
         return self.syntax_quote(form)
 
-    def syntax_quote(self, form):
+    @staticmethod
+    def syntax_quote(form):
         if isinstance(form, Symbol):
             ret = rt.list(QUOTE, form)
         elif is_unquote(form):
@@ -165,26 +168,26 @@ class SyntaxQuoteReader(ReaderHandler):
         elif is_unquote_splicing(form):
             raise Exception("Unquote splicing not used inside list")
         elif rt.vector_QMARK_(form) is true:
-            ret = rt.cons(CONCAT, self.expand_list(rt.seq(form)))
+            ret = rt.list(APPLY, CONCAT, SyntaxQuoteReader.expand_list(form))
         elif rt.seq_QMARK_(form) is true:
-            ret = rt.list(SEQ, rt.cons(CONCAT, self.expand_list(rt.seq(form))))
+            ret = rt.list(APPLY, LIST, rt.cons(CONCAT, SyntaxQuoteReader.expand_list(rt.seq(form))))
         else:
             ret = rt.list(QUOTE, form)
         return ret
 
-    def expand_list(self, form):
-        ret = EMPTY_VECTOR
-        while form is not nil:
-            item = rt.first(form)
-            if is_unquote(item):
-                ret = rt.conj(ret, rt.vector(rt.first(rt.next(item))))
-            elif is_unquote_splicing(item):
-                ret = rt.conj(ret, rt.first(rt.next(item)))
-            else:
-                ret = rt.conj(ret, rt.vector(self.syntax_quote(item)))
+    @staticmethod
+    def expand_list(form):
+        return rt.reduce(expand_list_rfn, EMPTY_VECTOR, form)
 
-            form = rt.next(form)
-        return rt.seq(ret)
+@wrap_fn
+def expand_list_rfn(ret, item):
+    if is_unquote(item):
+        ret = rt.conj(ret, rt.vector(rt.first(rt.next(item))))
+    elif is_unquote_splicing(item):
+        ret = rt.conj(ret, rt.first(rt.next(item)))
+    else:
+        ret = rt.conj(ret, rt.vector(SyntaxQuoteReader.syntax_quote(item)))
+    return ret
 
 class UnquoteReader(ReaderHandler):
     def invoke(self, rdr, ch):

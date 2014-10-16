@@ -1,6 +1,6 @@
 import pixie.vm.rt as rt
 import pixie.vm.object as object
-from pixie.vm.code import extend, as_var
+from pixie.vm.code import extend, as_var, returns
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.protocols as proto
 
@@ -21,6 +21,7 @@ def _deref(self):
 def reduced(val):
     return Reduced(val)
 
+@returns(bool)
 @as_var("reduced?")
 def reduced_QMARK_(val):
     return true if isinstance(val, Reduced) else false

@@ -173,7 +173,9 @@ class Code(BaseCode):
 
     def _invoke(self, args):
         try:
-            return interpret(self, args)
+            val = interpret(self, args)
+            return val
+
         except object.WrappedException as ex:
             ex._ex._trace.append(self._name)
             raise
@@ -189,6 +191,10 @@ class Code(BaseCode):
     @elidable_promote()
     def stack_size(self):
         return self._stack_size
+
+    @elidable_promote()
+    def get_base_code(self):
+        return self
 
 class VariadicCode(BaseCode):
     __immutable_fields__ = ["_required_arity", "_code"]
@@ -242,6 +248,9 @@ class Closure(BaseCode):
 
     def get_closed_overs(self):
         return self._closed_overs
+
+    def get_base_code(self):
+        return self._code.get_base_code()
 
 class Undefined(object.Object):
     _type = object.Type(u"Undefined")

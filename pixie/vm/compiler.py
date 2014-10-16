@@ -43,7 +43,7 @@ class Context(object):
         self.can_tail_call = False
         self.closed_overs = []
         self.name = name
-        self.ns = u"user"
+        self.ns = u"pixie.stdlib"
         self.recur_points = []
 
     def sp(self):
@@ -244,7 +244,7 @@ def compile_form(form, ctx):
         ctx.push_const(nil)
         return
 
-    if rt.instance_QMARK_(form, rt.ISeq.deref()) is true and form is not nil:
+    if rt.instance_QMARK_(rt.ISeq.deref(), form) and form is not nil:
         return compile_cons(form, ctx)
     if isinstance(form, numbers.Integer):
         ctx.push_const(form)
@@ -357,7 +357,7 @@ def compile_fn(form, ctx):
         name = symbol.symbol(u"unknown")
 
 
-    if rt.instance_QMARK_(rt.first(form), rt.ISeq.deref()) is true:
+    if rt.instance_QMARK_(rt.ISeq.deref(), rt.first(form)):
         arities = []
         while form is not nil:
             required_arity, argc = compile_fn_body(name, rt.first(rt.first(form)), rt.next(rt.first(form)), ctx)

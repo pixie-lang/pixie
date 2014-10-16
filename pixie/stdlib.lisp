@@ -161,6 +161,8 @@
 (extend -seq PersistentVector sequence)
 (extend -seq Array sequence)
 
+
+
 (def concat (fn [& args] (transduce cat conj args)))
 
 (def defn (fn [nm & rest] `(def ~nm (fn ~nm ~@rest))))
@@ -179,6 +181,13 @@
   ([x y] (-add x y))
   ([x y z] (-add x (-add y z)))
   ([x y z & rest] (-add x (-add y (-add z (reduce -add 0 rest))))))
+
+(defn -
+  ([] 0)
+  ([x] x)
+  ([x y] (-sub x y))
+  ([x y z] (-sub x (-sub y z)))
+  ([x y z & rest] (-sub x (-sub y (-sub z (reduce -sub 0 rest))))))
 
 (defn =
   ([x] true)
@@ -261,3 +270,20 @@
              `(fn [] nil))
 
           (fn [] ~@finally))))))
+
+
+(extend -count MapEntry (fn [self] 2))
+(extend -nth MapEntry (fn [self idx not-found]
+                          (cond (= idx 0) (-key self)
+                                (= idx 1) (-val self)
+                                :else not-found)))
+
+(extend -reduce MapEntry indexed-reduce)
+
+(extend -str MapEntry
+        (fn [v]
+            (apply str "[" (conj (transduce (interpose ", ") conj v) "]"))))
+
+(extend -hash MapEntry
+  (fn [v]
+    (transduce ordered-hash-reducing-fn v)))

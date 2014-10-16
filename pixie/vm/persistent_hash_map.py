@@ -2,7 +2,6 @@ py_object = object
 import pixie.vm.object as object
 from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
-import pixie.vm.code as code
 from pixie.vm.numbers import Integer
 import pixie.vm.protocols as proto
 from  pixie.vm.code import extend, as_var
@@ -31,7 +30,7 @@ class PersistentHashMap(object.Object):
         added_leaf = Box()
 
         new_root = (BitmapIndexedNode_EMPTY if self._root is None else self._root) \
-                   .assoc_inode(0, rt.hash(key), key, val, added_leaf)
+                   .assoc_inode(r_uint(0), rt.hash(key), key, val, added_leaf)
 
         if new_root is self._root:
             return self
@@ -39,7 +38,7 @@ class PersistentHashMap(object.Object):
         return PersistentHashMap(self._cnt if added_leaf._val is None else self._cnt + 1, new_root, self._meta)
 
     def val_at(self, key, not_found):
-        return not_found if self._root is None else self._root.find(0, rt.hash(key), key, not_found)
+        return not_found if self._root is None else self._root.find(r_uint(0), rt.hash(key), key, not_found)
 
 
 
@@ -55,6 +54,9 @@ class INode(object.Object):
         pass
 
     def find(self, shift, hash_val, key, not_found):
+        pass
+
+    def reduce_inode(self, f, init):
         pass
 
 def mask(hash, shift):
@@ -121,11 +123,11 @@ class BitmapIndexedNode(INode):
                 return ArrayNode(None, n + 1, nodes)
             else:
                 new_array = [None] * (2 * (n + 1))
-                code.list_copy(self._array, 0, new_array, 0, 2 * idx)
+                list_copy(self._array, 0, new_array, 0, 2 * idx)
                 new_array[2 * idx] = key
                 added_leaf._val = added_leaf
                 new_array[2 * idx + 1] = val
-                code.list_copy(self._array, 2 * idx, new_array, 2 * (idx + 1), 2 * (n - idx))
+                list_copy(self._array, 2 * idx, new_array, 2 * (idx + 1), 2 * (n - idx))
                 return BitmapIndexedNode(None, self._bitmap | bit, new_array)
 
     def find(self, shift, hash_val, key, not_found):
@@ -140,6 +142,18 @@ class BitmapIndexedNode(INode):
         if rt.eq(key, key_or_null):
             return val_or_node
         return not_found
+
+    def reduce_inode(self, f, init):
+        for x in range(0, 32, 2):
+            key_or_none = self._array[x]
+            val_or_node = self._array[x + 1]
+            if key_or_none is None:
+                init = init.reduce_inode(f, init)
+            else:
+                init = f.invoke([rt.map_entry(key_or_none, val_or_node)])
+            if rt.reduced_QMARK_(init):
+                return init
+        return init
 
 
 BitmapIndexedNode_EMPTY = BitmapIndexedNode(None, r_uint(0), [])
@@ -170,6 +184,14 @@ class ArrayNode(INode):
             return not_found
         return node.find(shift + 5, hash_val, key, not_found)
 
+    def reduce_inode(self, f, init):
+        for x in range(len(self._array)):
+            init = self._array[x].reduce_inode(f, init)
+            if rt.reduced_QMARK_(init):
+                return init
+
+        return init
+
 
 
 def bit_count(i):
@@ -179,10 +201,22 @@ def bit_count(i):
     return (((i + (i >> 4) & 0xF0F0F0F) * 0x1010101) & 0xffffffff) >> 24
 
 @jit.unroll_safe
+def list_copy(from_lst, from_loc, to_list, to_loc, count):
+    from_loc = r_uint(from_loc)
+    to_loc = r_uint(to_loc)
+    count = r_uint(count)
+
+    i = r_uint(0)
+    while i < count:
+        to_list[to_loc + i] = from_lst[from_loc+i]
+        i += 1
+    return to_list
+
+@jit.unroll_safe
 def clone_and_set(array, i, a):
     clone = [None] * len(array)
 
-    idx = 0
+    idx = r_uint(0)
     while idx < len(array):
         clone[idx] = array[idx]
 
@@ -193,7 +227,7 @@ def clone_and_set(array, i, a):
 def clone_and_set2(array, i, a, j, b):
     clone = [None] * len(array)
 
-    idx = 0
+    idx = r_uint(0)
     while idx < len(array):
         clone[idx] = array[idx]
 

@@ -5,11 +5,12 @@ from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint, intmask
 from rpython.rlib.jit import JitDriver, promote, elidable, elidable_promote, hint, unroll_safe
 import rpython.rlib.jit as jit
+import rpython.rlib.debug as debug
 
-def get_location(ip, sp, bc):
-    return code.BYTECODES[bc[ip]]
+def get_location(ip, sp, bc, base_code):
+    return code.BYTECODES[bc[ip]] + " in " + str(base_code._name)
 
-jitdriver = JitDriver(greens=["ip", "sp", "bc"], reds=["frame"], virtualizables=["frame"],
+jitdriver = JitDriver(greens=["ip", "sp", "bc", "base_code"], reds=["frame"], virtualizables=["frame"],
                       get_printable_location=get_location)
 
 
@@ -22,9 +23,10 @@ class Frame(object):
                        "sp",
                        "ip",
                        "bc",
-                       "consts",
+                       "consts[*]",
                        "code_obj",
                        "args[*]",
+                       "base_code",
                        "closed_overs[*]"
 ]
     def __init__(self, code_obj, args):
@@ -33,7 +35,8 @@ class Frame(object):
         self.sp = r_uint(0)
         self.ip = r_uint(0)
         self.stack = [None] * code_obj.stack_size()
-        self.args = args
+        self.args = debug.make_sure_not_resized(args)
+        self.base_code = code_obj.get_base_code()
         if code_obj is not None:
             self.unpack_code_obj()
 
@@ -132,6 +135,7 @@ def interpret(code_obj, args=[]):
         jitdriver.jit_merge_point(bc=frame.bc,
                                   ip=frame.ip,
                                   sp=frame.sp,
+                                  base_code=frame.base_code,
                                   frame=frame)
         inst = frame.get_inst()
 
@@ -244,6 +248,7 @@ def interpret(code_obj, args=[]):
             jitdriver.can_enter_jit(bc=frame.bc,
                                   ip=frame.ip,
                                   sp=frame.sp,
+                                  base_code=frame.base_code,
                                   frame=frame)
             continue
 
@@ -278,6 +283,7 @@ def interpret(code_obj, args=[]):
             jitdriver.can_enter_jit(bc=frame.bc,
                                   ip=frame.ip,
                                   sp=frame.sp,
+                                  base_code=frame.base_code,
                                   frame=frame)
             continue
 

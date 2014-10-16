@@ -127,7 +127,7 @@ def _reduce(self, f, init):
         array = self.array_for(i)
         for j in range(len(array)):
             init = f.invoke([init, array[j]])
-            if rt.reduced_QMARK_(init) is true:
+            if rt.reduced_QMARK_(init):
                 return rt.deref(init)
 
         step = len(array)

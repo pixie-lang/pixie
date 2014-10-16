@@ -11,8 +11,8 @@ def unwrap(fn):
             def wrapper(*args):
                 ret = fn.invoke(py_list(args))
                 if ret is nil or ret is false:
-                    return false
-                return true
+                    return False
+                return True
             return wrapper
         elif tp is r_uint:
             return lambda *args: fn.invoke(py_list(args)).r_uint_val()
@@ -28,9 +28,9 @@ def init():
     sys.setrecursionlimit(10000) # Yeah we blow the stack sometimes, we promise it's not a bug
 
     import pixie.vm.numbers as numbers
-    import pixie.vm.code
+    from pixie.vm.code import wrap_fn
     import pixie.vm.interpreter
-    import pixie.vm.stacklet
+    import pixie.vm.stacklet as stacklet
     import pixie.vm.atom
     import pixie.vm.reduced
     import pixie.vm.util
@@ -39,7 +39,9 @@ def init():
     import pixie.vm.persistent_list
     import pixie.vm.persistent_hash_map
     import pixie.vm.custom_types
-    import pixie.vm.compiler
+    import pixie.vm.compiler as compiler
+    import pixie.vm.map_entry
+    import pixie.vm.reader as reader
 
     numbers.init()
 
@@ -56,17 +58,35 @@ def init():
 
     import pixie.vm.bootstrap
 
-    for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():
-        name = munge(name)
-        if name in globals():
-            print "skipping", name
-            continue
+    def reinit():
+        for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():
+            name = munge(name)
+            if name in globals():
+                continue
 
-        print name
-        if isinstance(var.deref(), BaseCode):
-            globals()[name] = unwrap(var)
-        else:
-            globals()[name] = var
+            print "Found ->> ", name, var.deref()
+            if isinstance(var.deref(), BaseCode):
+                globals()[name] = unwrap(var)
+            else:
+                globals()[name] = var
+
+    f = open("pixie/stdlib.lisp")
+    data = f.read()
+    f.close()
+    rdr = reader.StringReader(unicode(data))
+    result = nil
+
+    @wrap_fn
+    def run_load_stdlib():
+        while True:
+            form = reader.read(rdr, False)
+            if form is reader.eof:
+                return result
+            result = compiler.compile(form).invoke([])
+            reinit()
+    stacklet.with_stacklets(run_load_stdlib)
+
+
 
     globals()["__inited__"] = True
 

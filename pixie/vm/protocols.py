@@ -32,6 +32,8 @@ defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
 
 defprotocol("pixie.stdlib", "ILookup", ["-val-at"])
 
+defprotocol("pixie.stdlib", "IMapEntry", ["-key", "-val"])
+
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
 def default_str(x):
@@ -59,7 +61,7 @@ def seq(x):
 
 @as_var("seq?")
 def seq_QMARK_(x):
-    return rt.instance_QMARK_(x, rt.ISeq.deref())
+    return true if rt.instance_QMARK_(rt.ISeq.deref(), x) else false
 
 
 @as_var("type")
@@ -135,8 +137,8 @@ def str__args(args):
 @jit.unroll_safe
 def apply__args(args):
     last_itm = args[len(args) - 1]
-    if rt.instance_QMARK_(last_itm, rt.IIndexed.deref()) is false or \
-        rt.instance_QMARK_(last_itm, rt.ICounted.deref()) is false:
+    if not rt.instance_QMARK_(rt.IIndexed.deref(), last_itm) or \
+        not rt.instance_QMARK_(rt.ICounted.deref(), last_itm):
         raise ValueError("Last item to apply must be bost IIndexed and ICounted")
 
     fn = args[0]
@@ -156,8 +158,9 @@ def _print(a):
     print rt._str(a)._str
     return nil
 
+@returns(bool)
 @as_var("instance?")
-def _instance(o, proto):
+def _instance(proto, o):
     affirm(isinstance(proto, Protocol), u"proto must be a Protocol")
 
     return true if proto.satisfies(o.type()) else false
@@ -177,10 +180,13 @@ def load_file(filename):
     result = nil
     while True:
         form = reader.read(rdr, False)
+        print "printing"
+        print rt.str(form)._str
         if form is reader.eof:
             return result
-
+        print "compiling"
         result = compiler.compile(form).invoke([])
+        print "compiled"
 
 @as_var("extend")
 def extend(proto_fn, tp, fn):
@@ -206,7 +212,7 @@ def identical(a, b):
 
 @as_var("vector?")
 def vector_QMARK_(a):
-    return rt.instance_QMARK_(a, rt.IVector.deref())
+    return true if rt.instance_QMARK_(rt.IVector.deref(), a) else false
 
 @returns(bool)
 @as_var("eq")

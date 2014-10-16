@@ -62,7 +62,7 @@ def list__args(args):
     i = r_uint(len(args))
     acc = nil
     while i > 0:
-        acc = PersistentList(args[i - 1], acc, i, nil)
+        acc = PersistentList(args[i - 1], acc, len(args) - i + 1, nil)
         i -= 1
     return acc
 
