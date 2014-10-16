@@ -5,6 +5,7 @@ from pixie.vm.primitives import nil
 import pixie.vm.protocols as proto
 import pixie.vm.numbers as numbers
 import pixie.vm.util as util
+from rpython.rlib.rarithmetic import intmask
 
 class String(Object):
     _type = Type(u"pixie.stdlib.String")
@@ -79,4 +80,4 @@ def _namespace(self):
 
 @extend(proto._hash, String)
 def _hash(self):
-    return numbers.Integer(util.hash_unencoded_chars(self._str))
+    return numbers.Integer(intmask(util.hash_unencoded_chars(self._str)))
