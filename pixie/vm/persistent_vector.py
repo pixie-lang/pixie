@@ -1,9 +1,10 @@
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer
 import pixie.vm.protocols as proto
 from  pixie.vm.code import extend, as_var
-from rpython.rlib.rarithmetic import r_uint as r_uint32, intmask, widen
+from rpython.rlib.rarithmetic import r_uint, intmask, widen
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 
@@ -53,11 +54,11 @@ class PersistentVector(object.Object):
                 level -= 5
             return node._array
 
-        raise IndexError()
+        affirm(False, u"Index out of Range")
 
     def nth(self, i, not_found=nil):
         if 0 <= i < self._cnt:
-            node = self.array_for(r_uint32(i))
+            node = self.array_for(r_uint(i))
             return node[i & 0x01f]
 
         return not_found
@@ -74,10 +75,11 @@ class PersistentVector(object.Object):
         tail_node = Node(self._root._edit, self._tail)
         new_shift = self._shift
 
-        if (self._cnt >> 5) > (r_uint32(1) << self._shift):
+        if (self._cnt >> 5) > (r_uint(1) << self._shift):
             new_root = Node(self._root._edit)
             new_root._array[0] = self._root
             new_root._array[1] = self.new_path(self._root._edit, self._shift, tail_node)
+            new_shift += 5
 
         else:
             new_root = self.push_tail(self._shift, self._root, tail_node)
@@ -106,6 +108,50 @@ class PersistentVector(object.Object):
         ret._array[0] = self.new_path(edit, level - 5, node)
         return ret
 
+    def pop(self):
+        affirm(self._cnt != 0, u"Can't pop an empty vector")
+
+        if self._cnt == 1:
+            return EMPTY
+
+        if self._cnt - self.tailoff() > 1:
+            new_tail = self._tail[:len(self._tail) - 1]
+            return PersistentVector(self._meta, self._cnt - 1, self._shift, self._root, new_tail)
+
+        new_tail = self.array_for(self._cnt - 2)
+
+        new_root = self.pop_tail(self._shift, self._root)
+        new_shift = self._shift
+        if new_root is None:
+            new_root = EMPTY_NODE
+
+        if self._shift > 5 and new_root._array[1] is None:
+            new_root = new_root._array[0]
+            new_shift -= 5
+
+        return PersistentVector(self._meta, self._cnt - 1, new_shift, new_root, new_tail)
+
+    def pop_tail(self, level, node):
+        sub_idx = ((self._cnt - 1) >> level) & 0x01f
+        if level > 5:
+            new_child = self.pop_tail(level - 5, node._array[sub_idx])
+            if new_child is None or sub_idx == 0:
+                return None
+            else:
+                ret = Node(self._root._edit, node._array[:])
+                ret._array[sub_idx] = new_child
+                return ret
+
+        elif sub_idx == 0:
+            return None
+
+        else:
+            ret = Node(self._root._edit, node._array[:])
+            ret._array[sub_idx] = None
+            return ret
+
+
+
 
 
 @extend(proto._count, PersistentVector)
@@ -119,6 +165,14 @@ def _nth(self, idx):
 @extend(proto._conj, PersistentVector)
 def _conj(self, v):
     return self.conj(v)
+
+@extend(proto._push, PersistentVector)
+def _push(self, v):
+    return self.conj(v)
+
+@extend(proto._pop, PersistentVector)
+def _push(self):
+    return self.pop()
 
 @extend(proto._reduce, PersistentVector)
 def _reduce(self, f, init):
@@ -145,4 +199,4 @@ def vector__args(args):
 
 proto.IVector.add_satisfies(PersistentVector._type)
 
-EMPTY = PersistentVector(None, r_uint32(0), r_uint32(5), EMPTY_NODE, [])
+EMPTY = PersistentVector(None, r_uint(0), r_uint(5), EMPTY_NODE, [])

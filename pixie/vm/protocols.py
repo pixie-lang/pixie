@@ -37,6 +37,8 @@ defprotocol("pixie.stdlib", "ILookup", ["-val-at"])
 
 defprotocol("pixie.stdlib", "IMapEntry", ["-key", "-val"])
 
+defprotocol("pixie.stdlib", "IStack", ["-push", "-pop"])
+
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
 IMap = as_var("pixie.stdlib", "IMap")(Protocol(u"IMap"))
