@@ -115,7 +115,9 @@ class PersistentVector(object.Object):
             return EMPTY
 
         if self._cnt - self.tailoff() > 1:
-            new_tail = self._tail[:len(self._tail) - 1]
+            size = len(self._tail) - 1
+            assert size >= 0 # for translation
+            new_tail = self._tail[:size]
             return PersistentVector(self._meta, self._cnt - 1, self._shift, self._root, new_tail)
 
         new_tail = self.array_for(self._cnt - 2)
