@@ -34,7 +34,7 @@ def mix_h1(h1, k1):
     return h1
 
 def hash_unencoded_chars(u):
-    assert isinstance(u, unicode)
+    #assert isinstance(u, unicode)
     h1 = seed
 
     # step through the CharSequence 2 chars at a time

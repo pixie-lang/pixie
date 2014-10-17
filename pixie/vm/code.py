@@ -342,7 +342,7 @@ class Var(BaseCode):
 
 class Refer(py_object):
     def __init__(self, ns, refer_syms=[], refer_all=False):
-        self._ns = ns
+        self._namespace = ns
         self._refer_syms = refer_syms
         self._refer_all = refer_all
 
@@ -359,7 +359,8 @@ class Namespace(object.Object):
         self._refers = {}
 
     def intern_or_make(self, name):
-        affirm(isinstance(name, unicode), u"Var names must be unicode")
+        assert name is not None
+        #\affirm(isinstance(name, unicode), u"Var names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
             v = Var(self._name, name)
@@ -383,11 +384,14 @@ class Namespace(object.Object):
         name = rt.name(s)
 
         if ns is not None:
-            resolved_ns = self._refers.get(ns, None)
+            refer = self._refers.get(ns, None)
+            resolved_ns = None
+            if refer is not None:
+                resolved_ns = refer._namespace
             if resolved_ns is None:
                 resolved_ns = _ns_registry.get(ns, None)
             if resolved_ns is None:
-                affirm(False, u"Unable to resolve namespace: " + resolved_ns + u" inside namespace " + self._name)
+                affirm(False, u"Unable to resolve namespace: " + ns + u" inside namespace " + self._name)
         else:
             resolved_ns = self
 
@@ -396,7 +400,7 @@ class Namespace(object.Object):
             for refer_nm in self._refers:
                 refer = self._refers[refer_nm]
                 if name in refer._refer_syms or refer._refer_all:
-                    var = refer._ns.resolve(symbol.Symbol(name), False)
+                    var = refer._namespace.resolve(symbol.Symbol(name), False)
                 if var is not None:
                     return var
             return None
@@ -412,7 +416,7 @@ class NamespaceRegistry(py_object):
         self._registry = {}
 
     def find_or_make(self, name):
-        affirm(isinstance(name, unicode), u"Namespace names must be unicode")
+        #affirm(isinstance(name, unicode), u"Namespace names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
             v = Namespace(name)

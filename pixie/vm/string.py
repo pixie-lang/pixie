@@ -14,7 +14,7 @@ class String(Object):
         return String._type
 
     def __init__(self, s):
-        assert isinstance(s, unicode)
+        #assert isinstance(s, unicode)
         self._str = s
 
 

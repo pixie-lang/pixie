@@ -20,7 +20,7 @@ class TypeRegistry(object):
 
     def var_for_type_and_name(self, nm, tp):
         from pixie.vm.symbol import symbol
-        splits = nm.split(".")
+        splits = nm.split(u".")
         size = len(splits) - 1
         assert size >= 0
         ns = u".".join(splits[:size])
@@ -43,7 +43,7 @@ _type_registry = TypeRegistry()
 
 class Type(Object):
     def __init__(self, name):
-        assert isinstance(name, unicode), u"Type names must be unicode"
+        #assert isinstance(name, unicode), u"Type names must be unicode"
         _type_registry.register_type(name, self)
         self._name = name
 

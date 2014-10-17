@@ -9,7 +9,7 @@ class Symbol(object.Object):
     _type = object.Type(u"pixie.stdlib.Symbol")
 
     def __init__(self, s):
-        assert isinstance(s, unicode)
+        #assert isinstance(s, unicode)
         self._str = s
         self._w_name = None
         self._w_ns = None

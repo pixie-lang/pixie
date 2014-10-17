@@ -19,7 +19,7 @@ class PlatformReader(object.Object):
 class StringReader(PlatformReader):
 
     def __init__(self, s):
-        affirm(isinstance(s, unicode), u"StringReader requires unicode")
+        #affirm(isinstance(s, unicode), u"StringReader requires unicode")
         self._str = s
         self._idx = 0
 
