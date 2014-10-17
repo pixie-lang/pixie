@@ -176,12 +176,20 @@ def _push(self, v):
 def _push(self):
     return self.pop()
 
+
+_reduce_driver = jit.JitDriver(name="pixie.stdlib.PersistentVector_reduce",
+                              greens=["f"],
+                              reds="auto")
+
 @extend(proto._reduce, PersistentVector)
 def _reduce(self, f, init):
     i = 0
     while i < self._cnt:
         array = self.array_for(i)
         for j in range(len(array)):
+            item = array[j]
+            _reduce_driver.jit_merge_point(f=f)
+
             init = f.invoke([init, array[j]])
             if rt.reduced_QMARK_(init):
                 return rt.deref(init)
