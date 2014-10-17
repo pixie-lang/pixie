@@ -97,6 +97,16 @@ def _seq(_):
 def _count(_):
     return numbers.zero_int
 
+@extend(_name, Var)
+def __name(self):
+    import pixie.vm.string as string
+    return string.String(self._name)
+
+@extend(_namespace, Var)
+def __name(self):
+    import pixie.vm.string as string
+    return string.String(self._ns)
+
 @returns(r_uint)
 @as_var("hash")
 def __hash(x):
@@ -235,10 +245,12 @@ def set_macro(f):
     f.set_macro()
     return f
 
+@returns(unicode)
 @as_var("name")
 def name(s):
     return rt._name(s)
 
+@returns(unicode)
 @as_var("namespace")
 def namespace(s):
     return rt._namespace(s)
@@ -269,7 +281,7 @@ def _throw(ex):
 
 @as_var("resolve")
 def _var(nm):
-    var = get_var_if_defined(rt.namespace(nm)._str, rt.name(nm)._str, nil)
+    var = get_var_if_defined(rt.namespace(nm), rt.name(nm), nil)
     return var
 
 @as_var("set-dynamic!")

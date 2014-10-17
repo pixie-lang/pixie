@@ -5,6 +5,7 @@ from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.jit import elidable, elidable_promote, promote
 import rpython.rlib.jit as jit
+import pixie.vm.rt as rt
 
 
 BYTECODES = ["LOAD_CONST",
@@ -290,7 +291,8 @@ class Var(BaseCode):
     def type(self):
         return Var._type
 
-    def __init__(self, name):
+    def __init__(self, ns, name):
+        self._ns = ns
         self._name = name
         self._rev = 0
         self._root = undefined
@@ -338,20 +340,69 @@ class Var(BaseCode):
         return self.deref().invoke(args)
 
 
+class Refer(py_object):
+    def __init__(self, ns, refer_syms=[], refer_all=False):
+        self._ns = ns
+        self._refer_syms = refer_syms
+        self._refer_all = refer_all
 
 
-class Namespace(py_object):
+class Namespace(object.Object):
+    _type = object.Type(u"pixie.stdlib.Namespace")
+
+    def type(self):
+        return Namespace._type
+
     def __init__(self, name):
         self._registry = {}
         self._name = name
+        self._refers = {}
 
     def intern_or_make(self, name):
         affirm(isinstance(name, unicode), u"Var names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
-            v = Var(name)
+            v = Var(self._name, name)
             self._registry[name] = v
         return v
+
+    def add_refer(self, ns, as_nm=None, refer_all=False):
+        if as_nm is None:
+            as_nm = ns._name
+
+        self._refers[as_nm] = Refer(ns, refer_all=refer_all)
+
+    def include_stdlib(self):
+        stdlib = _ns_registry.find_or_make(u"pixie.stdlib")
+        self.add_refer(stdlib, refer_all=True)
+
+    def resolve(self, s, use_refers=True):
+        import pixie.vm.symbol as symbol
+        affirm(isinstance(s, symbol.Symbol), u"Must resolve symbols")
+        ns = rt.namespace(s)
+        name = rt.name(s)
+
+        if ns is not None:
+            resolved_ns = self._refers.get(ns, None)
+            if resolved_ns is None:
+                resolved_ns = _ns_registry.get(ns, None)
+            if resolved_ns is None:
+                affirm(False, u"Unable to resolve namespace: " + resolved_ns + u" inside namespace " + self._name)
+        else:
+            resolved_ns = self
+
+        var = resolved_ns._registry.get(name, None)
+        if var is None and use_refers:
+            for refer_nm in self._refers:
+                refer = self._refers[refer_nm]
+                if name in refer._refer_syms or refer._refer_all:
+                    var = refer._ns.resolve(symbol.Symbol(name), False)
+                if var is not None:
+                    return var
+            return None
+        return var
+
+
 
     def get(self, name, default):
         return self._registry.get(name, default)
@@ -374,6 +425,7 @@ class NamespaceRegistry(py_object):
 
 _ns_registry = NamespaceRegistry()
 
+
 def intern_var(ns, name=None):
     if name is None:
         name = ns
@@ -386,7 +438,6 @@ def get_var_if_defined(ns, name, els=None):
     if w_ns is None:
         return els
     return w_ns.get(name, els)
-
 
 
 

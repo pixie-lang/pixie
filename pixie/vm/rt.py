@@ -1,26 +1,43 @@
 __config__ = None
 py_list = list
-import pixie.vm.code as code
-from pixie.vm.primitives import nil, true, false
-from rpython.rlib.rarithmetic import r_uint
 
-def unwrap(fn):
-    if isinstance(fn, code.Var) and hasattr(fn.deref(), "_returns"):
-        tp = fn.deref()._returns
-        if tp is bool:
-            def wrapper(*args):
-                ret = fn.invoke(py_list(args))
-                if ret is nil or ret is false:
-                    return False
-                return True
-            return wrapper
-        elif tp is r_uint:
-            return lambda *args: fn.invoke(py_list(args)).r_uint_val()
-        else:
-            assert False, "Don't know how to convert" + str(tp)
-    return lambda *args: fn.invoke(py_list(args))
+
 
 def init():
+
+    import pixie.vm.code as code
+    from pixie.vm.object import affirm, _type_registry
+    from rpython.rlib.rarithmetic import r_uint
+    from pixie.vm.primitives import nil, true, false
+    from pixie.vm.string import String
+
+    _type_registry.set_registry(code._ns_registry)
+
+    def unwrap(fn):
+        if isinstance(fn, code.Var) and hasattr(fn.deref(), "_returns"):
+            tp = fn.deref()._returns
+            if tp is bool:
+                def wrapper(*args):
+                    ret = fn.invoke(py_list(args))
+                    if ret is nil or ret is false:
+                        return False
+                    return True
+                return wrapper
+            elif tp is r_uint:
+                return lambda *args: fn.invoke(py_list(args)).r_uint_val()
+            elif tp is unicode:
+                def wrapper(*args):
+                    ret = fn.invoke(py_list(args))
+                    if ret is nil:
+                        return None
+                    affirm(isinstance(ret, String), u"Invalid return value, expected String")
+                    return ret._str
+                return wrapper
+            else:
+                assert False, "Don't know how to convert" + str(tp)
+        return lambda *args: fn.invoke(py_list(args))
+
+
     if globals().has_key("__inited__"):
         return
 
@@ -78,12 +95,14 @@ def init():
 
     @wrap_fn
     def run_load_stdlib():
-        while True:
-            form = reader.read(rdr, False)
-            if form is reader.eof:
-                return result
-            result = compiler.compile(form).invoke([])
-            reinit()
+        with compiler.with_ns(u"pixie.stdlib"):
+            while True:
+                form = reader.read(rdr, False)
+                if form is reader.eof:
+                    return result
+                result = compiler.compile(form).invoke([])
+                reinit()
+
     stacklet.with_stacklets(run_load_stdlib)
 
 

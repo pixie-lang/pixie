@@ -1,4 +1,4 @@
-from pixie.vm.compiler import compile
+from pixie.vm.compiler import compile, with_ns, NS_VAR
 from pixie.vm.reader import StringReader, read, eof, PromptReader
 from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
@@ -35,18 +35,22 @@ def repl():
     import pixie.vm.rt as rt
     from pixie.vm.string import String
 
+    with with_ns(u"user"):
+        NS_VAR.deref().include_stdlib()
+
     rdr = PromptReader()
     while True:
-        try:
-            val = interpret(compile(read(rdr, True)))
-        except WrappedException as ex:
-            print "Error: ", ex._ex.__repr__()
-            continue
-        if val is keyword(u"exit-repl"):
-            break
-        val = rt.str(val)
-        assert isinstance(val, String), "str should always return a string"
-        print val._str
+        with with_ns(u"user"):
+            try:
+                val = interpret(compile(read(rdr, True)))
+            except WrappedException as ex:
+                print "Error: ", ex._ex.__repr__()
+                continue
+            if val is keyword(u"exit-repl"):
+                break
+            val = rt.str(val)
+            assert isinstance(val, String), "str should always return a string"
+            print val._str
 
 def entry_point(foo=None):
     print "Pixie 0.1 - Interactive REPL"

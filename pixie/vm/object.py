@@ -10,9 +10,31 @@ class Object(object):
 class TypeRegistry(object):
     def __init__(self):
         self._types = {}
+        self._ns_registry = None
 
     def register_type(self, nm, tp):
-        self._types[nm] = tp
+        if self._ns_registry is None:
+            self._types[nm] = tp
+        else:
+            self.var_for_type_and_name(nm, tp)
+
+    def var_for_type_and_name(self, nm, tp):
+        from pixie.vm.symbol import symbol
+        splits = nm.split(".")
+        size = len(splits) - 1
+        assert size >= 0
+        ns = u".".join(splits[:size])
+        name = splits[size]
+        var = self._ns_registry.find_or_make(ns).intern_or_make(name)
+        var.set_root(tp)
+        return var
+
+    def set_registry(self, registry):
+        self._ns_registry = registry
+        for nm in self._types:
+            tp = self._types[nm]
+            self.var_for_type_and_name(nm, tp)
+
 
     def get_by_name(self, nm, default=None):
         return self._types.get(nm, default)
@@ -20,7 +42,6 @@ class TypeRegistry(object):
 _type_registry = TypeRegistry()
 
 class Type(Object):
-
     def __init__(self, name):
         assert isinstance(name, unicode), u"Type names must be unicode"
         _type_registry.register_type(name, self)
@@ -28,6 +49,7 @@ class Type(Object):
 
     def type(self):
         return Type._type
+
 
 
 Type._type = Type(u"Type")

@@ -235,7 +235,8 @@ def interpret(code_obj, args=[]):
 
         if inst == code.DEREF_VAR:
             var = frame.pop()
-            assert isinstance(var, code.Var)
+            if not isinstance(var, code.Var):
+                affirm(False, u"Can't deref " + var.type()._name)
             frame.push(var.deref())
             continue
 

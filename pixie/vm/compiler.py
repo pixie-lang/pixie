@@ -13,6 +13,20 @@ from rpython.rlib.rarithmetic import r_uint
 import pixie.vm.rt as rt
 from pixie.vm.util import *
 
+NS_VAR = code.intern_var(u"pixie.stdlib", u"*ns*")
+NS_VAR.set_dynamic()
+
+
+class with_ns(object):
+    def __init__(self, nm):
+        assert isinstance(nm, unicode)
+        self._ns = nm
+    def __enter__(self):
+        code._dynamic_vars.push_binding_frame()
+        NS_VAR.set_value(code._ns_registry.find_or_make(self._ns))
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        code._dynamic_vars.pop_binding_frame()
 
 def clone(lst):
     arr = [None] * len(lst)
@@ -43,7 +57,6 @@ class Context(object):
         self.can_tail_call = False
         self.closed_overs = []
         self.name = name
-        self.ns = u"pixie.stdlib"
         self.recur_points = []
 
     def sp(self):
@@ -207,10 +220,7 @@ class ClosureCell(LocalType):
 
 
 def resolve_var(ctx, name):
-    var = code.get_var_if_defined(ctx.ns, name)
-    if var is None:
-        var = code.get_var_if_defined(u"pixie.stdlib", name)
-    return var
+    return NS_VAR.deref().resolve(name)
 
 def resolve_local(ctx, name):
     return ctx.get_local(name)
@@ -221,7 +231,7 @@ def is_macro_call(form, ctx):
         name = rt.first(form)._str
         if resolve_local(ctx, name):
             return None
-        var = resolve_var(ctx, name)
+        var = resolve_var(ctx, rt.first(form))
 
         if var and var.is_defined():
             val = var.deref()
@@ -274,24 +284,10 @@ def compile_form(form, ctx):
         name = form._str
         loc = resolve_local(ctx, name)
         if loc is None:
-            var = resolve_var(ctx, name)
-            if var is None:
-                var = _type_registry.get_by_name(name, None)
-                if var is not None:
-                    ctx.push_const(var)
-                    return
-                var = None
+            var = resolve_var(ctx, form)
 
             if var is None:
-                var = _type_registry.get_by_name(u"pixie.stdlib." + name, None)
-                if var is not None:
-                    ctx.push_const(var)
-                    return
-
-            if var is None:
-                var = code.intern_var(ctx.ns, name)
-
-
+                var = NS_VAR.deref().intern_or_make(name)
 
             ctx.push_const(var)
 
@@ -483,7 +479,7 @@ def compile_def(form, ctx):
 
     affirm(isinstance(name, symbol.Symbol), u"Def'd name must be a symbol")
 
-    var = code.intern_var(ctx.ns, name._str)
+    var = NS_VAR.deref().intern_or_make(rt.name(name))
     ctx.push_const(var)
     compile_form(val, ctx)
     ctx.bytecode.append(code.SET_VAR)
@@ -608,9 +604,9 @@ def compile_ns(form, ctx):
 
     affirm(isinstance(nm, symbol.Symbol), u"Namespace name must be a symbol")
 
-    str_name = rt.name(nm)._str
+    str_name = rt.name(nm)
 
-    ctx.ns = str_name
+    NS_VAR.set_value(code._ns_registry.find_or_make(str_name))
     ctx.push_const(nil)
 
 

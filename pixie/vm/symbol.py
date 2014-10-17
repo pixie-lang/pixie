@@ -6,7 +6,7 @@ from pixie.vm.code import extend, as_var
 from pixie.vm.string import String
 
 class Symbol(object.Object):
-    _type = object.Type(u"Symbol")
+    _type = object.Type(u"pixie.stdlib.Symbol")
 
     def __init__(self, s):
         assert isinstance(s, unicode)

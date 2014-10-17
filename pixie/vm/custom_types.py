@@ -61,7 +61,7 @@ def create_type(type_name, fields):
         acc[val] = i
 
 
-    return CustomType(rt.name(type_name)._str, acc)
+    return CustomType(rt.name(type_name), acc)
 
 @as_var("new")
 def _new(tp):
