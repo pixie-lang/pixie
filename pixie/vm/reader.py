@@ -10,16 +10,29 @@ import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
 from pixie.vm.string import String
-from pixie.vm.code import wrap_fn
+from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
+import pixie.vm.protocols as proto
+
+LINE_NUMBER_KW = keyword(u"line-number")
+COLUMN_NUMBER_KW = keyword(u"column-number")
+LINE_KW = keyword(u"line")
+FILE_KW = keyword(u"file")
+
 
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
 
+    def read(self):
+        assert False
+
+    def unread(self, ch):
+        pass
+
 class StringReader(PlatformReader):
 
     def __init__(self, s):
-        #affirm(isinstance(s, unicode), u"StringReader requires unicode")
+        affirm(isinstance(s, unicode), u"StringReader requires unicode")
         self._str = s
         self._idx = 0
 
@@ -37,6 +50,7 @@ class PromptReader(PlatformReader):
     def __init__(self):
         self._string_reader = None
 
+
     def read(self):
         if self._string_reader is None:
             self._string_reader = StringReader(_readline(">>") + u"\n")
@@ -50,6 +64,92 @@ class PromptReader(PlatformReader):
     def unread(self, ch):
         assert self._string_reader is not None
         self._string_reader.unread(ch)
+
+class LinePromise(object.Object):
+    _type = object.Type(u"pixie.stdlib.LinePromise")
+    def type(self):
+        return LinePromise._type
+
+    def __init__(self):
+        self._chrs = []
+        self._str = None
+
+    def add_char(self, ch):
+        self._chrs.append(ch)
+
+    def finalize(self):
+        self._str = u"".join(self._chrs)
+        self._chrs = None
+
+    def is_finalized(self):
+        return self._chrs is None
+
+    def __repr__(self):
+        if self.is_finalized():
+            return self._str
+        return u"".join(self._chrs)
+
+@extend(proto._str, LinePromise)
+def _str(self):
+    return rt.wrap(self.reader_string_state())
+
+
+class MetaDataReader(PlatformReader):
+    """Creates metadata for use by the debug system"""
+    def __init__(self, parent_reader, filename=u"<unknown>"):
+        assert isinstance(parent_reader, PlatformReader)
+        self._parent_reader = parent_reader
+        self._line_number = 1
+        self._column_number = 0
+        self._line = LinePromise()
+        self._has_unread = False
+        self._prev_line_number = 1
+        self._prev_column_number = 0
+        self._prev_line = None
+        self._prev_chr = u""
+        self._filename = filename
+
+    def read(self):
+        if self._has_unread:
+            self._has_unread = False
+            return self._prev_chr
+        else:
+            self._prev_column_number = self._column_number
+            self._prev_line_number = self._line_number
+            self._prev_line = self._line
+            ch = self._parent_reader.read()
+            if self._line.is_finalized():
+                self._line = LinePromise()
+            if ch == u'\n':
+                self._line.finalize()
+                self._line_number += 1
+                self._column_number = 0
+            else:
+                self._line.add_char(ch)
+                self._column_number += 1
+
+            self._cur_ch = ch
+            return ch
+
+    def get_metadata(self):
+        return object.InterpreterCodeInfo(self._line, self._line_number, self._column_number, self._filename)
+
+
+    def unread(self, ch):
+        affirm(not self._has_unread, u"Can't unread twice")
+        self._has_unread = True
+        self._prev_chr = self._cur_ch
+#
+#
+#     def reader_str_state(self):
+#         spaces = []
+#         for x in range(self._column_number - 1):
+#             spaces.append(u" ")
+#
+#         return u"in " + self._filename + \
+#             u" at " + unicode(str(self._line_number)) + u":" + unicode(str(self._column_number)) + u"\n" \
+#                + self._line.reader_string_state() + u"\n" + u"".join(spaces) + u"^"
+
 
 
 def is_whitespace(ch):
@@ -123,7 +223,7 @@ class MapReader(ReaderHandler):
 
 class UnmachedMapReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        affirm(False, u"Unmatched Map brace")
+        affirm(False, u"Unmatched Map brace ")
 
 class QuoteReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -148,7 +248,7 @@ class LiteralStringReader(ReaderHandler):
             except EOFError:
                 raise Exception("unmatched quote")
             if v == "\"":
-                return String(u"".join(acc))
+                return rt.wrap(u"".join(acc))
             acc.append(v)
 
 class DerefReader(ReaderHandler):
@@ -246,7 +346,7 @@ def read_number(rdr, ch):
     except EOFError:
         pass
 
-    return numbers.Integer(int(u"".join(acc)))
+    return rt.wrap(int(u"".join(acc)))
 
 def read_symbol(rdr, ch):
     acc = [ch]
@@ -275,6 +375,13 @@ class EOF(object.Object):
 
 eof = EOF()
 
+
+
+
+
+
+
+
 def read(rdr, error_on_eof):
     try:
         eat_whitespace(rdr)
@@ -286,24 +393,34 @@ def read(rdr, error_on_eof):
 
 
     ch = rdr.read()
+    if isinstance(rdr, MetaDataReader):
+        meta = rdr.get_metadata()
+    else:
+        meta = nil
 
     macro = handlers.get(ch, None)
     if macro is not None:
-        return macro.invoke(rdr, ch)
+        itm = macro.invoke(rdr, ch)
 
-    if is_digit(ch):
-        return read_number(rdr, ch)
+    elif is_digit(ch):
+        itm = read_number(rdr, ch)
 
-    if ch == u"-":
+    elif ch == u"-":
         ch2 = rdr.read()
         if is_digit(ch2):
             rdr.unread(ch2)
-            return read_number(rdr, ch)
+            itm = read_number(rdr, ch)
         else:
             rdr.unread(ch2)
-            return read_symbol(rdr, ch)
+            itm = read_symbol(rdr, ch)
 
-    return read_symbol(rdr, ch)
+    else:
+        itm = read_symbol(rdr, ch)
+
+    if rt.has_meta_QMARK_(itm):
+        itm = rt.with_meta(itm, meta)
+
+    return itm
 
 
 

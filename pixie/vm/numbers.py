@@ -2,7 +2,7 @@ import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
-
+import pixie.vm.rt as rt
 
 class Number(object.Object):
     pass
@@ -44,15 +44,15 @@ def _add(a, b):
 
 @extend(_sub, Integer._type, Integer._type)
 def _sub(a, b):
-    return Integer(a.int_val() - b.int_val())
+    return rt.wrap(a.int_val() - b.int_val())
 
 @extend(_mul, Integer._type, Integer._type)
 def _mul(a, b):
-    return Integer(a.int_val() * b.int_val())
+    return rt.wrap(a.int_val() * b.int_val())
 
 @extend(_div, Integer._type, Integer._type)
 def _div(a, b):
-    return Integer(a.int_val() / b.int_val())
+    return rt.wrap(a.int_val() / b.int_val())
 
 @extend(_num_eq, Integer._type, Integer._type)
 def _div(a, b):
@@ -80,10 +80,10 @@ def init():
 
     @extend(proto._str, Integer._type)
     def _str(i):
-        return String(unicode(str(i.int_val())))
+        return rt.wrap(unicode(str(i.int_val())))
 
     @extend(proto._repr, Integer._type)
     def _repr(i):
-        return String(unicode(str(i.int_val())))
+        return rt.wrap(unicode(str(i.int_val())))
 
 

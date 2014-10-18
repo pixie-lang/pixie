@@ -4,6 +4,7 @@ from pixie.vm.primitives import nil, true, false
 import pixie.vm.protocols as proto
 from pixie.vm.code import extend, as_var
 from pixie.vm.string import String
+import pixie.vm.rt as rt
 
 class Symbol(object.Object):
     _type = object.Type(u"pixie.stdlib.Symbol")
@@ -21,14 +22,14 @@ class Symbol(object.Object):
         if self._w_name is None:
             s = self._str.split(u"/")
             if len(s) == 2:
-                self._w_ns = String(s[0])
-                self._w_name = String(s[1])
+                self._w_ns = rt.wrap(s[0])
+                self._w_name = rt.wrap(s[1])
             elif len(s) == 1:
-                self._w_name = String(s[0])
+                self._w_name = rt.wrap(s[0])
                 self._w_ns = nil
             else:
-                self._w_ns = String(s[0])
-                self._w_name = String(u"/".join(s[1:]))
+                self._w_ns = rt.wrap(s[0])
+                self._w_name = rt.wrap(u"/".join(s[1:]))
 
 
 
@@ -43,7 +44,7 @@ def _eq(self, other):
 
 @extend(proto._str, Symbol)
 def _str(self):
-    return String(self._str)
+    return rt.wrap(self._str)
 
 @extend(proto._name, Symbol)
 def _name(self):

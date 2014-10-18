@@ -3,9 +3,10 @@ from pixie.vm.primitives import nil, true, false
 from pixie.vm.string import String
 import pixie.vm.protocols as proto
 from pixie.vm.code import extend, as_var
+import pixie.vm.rt as rt
 
 class Keyword(Object):
-    _type = Type(u"Keyword")
+    _type = Type(u"pixie.stdlib.Keyword")
 
     def __init__(self, name):
         self._str = name
@@ -19,14 +20,14 @@ class Keyword(Object):
         if self._w_name is None:
             s = self._str.split(u"/")
             if len(s) == 2:
-                self._w_ns = String(s[0])
-                self._w_name = String(s[1])
+                self._w_ns = rt.wrap(s[0])
+                self._w_name = rt.wrap(s[1])
             elif len(s) == 1:
-                self._w_name = String(s[0])
+                self._w_name = rt.wrap(s[0])
                 self._w_ns = nil
             else:
-                self._w_ns = String(s[0])
-                self._w_name = String(u"/".join(s[1:]))
+                self._w_ns = rt.wrap(s[0])
+                self._w_name = rt.wrap(u"/".join(s[1:]))
 
 
 class KeywordCache(object):

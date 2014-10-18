@@ -37,7 +37,7 @@ class TestReader(unittest.TestCase):
             assert isinstance(frm, PersistentVector)
 
             for x in range(len(to)):
-                self._compare(rt.nth(frm, Integer(x)), to[x])
+                self._compare(rt.nth(frm, rt.wrap(x)), to[x])
 
         else:
             raise Exception("Don't know how to handle " + str(type(to)))

@@ -1,5 +1,6 @@
 __config__ = None
 py_list = list
+from rpython.rlib.objectmodel import specialize
 
 
 
@@ -60,7 +61,20 @@ def init():
     import pixie.vm.map_entry
     import pixie.vm.reader as reader
 
+
+
     numbers.init()
+
+    @specialize.argtype(0)
+    def wrap(x):
+        if isinstance(x, int):
+            return numbers.Integer(x)
+        if isinstance(x, unicode):
+            return String(x)
+        #if isinstance(x, str):
+        #    return String(unicode(x))
+
+    globals()["wrap"] = wrap
 
     from pixie.vm.code import _ns_registry, BaseCode, munge
 
@@ -90,7 +104,7 @@ def init():
     f = open("pixie/stdlib.lisp")
     data = f.read()
     f.close()
-    rdr = reader.StringReader(unicode(data))
+    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), "pixie/stdlib.pixie")
     result = nil
 
     @wrap_fn
@@ -107,7 +121,9 @@ def init():
 
 
 
+
     globals()["__inited__"] = True
+
 
 
 

@@ -65,7 +65,17 @@ class RuntimeException(Object):
 
     def __repr__(self):
         import pixie.vm.rt as rt
-        return u"RuntimeException(" + rt._str(self._data)._str + u") \n" + u"\n".join(self._trace)
+        s = []
+        trace = self._trace[:]
+        trace.reverse()
+        for x in trace:
+            s.append(x.__repr__())
+            s.append(u"\n")
+
+        s.extend([u"RuntimeException: " + rt.str(self._data)._str + u"\n"])
+
+
+        return u"".join(s)
 
 class WrappedException(Exception):
     def __init__(self, ex):
@@ -82,10 +92,47 @@ def affirm(val, msg):
     """Works a lot like assert except it throws RuntimeExceptions"""
     assert isinstance(msg, unicode)
     if not val:
-        from pixie.vm.string import String
-        raise WrappedException(RuntimeException(String(msg)))
+        import pixie.vm.rt as rt
+        raise WrappedException(RuntimeException(rt.wrap(msg)))
 
 
+class ErrorInfo(object):
+    def __init__(self):
+        pass
+
+class InterpreterCodeInfo(ErrorInfo):
+    def __init__(self, line, line_number, column_number, file):
+        self._line = line
+        self._line_number = line_number
+        self._column_number = column_number
+        self._file = file
+
+    def pad_chars(self):
+        chrs = []
+        for x in range(self._column_number - 1):
+            chrs += u" "
+        return u"".join(chrs)
+
+    def __repr__(self):
+        return u"in " + self._file + u" at " + unicode(str(self._line_number)) \
+               + u":" + unicode(str(self._column_number)) + u"\n" \
+               + self._line.__repr__() + u"\n" \
+               + self.pad_chars() + u"^"
+
+class NativeCodeInfo(ErrorInfo):
+    def __init__(self, name):
+        self._name = name
+
+    def __repr__(self):
+        return u"in internal function " + self._name + u"\n"
+
+class PolymorphicCodeInfo(ErrorInfo):
+    def __init__(self, name, tp):
+        self._name = name
+        self._tp = tp
+
+    def __repr__(self):
+        return u"in polymorphic function " + self._name + u" dispatching on " + self._tp._name + u"\n"
 
 
 

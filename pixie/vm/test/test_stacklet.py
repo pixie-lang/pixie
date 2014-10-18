@@ -12,7 +12,7 @@ class YieldingFn(code.BaseCode):
 
         hdler.invoke([numbers.zero_int])
         hdler.invoke([numbers.one_int])
-        hdler.invoke([numbers.Integer(2)])
+        hdler.invoke([rt.wrap(2)])
 
         return
 

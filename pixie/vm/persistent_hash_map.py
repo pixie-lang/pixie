@@ -320,4 +320,4 @@ proto.IMap.add_satisfies(PersistentHashMap._type)
 
 @extend(proto._count, PersistentHashMap)
 def _count(self):
-    return Integer(intmask(self._cnt))
+    return rt.wrap(intmask(self._cnt))

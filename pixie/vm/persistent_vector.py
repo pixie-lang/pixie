@@ -36,6 +36,12 @@ class PersistentVector(object.Object):
         self._root = root
         self._tail = tail
 
+    def meta(self):
+        return self._meta
+
+    def with_meta(self, meta):
+        return PersistentVector(meta, self._cnt, self._shift, self._root, self._tail)
+
     def tailoff(self):
         if self._cnt < 32:
             return 0
@@ -158,7 +164,7 @@ class PersistentVector(object.Object):
 
 @extend(proto._count, PersistentVector)
 def _count(self):
-    return Integer(intmask(self._cnt))
+    return rt.wrap(intmask(self._cnt))
 
 @extend(proto._nth, PersistentVector)
 def _nth(self, idx):
@@ -175,6 +181,14 @@ def _push(self, v):
 @extend(proto._pop, PersistentVector)
 def _push(self):
     return self.pop()
+
+@extend(proto._meta, PersistentVector)
+def _meta(self):
+    return self.meta()
+
+@extend(proto._with_meta, PersistentVector)
+def _with_meta(self, meta):
+    return self.with_meta(meta)
 
 
 _reduce_driver = jit.JitDriver(name="pixie.stdlib.PersistentVector_reduce",
@@ -209,4 +223,4 @@ def vector__args(args):
 
 proto.IVector.add_satisfies(PersistentVector._type)
 
-EMPTY = PersistentVector(None, r_uint(0), r_uint(5), EMPTY_NODE, [])
+EMPTY = PersistentVector(nil, r_uint(0), r_uint(5), EMPTY_NODE, [])

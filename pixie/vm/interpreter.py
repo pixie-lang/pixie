@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, affirm
+from pixie.vm.object import Object, affirm, WrappedException
 import pixie.vm.code as code
 import pixie.vm.numbers as numbers
 from pixie.vm.primitives import nil, true, false
@@ -6,6 +6,7 @@ from rpython.rlib.rarithmetic import r_uint, intmask
 from rpython.rlib.jit import JitDriver, promote, elidable, elidable_promote, hint, unroll_safe
 import rpython.rlib.jit as jit
 import rpython.rlib.debug as debug
+import pixie.vm.rt as rt
 
 def get_location(ip, sp, bc, base_code):
     return code.BYTECODES[bc[ip]] + " in " + str(base_code._name)
@@ -147,15 +148,23 @@ def interpret(code_obj, args=[]):
             continue
 
         if inst == code.INVOKE:
+            debug_ip = frame.ip
             argc = frame.get_inst()
             fn = frame.nth(argc - 1)
 
             assert isinstance(fn, code.BaseCode), "Expected callable, got " + str(fn)
 
+
+
             args = frame.pop_n(argc - 1)
             frame.pop()
-
-            frame.push(fn.invoke(args))
+            try:
+                frame.push(fn.invoke(args))
+                continue
+            except WrappedException as ex:
+                dp = code_obj.get_debug_point(debug_ip - 1)
+                ex._ex._trace.append(dp)
+                raise
 
             continue
 

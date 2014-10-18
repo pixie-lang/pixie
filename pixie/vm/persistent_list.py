@@ -4,6 +4,7 @@ import pixie.vm.protocols as proto
 from  pixie.vm.code import extend, as_var
 from pixie.vm.numbers import Integer
 from rpython.rlib.rarithmetic import r_uint, intmask
+import pixie.vm.rt as rt
 
 class PersistentList(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentList")
@@ -44,7 +45,7 @@ def _seq(x):
 
 @extend(proto._count, PersistentList)
 def _count(self):
-    return Integer(intmask(self._cnt))
+    return rt.wrap(intmask(self._cnt))
 
 @extend(proto._conj, PersistentList)
 def _conj(self, itm):

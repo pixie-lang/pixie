@@ -40,6 +40,14 @@ def _next(x):
 def _seq(x):
     return x
 
+@extend(proto._meta, Cons)
+def _meta(self):
+    return self.meta()
+
+@extend(proto._with_meta, Cons)
+def _with_meta(self, meta):
+    return self.with_meta(meta)
+
 @as_var("cons")
 def cons(head, tail):
     return Cons(head, tail)

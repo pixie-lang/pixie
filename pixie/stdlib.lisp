@@ -319,6 +319,16 @@
         (fn [v]
           (hash [(namespace v) (name v)])))
 
+(extend -hash Keyword
+        (fn [v]
+          (hash [(namespace v) (name v)])))
+
+(extend -str Keyword
+  (fn [k]
+    (if (namespace k)
+      (str ":" (namespace k) "/" (name k))
+      (str ":" (name k)))))
+
 
 (defn get
   ([mp k]

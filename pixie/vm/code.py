@@ -165,21 +165,20 @@ class Code(BaseCode):
     def type(self):
         return Code._type
 
-    def __init__(self, name, bytecode, consts, stack_size):
+    def __init__(self, name, bytecode, consts, stack_size, debug_points):
         BaseCode.__init__(self)
         self._bytecode = bytecode
         self._consts = consts
         self._name = name
         self._stack_size = stack_size
+        self._debug_points = debug_points
+
+    def get_debug_point(self, ip):
+        return self._debug_points.get(ip, nil)
 
     def _invoke(self, args):
-        try:
-            val = interpret(self, args)
-            return val
-
-        except object.WrappedException as ex:
-            ex._ex._trace.append(self._name)
-            raise
+        val = interpret(self, args)
+        return val
 
     @elidable_promote()
     def get_consts(self):
@@ -196,6 +195,8 @@ class Code(BaseCode):
     @elidable_promote()
     def get_base_code(self):
         return self
+
+
 
 class VariadicCode(BaseCode):
     __immutable_fields__ = ["_required_arity", "_code"]
@@ -257,6 +258,9 @@ class Closure(BaseCode):
 
     def get_base_code(self):
         return self._code.get_base_code()
+
+    def get_debug_point(self, idx):
+        return self._code.get_debug_point(idx)
 
 class Undefined(object.Object):
     _type = object.Type(u"Undefined")
@@ -519,7 +523,7 @@ class PolymorphicFn(BaseCode):
         try:
             return fn.invoke(args)
         except object.WrappedException as ex:
-            ex._ex._trace.append(self._name)
+            ex._ex._trace.append(object.PolymorphicCodeInfo(self._name, args[0].type()))
             raise
 
 class DoublePolymorphicFn(BaseCode):
@@ -591,6 +595,7 @@ def assert_type(x, tp):
     affirm(isinstance(x, tp), u"Fatal Error, this should never happen")
     return x
 
+
 ## PYTHON FLAGS
 CO_VARARGS = 0x4
 def wrap_fn(fn, tp=object.Object):
@@ -605,18 +610,46 @@ def wrap_fn(fn, tp=object.Object):
     if fn.__name__.endswith("__args"):
         return as_variadic_fn(lambda self, args: fn(args))
 
+    fn_name = unicode(getattr(fn, "__real_name__", fn.__name__))
+
     if code.co_flags & CO_VARARGS:
         raise Exception("Variadic functions not supported by wrap")
     else:
         argc = code.co_argcount
         if argc == 0:
-            return as_native_fn(lambda self, args: fn())
+            def wrapped_fn(self, args):
+                try:
+                    return fn()
+                except object.WrappedException as ex:
+                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                    raise
+            return as_native_fn(wrapped_fn)
+
         if argc == 1:
-            return as_native_fn(lambda self, args: fn(assert_type(args[0], tp)))
+            def wrapped_fn(self, args):
+                try:
+                    return fn(args[0])
+                except object.WrappedException as ex:
+                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                    raise
+            return as_native_fn(wrapped_fn)
+
         if argc == 2:
-            return as_native_fn(lambda self, args: fn(assert_type(args[0], tp), args[1]))
+            def wrapped_fn(self, args):
+                try:
+                    return fn(args[0], args[1])
+                except object.WrappedException as ex:
+                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                    raise
+            return as_native_fn(wrapped_fn)
         if argc == 3:
-            return as_native_fn(lambda self, args: fn(assert_type(args[0], tp), args[1], args[2]))
+            def wrapped_fn(self, args):
+                try:
+                    return fn(args[0], args[1], args[2])
+                except object.WrappedException as ex:
+                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                    raise
+            return as_native_fn(wrapped_fn)
 
 
 def extend(pfn, tp1, tp2=None):
@@ -653,6 +686,7 @@ def as_var(ns, name=None):
 
     var = intern_var(ns, name)
     def with_fn(fn):
+        fn.__real_name__ = name
         if not isinstance(fn, object.Object):
             fn = wrap_fn(fn)
         var.set_root(fn)

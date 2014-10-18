@@ -97,7 +97,7 @@ class HashingState(Object):
         return self
 
     def finish(self):
-        return numbers.Integer(intmask(mix_coll_hash(self._hash, self._n)))
+        return rt.wrap(intmask(mix_coll_hash(self._hash, self._n)))
 
 
 @as_var("new-hash-state")
@@ -121,5 +121,5 @@ def finish_hash_state(acc):
 
 @as_var("hash-int")
 def _hash_int(acc):
-    return numbers.Integer(intmask(hash_int(acc.r_uint_val())))
+    return rt.wrap(intmask(hash_int(acc.r_uint_val())))
 

@@ -24,12 +24,12 @@ def _str(x):
 
 @extend(proto._repr, String)
 def _repr(self):
-    return String(u"\"" + self._str + u"\"")
+    return rt.wrap(u"\"" + self._str + u"\"")
 
 
 @extend(proto._count, String)
 def _count(self):
-    return numbers.Integer(len(self._str))
+    return rt.wrap(len(self._str))
 
 @extend(proto._nth, String)
 def _nth(self, idx):
@@ -59,15 +59,15 @@ class Character(Object):
 def _str(self):
     cv = self.char_val()
     if cv < 128:
-        return String(u"\\"+unicode(chr(cv)))
-    return String(u"\\u"+unicode(str(cv)))
+        return rt.wrap(u"\\"+unicode(chr(cv)))
+    return rt.wrap(u"\\u"+unicode(str(cv)))
 
 @extend(proto._repr, Character)
 def _repr(self):
     cv = self.char_val()
     if cv < 128:
-        return String(u"\\"+unicode(chr(cv)))
-    return String(u"\\u"+unicode(str(cv)))
+        return rt.wrap(u"\\"+unicode(chr(cv)))
+    return rt.wrap(u"\\u"+unicode(str(cv)))
 
 
 @extend(proto._name, String)
@@ -80,4 +80,4 @@ def _namespace(self):
 
 @extend(proto._hash, String)
 def _hash(self):
-    return numbers.Integer(intmask(util.hash_unencoded_chars(self._str)))
+    return rt.wrap(intmask(util.hash_unencoded_chars(self._str)))

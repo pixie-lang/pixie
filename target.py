@@ -1,5 +1,5 @@
 from pixie.vm.compiler import compile, with_ns, NS_VAR
-from pixie.vm.reader import StringReader, read, eof, PromptReader
+from pixie.vm.reader import StringReader, read, eof, PromptReader, MetaDataReader
 from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
@@ -38,9 +38,9 @@ def repl():
     with with_ns(u"user"):
         NS_VAR.deref().include_stdlib()
 
-    rdr = PromptReader()
-    while True:
-        with with_ns(u"user"):
+    rdr = MetaDataReader(PromptReader())
+    with with_ns(u"user"):
+        while True:
             try:
                 val = interpret(compile(read(rdr, True)))
             except WrappedException as ex:

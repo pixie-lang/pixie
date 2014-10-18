@@ -43,13 +43,17 @@ IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
 IMap = as_var("pixie.stdlib", "IMap")(Protocol(u"IMap"))
 
+defprotocol("pixie.stdlib", "IMeta", ["-with-meta", "-meta"])
+
 def default_str(x):
     from pixie.vm.string import String
 
-    return String(u"<inst " + x.type()._name + u">")
+    return rt.wrap(u"<inst " + x.type()._name + u">")
 
 _str.set_default_fn(wrap_fn(default_str))
 _repr.set_default_fn(wrap_fn(default_str))
+
+_meta.set_default_fn(wrap_fn(lambda x: nil))
 
 #_first = PolymorphicFn("-first")
 #_next = PolymorphicFn("-next")
@@ -78,7 +82,7 @@ def type(x):
 @extend(_str, Type)
 def _str(tp):
     import pixie.vm.string as string
-    return string.String(u"<type " + tp._name + u">")
+    return string.rt.wrap(u"<type " + tp._name + u">")
 
 
 @extend(_first, nil._type)
@@ -100,12 +104,12 @@ def _count(_):
 @extend(_name, Var)
 def __name(self):
     import pixie.vm.string as string
-    return string.String(self._name)
+    return string.rt.wrap(self._name)
 
 @extend(_namespace, Var)
 def __name(self):
     import pixie.vm.string as string
-    return string.String(self._ns)
+    return string.rt.wrap(self._ns)
 
 @returns(r_uint)
 @as_var("hash")
@@ -124,7 +128,7 @@ def count(x):
     while True:
         _count_driver.jit_merge_point(tp=rt.type(x))
         if ICounted.satisfies(rt.type(x)):
-           return rt._add(numbers.Integer(acc), rt._count(x))
+           return rt._add(rt.wrap(acc), rt._count(x))
         acc += 1
         x = rt.next(rt.seq(x))
 
@@ -132,6 +136,19 @@ def count(x):
 @as_var("+")
 def add(a, b):
     return rt._add(a, b)
+
+@as_var("meta")
+def __meta(a):
+    return rt._meta(a)
+
+@as_var("with-meta")
+def __with_meta(a, b):
+    return rt._with_meta(a, b)
+
+@returns(bool)
+@as_var("has-meta?")
+def __has_meta(a):
+    return true if rt.instance_QMARK_(rt.IMeta.deref(), a) else false
 
 @as_var("conj")
 def conj(a, b):
@@ -148,7 +165,7 @@ def str__args(args):
     acc = []
     for x in args:
         acc.append(rt._str(x)._str)
-    return String(u"".join(acc))
+    return rt.wrap(u"".join(acc))
 
 @as_var("apply")
 @jit.unroll_safe
@@ -165,7 +182,7 @@ def apply__args(args):
     list_copy(args, 1, out_args, 0, argc)
 
     for x in range(rt.count(last_itm).int_val()):
-        out_args[argc + x] = rt.nth(last_itm, numbers.Integer(x))
+        out_args[argc + x] = rt.nth(last_itm, rt.wrap(x))
 
     return fn.invoke(out_args)
 
@@ -263,7 +280,7 @@ def _try_catch(main_fn, catch_fn, final):
         if not isinstance(ex, WrappedException):
             from pixie.vm.string import String
             if isinstance(ex, Exception):
-                ex = RuntimeException(String(u"Some error"))
+                ex = RuntimeException(rt.wrap(u"Some error"))
             else:
                 ex = RuntimeException(nil)
             return catch_fn.invoke([ex])

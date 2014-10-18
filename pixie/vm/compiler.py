@@ -58,6 +58,7 @@ class Context(object):
         self.closed_overs = []
         self.name = name
         self.recur_points = []
+        self.debug_points = {}
 
     def sp(self):
         return self._sp
@@ -83,7 +84,7 @@ class Context(object):
         self.recur_points.pop()
 
     def to_code(self, required_args=-1):
-        return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1)
+        return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1, self.debug_points)
 
     def push_arg(self, idx):
         self.bytecode.append(code.ARG)
@@ -310,7 +311,7 @@ def compile_form(form, ctx):
         #assert rt.count(form).int_val() == 0
         ctx.push_const(code.intern_var(u"pixie.stdlib", u"vector"))
         for x in range(size):
-            compile_form(rt.nth(form, numbers.Integer(x)), ctx)
+            compile_form(rt.nth(form, rt.wrap(x)), ctx)
 
         ctx.bytecode.append(code.INVOKE)
         ctx.bytecode.append(r_uint(size + 1))
@@ -357,7 +358,7 @@ def add_args(args, ctx):
     required_args = -1
     local_idx = 0
     for x in range(rt.count(args).int_val()):
-        arg = rt.nth(args, numbers.Integer(x))
+        arg = rt.nth(args, rt.wrap(x))
         affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
         if arg._str == u"&":
 
@@ -532,9 +533,9 @@ def compile_let(form, ctx):
     binding_count = 0
     for i in range(0, rt.count(bindings).int_val(), 2):
         binding_count += 1
-        name = rt.nth(bindings, numbers.Integer(i))
+        name = rt.nth(bindings, rt.wrap(i))
         affirm(isinstance(name, symbol.Symbol), u"Let locals must be symbols")
-        bind = rt.nth(bindings, numbers.Integer(i + 1))
+        bind = rt.nth(bindings, rt.wrap(i + 1))
 
         compile_form(bind, ctx)
 
@@ -568,9 +569,9 @@ def compile_loop(form, ctx):
     binding_count = 0
     for i in range(0, rt.count(bindings).int_val(), 2):
         binding_count += 1
-        name = rt.nth(bindings, numbers.Integer(i))
+        name = rt.nth(bindings, rt.wrap(i))
         affirm(isinstance(name, symbol.Symbol), u"Loop must bindings must be symbols")
-        bind = rt.nth(bindings, numbers.Integer(i + 1))
+        bind = rt.nth(bindings, rt.wrap(i + 1))
 
         compile_form(bind, ctx)
 
@@ -607,6 +608,7 @@ def compile_ns(form, ctx):
     str_name = rt.name(nm)
 
     NS_VAR.set_value(code._ns_registry.find_or_make(str_name))
+    NS_VAR.deref().include_stdlib()
     ctx.push_const(nil)
 
 
@@ -631,6 +633,8 @@ def compile_cons(form, ctx):
     if macro:
         return compile_form(call_macro(macro, form, ctx), ctx)
 
+    meta = rt.meta(form)
+
     cnt = 0
     ctc = ctx.can_tail_call
     while form is not nil:
@@ -645,6 +649,7 @@ def compile_cons(form, ctx):
     #if ctx.can_tail_call:
     #    ctx.bytecode.append(code.TAIL_CALL)
     #else:
+    ctx.debug_points[len(ctx.bytecode)] = meta
     ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)

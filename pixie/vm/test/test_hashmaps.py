@@ -7,8 +7,8 @@ rt.init()
 
 def test_hashmap_create():
 
-    acc = rt.hashmap(Integer(1), Integer(2))
+    acc = rt.hashmap(rt.wrap(1), rt.wrap(2))
 
-    val = rt._val_at(acc, Integer(1), nil)
+    val = rt._val_at(acc, rt.wrap(1), nil)
 
     assert val.int_val() == 2

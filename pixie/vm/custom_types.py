@@ -56,7 +56,7 @@ def create_type(type_name, fields):
     field_count = rt.count(fields).int_val()
     acc = {}
     for i in range(rt.count(fields).int_val()):
-        val = rt.nth(fields, Integer(i))
+        val = rt.nth(fields, rt.wrap(i))
         affirm(isinstance(val, Keyword), u"Field names must be keywords")
         acc[val] = i
 

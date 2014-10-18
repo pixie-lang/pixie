@@ -40,7 +40,7 @@ class Array(object.Object):
 
 @extend(proto._count, Array)
 def _count(self):
-    return Integer(len(self._list))
+    return rt.wrap(len(self._list))
 
 @extend(proto._nth, Array)
 def _nth(self, idx):
