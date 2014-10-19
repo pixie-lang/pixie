@@ -350,7 +350,7 @@ class Var(BaseCode):
     def _invoke(self, args):
         return self.deref().invoke(args)
 
-class bindings(object):
+class bindings(py_object):
     def __init__(self, *args):
        self._args = args
 
