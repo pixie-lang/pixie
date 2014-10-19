@@ -89,9 +89,6 @@ class LinePromise(object.Object):
             return self._str
         return u"".join(self._chrs)
 
-@extend(proto._str, LinePromise)
-def _str(self):
-    return rt.wrap(self.reader_string_state())
 
 
 class MetaDataReader(PlatformReader):

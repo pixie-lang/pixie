@@ -28,7 +28,7 @@ class PersistentList(object.Object):
         return self._meta
 
     def with_meta(self, meta):
-        return PersistentList(self._first, self._next, meta)
+        return PersistentList(self._first, self._next, self._cnt, meta)
 
 
 @extend(proto._first, PersistentList)

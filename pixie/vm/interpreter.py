@@ -163,7 +163,8 @@ def interpret(code_obj, args=[]):
                 continue
             except WrappedException as ex:
                 dp = code_obj.get_debug_point(debug_ip - 1)
-                ex._ex._trace.append(dp)
+                if dp:
+                    ex._ex._trace.append(dp)
                 raise
 
             continue

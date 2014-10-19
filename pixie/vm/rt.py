@@ -104,7 +104,7 @@ def init():
     f = open("pixie/stdlib.lisp")
     data = f.read()
     f.close()
-    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), "pixie/stdlib.pixie")
+    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
     result = nil
 
     @wrap_fn

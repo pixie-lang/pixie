@@ -174,11 +174,14 @@ class Code(BaseCode):
         self._debug_points = debug_points
 
     def get_debug_point(self, ip):
-        return self._debug_points.get(ip, nil)
+        return self._debug_points.get(ip, None)
 
     def _invoke(self, args):
-        val = interpret(self, args)
-        return val
+        try:
+            return interpret(self, args)
+        except object.WrappedException as ex:
+            ex._ex._trace.append(object.PixieCodeInfo(self._name))
+            raise
 
     @elidable_promote()
     def get_consts(self):
@@ -239,7 +242,11 @@ class Closure(BaseCode):
         self._closed_overs = closed_overs
 
     def _invoke(self, args):
-        return interpret(self, args)
+        try:
+            return interpret(self, args)
+        except object.WrappedException as ex:
+            ex._ex._trace.append(object.PixieCodeInfo(self._code._name))
+            raise
 
     def get_closed_over(self, idx):
         return self._closed_overs[idx]
@@ -342,6 +349,19 @@ class Var(BaseCode):
 
     def _invoke(self, args):
         return self.deref().invoke(args)
+
+class bindings(object):
+    def __init__(self, *args):
+       self._args = args
+
+    def __enter__(self):
+        _dynamic_vars.push_binding_frame()
+        assert isinstance(nm, unicode)
+        for x in range(0, len(self._args), 2):
+            self._args[x].set_value(self._args[x + 1])
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _dynamic_vars.pop_binding_frame()
 
 
 class Refer(py_object):

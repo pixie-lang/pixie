@@ -16,6 +16,8 @@ from pixie.vm.util import *
 NS_VAR = code.intern_var(u"pixie.stdlib", u"*ns*")
 NS_VAR.set_dynamic()
 
+FN_NAME = code.intern_var(u"pixie.stdlib", u"*fn-name*")
+FN_NAME.set_dynamic()
 
 class with_ns(object):
     def __init__(self, nm):
@@ -375,7 +377,9 @@ def compile_fn(form, ctx):
         name = rt.first(form)
         form = rt.next(form)
     else:
-        name = symbol.symbol(u"unknown")
+        name = symbol.symbol(u"-fn")
+
+
 
 
     if rt.instance_QMARK_(rt.ISeq.deref(), rt.first(form)):
@@ -649,7 +653,8 @@ def compile_cons(form, ctx):
     #if ctx.can_tail_call:
     #    ctx.bytecode.append(code.TAIL_CALL)
     #else:
-    ctx.debug_points[len(ctx.bytecode)] = meta
+    if meta is not nil:
+        ctx.debug_points[len(ctx.bytecode)] = meta
     ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)

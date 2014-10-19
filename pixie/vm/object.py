@@ -96,7 +96,10 @@ def affirm(val, msg):
         raise WrappedException(RuntimeException(rt.wrap(msg)))
 
 
-class ErrorInfo(object):
+class ErrorInfo(Object):
+    _type = Type(u"pixie.stdlib.ErrorInfo")
+    def type(self):
+        return ErrorInfo._type
     def __init__(self):
         pass
 
@@ -136,3 +139,9 @@ class PolymorphicCodeInfo(ErrorInfo):
 
 
 
+class PixieCodeInfo(ErrorInfo):
+    def __init__(self, name):
+        self._name = name
+
+    def __repr__(self):
+        return u"in pixie function " + self._name + u"\n"
