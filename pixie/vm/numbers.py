@@ -80,7 +80,7 @@ def eq(a, b):
 
 
 def init():
-    import pixie.vm.protocols as proto
+    import pixie.vm.stdlib as proto
     from pixie.vm.string import String
 
     @extend(proto._str, Integer._type)

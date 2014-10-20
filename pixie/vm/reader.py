@@ -12,7 +12,7 @@ from pixie.vm.libs.readline import _readline
 from pixie.vm.string import String
 from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 
 LINE_NUMBER_KW = keyword(u"line-number")
 COLUMN_NUMBER_KW = keyword(u"column-number")

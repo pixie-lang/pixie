@@ -85,6 +85,7 @@ def slice_from_start(from_list, count, extra=r_uint(0)):
 
 class BaseCode(object.Object):
     def __init__(self):
+        assert isinstance(self, BaseCode)
         self._is_macro = False
 
     def set_macro(self):
@@ -474,6 +475,7 @@ class DefaultProtocolFn(NativeFn):
         self._pfn = pfn
 
     def _invoke(self, args):
+        assert isinstance(self, PolymorphicFn)
         from pixie.vm.string import String
         tp = args[0].type()._name
         affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
@@ -638,6 +640,7 @@ def wrap_fn(fn, tp=object.Object):
         argc = code.co_argcount
         if argc == 0:
             def wrapped_fn(self, args):
+                affirm(len(args) == 0, u"Expected 0 arguments to " + fn_name)
                 try:
                     return fn()
                 except object.WrappedException as ex:
@@ -647,6 +650,7 @@ def wrap_fn(fn, tp=object.Object):
 
         if argc == 1:
             def wrapped_fn(self, args):
+                affirm(len(args) == 1, u"Expected 1 arguments to " + fn_name)
                 try:
                     return fn(args[0])
                 except object.WrappedException as ex:
@@ -656,6 +660,7 @@ def wrap_fn(fn, tp=object.Object):
 
         if argc == 2:
             def wrapped_fn(self, args):
+                affirm(len(args) == 2, u"Expected 2 arguments to " + fn_name)
                 try:
                     return fn(args[0], args[1])
                 except object.WrappedException as ex:
@@ -664,6 +669,8 @@ def wrap_fn(fn, tp=object.Object):
             return as_native_fn(wrapped_fn)
         if argc == 3:
             def wrapped_fn(self, args):
+                affirm(len(args) == 3, u"Expected 3 arguments to " + fn_name)
+
                 try:
                     return fn(args[0], args[1], args[2])
                 except object.WrappedException as ex:

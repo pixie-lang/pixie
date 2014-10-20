@@ -205,24 +205,23 @@ def _instance(proto, o):
 import pixie.vm.rt as rt
 
 
-@as_var("load_file")
+@as_var("load-file")
 def load_file(filename):
     import pixie.vm.reader as reader
     import pixie.vm.compiler as compiler
+    import pixie.vm.string as string
+    affirm(isinstance(filename, string.String), u"Filename must be string")
     f = open(str(filename._str))
     data = f.read()
     f.close()
     rdr = reader.StringReader(unicode(data))
-    result = nil
-    while True:
-        form = reader.read(rdr, False)
-        print "printing"
-        print rt.str(form)._str
-        if form is reader.eof:
-            return result
-        print "compiling"
-        result = compiler.compile(form).invoke([])
-        print "compiled"
+
+    with compiler.with_ns(u"user"):
+        while True:
+            form = reader.read(rdr, False)
+            if form is reader.eof:
+                return nil
+            result = compiler.compile(form).invoke([])
 
 @as_var("extend")
 def extend(proto_fn, tp, fn):

@@ -3,7 +3,7 @@ import pixie.vm.object as object
 from pixie.vm.code import extend, as_var
 from pixie.vm.numbers import Integer
 from pixie.vm.primitives import nil
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 import rpython.rlib.jit as jit
 
 UNROLL_IF_SMALLER_THAN = 8

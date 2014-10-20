@@ -1,6 +1,6 @@
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 from  pixie.vm.code import extend, as_var
 
 

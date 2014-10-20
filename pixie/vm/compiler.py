@@ -7,7 +7,7 @@ import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
 from pixie.vm.string import String
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 from rpython.rlib.rarithmetic import r_uint
 
 import pixie.vm.rt as rt

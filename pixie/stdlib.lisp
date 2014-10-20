@@ -189,18 +189,13 @@
 
 
 (defn +
-  ([] 0)
-  ([x] x)
-  ([x y] (-add x y))
-  ([x y z] (-add x (-add y z)))
-  ([x y z & rest] (-add x (-add y (-add z (reduce -add 0 rest))))))
+  [& args]
+  (reduce -add 0 args))
+
 
 (defn -
-  ([] 0)
-  ([x] x)
-  ([x y] (-sub x y))
-  ([x y z] (-sub x (-sub y z)))
-  ([x y z & rest] (-sub x (-sub y (-sub z (reduce -sub 0 rest))))))
+  [& args]
+  (reduce -sub 0 args))
 
 (defn =
   ([x] true)
@@ -232,20 +227,21 @@
      (fn [& args]
        (f1 (f2 (apply f3 args))))))
 
-(comment
+
 (defmacro deftype [nm fields & body]
-  (let [type-decl `(def ~nm (create-type ~(keyword (name nm))))
+  (let [ctor-name (symbol (str "->" (name nm)))
+        type-decl `(def ~nm (create-type ~(keyword (name nm)) ~fields))
         field-syms (transduce (map (comp symbol name)) conj fields)
-        ctor `(defn ~nm ~field-syms
+        ctor `(defn ~ctor-name ~field-syms
                 (let [inst (new ~nm)]
                   ~@(transduce
                      (map (fn [field]
                             `(set-field! inst ~field ~(symbol (name field)))))
                      conj
                      fields)
-                  ~inst))]
+                   inst))]
     `(do ~type-decl
-         ~ctor))))
+         ~ctor)))
 
 (defn not [x]
   (if x false true))

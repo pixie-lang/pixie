@@ -18,4 +18,8 @@ def llexternal(*args, **kwargs):
 __readline = llexternal('readline', [rffi.CCHARP], rffi.CCHARP)
 
 def _readline(prompt):
-    return unicode(rffi.charp2str(__readline(rffi.str2charp(prompt))))
+    result = __readline(rffi.str2charp(prompt))
+    if result is None:
+        return u""
+    else:
+        return unicode(rffi.charp2str(result))

@@ -2,9 +2,9 @@ import pixie.vm.rt as rt
 import pixie.vm.object as object
 from pixie.vm.code import extend, as_var
 from pixie.vm.primitives import nil
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 
 class Atom(object.Object):
     _type = object.Type(u"pixie.stdlib.Atom")

@@ -2,7 +2,7 @@ import pixie.vm.rt as rt
 from pixie.vm.object import Object, Type
 from pixie.vm.code import extend, as_var
 from pixie.vm.primitives import nil
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 import pixie.vm.numbers as numbers
 import pixie.vm.util as util
 from rpython.rlib.rarithmetic import intmask

@@ -1,7 +1,7 @@
 from pixie.vm.object import Object, Type, affirm
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.string import String
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 from pixie.vm.code import extend, as_var
 import pixie.vm.rt as rt
 

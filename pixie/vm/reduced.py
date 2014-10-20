@@ -2,7 +2,7 @@ import pixie.vm.rt as rt
 import pixie.vm.object as object
 from pixie.vm.code import extend, as_var, returns
 from pixie.vm.primitives import nil, true, false
-import pixie.vm.protocols as proto
+import pixie.vm.stdlib as proto
 
 
 class Reduced(object.Object):
