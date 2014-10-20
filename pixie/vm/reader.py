@@ -103,8 +103,9 @@ class MetaDataReader(PlatformReader):
         self._prev_line_number = 1
         self._prev_column_number = 0
         self._prev_line = None
-        self._prev_chr = u""
+        self._prev_chr = u"\0"
         self._filename = filename
+        assert isinstance(self._prev_chr, unicode)
 
     def read(self):
         if self._has_unread:

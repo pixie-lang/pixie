@@ -173,8 +173,8 @@ class Code(BaseCode):
         self._stack_size = stack_size
         self._debug_points = debug_points
 
-    def get_debug_point(self, ip):
-        return self._debug_points.get(ip, None)
+    def get_debug_points(self):
+        return self._debug_points
 
     def _invoke(self, args):
         try:
@@ -266,8 +266,8 @@ class Closure(BaseCode):
     def get_base_code(self):
         return self._code.get_base_code()
 
-    def get_debug_point(self, idx):
-        return self._code.get_debug_point(idx)
+    def get_debug_points(self):
+        return self._code.get_debug_points()
 
 class Undefined(object.Object):
     _type = object.Type(u"Undefined")

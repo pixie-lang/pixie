@@ -26,6 +26,7 @@ class Frame(object):
                        "bc",
                        "consts[*]",
                        "code_obj",
+                       "debug_points",
                        "args[*]",
                        "base_code",
                        "closed_overs[*]"
@@ -38,6 +39,7 @@ class Frame(object):
         self.stack = [None] * code_obj.stack_size()
         self.args = debug.make_sure_not_resized(args)
         self.base_code = code_obj.get_base_code()
+        self.debug_points = code_obj.get_debug_points()
         if code_obj is not None:
             self.unpack_code_obj()
 
@@ -162,7 +164,7 @@ def interpret(code_obj, args=[]):
                 frame.push(fn.invoke(args))
                 continue
             except WrappedException as ex:
-                dp = code_obj.get_debug_point(debug_ip - 1)
+                dp = frame.debug_points.get(debug_ip - 1, None)
                 if dp:
                     ex._ex._trace.append(dp)
                 raise
