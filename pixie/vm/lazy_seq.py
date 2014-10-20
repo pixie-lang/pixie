@@ -28,16 +28,19 @@ class LazySeq(object.Object):
 
 @extend(proto._first, LazySeq)
 def _first(self):
+    assert isinstance(self, LazySeq)
     rt.seq(self)
     return rt.first(self._s)
 
 @extend(proto._next, LazySeq)
 def _next(self):
+    assert isinstance(self, LazySeq)
     rt.seq(self)
     return rt.next(self._s)
 
 @extend(proto._seq, LazySeq)
 def _seq(self):
+    assert isinstance(self, LazySeq)
     self.sval()
     if self._s is not nil:
         ls = self._s

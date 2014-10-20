@@ -15,6 +15,7 @@ class Reduced(object.Object):
 
 @extend(proto._deref, Reduced._type)
 def _deref(self):
+    assert isinstance(self, Reduced)
     return self._boxed_value
 
 @as_var("reduced")

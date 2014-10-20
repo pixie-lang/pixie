@@ -164,30 +164,37 @@ class PersistentVector(object.Object):
 
 @extend(proto._count, PersistentVector)
 def _count(self):
+    assert isinstance(self, PersistentVector)
     return rt.wrap(intmask(self._cnt))
 
 @extend(proto._nth, PersistentVector)
 def _nth(self, idx):
+    assert isinstance(self, PersistentVector)
     return self.nth(idx.int_val())
 
 @extend(proto._conj, PersistentVector)
 def _conj(self, v):
+    assert isinstance(self, PersistentVector)
     return self.conj(v)
 
 @extend(proto._push, PersistentVector)
 def _push(self, v):
+    assert isinstance(self, PersistentVector)
     return self.conj(v)
 
 @extend(proto._pop, PersistentVector)
 def _push(self):
+    assert isinstance(self, PersistentVector)
     return self.pop()
 
 @extend(proto._meta, PersistentVector)
 def _meta(self):
+    assert isinstance(self, PersistentVector)
     return self.meta()
 
 @extend(proto._with_meta, PersistentVector)
 def _with_meta(self, meta):
+    assert isinstance(self, PersistentVector)
     return self.with_meta(meta)
 
 
@@ -197,6 +204,7 @@ _reduce_driver = jit.JitDriver(name="pixie.stdlib.PersistentVector_reduce",
 
 @extend(proto._reduce, PersistentVector)
 def _reduce(self, f, init):
+    assert isinstance(self, PersistentVector)
     i = 0
     while i < self._cnt:
         array = self.array_for(i)

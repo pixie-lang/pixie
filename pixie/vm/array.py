@@ -40,14 +40,17 @@ class Array(object.Object):
 
 @extend(proto._count, Array)
 def _count(self):
+    assert isinstance(self, Array)
     return rt.wrap(len(self._list))
 
 @extend(proto._nth, Array)
 def _nth(self, idx):
+    assert isinstance(self, Array)
     return self._list[idx.int_val()]
 
 @extend(proto._reduce, Array)
 def reduce(self, f, init):
+    assert isinstance(self, Array)
     if len(self._list) > UNROLL_IF_SMALLER_THAN:
         return self.reduce_large(f, init)
     return self.reduce_small(f, init)

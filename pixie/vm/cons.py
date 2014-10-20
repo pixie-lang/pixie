@@ -29,23 +29,28 @@ class Cons(object.Object):
 
 
 @extend(proto._first, Cons._type)
-def _first(x):
-    return x._first
+def _first(self):
+    assert isinstance(self, Cons)
+    return self._first
 
 @extend(proto._next, Cons._type)
-def _next(x):
-    return x._next
+def _next(self):
+    assert isinstance(self, Cons)
+    return self._next
 
 @extend(proto._seq, Cons._type)
-def _seq(x):
-    return x
+def _seq(self):
+    assert isinstance(self, Cons)
+    return self
 
 @extend(proto._meta, Cons)
 def _meta(self):
+    assert isinstance(self, Cons)
     return self.meta()
 
 @extend(proto._with_meta, Cons)
 def _with_meta(self, meta):
+    assert isinstance(self, Cons)
     return self.with_meta(meta)
 
 @as_var("cons")

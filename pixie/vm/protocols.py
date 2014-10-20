@@ -103,11 +103,13 @@ def _count(_):
 
 @extend(_name, Var)
 def __name(self):
+    assert isinstance(self, Var)
     import pixie.vm.string as string
     return string.rt.wrap(self._name)
 
 @extend(_namespace, Var)
 def __name(self):
+    assert isinstance(self, Var)
     import pixie.vm.string as string
     return string.rt.wrap(self._ns)
 

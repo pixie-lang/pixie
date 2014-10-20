@@ -29,9 +29,11 @@ def map_entry(k, v):
 
 @extend(proto._key, MapEntry)
 def _key(self):
+    assert isinstance(self, MapEntry)
     return self._key
 
 @extend(proto._val, MapEntry)
 def _val(self):
+    assert isinstance(self, MapEntry)
     return self._val
 

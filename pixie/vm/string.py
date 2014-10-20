@@ -57,6 +57,7 @@ class Character(Object):
 
 @extend(proto._str, Character)
 def _str(self):
+    assert isinstance(self, Character)
     cv = self.char_val()
     if cv < 128:
         return rt.wrap(u"\\"+unicode(chr(cv)))
@@ -64,6 +65,7 @@ def _str(self):
 
 @extend(proto._repr, Character)
 def _repr(self):
+    assert isinstance(self, Character)
     cv = self.char_val()
     if cv < 128:
         return rt.wrap(u"\\"+unicode(chr(cv)))

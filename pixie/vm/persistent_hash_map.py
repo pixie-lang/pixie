@@ -300,10 +300,12 @@ def hashmap__args(args):
 
 @extend(proto._val_at, PersistentHashMap)
 def _val_at(self, key, not_found):
+    assert isinstance(self, PersistentHashMap)
     return self.val_at(key, not_found)
 
 @extend(proto._reduce, PersistentHashMap)
 def _reduce(self, f, init):
+    assert isinstance(self, PersistentHashMap)
     if self._root is None:
         return init
     val = self._root.reduce_inode(f, init)
@@ -314,10 +316,12 @@ def _reduce(self, f, init):
 
 @extend(proto._assoc, PersistentHashMap)
 def _assoc(self, key, val):
+    assert isinstance(self, PersistentHashMap)
     return self.assoc(key, val)
 
 proto.IMap.add_satisfies(PersistentHashMap._type)
 
 @extend(proto._count, PersistentHashMap)
 def _count(self):
+    assert isinstance(self, PersistentHashMap)
     return rt.wrap(intmask(self._cnt))

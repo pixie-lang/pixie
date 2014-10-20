@@ -32,23 +32,28 @@ class PersistentList(object.Object):
 
 
 @extend(proto._first, PersistentList)
-def _first(x):
-    return x._first
+def _first(self):
+    assert isinstance(self, PersistentList)
+    return self._first
 
 @extend(proto._next, PersistentList)
-def _next(x):
-    return x._next
+def _next(self):
+    assert isinstance(self, PersistentList)
+    return self._next
 
 @extend(proto._seq, PersistentList)
-def _seq(x):
-    return x
+def _seq(self):
+    assert isinstance(self, PersistentList)
+    return self
 
 @extend(proto._count, PersistentList)
 def _count(self):
+    assert isinstance(self, PersistentList)
     return rt.wrap(intmask(self._cnt))
 
 @extend(proto._conj, PersistentList)
 def _conj(self, itm):
+    assert isinstance(self, PersistentList)
     return PersistentList(itm, self, self._cnt + 1, nil)
 
 def count(self):

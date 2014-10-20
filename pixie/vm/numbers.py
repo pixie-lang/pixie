@@ -40,22 +40,27 @@ _num_eq.set_default_fn(wrap_fn(lambda a, b: false))
 
 @extend(_add, Integer._type, Integer._type)
 def _add(a, b):
+    assert isinstance(a, Integer) and isinstance(b, Integer)
     return Integer(a.int_val() + b.int_val())
 
 @extend(_sub, Integer._type, Integer._type)
 def _sub(a, b):
+    assert isinstance(a, Integer) and isinstance(b, Integer)
     return rt.wrap(a.int_val() - b.int_val())
 
 @extend(_mul, Integer._type, Integer._type)
 def _mul(a, b):
+    assert isinstance(a, Integer) and isinstance(b, Integer)
     return rt.wrap(a.int_val() * b.int_val())
 
 @extend(_div, Integer._type, Integer._type)
 def _div(a, b):
+    assert isinstance(a, Integer) and isinstance(b, Integer)
     return rt.wrap(a.int_val() / b.int_val())
 
 @extend(_num_eq, Integer._type, Integer._type)
 def _div(a, b):
+    assert isinstance(a, Integer) and isinstance(b, Integer)
     return true if a.int_val() == b.int_val() else false
 
 

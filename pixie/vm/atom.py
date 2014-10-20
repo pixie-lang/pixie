@@ -18,11 +18,13 @@ class Atom(object.Object):
 
 @extend(proto._reset_BANG_, Atom)
 def _reset(self, v):
+    assert isinstance(self, Atom)
     self._boxed_value = v
     return self
 
 @extend(proto._deref, Atom)
 def _deref(self):
+    assert isinstance(self, Atom)
     return self._boxed_value
 
 @as_var("atom")

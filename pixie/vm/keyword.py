@@ -51,11 +51,13 @@ def keyword(nm):
 
 @extend(proto._name, Keyword)
 def _name(self):
+    assert isinstance(self, Keyword)
     self.init_names()
     return self._w_name
 
 @extend(proto._namespace, Keyword)
 def _namespace(self):
+    assert isinstance(self, Keyword)
     self.init_names()
     return self._w_ns
 
