@@ -31,4 +31,4 @@ suitable to our needs, and feel free to reject those that aren't. Therefore this
 
 Free use of this software is granted under the terms of the GNU Lesser General
 Public License (LGPL). For details see the files `COPYING` and `COPYING.LESSER`
-included with the 0MQ distribution.
+included with the source distribution.
