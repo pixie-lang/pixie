@@ -210,8 +210,23 @@ def load_file(filename):
     import pixie.vm.reader as reader
     import pixie.vm.compiler as compiler
     import pixie.vm.string as string
-    affirm(isinstance(filename, string.String), u"Filename must be string")
-    f = open(str(filename._str))
+    import pixie.vm.symbol as symbol
+    import os.path as path
+    if isinstance(filename, symbol.Symbol):
+        affirm(rt.namespace(filename) is None, u"load-file takes a un-namespaced symbol")
+        filename_str = rt.name(filename).replace(u".", u"/") + u".lisp"
+
+        loaded_ns = code._ns_registry.get(rt.name(filename), None)
+        if loaded_ns is not None:
+            return loaded_ns
+
+    else:
+        affirm(isinstance(filename, string.String), u"Filename must be string")
+        filename_str = filename._str
+
+    affirm(path.isfile(str(filename_str)), u"File does not exist on path")
+
+    f = open(str(filename_str))
     data = f.read()
     f.close()
     rdr = reader.StringReader(unicode(data))
@@ -222,6 +237,24 @@ def load_file(filename):
             if form is reader.eof:
                 return nil
             result = compiler.compile(form).invoke([])
+
+@as_var("the-ns")
+def the_ns(ns_name):
+    affirm(rt.namespace(ns_name) is None, u"the-ns takes a un-namespaced symbol")
+
+    return code._ns_registry.get(rt.name(ns_name), nil)
+
+@as_var("refer")
+def refer(ns, refer, alias):
+    from pixie.vm.symbol import Symbol
+
+    affirm(isinstance(ns, code.Namespace), u"First argument must be a namespace")
+    affirm(isinstance(refer, code.Namespace), u"Second argument must be a namespace")
+    affirm(isinstance(alias, Symbol), u"Third argument must be a symbol")
+
+    ns.add_refer(refer, rt.name(alias))
+    return nil
+
 
 @as_var("extend")
 def extend(proto_fn, tp, fn):

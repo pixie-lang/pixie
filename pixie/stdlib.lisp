@@ -1,4 +1,4 @@
-(ns pixie.stdlib)
+(__ns__ pixie.stdlib)
 
 (def reset! -reset!)
 
@@ -194,8 +194,10 @@
 
 
 (defn -
-  [& args]
-  (reduce -sub 0 args))
+  ([] 0)
+  ([x] (-sub 0 x))
+  ([x & args]
+     (reduce -sub x args)))
 
 (defn =
   ([x] true)
@@ -356,3 +358,11 @@
 (def foo 42)
 (set-dynamic! (resolve 'pixie.stdlib/foo))
 
+(defmacro require [ns kw as-nm]
+  (assert (= kw :as) "Require expects :as as the second argument")
+  `(do (load-file (quote ~ns))
+       (refer (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
+
+(defmacro ns [nm & body]
+  `(do (__ns__ ~nm)
+       ~@body))

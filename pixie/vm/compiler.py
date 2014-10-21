@@ -615,6 +615,9 @@ def compile_ns(form, ctx):
     NS_VAR.deref().include_stdlib()
     ctx.push_const(nil)
 
+def compile_this_ns(form, ctx):
+    ctx.push_const(NS_VAR.deref())
+
 
 builtins = {u"fn": compile_fn,
             u"if": compile_if,
@@ -626,7 +629,8 @@ builtins = {u"fn": compile_fn,
             u"let": compile_let,
             u"loop": compile_loop,
             u"comment": compile_comment,
-            u"ns": compile_ns}
+            u"__ns__": compile_ns,
+            u"this-ns-name": compile_this_ns}
 
 
 def compile_cons(form, ctx):

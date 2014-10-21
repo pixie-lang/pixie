@@ -393,6 +393,10 @@ class Namespace(object.Object):
         return v
 
     def add_refer(self, ns, as_nm=None, refer_all=False):
+        assert isinstance(ns, Namespace)
+        if as_nm is not None:
+            assert isinstance(as_nm, unicode)
+
         if as_nm is None:
             as_nm = ns._name
 
