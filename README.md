@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/pixie-lang/pixie.svg?branch=master)](https://travis-ci.org/pixie-lang/pixie)
 # Pixie
 
 ## Intro
