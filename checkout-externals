@@ -1,6 +1,6 @@
 mkdir ../externals
 cd ../externals
-curl https://bitbucket.org/halgari/pypy/commits/e5d9ee0be134.tar.bz2 >  pypy.tar.bz2
+curl https://bitbucket.org/halgari/pypy/get/e5d9ee0be134.tar.bz2 >  pypy.tar.bz2
 mkdir pypy
 cd pypy
 tar -jxf ../pypy.tar.bz2 --strip-components=1
