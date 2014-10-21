@@ -269,6 +269,12 @@
 
           (fn [] ~@finally))))))
 
+(defn .
+  ([obj sym]
+     (get-field obj sym))
+  ([obj sym & args]
+     (apply (get-field obj sym) args)))
+
 
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn [self idx not-found]

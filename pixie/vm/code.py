@@ -133,7 +133,17 @@ class MultiArityFn(BaseCode):
             return f
         if self._rest_fn is not None and arity >= self._required_arity:
             return self._rest_fn
-        affirm(False, u"Wrong number of args to fn")
+
+        acc = []
+        for x in self._arities:
+            acc.append(unicode(str(x)))
+
+        if self._rest_fn:
+            acc.append(u" or more")
+
+        print self._arities
+
+        affirm(False, u"Wrong number of args to fn: got " + unicode(str(arity)) + u" expected " + u",".join(acc))
 
     def _invoke(self, args):
         return self.get_fn(len(args)).invoke(args)
