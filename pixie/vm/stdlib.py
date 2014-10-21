@@ -45,6 +45,12 @@ IMap = as_var("pixie.stdlib", "IMap")(Protocol(u"IMap"))
 
 defprotocol("pixie.stdlib", "IMeta", ["-with-meta", "-meta"])
 
+defprotocol("pixie.stdlib", "ITransient", ["-persistent!"])
+defprotocol("pixie.stdlib", "IToTransient", ["-transient"])
+
+defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
+
+
 def default_str(x):
     from pixie.vm.string import String
 

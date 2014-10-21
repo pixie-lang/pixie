@@ -14,6 +14,12 @@
            ([result] result)
            ([result item] (-conj result item))))
 
+(def conj! (fn conj!
+             ([] (-transient []))
+             ([result] (-persistent! result))
+             ([result item] (-conj! result item))))
+
+
 (def transduce (fn transduce
               ([f coll]
                 (let [result (-reduce coll f (f))]
