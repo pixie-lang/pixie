@@ -56,6 +56,10 @@ def _conj(self, itm):
     assert isinstance(self, PersistentList)
     return PersistentList(itm, self, self._cnt + 1, nil)
 
+@extend(_conj, nil._type)
+def _conj(_, itm):
+    return PersistentList(itm, nil, 1, nil)
+
 def count(self):
         cnt = 0
         while self is not nil:
