@@ -154,11 +154,11 @@ class PersistentVector(object.Object):
             ret._array[sub_idx] = None
             return ret
 
-def new_path(self, edit, level, node):
+def new_path(edit, level, node):
     if level == 0:
         return node
     ret = Node(edit)
-    ret._array[0] = self.new_path(edit, level - 5, node)
+    ret._array[0] = new_path(edit, level - 5, node)
     return ret
 
 class Edited(py_object):
@@ -167,7 +167,7 @@ class Edited(py_object):
 edited = Edited
 
 class TransientVector(object.Object):
-    _type = object.Type("pixie.stdlib.TransientVector")
+    _type = object.Type(u"pixie.stdlib.TransientVector")
 
     def __init__(self, cnt, shift, root, tail):
         self._cnt = cnt
