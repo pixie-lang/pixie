@@ -42,7 +42,10 @@ def repl():
     with with_ns(u"user"):
         while True:
             try:
-                val = interpret(compile(read(rdr, True)))
+                val = read(rdr, False)
+                if val is eof:
+                    break
+                val = interpret(compile(val))
             except WrappedException as ex:
                 print "Error: ", ex._ex.__repr__()
                 continue

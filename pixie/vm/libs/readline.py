@@ -19,7 +19,7 @@ __readline = llexternal('readline', [rffi.CCHARP], rffi.CCHARP)
 
 def _readline(prompt):
     result = __readline(rffi.str2charp(prompt))
-    if result is None:
+    if result == lltype.nullptr(rffi.CCHARP.TO):
         return u""
     else:
         return unicode(rffi.charp2str(result))

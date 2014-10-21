@@ -53,7 +53,10 @@ class PromptReader(PlatformReader):
 
     def read(self):
         if self._string_reader is None:
-            self._string_reader = StringReader(_readline(">>") + u"\n")
+            result = _readline(">>")
+            if result == u"":
+                raise EOFError()
+            self._string_reader = StringReader(result + u"\n")
 
         try:
             return self._string_reader.read()
