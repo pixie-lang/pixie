@@ -264,6 +264,13 @@ def extend(proto_fn, tp, fn):
     proto_fn.extend(tp, fn)
     return nil
 
+@as_var("satisfy")
+def satisfy(protocol, tp):
+    affirm(isinstance(protocol, code.Protocol), u"First argument must be a protocol")
+    affirm(isinstance(tp, Type), u"Second argument must be a type")
+    protocol.add_satisfies(tp)
+    return protocol
+
 @as_var("type-by-name")
 def type_by_name(nm):
     import pixie.vm.string as string

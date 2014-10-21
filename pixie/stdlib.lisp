@@ -85,6 +85,7 @@
                             init
                             (recur (f init (nth coll i)) (+ i 1))))))))
 
+
 (extend -reduce Cons seq-reduce)
 (extend -reduce PersistentList seq-reduce)
 (extend -reduce LazySeq seq-reduce)
@@ -230,21 +231,6 @@
        (f1 (f2 (apply f3 args))))))
 
 
-(defmacro deftype [nm fields & body]
-  (let [ctor-name (symbol (str "->" (name nm)))
-        type-decl `(def ~nm (create-type ~(keyword (name nm)) ~fields))
-        field-syms (transduce (map (comp symbol name)) conj fields)
-        ctor `(defn ~ctor-name ~field-syms
-                (let [inst (new ~nm)]
-                  ~@(transduce
-                     (map (fn [field]
-                            `(set-field! inst ~field ~(symbol (name field)))))
-                     conj
-                     fields)
-                   inst))]
-    `(do ~type-decl
-         ~ctor)))
-
 (defn not [x]
   (if x false true))
 
@@ -254,6 +240,7 @@
       `(if ~test
          ~then
          (cond ~@clauses))))
+
 
 (defmacro try [& body]
   (loop [catch nil
@@ -327,7 +314,6 @@
       (str ":" (namespace k) "/" (name k))
       (str ":" (name k)))))
 
-
 (defn get
   ([mp k]
      (get mp k nil))
@@ -366,3 +352,34 @@
 (defmacro ns [nm & body]
   `(do (__ns__ ~nm)
        ~@body))
+
+
+(defn symbol? [x]
+  (identical? Symbol (type x)))
+
+
+
+
+(defmacro deftype [nm fields & body]
+  (let [ctor-name (symbol (str "->" (name nm)))
+        type-decl `(def ~nm (create-type ~(keyword (name nm)) ~fields))
+        field-syms (transduce (map (comp symbol name)) conj fields)
+        ctor `(defn ~ctor-name ~field-syms
+                (let [inst (new ~nm)]
+                  ~@(transduce
+                     (map (fn [field]
+                            `(set-field! inst ~field ~(symbol (name field)))))
+                     conj
+                     fields)
+                  inst))
+        proto-bodies (transduce
+                      (map (fn [body]
+                             (cond
+                              (symbol? body) `(satisfy ~body ~nm)
+                              (seq? body) `(extend ~(first body) ~nm (fn ~@body))
+                              :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
+                      conj
+                      body)]
+    `(do ~type-decl
+         ~ctor
+         ~@proto-bodies)))

@@ -479,7 +479,6 @@ class DefaultProtocolFn(NativeFn):
         self._pfn = pfn
 
     def _invoke(self, args):
-        assert isinstance(self, PolymorphicFn)
         from pixie.vm.string import String
         tp = args[0].type()._name
         affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
