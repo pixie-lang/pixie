@@ -141,8 +141,6 @@ class MultiArityFn(BaseCode):
         if self._rest_fn:
             acc.append(u" or more")
 
-        print self._arities
-
         affirm(False, u"Wrong number of args to fn: got " + unicode(str(arity)) + u" expected " + u",".join(acc))
 
     def _invoke(self, args):

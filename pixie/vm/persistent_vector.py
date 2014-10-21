@@ -1,3 +1,4 @@
+py_object = object
 import pixie.vm.object as object
 from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
@@ -84,7 +85,7 @@ class PersistentVector(object.Object):
         if (self._cnt >> 5) > (r_uint(1) << self._shift):
             new_root = Node(self._root._edit)
             new_root._array[0] = self._root
-            new_root._array[1] = self.new_path(self._root._edit, self._shift, tail_node)
+            new_root._array[1] = new_path(self._root._edit, self._shift, tail_node)
             new_shift += 5
 
         else:
@@ -102,17 +103,12 @@ class PersistentVector(object.Object):
             if child is not None:
                 node_to_insert = self.push_tail(level - 5, child, tail_node)
             else:
-                node_to_insert = self.new_path(self._root._edit, level - 5, tail_node)
+                node_to_insert = new_path(self._root._edit, level - 5, tail_node)
 
         ret._array[subidx] = node_to_insert
         return ret
 
-    def new_path(self, edit, level, node):
-        if level == 0:
-            return node
-        ret = Node(edit)
-        ret._array[0] = self.new_path(edit, level - 5, node)
-        return ret
+
 
     def pop(self):
         affirm(self._cnt != 0, u"Can't pop an empty vector")
@@ -158,7 +154,117 @@ class PersistentVector(object.Object):
             ret._array[sub_idx] = None
             return ret
 
+def new_path(self, edit, level, node):
+    if level == 0:
+        return node
+    ret = Node(edit)
+    ret._array[0] = self.new_path(edit, level - 5, node)
+    return ret
 
+class Edited(py_object):
+    pass
+
+edited = Edited
+
+class TransientVector(object.Object):
+    _type = object.Type("pixie.stdlib.TransientVector")
+
+    def __init__(self, cnt, shift, root, tail):
+        self._cnt = cnt
+        self._shift = shift
+        self._root = root
+        self._tail = tail
+
+
+    def editable_root(self, node):
+        return Node(edited, node._array[:])
+
+    def ensure_editable(self):
+        affirm(self._root._edit is not None, u"Transient used after call to persist!")
+
+    def ensure_node_editable(self, node):
+        if node._edit is self._root._edit:
+            return node
+
+        return Node(self._root._edit, node._array[:])
+
+    def tailoff(self):
+        if self._cnt < 32:
+            return 0
+        return ((self._cnt - 1) >> 5) << 5
+
+    def persistent(self):
+        self.ensure_editable()
+
+        self._root._edit = None
+        trimmed = [None] * (self._cnt - self.tailoff())
+        list_copy(self._tail, 0, trimmed, 0, len(trimmed))
+        return PersistentVector(nil, self._cnt, self._shift, self._root, trimmed)
+
+    def editable_tail(self, tl):
+        ret = [None] * 32
+        list_copy(tl, 0, rt, 0, len(tl))
+        return ret
+
+    def conj(self, val):
+        self.ensure_editable()
+        i = self._cnt
+
+        if i - self.tailoff() < 32:
+            self._tail[i & 0x01f] = val
+            self._cnt += 1
+            return self
+
+        tail_node = Node(self._root._edit, self._tail)
+        self._tail = [None] * 32
+        self._tail[0] = val
+        new_shift = self._shift
+
+        if (self._cnt >> 5) > (r_uint(1) << self._shift):
+            new_root = Node(self._root._edit)
+            new_root._array[0] = self._root
+            new_root._array[1] = new_path(self._root._edit, self._shift, tail_node)
+            new_shift += 1
+
+        else:
+            new_root = self.push_tail(self._shift, self._root, tail_node)
+
+        self._root = new_root
+        self._shift = new_shift
+        self._cnt += 1
+        return self
+
+    def push_tail(self, level, parent, tail_node):
+        parent = self.ensure_node_editable(parent)
+
+        sub_idx = ((self._cnt - 1) >> level) & 0x01f
+
+        ret = parent
+        if level == 5:
+            node_to_insert = tail_node
+        else:
+            child = parent._array[sub_idx]
+            if child is not None:
+                node_to_insert = self.push_tail(level - 5, child, tail_node)
+            else:
+                node_to_insert = new_path(level-5, child, tail_node)
+
+        ret._array[sub_idx] = node_to_insert
+        return ret
+
+
+
+@jit.unroll_safe
+def list_copy(from_lst, from_loc, to_list, to_loc, count):
+    from_loc = r_uint(from_loc)
+    to_loc = r_uint(to_loc)
+    count = r_uint(count)
+
+    i = r_uint(0)
+    while i < count:
+        to_list[to_loc + i] = from_lst[from_loc+i]
+        i += 1
+    return to_list
 
 
 
