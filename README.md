@@ -17,6 +17,12 @@ Some planned and implemented features:
 * Easy FFI (TODO)
 * Pattern matching (TODO)
 
+## Building
+
+    ./checkout-externals
+    ./make-with-jit
+    ./target-c
+    
 
 ## FAQ
 
