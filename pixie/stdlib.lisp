@@ -349,6 +349,8 @@
         nil
         (throw (str "Assert failed " ~msg)))))
 
+(defmacro resolve [sym]
+  `(resolve-in (this-ns-name) ~sym))
 
 (defmacro with-bindings [binds & body]
   `(do (push-binding-frame!)

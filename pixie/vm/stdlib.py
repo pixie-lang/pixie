@@ -110,19 +110,26 @@ def _count(_):
 @extend(_name, Var)
 def __name(self):
     assert isinstance(self, Var)
-    import pixie.vm.string as string
-    return string.rt.wrap(self._name)
+    return rt.wrap(self._name)
 
 @extend(_namespace, Var)
 def __name(self):
     assert isinstance(self, Var)
-    import pixie.vm.string as string
-    return string.rt.wrap(self._ns)
+    return rt.wrap(self._ns)
 
 @extend(_deref, Var)
 def __deref(self):
     assert isinstance(self, Var)
     return self.deref()
+
+@extend(_name, code.Namespace)
+def __name(self):
+    assert isinstance(self, code.Namespace)
+    return rt.wrap(self._name)
+
+@extend(_namespace, code.Namespace)
+def __name(_):
+    return nil
 
 @returns(r_uint)
 @as_var("hash")
@@ -350,10 +357,11 @@ def _throw(ex):
         raise WrappedException(ex)
     raise WrappedException(RuntimeException(ex))
 
-@as_var("resolve")
-def _var(nm):
-    var = get_var_if_defined(rt.namespace(nm), rt.name(nm), nil)
-    return var
+@as_var("resolve-in")
+def _var(ns, nm):
+    affirm(isinstance(ns, code.Namespace), u"First argument to resolve-in must be a namespace")
+    var = ns.resolve(nm)
+    return var if var is not None else nil
 
 @as_var("set-dynamic!")
 def set_dynamic(var):

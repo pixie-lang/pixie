@@ -392,7 +392,7 @@ class Namespace(object.Object):
 
     def intern_or_make(self, name):
         assert name is not None
-        #\affirm(isinstance(name, unicode), u"Var names must be unicode")
+        affirm(isinstance(name, unicode), u"Var names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
             v = Var(self._name, name)

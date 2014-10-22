@@ -644,10 +644,22 @@ builtins = {u"fn": compile_fn,
             u"__ns__": compile_ns,
             u"this-ns-name": compile_this_ns}
 
+def compiler_special(s):
+    if isinstance(s, symbol.Symbol):
+        ns = rt.namespace(s)
+        if ns is None or ns == u"pixie.stdlib":
+            return builtins.get(rt.name(s), None)
+
+    return None
+
+def is_compiler_special(s):
+    return True if compiler_special(s) is not None else False
 
 def compile_cons(form, ctx):
-    if isinstance(form.first(), symbol.Symbol) and form.first()._str in builtins:
-        return builtins[form.first()._str](form, ctx)
+    if isinstance(rt.first(form), symbol.Symbol):
+        special = compiler_special(rt.first(form))
+        if special is not None:
+            return special(form, ctx)
 
     macro = is_macro_call(form, ctx)
     if macro:

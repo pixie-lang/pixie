@@ -291,6 +291,8 @@ class SyntaxQuoteReader(ReaderHandler):
 
     @staticmethod
     def syntax_quote(form):
+        if isinstance(form, Symbol) and compiler.is_compiler_special(form):
+            ret = rt.list(QUOTE, form)
         if isinstance(form, Symbol):
             if rt.namespace(form) is None and rt.name(form).endswith("#"):
                 gmap = rt.deref(GEN_SYM_ENV)
@@ -300,10 +302,12 @@ class SyntaxQuoteReader(ReaderHandler):
                     gs = rt.symbol(rt.str(form, rt.wrap(u"__"), rt.gensym()))
                     GEN_SYM_ENV.set_value(rt.assoc(gmap, form, gs))
                     form = gs
+            else:
+                var = rt.resolve_in(compiler.NS_VAR.deref(), form)
+                if var is nil:
+                    form = rt.symbol(rt.str(rt.wrap(rt.name(rt.deref(compiler.NS_VAR))), rt.wrap(u"/"), form))
                 else:
-                    form = gs
-
-
+                    form = rt.symbol(rt.str(rt.wrap(rt.namespace(var)), rt.wrap(u"/"), rt.str(rt.wrap(rt.name(var)))))
             ret = rt.list(QUOTE, form)
         elif is_unquote(form):
             ret = rt.first(rt.next(form))
