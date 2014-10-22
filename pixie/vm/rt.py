@@ -73,6 +73,7 @@ def init():
             return String(x)
         #if isinstance(x, str):
         #    return String(unicode(x))
+        affirm(False, u"Bad wrap")
 
     globals()["wrap"] = wrap
 

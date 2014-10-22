@@ -7,6 +7,7 @@ import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
 from pixie.vm.string import String
+from pixie.vm.atom import Atom
 import pixie.vm.stdlib as proto
 from rpython.rlib.rarithmetic import r_uint
 
@@ -18,6 +19,17 @@ NS_VAR.set_dynamic()
 
 FN_NAME = code.intern_var(u"pixie.stdlib", u"*fn-name*")
 FN_NAME.set_dynamic()
+
+gensym_id = Atom(numbers.zero_int)
+
+
+@code.as_var("gensym")
+def gensym():
+    rt.reset_BANG_(gensym_id, rt._add(rt.deref(gensym_id), rt.wrap(1)))
+    i = rt.deref(gensym_id)
+
+    return rt.symbol(rt.str(rt.wrap(u"gensym_"), i))
+
 
 class with_ns(object):
     def __init__(self, nm):

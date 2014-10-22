@@ -119,6 +119,11 @@ def __name(self):
     import pixie.vm.string as string
     return string.rt.wrap(self._ns)
 
+@extend(_deref, Var)
+def __deref(self):
+    assert isinstance(self, Var)
+    return self.deref()
+
 @returns(r_uint)
 @as_var("hash")
 def __hash(x):
@@ -282,6 +287,8 @@ def type_by_name(nm):
     import pixie.vm.string as string
     affirm(isinstance(nm, string.String), u"type name must be string")
     return _type_registry.get_by_name(nm._str, nil)
+
+
 
 @as_var("deref")
 def deref(x):

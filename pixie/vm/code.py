@@ -361,11 +361,10 @@ class Var(BaseCode):
 
 class bindings(py_object):
     def __init__(self, *args):
-       self._args = args
+       self._args = list(args)
 
     def __enter__(self):
         _dynamic_vars.push_binding_frame()
-        assert isinstance(nm, unicode)
         for x in range(0, len(self._args), 2):
             self._args[x].set_value(self._args[x + 1])
 

@@ -192,8 +192,8 @@
   `(do (defn ~nm ~@rest)
        (set-macro! ~nm)
        ~nm))
-(set-macro! defmacro)
 
+(set-macro! defmacro)
 
 (defn +
   [& args]
@@ -217,6 +217,13 @@
 
 (def dec (fn [x] (- x 1)))
 
+
+(defn assoc
+  ([m] m)
+  ([m k v]
+     (-assoc m k v))
+  ([m k v & rest]
+     (apply assoc (-assoc m k v) rest)))
 
 (def slot-tp (create-type :slot [:val]))
 
@@ -376,14 +383,15 @@
   (let [ctor-name (symbol (str "->" (name nm)))
         type-decl `(def ~nm (create-type ~(keyword (name nm)) ~fields))
         field-syms (transduce (map (comp symbol name)) conj fields)
+        inst (gensym)
         ctor `(defn ~ctor-name ~field-syms
-                (let [inst (new ~nm)]
+                (let [~inst (new ~nm)]
                   ~@(transduce
                      (map (fn [field]
-                            `(set-field! inst ~field ~(symbol (name field)))))
+                            `(set-field! ~inst ~field ~(symbol (name field)))))
                      conj
                      fields)
-                  inst))
+                  ~inst))
         proto-bodies (transduce
                       (map (fn [body]
                              (cond

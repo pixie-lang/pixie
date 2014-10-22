@@ -1,6 +1,7 @@
 py_object = object
 import pixie.vm.object as object
 from pixie.vm.object import affirm
+import pixie.vm.code as code
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons
@@ -13,12 +14,16 @@ from pixie.vm.string import String
 from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 import pixie.vm.stdlib as proto
+import pixie.vm.compiler as compiler
 
 LINE_NUMBER_KW = keyword(u"line-number")
 COLUMN_NUMBER_KW = keyword(u"column-number")
 LINE_KW = keyword(u"line")
 FILE_KW = keyword(u"file")
 
+GEN_SYM_ENV = code.intern_var(u"pixie.stdlib.reader", u"*gen-sym-env*")
+GEN_SYM_ENV.set_dynamic()
+GEN_SYM_ENV.set_value(EMPTY_MAP)
 
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
@@ -278,11 +283,27 @@ def is_unquote_splicing(form):
 class SyntaxQuoteReader(ReaderHandler):
     def invoke(self, rdr, ch):
         form = read(rdr, True)
-        return self.syntax_quote(form)
+
+        with code.bindings(GEN_SYM_ENV, EMPTY_MAP):
+            result = self.syntax_quote(form)
+
+        return result
 
     @staticmethod
     def syntax_quote(form):
         if isinstance(form, Symbol):
+            if rt.namespace(form) is None and rt.name(form).endswith("#"):
+                gmap = rt.deref(GEN_SYM_ENV)
+                affirm(gmap is not nil, u"Gensym literal used outside a syntax quote")
+                gs = rt.get(gmap, form)
+                if gs is nil:
+                    gs = rt.symbol(rt.str(form, rt.wrap(u"__"), rt.gensym()))
+                    GEN_SYM_ENV.set_value(rt.assoc(gmap, form, gs))
+                    form = gs
+                else:
+                    form = gs
+
+
             ret = rt.list(QUOTE, form)
         elif is_unquote(form):
             ret = rt.first(rt.next(form))

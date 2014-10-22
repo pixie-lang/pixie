@@ -136,6 +136,8 @@ stacklet.global_state = stacklet.GlobalState()
 
 def target(*args):
     import pixie.vm.rt as rt
+    driver = args[0]
+    driver.exe_name = "pixie"
     rt.__config__ = args[0].config
 
 
