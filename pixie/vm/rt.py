@@ -60,6 +60,7 @@ def init():
     import pixie.vm.compiler as compiler
     import pixie.vm.map_entry
     import pixie.vm.reader as reader
+    #import pixie.vm.libs.ffi
 
 
 

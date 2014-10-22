@@ -154,7 +154,7 @@ def interpret(code_obj, args=[]):
             argc = frame.get_inst()
             fn = frame.nth(argc - 1)
 
-            assert isinstance(fn, code.BaseCode), "Expected callable, got " + str(fn)
+            #assert isinstance(fn, code.BaseCode), "Expected callable, got " + str(fn)
 
 
 

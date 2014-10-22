@@ -39,6 +39,8 @@ defprotocol("pixie.stdlib", "IMapEntry", ["-key", "-val"])
 
 defprotocol("pixie.stdlib", "IStack", ["-push", "-pop"])
 
+defprotocol("pixie.stdlib", "IFn", ["-invoke"])
+
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
 IMap = as_var("pixie.stdlib", "IMap")(Protocol(u"IMap"))
@@ -384,3 +386,8 @@ def push_binding_frame():
 def pop_binding_frame():
     code._dynamic_vars.pop_binding_frame()
     return nil
+
+
+def invoke_other(obj, args):
+    from pixie.vm.array import array
+    return rt.apply(_invoke, obj, array(args))

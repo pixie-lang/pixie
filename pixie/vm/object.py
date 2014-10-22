@@ -1,4 +1,4 @@
-
+import rpython.rlib.jit as jit
 
 class Object(object):
     """ Base Object for all VM objects
@@ -6,6 +6,11 @@ class Object(object):
 
     def type(self):
         affirm(False, u".type isn't overloaded")
+
+    @jit.unroll_safe
+    def invoke(self, args):
+        import pixie.vm.stdlib as stdlib
+        return stdlib.invoke_other(self, args)
 
 class TypeRegistry(object):
     def __init__(self):
