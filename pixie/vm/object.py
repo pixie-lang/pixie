@@ -12,6 +12,9 @@ class Object(object):
         import pixie.vm.stdlib as stdlib
         return stdlib.invoke_other(self, args)
 
+    def promote(self):
+        return self
+
 class TypeRegistry(object):
     def __init__(self):
         self._types = {}

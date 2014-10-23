@@ -1,6 +1,7 @@
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
+import rpython.rlib.jit as jit
 from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
 import pixie.vm.rt as rt
 
@@ -21,6 +22,9 @@ class Integer(Number):
 
     def r_uint_val(self):
         return r_uint(self._int_val)
+
+    def promote(self):
+        return Integer(jit.promote(self._int_val))
 
     def type(self):
         return Integer._type

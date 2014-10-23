@@ -319,14 +319,6 @@
         (fn [v]
           (transduce cat unordered-hash-reducing-fn v)))
 
-(extend -hash Symbol
-        (fn [v]
-          (hash [(namespace v) (name v)])))
-
-(extend -hash Keyword
-        (fn [v]
-          (hash [(namespace v) (name v)])))
-
 (extend -str Keyword
   (fn [k]
     (if (namespace k)

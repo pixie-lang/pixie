@@ -5,15 +5,20 @@ import pixie.vm.stdlib as proto
 from pixie.vm.code import extend, as_var
 from pixie.vm.string import String
 import pixie.vm.rt as rt
+import pixie.vm.util as util
+from rpython.rlib.rarithmetic import intmask
+
 
 class Symbol(object.Object):
     _type = object.Type(u"pixie.stdlib.Symbol")
+    __immutable_fields__ = ["_hash"]
 
     def __init__(self, s):
         #assert isinstance(s, unicode)
         self._str = s
         self._w_name = None
         self._w_ns = None
+        self._hash = 0
 
     def type(self):
         return Symbol._type
@@ -59,6 +64,13 @@ def _namespace(self):
     assert isinstance(self, Symbol)
     self.init_names()
     return self._w_ns
+
+@extend(proto._hash, Symbol)
+def _hash(self):
+    assert isinstance(self, Symbol)
+    if self._hash == 0:
+        self._hash = util.hash_unencoded_chars(self._str)
+    return rt.wrap(intmask(self._hash))
 
 @as_var("symbol")
 def _symbol(s):

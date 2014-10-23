@@ -3,6 +3,7 @@ import pixie.vm.object as object
 from pixie.vm.code import extend, as_var
 from pixie.vm.primitives import nil
 import pixie.vm.stdlib as proto
+import rpython.rlib.jit as jit
 
 import pixie.vm.stdlib as proto
 

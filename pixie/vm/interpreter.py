@@ -313,7 +313,7 @@ def interpret(code_obj, args=[]):
             continue
 
 
-        print "NO DISPATCH FOR: " + code.BYTECODES[inst]
+        affirm(False, u"NO DISPATCH FOR: " + unicode(code.BYTECODES[inst]))
         raise Exception()
 
 

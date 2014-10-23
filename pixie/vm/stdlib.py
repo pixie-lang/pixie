@@ -209,10 +209,10 @@ def apply__args(args):
     return fn.invoke(out_args)
 
 
-@as_var("print")
-def _print(a):
-    print rt._str(a)._str
-    return nil
+#@as_var("print")
+#def _print(a):
+#    print rt._str(a)._str
+#    return nil
 
 @returns(bool)
 @as_var("instance?")
@@ -387,6 +387,13 @@ def pop_binding_frame():
     code._dynamic_vars.pop_binding_frame()
     return nil
 
+@as_var("elidable-fn")
+def elidable_fn(fn):
+    return code.ElidableFn(fn)
+
+@as_var("promote")
+def promote(i):
+    return i.promote()
 
 def invoke_other(obj, args):
     from pixie.vm.array import array

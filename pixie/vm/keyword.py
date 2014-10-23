@@ -4,14 +4,18 @@ from pixie.vm.string import String
 import pixie.vm.stdlib as proto
 from pixie.vm.code import extend, as_var
 import pixie.vm.rt as rt
+import pixie.vm.util as util
+from rpython.rlib.rarithmetic import intmask
+
 
 class Keyword(Object):
     _type = Type(u"pixie.stdlib.Keyword")
-
+    __immutable_fields__ = ["_hash"]
     def __init__(self, name):
         self._str = name
         self._w_name = None
         self._w_ns = None
+        self._hash = 0
 
     def type(self):
         return Keyword._type
@@ -60,6 +64,13 @@ def _namespace(self):
     assert isinstance(self, Keyword)
     self.init_names()
     return self._w_ns
+
+@extend(proto._hash, Keyword)
+def _hash(self):
+    assert isinstance(self, Keyword)
+    if self._hash == 0:
+        self._hash = util.hash_unencoded_chars(self._str)
+    return rt.wrap(intmask(self._hash))
 
 @as_var("keyword")
 def _keyword(s):
