@@ -605,38 +605,38 @@ class DoublePolymorphicFn(BaseCode):
 
 
 
-class ElidableFn(object.Object):
-    _type = object.Type(u"pixie.stdlib.ElidableFn")
-    __immutable_fields__ = ["_boxed_fn"]
-    def type(self):
-        return ElidableFn._type
-
-    def __init__(self, boxed_fn):
-        self._boxed_fn = boxed_fn
-
-    @elidable
-    def _elidable_invoke_0(self, fn):
-        return self._boxed_fn.invoke([])
-
-    @elidable
-    def _elidable_invoke_1(self, fn, arg0):
-        return self._boxed_fn.invoke([arg0])
-
-    @elidable
-    def _elidable_invoke_2(self, fn, arg0, arg1):
-        return self._boxed_fn.invoke([arg0, arg1])
-
-
-    def invoke(self, args):
-        largs = jit.promote(len(args))
-        fn = self._boxed_fn.promote()
-        if largs == 0:
-            return self._elidable_invoke_0(fn).promote()
-        elif largs == 1:
-            return self._elidable_invoke_1(fn, args[0].promote()).promote()
-        elif largs == 2:
-            return self._elidable_invoke_2(fn, args[0].promote(), args[1].promote()).promote()
-        affirm(False, u"Too many args to Elidable Fn")
+# class ElidableFn(object.Object):
+#     _type = object.Type(u"pixie.stdlib.ElidableFn")
+#     __immutable_fields__ = ["_boxed_fn"]
+#     def type(self):
+#         return ElidableFn._type
+#
+#     def __init__(self, boxed_fn):
+#         self._boxed_fn = boxed_fn
+#
+#     @elidable
+#     def _elidable_invoke_0(self, fn):
+#         return self._boxed_fn.invoke([])
+#
+#     @elidable
+#     def _elidable_invoke_1(self, fn, arg0):
+#         return self._boxed_fn.invoke([arg0])
+#
+#     @elidable
+#     def _elidable_invoke_2(self, fn, arg0, arg1):
+#         return self._boxed_fn.invoke([arg0, arg1])
+#
+#
+#     def invoke(self, args):
+#         largs = jit.promote(len(args))
+#         fn = self._boxed_fn.promote()
+#         if largs == 0:
+#             return self._elidable_invoke_0(fn).promote()
+#         elif largs == 1:
+#             return self._elidable_invoke_1(fn, args[0].promote()).promote()
+#         elif largs == 2:
+#             return self._elidable_invoke_2(fn, args[0].promote(), args[1].promote()).promote()
+#         affirm(False, u"Too many args to Elidable Fn")
 
 def munge(s):
     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")

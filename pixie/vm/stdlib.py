@@ -387,9 +387,9 @@ def pop_binding_frame():
     code._dynamic_vars.pop_binding_frame()
     return nil
 
-@as_var("elidable-fn")
-def elidable_fn(fn):
-    return code.ElidableFn(fn)
+# @as_var("elidable-fn")
+# def elidable_fn(fn):
+#     return code.ElidableFn(fn)
 
 @as_var("promote")
 def promote(i):

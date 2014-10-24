@@ -18,7 +18,7 @@ good docs in that module.
 
 The problem is we can't serialize/translate function pointers (makes sense), so we make use of the _cleanup_ method
 hook to clean out all unsupported fields. We then lazy re-load these values as needed. This allows us to specifiy FFI
-functions inside of the stdlib (and other places) allowing for fast interpreter boot times. 
+functions inside of the stdlib (and other places) allowing for fast interpreter boot times.
 
 
 """
@@ -132,6 +132,7 @@ class FFIFn(object.Object):
 
         print "_____________________________\n"
         jit_ffi_call(self._cd, self._f_ptr, exb)
+        lltype.free(exb, flavor="raw")
         print "_____________________________\n"
         return Integer(42)
 
