@@ -1,3 +1,6 @@
 script:
   - ./checkout-externals
   - ./make-with-jit
+
+os:
+  - osx
