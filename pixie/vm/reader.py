@@ -58,7 +58,7 @@ class PromptReader(PlatformReader):
 
     def read(self):
         if self._string_reader is None:
-            result = _readline(">>")
+            result = _readline(str(rt.name(compiler.NS_VAR.deref())) + " => ")
             if result == u"":
                 raise EOFError()
             self._string_reader = StringReader(result + u"\n")

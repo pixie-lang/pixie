@@ -8,6 +8,7 @@ from pixie.vm.code import wrap_fn
 from pixie.vm.stacklet import with_stacklets
 import pixie.vm.stacklet as stacklet
 from pixie.vm.object import RuntimeException, WrappedException
+from rpython.translator.platform import platform
 
 import sys
 
@@ -57,6 +58,8 @@ def repl():
 
 def entry_point(foo=None):
     print "Pixie 0.1 - Interactive REPL"
+    print "(" + platform.name + ", " + platform.cc + ")"
+    print "----------------------------"
     #try:
     #    code = argv[1]
     #except IndexError:

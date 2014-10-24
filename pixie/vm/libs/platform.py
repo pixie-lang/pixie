@@ -5,7 +5,7 @@ from pixie.vm.code import as_var
 import os
 
 
-as_var("pixie.platform", "os")(String(os.name))
-as_var("pixie.platform", "name")(String(platform.name))
-as_var("pixie.platform", "so-ext")(String(platform.so_ext))
+as_var("pixie.platform", "os")(String(unicode(os.name)))
+as_var("pixie.platform", "name")(String(unicode(platform.name)))
+as_var("pixie.platform", "so-ext")(String(unicode(platform.so_ext)))
 
