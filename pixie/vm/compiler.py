@@ -376,7 +376,7 @@ def add_args(args, ctx):
         affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
         if arg._str == u"&":
 
-            required_args = x
+            required_args = intmask(x)
             continue
         ctx.add_local(arg._str, Arg(local_idx))
         local_idx += 1
@@ -455,7 +455,7 @@ def compile_fn_body(name, args, body, ctx):
         ctx.bytecode.append(code.MAKE_VARIADIC)
         ctx.bytecode.append(r_uint(required_args))
 
-    return required_args, rt.count(args)
+    return required_args, intmask(rt.count(args))
 
 def compile_if(form, ctx):
     form = form.next()
@@ -534,7 +534,7 @@ def compile_recur(form, ctx):
     ctx.get_recur_point().emit(ctx, args)
     if ctc:
         ctx.enable_tail_call()
-    ctx.sub_sp(args - 1)
+    ctx.sub_sp(r_uint(args - 1))
 
 
 def compile_let(form, ctx):
@@ -686,7 +686,7 @@ def compile_cons(form, ctx):
     ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)
-    ctx.sub_sp(cnt - 1)
+    ctx.sub_sp(r_uint(cnt - 1))
 
 
 def compile(form):
