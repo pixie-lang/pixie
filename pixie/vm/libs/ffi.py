@@ -144,12 +144,6 @@ def get_clibffi_type(arg):
     assert False
 
 
-
-LIBC = ExternalLib(u"/usr/lib/libc.dylib")
-FN = FFIFn(LIBC, u"exit", [Integer._type], Integer._type)
-#putc = LIBC.get_fn(u"exit")
-#ffifn = wrap_dyfn(putc, [Integer._type], Integer._type)
-
 @as_var("ffi-library")
 def _ffi_library(ns):
     nm = rt.name(ns)
@@ -170,11 +164,5 @@ def _ffi_fn(lib, nm, args, ret_type):
 
     f = FFIFn(lib, rt.name(nm), new_args, ret_type)
     return f
-
-
-@code.as_var("doit")
-def _doit():
-    FN.invoke([Integer(11)])
-    return Integer(42)
 
 
