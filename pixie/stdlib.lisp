@@ -397,3 +397,7 @@
     `(do ~type-decl
          ~ctor
          ~@proto-bodies)))
+
+
+(def libc (ffi-library "/usr/lib/libc.dylib"))
+(def exit (ffi-fn libc "exit" [Integer] Integer))
