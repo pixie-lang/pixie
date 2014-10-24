@@ -53,9 +53,9 @@ class CustomTypeInstance(Object):
 def create_type(type_name, fields):
     affirm(isinstance(type_name, Keyword), u"Type name must be a keyword")
 
-    field_count = rt.count(fields).int_val()
+    field_count = rt.count(fields)
     acc = {}
-    for i in range(rt.count(fields).int_val()):
+    for i in range(rt.count(fields)):
         val = rt.nth(fields, rt.wrap(i))
         affirm(isinstance(val, Keyword), u"Field names must be keywords")
         acc[val] = i

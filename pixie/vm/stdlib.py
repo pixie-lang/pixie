@@ -142,6 +142,7 @@ def __hash(x):
 _count_driver = jit.JitDriver(name="pixie.stdlib.count",
                               greens=["tp"],
                               reds="auto")
+@returns(r_uint)
 @as_var("count")
 def count(x):
     acc = 0
@@ -199,11 +200,11 @@ def apply__args(args):
 
     fn = args[0]
     argc = r_uint(len(args) - 2)
-    out_args = [None] * (argc + r_uint(rt.count(last_itm).int_val()))
+    out_args = [None] * (argc + r_uint(rt.count(last_itm)))
 
     list_copy(args, 1, out_args, 0, argc)
 
-    for x in range(rt.count(last_itm).int_val()):
+    for x in range(rt.count(last_itm)):
         out_args[argc + x] = rt.nth(last_itm, rt.wrap(x))
 
     return fn.invoke(out_args)

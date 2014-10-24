@@ -423,10 +423,10 @@ def _reduce(self, f, init):
 
 @as_var("vector")
 def vector__args(args):
-    acc = EMPTY
+    acc = rt._transient(EMPTY)
     for x in range(len(args)):
-        acc = acc.conj(args[x])
-    return acc
+        acc = rt._conj_BANG_(acc, args[x])
+    return rt._persistent_BANG_(acc)
 
 @extend(proto._transient, PersistentVector)
 def _transient(self):

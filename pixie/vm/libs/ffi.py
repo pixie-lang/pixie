@@ -188,7 +188,7 @@ def _ffi_fn(lib, nm, args, ret_type):
     affirm(isinstance(ret_type, object.Type), u"Ret type must be a type")
     affirm(rt.namespace(nm) is None, u"Name must not be namespaced")
 
-    cnt = rt.count(args).int_val()
+    cnt = rt.count(args)
     new_args = [None] * cnt
     for x in range(cnt):
         t = rt.nth(args, rt.wrap(x))

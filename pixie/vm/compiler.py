@@ -256,7 +256,7 @@ def is_macro_call(form, ctx):
 
 def call_macro(var, form, ctx):
     form = rt.next(form)
-    args = [None] * rt.count(form).int_val()
+    args = [None] * rt.count(form)
     i = 0
     while form is not nil:
         args[i] = rt.first(form)
@@ -278,7 +278,7 @@ def compile_map_literal(form, ctx):
 
     rt.reduce(CompileMapRf(ctx), nil, form)
 
-    size = rt.count(form).int_val() * 2
+    size = rt.count(form) * 2
     ctx.bytecode.append(code.INVOKE)
     ctx.bytecode.append(r_uint(size) + 1)
 
@@ -321,7 +321,7 @@ def compile_form(form, ctx):
 
     if isinstance(form, PersistentVector):
         vector_var = rt.vector()
-        size = rt.count(form).int_val()
+        size = rt.count(form)
         #assert rt.count(form).int_val() == 0
         ctx.push_const(code.intern_var(u"pixie.stdlib", u"vector"))
         for x in range(size):
@@ -359,7 +359,7 @@ def compile_platform_plus(form, ctx):
 def compile_platform_eq(form, ctx):
     form = form.next()
 
-    affirm(rt.count(form).int_val() == 2, u"TODO: REMOVE")
+    affirm(rt.count(form) == 2, u"TODO: REMOVE")
     while form is not nil:
         compile_form(form.first(), ctx)
         form = form.next()
@@ -371,7 +371,7 @@ def compile_platform_eq(form, ctx):
 def add_args(args, ctx):
     required_args = -1
     local_idx = 0
-    for x in range(rt.count(args).int_val()):
+    for x in range(rt.count(args)):
         arg = rt.nth(args, rt.wrap(x))
         affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
         if arg._str == u"&":
@@ -416,7 +416,7 @@ def compile_fn(form, ctx):
 
 
 def compile_fn_body(name, args, body, ctx):
-    new_ctx = Context(name._str, rt.count(args).int_val(), ctx)
+    new_ctx = Context(name._str, rt.count(args), ctx)
     required_args = add_args(args, new_ctx)
     bc = 0
 
@@ -455,11 +455,11 @@ def compile_fn_body(name, args, body, ctx):
         ctx.bytecode.append(code.MAKE_VARIADIC)
         ctx.bytecode.append(r_uint(required_args))
 
-    return required_args, rt.count(args).int_val()
+    return required_args, rt.count(args)
 
 def compile_if(form, ctx):
     form = form.next()
-    affirm(2 <= rt.count(form).int_val() <= 3, u"If must have either 2 or 3 forms")
+    affirm(2 <= rt.count(form) <= 3, u"If must have either 2 or 3 forms")
 
     test = rt.first(form)
     form = rt.next(form)
@@ -547,7 +547,7 @@ def compile_let(form, ctx):
     ctx.disable_tail_call()
 
     binding_count = 0
-    for i in range(0, rt.count(bindings).int_val(), 2):
+    for i in range(0, rt.count(bindings), 2):
         binding_count += 1
         name = rt.nth(bindings, rt.wrap(i))
         affirm(isinstance(name, symbol.Symbol), u"Let locals must be symbols")
@@ -583,7 +583,7 @@ def compile_loop(form, ctx):
     ctx.disable_tail_call()
 
     binding_count = 0
-    for i in range(0, rt.count(bindings).int_val(), 2):
+    for i in range(0, rt.count(bindings), 2):
         binding_count += 1
         name = rt.nth(bindings, rt.wrap(i))
         affirm(isinstance(name, symbol.Symbol), u"Loop must bindings must be symbols")
@@ -615,7 +615,7 @@ def compile_comment(form, ctx):
     ctx.push_const(nil)
 
 def compile_ns(form, ctx):
-    affirm(rt.count(form).int_val() == 2, u"ns only takes one argument, a symbol")
+    affirm(rt.count(form) == 2, u"ns only takes one argument, a symbol")
 
     nm = rt.first(rt.next(form))
 
