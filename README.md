@@ -21,7 +21,7 @@ Some planned and implemented features:
 
     ./checkout-externals
     ./make-with-jit
-    ./target-c
+    ./pixie-vm
     
 
 ## FAQ
