@@ -1,0 +1,1 @@
+python ../externals/pypy/rpython/bin/rpython --continuation --no-shared target.py
