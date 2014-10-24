@@ -38,9 +38,15 @@ class ExternalLib(object.Object):
     def thaw(self):
         if not self._is_inited:
             s = rffi.str2charp(str(self._name))
-            self._dyn_lib = dynload.dlopen(s)
+
+            try:
+                self._dyn_lib = dynload.dlopen(s)
+            except dynload.DLOpenError as ex:
+                raise object.WrappedException(object.RuntimeException(rt.wrap(ex.msg)))
+            finally:
+                rffi.free_charp(s)
+
             self._is_inited = True
-            rffi.free_charp(s)
 
 
     def get_fn_ptr(self, nm):
@@ -130,11 +136,9 @@ class FFIFn(object.Object):
         for x in range(len(args)):
             offset_p = set_native_value(offset_p, args[x], self._arg_types[x])
 
-        print "_____________________________\n"
         jit_ffi_call(self._cd, self._f_ptr, exb)
         lltype.free(exb, flavor="raw")
-        print "_____________________________\n"
-        return Integer(42)
+        return Integer(0)
 
 
 

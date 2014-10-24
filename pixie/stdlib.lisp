@@ -398,6 +398,6 @@
          ~ctor
          ~@proto-bodies)))
 
-(comment
- (def libc (ffi-library "/usr/lib/libc.dylib"))
- (def exit (ffi-fn libc "exit" [Integer] Integer)))
+
+ (def libc (ffi-library (str "libc" "." pixie.platform/so-ext)))
+ (def exit (ffi-fn libc "exit" [Integer] Integer))

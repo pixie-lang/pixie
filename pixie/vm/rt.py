@@ -1,5 +1,6 @@
 __config__ = None
 py_list = list
+py_str = str
 from rpython.rlib.objectmodel import specialize
 
 
@@ -60,6 +61,7 @@ def init():
     import pixie.vm.compiler as compiler
     import pixie.vm.map_entry
     import pixie.vm.reader as reader
+    import pixie.vm.libs.platform
     import pixie.vm.libs.ffi
 
 
@@ -72,8 +74,8 @@ def init():
             return numbers.Integer(x)
         if isinstance(x, unicode):
             return String(x)
-        #if isinstance(x, str):
-        #    return String(unicode(x))
+        if isinstance(x, py_str):
+            return String(unicode(x))
         affirm(False, u"Bad wrap")
 
     globals()["wrap"] = wrap
