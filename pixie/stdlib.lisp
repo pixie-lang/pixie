@@ -398,8 +398,8 @@
          ~ctor
          ~@proto-bodies)))
 
-
+(comment
  (def libc (ffi-library (str "libc" "." pixie.platform/so-ext)))
  (def exit (ffi-fn libc "exit" [Integer] Integer))
  (def puts (ffi-fn libc "puts" [String] Integer))
- (def printf (ffi-fn libc "printf" [String] Integer))
+ (def printf (ffi-fn libc "printf" [String] Integer)))
