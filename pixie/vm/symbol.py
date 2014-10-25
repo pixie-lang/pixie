@@ -13,12 +13,13 @@ class Symbol(object.Object):
     _type = object.Type(u"pixie.stdlib.Symbol")
     __immutable_fields__ = ["_hash"]
 
-    def __init__(self, s):
+    def __init__(self, s, meta=nil):
         #assert isinstance(s, unicode)
         self._str = s
         self._w_name = None
         self._w_ns = None
         self._hash = 0
+        self._meta = meta
 
     def type(self):
         return Symbol._type
@@ -35,6 +36,12 @@ class Symbol(object.Object):
             else:
                 self._w_ns = rt.wrap(s[0])
                 self._w_name = rt.wrap(u"/".join(s[1:]))
+
+    def with_meta(self, meta):
+        return Symbol(self._str, meta)
+
+    def meta(self):
+        return self._meta
 
 
 
@@ -79,3 +86,12 @@ def _symbol(s):
 
 
 
+@extend(proto._meta, Symbol)
+def _meta(self):
+    assert isinstance(self, Symbol)
+    return self.meta()
+
+@extend(proto._with_meta, Symbol)
+def _with_meta(self, meta):
+    assert isinstance(self, Symbol)
+    return self.with_meta(meta)

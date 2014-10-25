@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm
+from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           resize_list, list_copy, returns, get_var_if_defined
 import pixie.vm.code as code
@@ -399,3 +399,30 @@ def promote(i):
 def invoke_other(obj, args):
     from pixie.vm.array import array
     return rt.apply(_invoke, obj, array(args))
+
+@as_var("interpreter_code_info")
+def _ici(meta):
+    import pixie.vm.reader as reader
+    line = rt._val_at(meta, reader.LINE_KW, nil)
+    line_number = rt._val_at(meta, reader.LINE_NUMBER_KW, nil)
+    col_number = rt._val_at(meta, reader.COLUMN_NUMBER_KW, nil)
+    file = rt._val_at(meta, reader.FILE_KW, nil)
+
+    return InterpreterCodeInfo(line,
+                               line_number.int_val() if line_number is not nil else 0,
+                               col_number.int_val() if col_number is not nil else 0,
+                               rt.name(file) if file is not nil else u"<unknown")
+
+@wrap_fn
+def merge_fn(acc, x):
+    return rt._assoc(acc, rt._key(x), rt._val(x))
+
+
+@as_var("merge")
+def _merge__args(args):
+    affirm(len(args) > 0, u"Merge takes at least one arg")
+    x = 1
+    acc = args[0]
+    for x in range(1, len(args)):
+        acc = rt._reduce(acc, merge_fn, args[x])
+    return acc

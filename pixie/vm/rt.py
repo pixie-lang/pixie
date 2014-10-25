@@ -12,6 +12,7 @@ def init():
     from rpython.rlib.rarithmetic import r_uint
     from pixie.vm.primitives import nil, true, false
     from pixie.vm.string import String
+    from pixie.vm.object import Object
 
     _type_registry.set_registry(code._ns_registry)
 
@@ -76,6 +77,8 @@ def init():
             return String(x)
         if isinstance(x, py_str):
             return String(unicode(x))
+        if isinstance(x, Object):
+            return x
         affirm(False, u"Bad wrap")
 
     globals()["wrap"] = wrap

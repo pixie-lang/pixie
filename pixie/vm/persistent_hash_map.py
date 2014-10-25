@@ -26,6 +26,12 @@ class PersistentHashMap(object.Object):
         self._root = root
         self._meta = meta
 
+    def meta(self):
+        return self._meta
+
+    def with_meta(self, meta):
+        return PersistentHashMap(self._cnt, self._root, meta)
+
     def assoc(self, key, val):
         added_leaf = Box()
 
@@ -325,3 +331,14 @@ proto.IMap.add_satisfies(PersistentHashMap._type)
 def _count(self):
     assert isinstance(self, PersistentHashMap)
     return rt.wrap(intmask(self._cnt))
+
+
+@extend(proto._meta, PersistentHashMap)
+def _meta(self):
+    assert isinstance(self, PersistentHashMap)
+    return self.meta()
+
+@extend(proto._with_meta, PersistentHashMap)
+def _with_meta(self, meta):
+    assert isinstance(self, PersistentHashMap)
+    return self.with_meta(meta)

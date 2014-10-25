@@ -138,7 +138,10 @@ class MetaDataReader(PlatformReader):
             return ch
 
     def get_metadata(self):
-        return object.InterpreterCodeInfo(self._line, self._line_number, self._column_number, self._filename)
+        return rt.hashmap(LINE_KW, rt.wrap(self._line),
+                          LINE_NUMBER_KW, rt.wrap(self._line_number),
+                          COLUMN_NUMBER_KW, rt.wrap(self._column_number),
+                          FILE_KW, rt.wrap(self._filename))
 
 
     def unread(self, ch):
@@ -347,6 +350,17 @@ class UnquoteReader(ReaderHandler):
         form = read(rdr, True)
         return rt.list(sym, form)
 
+class MetaReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        meta = read(rdr, True)
+        obj = read(rdr, True)
+
+        if rt.instance_QMARK_(rt.IMeta.deref(), obj):
+
+            return rt._with_meta(obj, meta)
+        print "not meta"
+        return obj
+
 handlers = {u"(": ListReader(),
             u")": UnmachedListReader(),
             u"[": VectorReader(),
@@ -358,7 +372,8 @@ handlers = {u"(": ListReader(),
             u"\"": LiteralStringReader(),
             u"@": DerefReader(),
             u"`": SyntaxQuoteReader(),
-            u"~": UnquoteReader()}
+            u"~": UnquoteReader(),
+            u"^": MetaReader()}
 
 def read_number(rdr, ch):
     acc = [ch]

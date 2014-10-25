@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, _type_registry, affirm
+from pixie.vm.object import Object, _type_registry, affirm, InterpreterCodeInfo
 from pixie.vm.primitives import nil, true, false, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
 import pixie.vm.numbers as numbers
@@ -281,8 +281,21 @@ def compile_map_literal(form, ctx):
     size = rt.count(form) * 2
     ctx.bytecode.append(code.INVOKE)
     ctx.bytecode.append(r_uint(size) + 1)
+    ctx.sub_sp(size - 1)
 
+    compile_meta(rt.meta(form), ctx)
 
+def compile_meta(meta, ctx):
+    ctx.push_const(code.intern_var(u"pixie.stdlib", u'with-meta'))
+    ctx.bytecode.append(code.DUP_NTH)
+    ctx.bytecode.append(r_uint(1))
+    ctx.push_const(meta)
+    ctx.bytecode.append(code.INVOKE)
+    ctx.bytecode.append(r_uint(3))
+    ctx.sub_sp(1)
+    ctx.bytecode.append(code.POP_UP_N)
+    ctx.bytecode.append(1)
+    ctx.sub_sp(1)
 
 def compile_form(form, ctx):
     if form is nil:
@@ -330,6 +343,9 @@ def compile_form(form, ctx):
         ctx.bytecode.append(code.INVOKE)
         ctx.bytecode.append(r_uint(size + 1))
         ctx.sub_sp(size)
+
+        compile_meta(rt.meta(form), ctx)
+
         return
 
     if rt.instance_QMARK_(rt.IMap.deref(), form):
@@ -682,7 +698,7 @@ def compile_cons(form, ctx):
     #    ctx.bytecode.append(code.TAIL_CALL)
     #else:
     if meta is not nil:
-        ctx.debug_points[len(ctx.bytecode)] = meta
+        ctx.debug_points[len(ctx.bytecode)] = rt.interpreter_code_info(meta)
     ctx.bytecode.append(code.INVOKE)
 
     ctx.bytecode.append(cnt)

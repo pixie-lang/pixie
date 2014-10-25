@@ -92,17 +92,19 @@ def set_native_value(ptr, val, tp):
 
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
+    __immutable_fields__ = ["_is_inited?", "_lib", "_name", "_arg_types[*]", "_ret_type", \
+                            "_transfer_size?", "_arg0_offset?", "_ret_offset?", "_cd?"]
 
     def type(self):
         return FFIFn._type
 
     def __init__(self, lib, name, arg_types, ret_type):
+        self._rev = 0
         self._name = name
         self._lib = lib
         self._arg_types = arg_types
         self._ret_type = ret_type
         self._is_inited = False
-
 
 
     def thaw(self):
@@ -140,23 +142,26 @@ class FFIFn(object.Object):
             self._arg0_offset = arg0_offset
             self._ret_offset = ret_offset
 
+            self._is_inited = True
+
         return self
 
     def _cleanup_(self):
+        self._rev += 1
         self._f_ptr = lltype.nullptr(rffi.VOIDP.TO)
         self._cd = lltype.nullptr(CIF_DESCRIPTION)
         self._is_inited = False
 
-    #@jit.unroll_safe
-    def pack_args(self, offset_p, args, arg_types):
-        for x in range(len(arg_types)):
-            offset_p = set_native_value(offset_p, args[x], arg_types[x])
-
-
+    @jit.unroll_safe
     def _invoke(self, args):
+        if not self._is_inited:
+            self.thaw()
         exb = lltype.malloc(rffi.CCHARP.TO, self._transfer_size, flavor="raw")
         offset_p = rffi.ptradd(exb, self._arg0_offset)
-        self.pack_args(offset_p, args, self._arg_types)
+
+        for x in range(len(self._arg_types)):
+            offset_p = set_native_value(offset_p, args[x], self._arg_types[x])
+
         jit_ffi_call(self._cd, self._f_ptr, exb)
         offset_p = rffi.ptradd(exb, self._ret_offset)
         ret_val = get_ret_val(offset_p, self._ret_type)
@@ -164,7 +169,7 @@ class FFIFn(object.Object):
         return ret_val
 
     def invoke(self, args):
-        self.thaw()
+        self = jit.promote(self)
         return self._invoke(args)
 
 
