@@ -9,7 +9,7 @@ from rpython.rlib.rarithmetic import r_uint, intmask
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 
-MASK_32 = 0xFFFFFFFF
+MASK_32 = r_uint(0xFFFFFFFF)
 
 class Box(py_object):
     def __init__(self):
@@ -241,9 +241,9 @@ def create_node(shift, key1, val1, key2hash, key2, val2):
 
 def bit_count(i):
     assert isinstance(i, r_uint)
-    i = i - ((i >> 1) & 0x55555555)
-    i = (i & 0x33333333) + ((i >> 2) & 0x33333333)
-    return (((i + (i >> 4) & 0xF0F0F0F) * 0x1010101) & 0xffffffff) >> 24
+    i = i - ((i >> 1) & r_uint(0x55555555))
+    i = (i & r_uint(0x33333333)) + ((i >> 2) & r_uint(0x33333333))
+    return (((i + (i >> 4) & r_uint(0xF0F0F0F)) * r_uint(0x1010101)) & r_uint(0xffffffff)) >> 24
 
 @jit.unroll_safe
 def list_copy(from_lst, from_loc, to_list, to_loc, count):

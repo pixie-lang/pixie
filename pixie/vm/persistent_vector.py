@@ -71,7 +71,7 @@ class PersistentVector(object.Object):
         return not_found
 
     def conj(self, val):
-        assert self._cnt < 0xFFFFFFFF
+        assert self._cnt < r_uint(0xFFFFFFFF)
         i = self._cnt
 
         if self._cnt - self.tailoff() < 32:

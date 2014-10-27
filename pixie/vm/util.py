@@ -2,8 +2,8 @@ from rpython.rlib.rarithmetic import r_uint, LONG_BIT, intmask, LONG_MASK
 from pixie.vm.object import affirm
 
 seed = 0
-C1 = 0xcc9e2d51
-C2 = 0x1b873593
+C1 = r_uint(0xcc9e2d51)
+C2 = r_uint(0x1b873593)
 
 
 
@@ -30,7 +30,7 @@ def mix_k1(k1):
 def mix_h1(h1, k1):
     h1 ^= k1
     h1 = rotl(h1, 13)
-    h1 = h1 * 5 + 0xe6546b64
+    h1 = h1 * 5 + r_uint(0xe6546b64)
     return h1
 
 def hash_unencoded_chars(u):
@@ -55,9 +55,9 @@ def hash_unencoded_chars(u):
 def fmix(h1, length):
     h1 ^= length
     h1 ^= h1 >> 16
-    h1 *= 0x85ebca6b
+    h1 *= r_uint(0x85ebca6b)
     h1 ^= h1 >> 13
-    h1 *= 0xc2b2ae35
+    h1 *= r_uint(0xc2b2ae35)
     h1 ^= h1 >> 16
     return h1
 
