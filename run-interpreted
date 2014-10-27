@@ -1,0 +1,1 @@
+PYTHONPATH=$PYTHONPATH:../externals/pypy python target.py
