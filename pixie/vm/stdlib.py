@@ -53,6 +53,22 @@ defprotocol("pixie.stdlib", "IToTransient", ["-transient"])
 defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
 
 
+def __make_code_overrides(x):
+    @extend(_meta, x._type)
+    def __meta(self):
+        assert isinstance(self, x)
+        return self.meta()
+
+    @extend(_with_meta, x._type)
+    def __meta(self, meta):
+        assert isinstance(self, x)
+        return self.with_meta(meta)
+
+for x in (code.Code, code.Closure, code.VariadicCode, code.MultiArityFn):
+    __make_code_overrides(x)
+
+
+
 def default_str(x):
     from pixie.vm.string import String
 

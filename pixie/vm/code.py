@@ -87,6 +87,13 @@ class BaseCode(object.Object):
     def __init__(self):
         assert isinstance(self, BaseCode)
         self._is_macro = False
+        self._meta = nil
+
+    def meta(self):
+        return self._meta
+
+    def with_meta(self, meta):
+        assert false, "not implemented"
 
     def set_macro(self):
         self._is_macro = True
@@ -120,11 +127,15 @@ class MultiArityFn(BaseCode):
     def type(self):
         return MultiArityFn._type
 
-    def __init__(self, arities, required_arity=0, rest_fn=None):
+    def __init__(self, arities, required_arity=0, rest_fn=None, meta=nil):
         BaseCode.__init__(self)
         self._arities = arities
         self._required_arity = required_arity
         self._rest_fn = rest_fn
+        self._meta = meta
+
+    def with_meta(self, meta):
+        return MultiArityFn(self._arities, self._required_arity, self._rest_fn, meta)
 
     @elidable_promote()
     def get_fn(self, arity):
@@ -169,18 +180,22 @@ class NativeFn(BaseCode):
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
     _type = object.Type(u"Code")
-    __immutable_fields__ = ["_consts[*]", "_bytecode", "_stack_size"]
+    __immutable_fields__ = ["_consts[*]", "_bytecode", "_stack_size", "_meta"]
 
     def type(self):
         return Code._type
 
-    def __init__(self, name, bytecode, consts, stack_size, debug_points):
+    def __init__(self, name, bytecode, consts, stack_size, debug_points, meta=nil):
         BaseCode.__init__(self)
         self._bytecode = bytecode
         self._consts = consts
         self._name = name
         self._stack_size = stack_size
         self._debug_points = debug_points
+        self._meta = meta
+
+    def with_meta(self, meta):
+        return Code(self._name, self._bytecode, self._consts, self._stack_size, self._debug_points, meta)
 
     def get_debug_points(self):
         return self._debug_points
@@ -211,16 +226,20 @@ class Code(BaseCode):
 
 
 class VariadicCode(BaseCode):
-    __immutable_fields__ = ["_required_arity", "_code"]
+    __immutable_fields__ = ["_required_arity", "_code", "_meta"]
     _type = object.Type(u"pixie.stdlib.VariadicCode")
 
     def type(self):
         return VariadicCode._type
 
-    def __init__(self, code, required_arity):
+    def __init__(self, code, required_arity, meta=nil):
         BaseCode.__init__(self)
         self._required_arity = r_uint(required_arity)
         self._code = code
+        self._meta = meta
+
+    def with_meta(self, meta):
+        return VariadicCode(self._code, self._required_arity, meta)
 
     def _invoke(self, args):
         from pixie.vm.array import array
@@ -240,15 +259,19 @@ class VariadicCode(BaseCode):
 
 class Closure(BaseCode):
     _type = object.Type(u"Closure")
-    __immutable_fields__ = ["_closed_overs[*]", "_code"]
+    __immutable_fields__ = ["_closed_overs[*]", "_code", "_meta"]
     def type(self):
         return Closure._type
 
-    def __init__(self, code, closed_overs):
+    def __init__(self, code, closed_overs, meta=nil):
         BaseCode.__init__(self)
         affirm(isinstance(code, Code), u"Code argument to Closure must be an instance of Code")
         self._code = code
         self._closed_overs = closed_overs
+        self._meta = meta
+
+    def with_meta(self, meta):
+        return Closure(self._code, self._closed_overs, meta)
 
     def _invoke(self, args):
         try:
@@ -319,6 +342,7 @@ class Var(BaseCode):
         self._dynamic = False
 
     def set_root(self, o):
+        affirm(o is not None, u"Invalid var set")
         self._rev += 1
         self._root = o
         return self

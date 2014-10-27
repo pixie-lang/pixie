@@ -2,7 +2,9 @@
 
 (def reset! -reset!)
 
-(def map (fn map [f]
+
+(def map (fn ^{:doc "map - creates a transducer that applies f to every input element" :added "0.1"}
+             map [f]
              (fn [xf]
                  (fn
                   ([] (xf))
@@ -404,3 +406,7 @@
  (def exit (ffi-fn libc "exit" [Integer] Integer))
  (def puts (ffi-fn libc "puts" [String] Integer))
  (def printf (ffi-fn libc "printf" [String] Integer))
+
+
+(defn doc [x]
+  (get (meta x) :doc))

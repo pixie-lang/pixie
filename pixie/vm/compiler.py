@@ -289,10 +289,11 @@ def compile_meta(meta, ctx):
     ctx.push_const(code.intern_var(u"pixie.stdlib", u'with-meta'))
     ctx.bytecode.append(code.DUP_NTH)
     ctx.bytecode.append(r_uint(1))
+    ctx.add_sp(1)
     ctx.push_const(meta)
     ctx.bytecode.append(code.INVOKE)
     ctx.bytecode.append(r_uint(3))
-    ctx.sub_sp(1)
+    ctx.sub_sp(2)
     ctx.bytecode.append(code.POP_UP_N)
     ctx.bytecode.append(1)
     ctx.sub_sp(1)
@@ -428,7 +429,8 @@ def compile_fn(form, ctx):
     else:
         compile_fn_body(name, rt.first(form), rt.next(form), ctx)
 
-
+    if rt.meta(name) is not nil:
+        compile_meta(rt.meta(name), ctx)
 
 
 def compile_fn_body(name, args, body, ctx):

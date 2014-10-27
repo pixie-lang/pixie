@@ -483,7 +483,7 @@ def read(rdr, error_on_eof):
         itm = read_symbol(rdr, ch)
 
     if rt.has_meta_QMARK_(itm):
-        itm = rt.with_meta(itm, rt.merge(meta, rt._meta(itm)))
+        itm = rt.with_meta(itm, rt.merge(meta, rt.meta(itm)))
 
     return itm
 

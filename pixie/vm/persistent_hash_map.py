@@ -154,7 +154,7 @@ class BitmapIndexedNode(INode):
             key_or_none = self._array[x]
             val_or_node = self._array[x + 1]
             if key_or_none is None and val_or_node is not None:
-                init = init.reduce_inode(f, init)
+                init = val_or_node.reduce_inode(f, init)
             else:
                 init = f.invoke([init, rt.map_entry(key_or_none, val_or_node)])
             if rt.reduced_QMARK_(init):
@@ -275,6 +275,7 @@ def clone_and_set2(array, i, a, j, b):
     idx = r_uint(0)
     while idx < len(array):
         clone[idx] = array[idx]
+        idx += 1
 
     clone[i] = a
     clone[j] = b
