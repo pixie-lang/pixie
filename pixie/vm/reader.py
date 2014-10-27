@@ -16,6 +16,8 @@ from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 import pixie.vm.stdlib as proto
 import pixie.vm.compiler as compiler
 
+from rpython.rlib.rsre import rsre_re as re
+
 LINE_NUMBER_KW = keyword(u"line-number")
 COLUMN_NUMBER_KW = keyword(u"column-number")
 LINE_KW = keyword(u"line")
@@ -388,6 +390,35 @@ handlers = {u"(": ListReader(),
             u"~": UnquoteReader(),
             u"^": MetaReader()}
 
+# inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
+#                         sign      hex                    oct      radix                           decimal
+#                         1         2      3               4        5                 6             7
+int_matcher = re.compile('([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))')
+
+def parse_int(s):
+    m = int_matcher.match(s)
+
+    sign = 1
+    if m.group(1) == '-':
+        sign = -1
+
+    radix = 10
+    num   = None
+
+    if m.group(7):
+        num = m.group(7)
+    elif m.group(2):
+        radix = 16
+        num = m.group(3)
+    elif m.group(4):
+        radix = 7
+        num = m.group(4)
+    elif m.group(5):
+        radix = int(m.group(5))
+        num = m.group(6)
+
+    return sign * int(num, radix)
+
 def read_number(rdr, ch):
     acc = [ch]
     try:
@@ -400,7 +431,7 @@ def read_number(rdr, ch):
     except EOFError:
         pass
 
-    return rt.wrap(int(u"".join(acc)))
+    return rt.wrap(parse_int(u"".join(acc)))
 
 def read_symbol(rdr, ch):
     acc = [ch]
