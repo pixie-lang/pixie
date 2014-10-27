@@ -34,6 +34,9 @@ class PlatformReader(object.Object):
     def unread(self, ch):
         pass
 
+    def reset_line(self):
+        return self
+
 class StringReader(PlatformReader):
 
     def __init__(self, s):
@@ -68,6 +71,9 @@ class PromptReader(PlatformReader):
         except EOFError:
             self._string_reader = None
             return self.read()
+
+    def reset_line(self):
+        self._string_reader = None
 
     def unread(self, ch):
         assert self._string_reader is not None
@@ -137,6 +143,13 @@ class MetaDataReader(PlatformReader):
             self._cur_ch = ch
             return ch
 
+    def reset_line(self):
+        self._line.finalize()
+        self._line_number += 1
+        self._column_number = 0
+        self._parent_reader.reset_line()
+        return self
+
     def get_metadata(self):
         return rt.hashmap(LINE_KW, rt.wrap(self._line),
                           LINE_NUMBER_KW, rt.wrap(self._line_number),
@@ -197,7 +210,7 @@ class ListReader(ReaderHandler):
 
 class UnmachedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        raise SyntaxError()
+        throw_syntax_error_with_data(rdr, u"Unmatched list close ')'")
 
 class VectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -213,7 +226,7 @@ class VectorReader(ReaderHandler):
 
 class UnmachedVectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        raise SyntaxError()
+        throw_syntax_error_with_data(rdr, u"Unmatched vector close ']'")
 
 class MapReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -419,6 +432,17 @@ eof = EOF()
 
 
 
+def throw_syntax_error_with_data(rdr, txt):
+    assert isinstance(txt, unicode)
+    if isinstance(rdr, MetaDataReader):
+        meta = rdr.get_metadata()
+    else:
+        meta = nil
+
+    data = rt.interpreter_code_info(meta)
+    err = object.RuntimeException(rt.wrap(txt))
+    err._trace.append(data)
+    raise object.WrappedException(err)
 
 
 
@@ -459,7 +483,7 @@ def read(rdr, error_on_eof):
         itm = read_symbol(rdr, ch)
 
     if rt.has_meta_QMARK_(itm):
-        itm = rt.with_meta(itm, meta)
+        itm = rt.with_meta(itm, rt.merge(meta, rt._meta(itm)))
 
     return itm
 

@@ -49,6 +49,7 @@ def repl():
                 val = interpret(compile(val))
             except WrappedException as ex:
                 print "Error: ", ex._ex.__repr__()
+                rdr.reset_line()
                 continue
             if val is keyword(u"exit-repl"):
                 break

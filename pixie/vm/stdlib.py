@@ -109,6 +109,14 @@ def _seq(_):
 def _count(_):
     return numbers.zero_int
 
+@extend(_assoc, nil._type)
+def __assoc(_, k, v):
+    return rt.hashmap(k, v)
+
+@extend(_reduce, nil._type)
+def __reudce(self, f, init):
+    return init
+
 @extend(_name, Var)
 def __name(self):
     assert isinstance(self, Var)
@@ -419,6 +427,7 @@ def merge_fn(acc, x):
 
 
 @as_var("merge")
+@jit.unroll_safe
 def _merge__args(args):
     affirm(len(args) > 0, u"Merge takes at least one arg")
     x = 1
