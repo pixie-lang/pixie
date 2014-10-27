@@ -400,7 +400,7 @@
          ~@proto-bodies)))
 
 
- (def libc (ffi-library (str "libc.so.6")))
+ (def libc (ffi-library pixie.platform/lib-c-name))
  (def exit (ffi-fn libc "exit" [Integer] Integer))
  (def puts (ffi-fn libc "puts" [String] Integer))
  (def printf (ffi-fn libc "printf" [String] Integer))
