@@ -351,7 +351,7 @@
        (reduce (fn [_ map-entry]
                  (set! (resolve (key map-entry)) (val map-entry)))
                nil
-               (apply hashmap ~binds))
+               (apply hashmap ~@binds))
        (let [ret (do ~@body)]
          (pop-binding-frame!)
          ret)))
@@ -407,6 +407,32 @@
  (def puts (ffi-fn libc "puts" [String] Integer))
  (def printf (ffi-fn libc "printf" [String] Integer))
 
+(defn print [& args]
+  (puts (apply str args)))
+
 
 (defn doc [x]
   (get (meta x) :doc))
+
+(defn swap! [a f & args]
+  (reset! a (apply f @a args)))
+
+(def update-inner-f (fn inner-f
+                  ([m f k]
+                   (assoc m k (f (get m k))))
+                  ([m f k & ks]
+                    (assoc m k (apply update-inner-f m f ks)))))
+
+(defn update-in
+  [m ks f & args]
+  (let [f (fn [m] (apply f m args))]
+    (apply update-inner-f m f ks)))
+
+(defn nil? [x]
+  (identical? x nil))
+
+(defn fnil [f else]
+  (fn [x & args]
+    (apply f (if (nil? x) else x) args)))
+
+

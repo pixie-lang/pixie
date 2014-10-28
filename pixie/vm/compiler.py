@@ -391,9 +391,10 @@ def compile_platform_eq(form, ctx):
     ctx.sub_sp(1)
     return ctx
 
-def add_args(args, ctx):
+def add_args(name, args, ctx):
     required_args = -1
     local_idx = 0
+    #ctx.add_local(name, Self())
     for x in range(rt.count(args)):
         arg = rt.nth(args, rt.wrap(x))
         affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
@@ -441,7 +442,7 @@ def compile_fn(form, ctx):
 
 def compile_fn_body(name, args, body, ctx):
     new_ctx = Context(name._str, rt.count(args), ctx)
-    required_args = add_args(args, new_ctx)
+    required_args = add_args(name, args, new_ctx)
     bc = 0
 
     if name is not None:
@@ -663,6 +664,21 @@ def compile_ns(form, ctx):
 def compile_this_ns(form, ctx):
     ctx.push_const(NS_VAR.deref())
 
+def compile_var(form, ctx):
+    form = rt.next(form)
+    name = rt.first(form)
+
+    affirm(isinstance(name, symbol.Symbol), u"var name must be a symbol")
+
+    if rt.namespace(name) is not None:
+        var = code._ns_registry.find_or_make(rt.namespace(name))
+    else:
+        var = NS_VAR.deref().intern_or_make(rt.name(name))
+
+    ctx.push_const(var)
+
+def compile_catch(form, ctx):
+    affirm(False, u"Catch used outside of try")
 
 builtins = {u"fn": compile_fn,
             u"if": compile_if,
@@ -674,7 +690,9 @@ builtins = {u"fn": compile_fn,
             u"let": compile_let,
             u"loop": compile_loop,
             u"comment": compile_comment,
+            u"var": compile_var,
             u"__ns__": compile_ns,
+            u"catch": compile_catch,
             u"this-ns-name": compile_this_ns}
 
 def compiler_special(s):

@@ -82,7 +82,7 @@ class Frame(object):
         self.push(self.nth(delta))
 
     def push_arg(self, idx):
-        assert 0 <= idx < len(self.args)
+        affirm(0 <= idx < len(self.args), u"Argument doesn't exist")
         self.push(self.args[r_uint(idx)])
 
     @unroll_safe
@@ -132,7 +132,7 @@ def make_multi_arity(frame, argc):
 
     return code.MultiArityFn(d, required_arity, rest_fn)
 
-def interpret(code_obj, args=[]):
+def interpret(code_obj, args=[], self_obj = None):
     frame = Frame(code_obj, args)
     while True:
         jitdriver.jit_merge_point(bc=frame.bc,

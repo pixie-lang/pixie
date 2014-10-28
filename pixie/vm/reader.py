@@ -312,7 +312,8 @@ class SyntaxQuoteReader(ReaderHandler):
     def syntax_quote(form):
         if isinstance(form, Symbol) and compiler.is_compiler_special(form):
             ret = rt.list(QUOTE, form)
-        if isinstance(form, Symbol):
+
+        elif isinstance(form, Symbol):
             if rt.namespace(form) is None and rt.name(form).endswith("#"):
                 gmap = rt.deref(GEN_SYM_ENV)
                 affirm(gmap is not nil, u"Gensym literal used outside a syntax quote")

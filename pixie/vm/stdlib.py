@@ -133,6 +133,10 @@ def __assoc(_, k, v):
 def __reudce(self, f, init):
     return init
 
+@extend(_val_at, nil._type)
+def __val_at(x, k, not_found):
+    return not_found
+
 @extend(_name, Var)
 def __name(self):
     assert isinstance(self, Var)
