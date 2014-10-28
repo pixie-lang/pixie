@@ -424,7 +424,7 @@ def parse_int(m):
     return rt.wrap(sign * int(str(num), radix))
 
 def parse_float(m):
-    return rt.wrap(float(str(m.string)))
+    return rt.wrap(float(str(m.group(0))))
 
 def parse_number(s):
     m = int_matcher.match(s)
