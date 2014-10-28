@@ -101,6 +101,16 @@ def _add(a, b):
     assert isinstance(a, Float) and isinstance(b, Float)
     return Float(a.float_val() + b.float_val())
 
+@extend(_add, Integer._type, Float._type)
+def _add(a, b):
+    assert isinstance(a, Integer) and isinstance(b, Float)
+    return rt.wrap(a.int_val() + b.float_val())
+
+@extend(_add, Float._type, Integer._type)
+def _add(a, b):
+    assert isinstance(a, Float) and isinstance(b, Integer)
+    return rt.wrap(a.float_val() + b.int_val())
+
 @extend(_sub, Float._type, Float._type)
 def _sub(a, b):
     assert isinstance(a, Float) and isinstance(b, Float)
