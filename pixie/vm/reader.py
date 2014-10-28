@@ -393,17 +393,16 @@ handlers = {u"(": ListReader(),
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
 #                         sign      hex                    oct      radix                           decimal
 #                         1         2      3               4        5                 6             7
-int_matcher = re.compile('([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))')
+int_matcher = re.compile(u'([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))')
 
 def parse_int(s):
     m = int_matcher.match(s)
 
     sign = 1
-    if m.group(1) == '-':
+    if m.group(1) == u'-':
         sign = -1
 
     radix = 10
-    num   = None
 
     if m.group(7):
         num = m.group(7)
@@ -416,8 +415,10 @@ def parse_int(s):
     elif m.group(5):
         radix = int(m.group(5))
         num = m.group(6)
+    else:
+        return None
 
-    return sign * int(num, radix)
+    return rt.wrap(sign * int(str(num), radix))
 
 def read_number(rdr, ch):
     acc = [ch]
@@ -431,7 +432,11 @@ def read_number(rdr, ch):
     except EOFError:
         pass
 
-    return rt.wrap(parse_int(u"".join(acc)))
+    joined = u"".join(acc)
+    parsed = parse_int(joined)
+    if parsed is not None:
+        return parsed
+    return Symbol(joined)
 
 def read_symbol(rdr, ch):
     acc = [ch]
@@ -506,6 +511,7 @@ def read(rdr, error_on_eof):
         if is_digit(ch2):
             rdr.unread(ch2)
             itm = read_number(rdr, ch)
+
         else:
             rdr.unread(ch2)
             itm = read_symbol(rdr, ch)
