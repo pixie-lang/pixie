@@ -2,7 +2,7 @@ all: help
 
 EXTERNALS=../externals
 
-PYTHON=python
+PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 help:
