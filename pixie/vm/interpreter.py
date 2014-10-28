@@ -246,11 +246,19 @@ def interpret(code_obj, args=[]):
             continue
 
         if inst == code.DEREF_VAR:
+            debug_ip = frame.ip
             var = frame.pop()
             if not isinstance(var, code.Var):
                 affirm(False, u"Can't deref " + var.type()._name)
-            frame.push(var.deref())
-            continue
+            try:
+                frame.push(var.deref())
+                continue
+            except WrappedException as ex:
+                dp = frame.debug_points.get(debug_ip - 1, None)
+                if dp:
+                    ex._ex._trace.append(dp)
+                raise
+
 
         if inst == code.RECUR:
             argc = frame.get_inst()

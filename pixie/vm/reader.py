@@ -6,7 +6,7 @@ from pixie.vm.primitives import nil, true, false
 import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons
 from pixie.vm.symbol import symbol, Symbol
-from pixie.vm.keyword import keyword
+from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
@@ -94,8 +94,9 @@ class LinePromise(object.Object):
         self._chrs.append(ch)
 
     def finalize(self):
-        self._str = u"".join(self._chrs)
-        self._chrs = None
+        if self._chrs is not None:
+            self._str = u"".join(self._chrs)
+            self._chrs = None
 
     def is_finalized(self):
         return self._chrs is None
@@ -370,10 +371,12 @@ class MetaReader(ReaderHandler):
         meta = read(rdr, True)
         obj = read(rdr, True)
 
-        if rt.instance_QMARK_(rt.IMeta.deref(), obj):
+        if isinstance(meta, Keyword):
+            meta = rt.hashmap(meta, true)
 
-            return rt._with_meta(obj, meta)
-        print "not meta"
+        if rt.instance_QMARK_(rt.IMeta.deref(), obj):
+            return rt.with_meta(obj, rt.merge(meta, rt.meta(obj)))
+
         return obj
 
 handlers = {u"(": ListReader(),

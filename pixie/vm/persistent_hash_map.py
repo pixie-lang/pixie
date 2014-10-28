@@ -264,6 +264,7 @@ def clone_and_set(array, i, a):
     idx = r_uint(0)
     while idx < len(array):
         clone[idx] = array[idx]
+        idx += 1
 
     clone[i] = a
     return clone

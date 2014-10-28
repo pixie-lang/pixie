@@ -5,7 +5,7 @@ import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons, Cons
 import pixie.vm.symbol as symbol
 import pixie.vm.code as code
-from pixie.vm.keyword import Keyword
+from pixie.vm.keyword import Keyword, keyword
 from pixie.vm.string import String
 from pixie.vm.atom import Atom
 import pixie.vm.stdlib as proto
@@ -19,6 +19,8 @@ NS_VAR.set_dynamic()
 
 FN_NAME = code.intern_var(u"pixie.stdlib", u"*fn-name*")
 FN_NAME.set_dynamic()
+
+DYNAMIC_KW = keyword(u"dynamic")
 
 gensym_id = Atom(numbers.zero_int)
 
@@ -320,6 +322,10 @@ def compile_form(form, ctx):
 
             ctx.push_const(var)
 
+            meta = rt.meta(form)
+            if meta is not nil:
+                ctx.debug_points[len(ctx.bytecode)] = rt.interpreter_code_info(meta)
+
             ctx.bytecode.append(code.DEREF_VAR)
             return
         loc.emit(ctx)
@@ -515,6 +521,12 @@ def compile_def(form, ctx):
     affirm(isinstance(name, symbol.Symbol), u"Def'd name must be a symbol")
 
     var = NS_VAR.deref().intern_or_make(rt.name(name))
+
+    if rt._val_at(rt.meta(name), DYNAMIC_KW, nil) is true:
+        assert isinstance(var, code.Var)
+        var.set_dynamic()
+
+
     ctx.push_const(var)
     compile_form(val, ctx)
     ctx.bytecode.append(code.SET_VAR)
@@ -535,6 +547,9 @@ def compile_do(form, ctx):
 def compile_quote(form, ctx):
     data = rt.first(rt.next(form))
     ctx.push_const(data)
+
+    if rt.meta(form) is not nil:
+        compile_meta(rt.meta(form), ctx)
 
 def compile_recur(form, ctx):
     form = form.next()
