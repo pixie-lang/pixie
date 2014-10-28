@@ -32,6 +32,19 @@ class Integer(Number):
 zero_int = Integer(0)
 one_int = Integer(1)
 
+class Float(Number):
+    _type = object.Type(u"pixie.stdlib.Float")
+    _immutable_fields_ = ["_float_val"]
+
+    def __init__(self, f_val):
+        self._float_val = f_val
+
+    def float_val(self):
+        return self._float_val
+
+    def type(self):
+        return Float._type
+
 IMath = as_var("IMath")(Protocol(u"IMath"))
 _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
 _sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))
@@ -83,6 +96,32 @@ def eq(a, b):
     raise Exception("Add error")
 
 
+@extend(_add, Float._type, Float._type)
+def _add(a, b):
+    assert isinstance(a, Float) and isinstance(b, Float)
+    return Float(a.float_val() + b.float_val())
+
+@extend(_sub, Float._type, Float._type)
+def _sub(a, b):
+    assert isinstance(a, Float) and isinstance(b, Float)
+    return rt.wrap(a.float_val() - b.float_val())
+
+@extend(_mul, Float._type, Float._type)
+def _mul(a, b):
+    assert isinstance(a, Float) and isinstance(b, Float)
+    return rt.wrap(a.float_val() * b.float_val())
+
+@extend(_div, Float._type, Float._type)
+def _div(a, b):
+    assert isinstance(a, Float) and isinstance(b, Float)
+    return rt.wrap(a.float_val() / b.float_val())
+
+@extend(_num_eq, Float._type, Float._type)
+def _num_eq(a, b):
+    assert isinstance(a, Float) and isinstance(b, Float)
+    return true if a.float_val() == b.float_val() else false
+
+
 def init():
     import pixie.vm.stdlib as proto
     from pixie.vm.string import String
@@ -95,4 +134,10 @@ def init():
     def _repr(i):
         return rt.wrap(unicode(str(i.int_val())))
 
+    @extend(proto._str, Float._type)
+    def _str(i):
+        return rt.wrap(unicode(str(i.float_val())))
 
+    @extend(proto._repr, Float._type)
+    def _repr(i):
+        return rt.wrap(unicode(str(i.float_val())))
