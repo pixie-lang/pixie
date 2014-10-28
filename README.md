@@ -110,6 +110,9 @@ Currently there isn't a whole lot that newcomers can help out with, since the en
 
 Although parts of the language may be very close to Clojure (they are both lisps after all), language parity is not a design goal. We will take the features from Clojure or other languages that are suitable to our needs, and feel free to reject those that aren't. Therefore this should not be considered a "Clojure Dialect", but instead a "Clojure inspired lisp".
 
+## Disclaimer
+This project is the personal work of Timothy Baldridge and contributors. It is not supported by any entity, including Timothy's employer, or any employers of any other contributors.  
+
 ## Copying
 
-Free use of this software is granted under the terms of the GNU Lesser General Public License (LGPL). For details see the files `COPYING` and `COPYING.LESSER` included with the source distribution.
+Free use of this software is granted under the terms of the GNU Lesser General Public License (LGPL). For details see the files `COPYING` and `COPYING.LESSER` included with the source distribution. All copyrights are owned by their respective authors.
