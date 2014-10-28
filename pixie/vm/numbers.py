@@ -135,9 +135,9 @@ def init():
         return rt.wrap(unicode(str(i.int_val())))
 
     @extend(proto._str, Float._type)
-    def _str(i):
-        return rt.wrap(unicode(str(i.float_val())))
+    def _str(f):
+        return rt.wrap(unicode(str(f.float_val())))
 
     @extend(proto._repr, Float._type)
-    def _repr(i):
-        return rt.wrap(unicode(str(i.float_val())))
+    def _repr(f):
+        return rt.wrap(unicode(str(f.float_val())))
