@@ -1,6 +1,7 @@
 script:
   - ./checkout-externals
   - ./make-with-jit
+  - make run_built_tests
 
 os:
   - osx
