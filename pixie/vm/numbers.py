@@ -152,6 +152,32 @@ def _div(a, b):
     return rt._div(rt.wrap(b.denominator() * a.numerator()),
                    rt.wrap(b.numerator() * a.denominator()))
 
+ratio_op_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
+def {pfn}_{ty1}_{ty2}(a, b):
+    assert isinstance(a, {ty1}) and isinstance(b, {ty2})
+    return rt.{pfn}({conv1}(a), {conv2}(b))
+"""
+
+def to_ratio(x):
+    if isinstance(x, Ratio):
+        return x
+    else:
+        return Ratio(x.int_val(), 1)
+
+def get_conv(c):
+    if c == Ratio:
+        return ""
+    else:
+        return "to_ratio"
+
+def define_ratio_ops():
+    for (c1, c2) in [(Integer, Ratio), (Ratio, Integer)]:
+        for op in ["_add", "_sub", "_mul", "_div"]:
+            code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=get_conv(c1), conv2=get_conv(c2))
+            exec code
+
+define_ratio_ops()
+
 # def add(a, b):
 #     if isinstance(a, Integer):
 #         if isinstance(b, Integer):
