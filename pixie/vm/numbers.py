@@ -66,7 +66,7 @@ def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap
                                 wrap_start=wrap_start, wrap_end=wrap_end)
     exec tp
 
-def def_num_ops():
+def define_num_ops():
     # maybe define get_val() instead of using tuples?
     num_classes = [(Integer, "int_val"), (Float, "float_val")]
     for (c1, conv1) in num_classes:
