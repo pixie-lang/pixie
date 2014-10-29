@@ -115,6 +115,8 @@
 (extend -hash Integer hash-int)
 
 (extend -eq Integer -num-eq)
+(extend -eq Float -num-eq)
+(extend -eq Ratio -num-eq)
 
 (def ordered-hash-reducing-fn
   (fn ordered-hash-reducing-fn
@@ -436,7 +438,6 @@
 (defn fnil [f else]
   (fn [x & args]
     (apply f (if (nil? x) else x) args)))
-
 
 (defmacro foreach [binding & body]
   (assert (= 2 (count binding)) "binding and collection required")

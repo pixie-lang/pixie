@@ -66,6 +66,7 @@ def init():
     import pixie.vm.libs.ffi
     import pixie.vm.symbol
     import pixie.vm.libs.path
+    import pixie.vm.libs.string
 
 
 
@@ -73,6 +74,8 @@ def init():
 
     @specialize.argtype(0)
     def wrap(x):
+        if isinstance(x, bool):
+            return true if x else false
         if isinstance(x, int):
             return numbers.Integer(x)
         if isinstance(x, float):
