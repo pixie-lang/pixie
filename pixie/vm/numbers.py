@@ -126,6 +126,12 @@ def _div(n, d):
             dv = dv * -1
         return Ratio(nv, dv)
 
+@extend(_add, Ratio._type, Ratio._type)
+def _add(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return rt._div(rt._add(rt.wrap(b.numerator() * a.denominator()),
+                           rt.wrap(a.numerator() * b.denominator())),
+                   rt.wrap(a.denominator() * b.denominator()))
 
 # def add(a, b):
 #     if isinstance(a, Integer):
