@@ -12,6 +12,14 @@ class Object(object):
         import pixie.vm.stdlib as stdlib
         return stdlib.invoke_other(self, args)
 
+    def int_val(self):
+        affirm(False, u"Expected Number")
+        return 0
+
+    def r_uint_val(self):
+        affirm(False, u"Expected Number")
+        return 0
+
     def promote(self):
         return self
 

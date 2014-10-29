@@ -2,6 +2,8 @@
 
 (def reset! -reset!)
 
+(def load-paths (atom ["./"]))
+
 
 (def map (fn ^{:doc "map - creates a transducer that applies f to every input element" :added "0.1"}
              map [f]

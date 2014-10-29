@@ -84,6 +84,13 @@ def init():
 
     globals()["wrap"] = wrap
 
+
+    def int_val(x):
+        affirm(isinstance(x, numbers.Number), u"Expected number")
+        return x.int_val()
+
+    globals()["int_val"] = int_val
+
     from pixie.vm.code import _ns_registry, BaseCode, munge
 
     for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():

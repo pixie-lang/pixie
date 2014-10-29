@@ -7,6 +7,7 @@ from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
+import os.path as path
 import rpython.rlib.rstacklet as rstacklet
 from rpython.rlib.rarithmetic import r_uint
 
@@ -51,6 +52,9 @@ defprotocol("pixie.stdlib", "ITransient", ["-persistent!"])
 defprotocol("pixie.stdlib", "IToTransient", ["-transient"])
 
 defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
+
+defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
+defprotocol("pixie.stdlib", "IIterator", ["-current", "-has-next?", "-move-next!"])
 
 
 def __make_code_overrides(x):
@@ -262,6 +266,7 @@ def load_file(filename):
     import pixie.vm.symbol as symbol
     import os.path as path
     if isinstance(filename, symbol.Symbol):
+
         affirm(rt.namespace(filename) is None, u"load-file takes a un-namespaced symbol")
         filename_str = rt.name(filename).replace(u".", u"/") + u".lisp"
 
@@ -273,9 +278,20 @@ def load_file(filename):
         affirm(isinstance(filename, string.String), u"Filename must be string")
         filename_str = filename._str
 
-    affirm(path.isfile(str(filename_str)), u"File does not exist on path")
 
-    f = open(str(filename_str))
+    paths = rt.deref(rt.deref(rt.load_paths))
+    f = None
+    for x in range(rt.count(paths)):
+        path_x = rt.nth(paths, rt.wrap(x))
+        affirm(isinstance(path_x, string.String), u"Contents of load-paths must be strings")
+        full_path = path.join(rt.name(path_x), filename_str)
+        if path.isfile(full_path):
+            f = open(str(full_path))
+            break
+
+    if f is None:
+        affirm(False, u"File does not exist in any directory found in load-paths")
+
     data = f.read()
     f.close()
     rdr = reader.StringReader(unicode(data))
