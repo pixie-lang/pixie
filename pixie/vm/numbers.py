@@ -54,33 +54,6 @@ _num_eq = as_var("-num-eq")(DoublePolymorphicFn(u"-num-eq", IMath))
 _num_eq.set_default_fn(wrap_fn(lambda a, b: false))
 
 
-
-@extend(_add, Integer._type, Integer._type)
-def _add(a, b):
-    assert isinstance(a, Integer) and isinstance(b, Integer)
-    return Integer(a.int_val() + b.int_val())
-
-@extend(_sub, Integer._type, Integer._type)
-def _sub(a, b):
-    assert isinstance(a, Integer) and isinstance(b, Integer)
-    return rt.wrap(a.int_val() - b.int_val())
-
-@extend(_mul, Integer._type, Integer._type)
-def _mul(a, b):
-    assert isinstance(a, Integer) and isinstance(b, Integer)
-    return rt.wrap(a.int_val() * b.int_val())
-
-@extend(_div, Integer._type, Integer._type)
-def _div(a, b):
-    assert isinstance(a, Integer) and isinstance(b, Integer)
-    return rt.wrap(a.int_val() / b.int_val())
-
-@extend(_num_eq, Integer._type, Integer._type)
-def _div(a, b):
-    assert isinstance(a, Integer) and isinstance(b, Integer)
-    return true if a.int_val() == b.int_val() else false
-
-
 # def add(a, b):
 #     if isinstance(a, Integer):
 #         if isinstance(b, Integer):
@@ -95,41 +68,29 @@ def eq(a, b):
 
     raise Exception("Add error")
 
+num_op_template = """@extend({pfn}, {ty1}._type, {ty2}._type)
+def {pfn}_{ty1}_{ty2}(a, b):
+    assert isinstance(a, {ty1}) and isinstance(b, {ty2})
+    return {wrap_start}a.{conv1}() {op} b.{conv2}(){wrap_end}
+"""
 
-@extend(_add, Float._type, Float._type)
-def _add(a, b):
-    assert isinstance(a, Float) and isinstance(b, Float)
-    return Float(a.float_val() + b.float_val())
+def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap_end = ")"):
+    tp = num_op_template.format(pfn=pfn, ty1=ty1.__name__, ty2=ty2.__name__,
+                                conv1=conv1, op=op, conv2=conv2,
+                                wrap_start=wrap_start, wrap_end=wrap_end)
+    exec tp
 
-@extend(_add, Integer._type, Float._type)
-def _add(a, b):
-    assert isinstance(a, Integer) and isinstance(b, Float)
-    return rt.wrap(a.int_val() + b.float_val())
+def def_num_ops():
+    # maybe define get_val() instead of using tuples?
+    num_classes = [(Integer, "int_val"), (Float, "float_val")]
+    for (c1, conv1) in num_classes:
+        for (c2, conv2) in num_classes:
+            for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
+                extend_num_op(op, c1, c2, conv1, sym, conv2)
+            extend_num_op("_num_eq", c1, c2, conv1, "==", conv2,
+                          wrap_start = "true if ", wrap_end = " else false")
 
-@extend(_add, Float._type, Integer._type)
-def _add(a, b):
-    assert isinstance(a, Float) and isinstance(b, Integer)
-    return rt.wrap(a.float_val() + b.int_val())
-
-@extend(_sub, Float._type, Float._type)
-def _sub(a, b):
-    assert isinstance(a, Float) and isinstance(b, Float)
-    return rt.wrap(a.float_val() - b.float_val())
-
-@extend(_mul, Float._type, Float._type)
-def _mul(a, b):
-    assert isinstance(a, Float) and isinstance(b, Float)
-    return rt.wrap(a.float_val() * b.float_val())
-
-@extend(_div, Float._type, Float._type)
-def _div(a, b):
-    assert isinstance(a, Float) and isinstance(b, Float)
-    return rt.wrap(a.float_val() / b.float_val())
-
-@extend(_num_eq, Float._type, Float._type)
-def _num_eq(a, b):
-    assert isinstance(a, Float) and isinstance(b, Float)
-    return true if a.float_val() == b.float_val() else false
+define_num_ops()
 
 
 def init():
