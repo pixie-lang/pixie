@@ -203,15 +203,31 @@
 (set-macro! defmacro)
 
 (defn +
-  [& args]
-  (reduce -add 0 args))
-
+  ([] 0)
+  ([x] x)
+  ([x y] (-add x y))
+  ([x y & args]
+      (reduce -add (-add x y) args)))
 
 (defn -
   ([] 0)
   ([x] (-sub 0 x))
-  ([x & args]
-     (reduce -sub x args)))
+  ([x y] (-sub x y))
+  ([x y & args]
+      (reduce -sub (-sub x y) args)))
+
+(defn *
+  ([] 1)
+  ([x] x)
+  ([x y] (-mul x y))
+  ([x y & args]
+      (reduce -mul (-mul x y) args)))
+
+(defn /
+  ([x] (-div 1 x))
+  ([x y] (-div x y))
+  ([x y & args]
+      (reduce -div (-div x y) args)))
 
 (defn =
   ([x] true)
