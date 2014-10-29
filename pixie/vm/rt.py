@@ -75,6 +75,8 @@ def init():
     def wrap(x):
         if isinstance(x, int):
             return numbers.Integer(x)
+        if isinstance(x, float):
+            return numbers.Float(x)
         if isinstance(x, unicode):
             return String(x)
         if isinstance(x, py_str):
