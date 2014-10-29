@@ -438,3 +438,11 @@
     (apply f (if (nil? x) else x) args)))
 
 
+(defmacro foreach [binding & body]
+  (assert (= 2 (count binding)) "binding and collection required")
+  `(reduce
+    (fn [_ ~ (nth binding 0)]
+        ~@body
+        nil)
+    nil
+    ~(nth binding 1)))

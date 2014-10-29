@@ -29,6 +29,11 @@ def _reduce(self, f, init):
             if rt.reduced_QMARK_(init):
                 return rt.deref(init)
 
+        for filename in filenames:
+            init = f.invoke([init, rt.vector(rt.wrap(dirpath), KW_FILE, rt.wrap(filename))])
+            if rt.reduced_QMARK_(init):
+                return rt.deref(init)
+
 
 
     return init
