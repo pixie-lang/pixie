@@ -113,6 +113,8 @@
 (extend -hash Integer hash-int)
 
 (extend -eq Integer -num-eq)
+(extend -eq Float -num-eq)
+(extend -eq Ratio -num-eq)
 
 (def ordered-hash-reducing-fn
   (fn ordered-hash-reducing-fn
