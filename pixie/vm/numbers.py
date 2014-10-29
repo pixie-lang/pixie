@@ -45,6 +45,23 @@ class Float(Number):
     def type(self):
         return Float._type
 
+class Ratio(Number):
+    _type = object.Type(u"pixie.stdlib.Ratio")
+    _immutable_fields_ = ["_numerator", "_denominator"]
+
+    def __init__(self, numerator, denominator):
+        self._numerator = numerator
+        self._denominator = denominator
+
+    def numerator(self):
+        return self._numerator
+
+    def denominator(self):
+        return self._denominator
+
+    def type(self):
+        return Ratio._type
+
 IMath = as_var("IMath")(Protocol(u"IMath"))
 _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
 _sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))
@@ -72,11 +89,41 @@ def define_num_ops():
     for (c1, conv1) in num_classes:
         for (c2, conv2) in num_classes:
             for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
+                if op == "_div" and c1 == Integer and c2 == Integer:
+                    continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)
             extend_num_op("_num_eq", c1, c2, conv1, "==", conv2,
                           wrap_start = "true if ", wrap_end = " else false")
 
 define_num_ops()
+
+
+def gcd(u, v):
+    while v != 0:
+        r = u % v
+        u = v
+        v = r
+    return u
+
+@extend(_div, Integer._type, Integer._type)
+def _div(n, d):
+    object.affirm(d != 0, u"Divide by zero")
+    nv = n.int_val()
+    dv = d.int_val()
+    g = gcd(nv, dv)
+    if g == 0:
+        return rt.wrap(0)
+    nv = nv / g
+    dv = dv / g
+    if dv == 1:
+        return rt.wrap(nv)
+    elif dv == -1:
+        return rt.wrap(-1 * nv)
+    else:
+        if d < 0:
+            nv = nv * -1
+            dv = dv * -1
+        return Ratio(nv, dv)
 
 
 # def add(a, b):
@@ -113,3 +160,11 @@ def init():
     @extend(proto._repr, Float._type)
     def _repr(f):
         return rt.wrap(unicode(str(f.float_val())))
+
+    @extend(proto._repr, Ratio._type)
+    def _repr(r):
+        return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
+
+    @extend(proto._str, Ratio._type)
+    def _str(r):
+        return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
