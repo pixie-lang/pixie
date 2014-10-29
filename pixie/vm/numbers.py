@@ -152,6 +152,11 @@ def _div(a, b):
     return rt._div(rt.wrap(b.denominator() * a.numerator()),
                    rt.wrap(b.numerator() * a.denominator()))
 
+@extend(_num_eq, Ratio._type, Ratio._type)
+def _num_eq(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return true if a.numerator() == b.numerator() and a.denominator() == b.denominator() else false
+
 ratio_op_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
 def {pfn}_{ty1}_{ty2}(a, b):
     assert isinstance(a, {ty1}) and isinstance(b, {ty2})
@@ -184,12 +189,12 @@ def to_float_conv(c):
 
 def define_ratio_ops():
     for (c1, c2) in [(Integer, Ratio), (Ratio, Integer)]:
-        for op in ["_add", "_sub", "_mul", "_div"]:
+        for op in ["_add", "_sub", "_mul", "_div", "_num_eq"]:
             code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_ratio_conv(c1), conv2=to_ratio_conv(c2))
             exec code
 
     for (c1, c2) in [(Float, Ratio), (Ratio, Float)]:
-        for op in ["_add", "_sub", "_mul", "_div"]:
+        for op in ["_add", "_sub", "_mul", "_div", "_num_eq"]:
             code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_float_conv(c1), conv2=to_float_conv(c2))
             exec code
 
