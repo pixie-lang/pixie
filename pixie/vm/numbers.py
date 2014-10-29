@@ -121,7 +121,7 @@ def _div(n, d):
     elif dv == -1:
         return rt.wrap(-1 * nv)
     else:
-        if d < 0:
+        if dv < 0:
             nv = nv * -1
             dv = dv * -1
         return Ratio(nv, dv)
