@@ -54,20 +54,6 @@ _num_eq = as_var("-num-eq")(DoublePolymorphicFn(u"-num-eq", IMath))
 _num_eq.set_default_fn(wrap_fn(lambda a, b: false))
 
 
-# def add(a, b):
-#     if isinstance(a, Integer):
-#         if isinstance(b, Integer):
-#             return Integer(a.int_val() + b.int_val())
-#
-#     raise Exception("Add error")
-
-def eq(a, b):
-    if isinstance(a, Integer):
-        if isinstance(b, Integer):
-            return true if a.int_val() == b.int_val() else false
-
-    raise Exception("Add error")
-
 num_op_template = """@extend({pfn}, {ty1}._type, {ty2}._type)
 def {pfn}_{ty1}_{ty2}(a, b):
     assert isinstance(a, {ty1}) and isinstance(b, {ty2})
@@ -91,6 +77,21 @@ def def_num_ops():
                           wrap_start = "true if ", wrap_end = " else false")
 
 define_num_ops()
+
+
+# def add(a, b):
+#     if isinstance(a, Integer):
+#         if isinstance(b, Integer):
+#             return Integer(a.int_val() + b.int_val())
+#
+#     raise Exception("Add error")
+
+def eq(a, b):
+    if isinstance(a, Integer):
+        if isinstance(b, Integer):
+            return true if a.int_val() == b.int_val() else false
+
+    raise Exception("Add error")
 
 
 def init():
