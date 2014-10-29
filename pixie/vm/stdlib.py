@@ -276,7 +276,7 @@ def load_file(filename):
 
     else:
         affirm(isinstance(filename, string.String), u"Filename must be string")
-        filename_str = filename._str
+        filename_str = rt.name(filename)
 
 
     paths = rt.deref(rt.deref(rt.load_paths))
@@ -284,24 +284,26 @@ def load_file(filename):
     for x in range(rt.count(paths)):
         path_x = rt.nth(paths, rt.wrap(x))
         affirm(isinstance(path_x, string.String), u"Contents of load-paths must be strings")
-        full_path = path.join(rt.name(path_x), filename_str)
+        full_path = path.join(str(rt.name(path_x)), str(filename_str))
         if path.isfile(full_path):
             f = open(str(full_path))
             break
 
     if f is None:
         affirm(False, u"File does not exist in any directory found in load-paths")
+    else:
+        data = f.read()
+        f.close()
 
-    data = f.read()
-    f.close()
-    rdr = reader.StringReader(unicode(data))
+        rdr = reader.StringReader(unicode(data))
 
-    with compiler.with_ns(u"user"):
-        while True:
-            form = reader.read(rdr, False)
-            if form is reader.eof:
-                return nil
-            result = compiler.compile(form).invoke([])
+        with compiler.with_ns(u"user"):
+            while True:
+                form = reader.read(rdr, False)
+                if form is reader.eof:
+                    return nil
+                result = compiler.compile(form).invoke([])
+    return nil
 
 @as_var("the-ns")
 def the_ns(ns_name):
