@@ -278,7 +278,6 @@ def load_file(filename):
         affirm(isinstance(filename, string.String), u"Filename must be string")
         filename_str = rt.name(filename)
 
-
     paths = rt.deref(rt.deref(rt.load_paths))
     f = None
     for x in range(rt.count(paths)):
