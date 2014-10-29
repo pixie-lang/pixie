@@ -133,6 +133,25 @@ def _add(a, b):
                            rt.wrap(a.numerator() * b.denominator())),
                    rt.wrap(a.denominator() * b.denominator()))
 
+@extend(_sub, Ratio._type, Ratio._type)
+def _sub(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return rt._div(rt._add(rt.wrap(-1 * b.numerator() * a.denominator()),
+                           rt.wrap(a.numerator() * b.denominator())),
+                   rt.wrap(a.denominator() * b.denominator()))
+
+@extend(_mul, Ratio._type, Ratio._type)
+def _mul(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return rt._div(rt.wrap(b.numerator() * a.numerator()),
+                   rt.wrap(b.denominator() * a.denominator()))
+
+@extend(_div, Ratio._type, Ratio._type)
+def _div(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return rt._div(rt.wrap(b.denominator() * a.numerator()),
+                   rt.wrap(b.numerator() * a.denominator()))
+
 # def add(a, b):
 #     if isinstance(a, Integer):
 #         if isinstance(b, Integer):
