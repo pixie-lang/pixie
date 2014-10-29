@@ -108,9 +108,9 @@ def gcd(u, v):
 @extend(_div, Integer._type, Integer._type)
 def _div(n, d):
     assert isinstance(n, Integer) and isinstance(d, Integer)
-    object.affirm(d != 0, u"Divide by zero")
     nv = n.int_val()
     dv = d.int_val()
+    object.affirm(dv != 0, u"Divide by zero")
     g = gcd(nv, dv)
     if g == 0:
         return rt.wrap(0)
