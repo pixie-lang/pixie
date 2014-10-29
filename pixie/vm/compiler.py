@@ -310,6 +310,12 @@ def compile_form(form, ctx):
     if isinstance(form, numbers.Integer):
         ctx.push_const(form)
         return
+    if isinstance(form, numbers.Float):
+        ctx.push_const(form)
+        return
+    if isinstance(form, numbers.Ratio):
+        ctx.push_const(form)
+        return
 
     if isinstance(form, symbol.Symbol):
         name = form._str

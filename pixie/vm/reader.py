@@ -395,13 +395,14 @@ handlers = {u"(": ListReader(),
             u"^": MetaReader()}
 
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
-#                         sign      hex                    oct      radix                           decimal
-#                         1         2      3               4        5                 6             7
-int_matcher = re.compile(u'([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))')
+#                           sign      hex                    oct      radix                           decimal
+#                           1         2      3               4        5                 6             7
+int_matcher = re.compile(u'^([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))$')
 
-def parse_int(s):
-    m = int_matcher.match(s)
+float_matcher = re.compile(u'^([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)$')
+ratio_matcher = re.compile(u'^([-+]?[0-9]+)/([0-9]+)$')
 
+def parse_int(m):
     sign = 1
     if m.group(1) == u'-':
         sign = -1
@@ -424,6 +425,29 @@ def parse_int(s):
 
     return rt.wrap(sign * int(str(num), radix))
 
+def parse_float(m):
+    return rt.wrap(float(str(m.group(0))))
+
+def parse_ratio(m):
+    n = rt.wrap(int(str(m.group(1))))
+    d = rt.wrap(int(str(m.group(2))))
+    return rt._div(n, d)
+
+def parse_number(s):
+    m = int_matcher.match(s)
+    if m:
+        return parse_int(m)
+    else:
+        m = float_matcher.match(s)
+        if m:
+            return parse_float(m)
+        else:
+            m = ratio_matcher.match(s)
+            if m:
+                return parse_ratio(m)
+            else:
+                return None
+
 def read_number(rdr, ch):
     acc = [ch]
     try:
@@ -437,7 +461,7 @@ def read_number(rdr, ch):
         pass
 
     joined = u"".join(acc)
-    parsed = parse_int(joined)
+    parsed = parse_number(joined)
     if parsed is not None:
         return parsed
     return Symbol(joined)
