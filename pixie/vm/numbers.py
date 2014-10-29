@@ -164,16 +164,33 @@ def to_ratio(x):
     else:
         return Ratio(x.int_val(), 1)
 
-def get_conv(c):
+def to_ratio_conv(c):
     if c == Ratio:
         return ""
     else:
         return "to_ratio"
 
+def to_float(x):
+    if isinstance(x, Float):
+        return x
+    else:
+        return rt.wrap(x.numerator() / float(x.denominator()))
+
+def to_float_conv(c):
+    if c == Float:
+        return ""
+    else:
+        return "to_float"
+
 def define_ratio_ops():
     for (c1, c2) in [(Integer, Ratio), (Ratio, Integer)]:
         for op in ["_add", "_sub", "_mul", "_div"]:
-            code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=get_conv(c1), conv2=get_conv(c2))
+            code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_ratio_conv(c1), conv2=to_ratio_conv(c2))
+            exec code
+
+    for (c1, c2) in [(Float, Ratio), (Ratio, Float)]:
+        for op in ["_add", "_sub", "_mul", "_div"]:
+            code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_float_conv(c1), conv2=to_float_conv(c2))
             exec code
 
 define_ratio_ops()
