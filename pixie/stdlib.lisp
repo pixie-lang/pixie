@@ -411,6 +411,7 @@
  (def exit (ffi-fn libc "exit" [Integer] Integer))
  (def puts (ffi-fn libc "puts" [String] Integer))
  (def printf (ffi-fn libc "printf" [String] Integer))
+ (def getenv (ffi-fn libc "getenv" [String] String))
 
 (defn print [& args]
   (puts (apply str args)))
