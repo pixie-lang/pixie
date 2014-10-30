@@ -3,6 +3,7 @@
 (def reset! -reset!)
 
 (def load-paths (atom ["./"]))
+(def program-arguments [])
 
 
 (def map (fn ^{:doc "map - creates a transducer that applies f to every input element" :added "0.1"}
@@ -457,3 +458,16 @@
            nil
            (do ~@body
                (recur (inc ~b))))))))
+
+
+(defmacro and
+  ([x] x)
+  ([x y] `(if ~x ~y nil))
+  ([x y & more] `(if ~x (and ~y ~@more))))
+
+(defmacro or
+  ([x] x)
+  ([x y] `(let [r# ~x]
+            (if r# r# ~y)))
+  ([x y & more] `(let [r# ~x]
+                   (if r# r# (or ~y ~@more)))))

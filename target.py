@@ -4,12 +4,12 @@ from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
 from rpython.annotator.policy import AnnotatorPolicy
-from pixie.vm.code import wrap_fn
+from pixie.vm.code import wrap_fn, NativeFn, intern_var
 from pixie.vm.stacklet import with_stacklets
 import pixie.vm.stacklet as stacklet
 from pixie.vm.object import RuntimeException, WrappedException
 from rpython.translator.platform import platform
-
+from pixie.vm.primitives import nil
 import sys
 
 
@@ -23,65 +23,58 @@ class Policy(JitPolicy, AnnotatorPolicy):
     def __init__(self):
         JitPolicy.__init__(self, DebugIFace())
 
-    #def event(pol, bookkeeper, what, x):
-    #    pass
-
 def jitpolicy(driver):
     return JitPolicy(jithookiface=DebugIFace())
 
 
-@wrap_fn
-def repl():
-    from pixie.vm.keyword import keyword
-    import pixie.vm.rt as rt
-    from pixie.vm.string import String
+PROGRAM_ARGUMENTS = intern_var(u"pixie.stdlib", u"program-arguments")
+PROGRAM_ARGUMENTS.set_root(nil)
 
-    with with_ns(u"user"):
-        NS_VAR.deref().include_stdlib()
 
-    rdr = MetaDataReader(PromptReader())
-    with with_ns(u"user"):
-        while True:
-            try:
-                val = read(rdr, False)
-                if val is eof:
+class ReplFn(NativeFn):
+    def __init__(self, args):
+        self._argv = args
+
+    def inner_invoke(self, args):
+        from pixie.vm.keyword import keyword
+        import pixie.vm.rt as rt
+        from pixie.vm.string import String
+        import pixie.vm.persistent_vector as vector
+
+        with with_ns(u"user"):
+            NS_VAR.deref().include_stdlib()
+
+        acc = vector.EMPTY
+        for x in self._argv:
+            acc = rt.conj(acc, rt.wrap(x))
+
+        PROGRAM_ARGUMENTS.set_root(acc)
+
+
+        rdr = MetaDataReader(PromptReader())
+        with with_ns(u"user"):
+            while True:
+                try:
+                    val = read(rdr, False)
+                    if val is eof:
+                        break
+                    val = interpret(compile(val))
+                except WrappedException as ex:
+                    print "Error: ", ex._ex.__repr__()
+                    rdr.reset_line()
+                    continue
+                if val is keyword(u"exit-repl"):
                     break
-                val = interpret(compile(val))
-            except WrappedException as ex:
-                print "Error: ", ex._ex.__repr__()
-                rdr.reset_line()
-                continue
-            if val is keyword(u"exit-repl"):
-                break
-            val = rt.str(val)
-            assert isinstance(val, String), "str should always return a string"
-            print val._str
+                val = rt.str(val)
+                assert isinstance(val, String), "str should always return a string"
+                print val._str
 
-def entry_point(foo=None):
+def entry_point(args):
     print "Pixie 0.1 - Interactive REPL"
     print "(" + platform.name + ", " + platform.cc + ")"
     print "----------------------------"
-    #try:
-    #    code = argv[1]
-    #except IndexError:
-    #    print "must provide a program"
-    #    return 1
-    # rdr = StreamReader(sys.stdin)
-    # while True:
-    #     #val = read(rdr, True)
-    #     #if val is eof:
-    #     #    break
-    #     val = read(StringReader(raw_input("user>")), True)
-    #     print interpret(compile(val))
-    # interpret(compile(read(StringReader("""
-    #                          (do (def foo (fn [h v] (h 42)))
-    #                          ((create-stacklet foo) 0))
-    # """), True)))
-    #rt.load_file(String(u"pixie/stdlib.lisp"))
 
-
-
-    with_stacklets(repl)
+    with_stacklets(ReplFn(args))
 
     return 0
 
@@ -91,7 +84,6 @@ from rpython.rtyper.lltypesystem import lltype
 from rpython.jit.metainterp import warmspot
 
 def run_child(glob, loc):
-    import sys, pdb
     interp = loc['interp']
     graph = loc['graph']
     interp.malloc_check = False
@@ -153,6 +145,4 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    #run_debug(sys.argv)
-    #with_stacklets(bootstrap)
-    entry_point()
+    entry_point(sys.argv)
