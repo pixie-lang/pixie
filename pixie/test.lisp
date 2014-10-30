@@ -10,7 +10,7 @@
 
 (defmacro deftest [nm & body]
   `(do (defn ~nm []
-           (print "running" ~(name nm))
+           (print ".")
            (try
              ~@body
              (swap! *stats* update-in [:pass] (fnil inc 0))
@@ -23,7 +23,7 @@
 
 (defn run-tests []
   (push-binding-frame!)
-  (set! (var *stats*) (atom {}))
+  (set! (var *stats*) (atom {:fail 0 :pass 0}))
 
   (reduce
    (fn
@@ -40,7 +40,9 @@
 
 
 (defn load-all-tests []
+  (print "Looking for tests...")
   (foreach [path @load-paths]
+    (print "Looking for tests in: " path)
            (foreach [desc (pixie.path/file-list path)]
                     (if (= (nth desc 1) :file)
                       (let [filename (nth desc 2)]

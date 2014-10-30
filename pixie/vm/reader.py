@@ -66,7 +66,7 @@ class PromptReader(PlatformReader):
             result = _readline(str(rt.name(compiler.NS_VAR.deref())) + " => ")
             if result == u"":
                 raise EOFError()
-            self._string_reader = StringReader(result + u"\n")
+            self._string_reader = StringReader(result)
 
         try:
             return self._string_reader.read()
@@ -321,7 +321,7 @@ class SyntaxQuoteReader(ReaderHandler):
                 if gs is nil:
                     gs = rt.symbol(rt.str(form, rt.wrap(u"__"), rt.gensym()))
                     GEN_SYM_ENV.set_value(rt.assoc(gmap, form, gs))
-                    form = gs
+                form = gs
             else:
                 var = rt.resolve_in(compiler.NS_VAR.deref(), form)
                 if var is nil:

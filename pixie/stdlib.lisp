@@ -447,3 +447,13 @@
         nil)
     nil
     ~(nth binding 1)))
+
+
+(defmacro dotimes [bind & body]
+  (let [b (nth bind 0)]
+    `(let [max# ~(nth bind 1)]
+       (loop [~b 0]
+         (if (= ~b max#)
+           nil
+           (do ~@body
+               (recur (inc ~b))))))))

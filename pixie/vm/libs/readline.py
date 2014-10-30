@@ -22,4 +22,4 @@ def _readline(prompt):
     if result == lltype.nullptr(rffi.CCHARP.TO):
         return u""
     else:
-        return unicode(rffi.charp2str(result))
+        return unicode(rffi.charp2str(result)) + u"\n"
