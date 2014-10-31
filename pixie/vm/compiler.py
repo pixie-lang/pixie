@@ -24,14 +24,17 @@ DYNAMIC_KW = keyword(u"dynamic")
 
 gensym_id = Atom(numbers.zero_int)
 
+def gensym1():
+    return gensym2(rt.wrap(u"gensym_"))
 
-@code.as_var("gensym")
-def gensym():
+def gensym2(prefix):
     rt.reset_BANG_(gensym_id, rt._add(rt.deref(gensym_id), rt.wrap(1)))
     i = rt.deref(gensym_id)
 
-    return rt.symbol(rt.str(rt.wrap(u"gensym_"), i))
+    return rt.symbol(rt.str(prefix, i))
 
+gensym = code.intern_var(u"pixie.stdlib", u"gensym")
+gensym.set_root(code.MultiArityFn({0: code.wrap_fn(gensym1), 1: code.wrap_fn(gensym2)}))
 
 class with_ns(object):
     def __init__(self, nm):
