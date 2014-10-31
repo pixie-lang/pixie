@@ -474,15 +474,14 @@
 (defn swap! [a f & args]
   (reset! a (apply f @a args)))
 
-(def update-inner-f (fn inner-f
-                  ([m f k]
-                   (assoc m k (f (get m k))))
-                  ([m f k & ks]
-                    (assoc m k (apply update-inner-f m f ks)))))
-
 (defn update-in
   [m ks f & args]
-  (let [f (fn [m] (apply f m args))]
+  (let [f (fn [m] (apply f m args))
+        update-inner-f (fn update-inner-f
+                         ([m f k]
+                            (assoc m k (f (get m k))))
+                         ([m f k & ks]
+                            (assoc m k (apply update-inner-f m f ks))))]
     (apply update-inner-f m f ks)))
 
 (defn nil? [x]

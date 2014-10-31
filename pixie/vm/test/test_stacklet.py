@@ -5,7 +5,7 @@ import pixie.vm.numbers as numbers
 from pixie.vm.primitives import nil
 
 class YieldingFn(code.BaseCode):
-    def _invoke(self, args):
+    def invoke(self, args):
         assert len(args) == 2
         hdler = args[0]
         arg = args[1]
@@ -29,7 +29,7 @@ def yielding_fn(yld):
 class WrappingFn(code.NativeFn):
     def __init__(self, cont):
         self._cont = cont
-    def _invoke(self, args):
+    def invoke(self, args):
         ret = args[0]
         ret.invoke([self._cont.invoke([4])])
 

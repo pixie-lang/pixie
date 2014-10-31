@@ -102,9 +102,6 @@ class BaseCode(object.Object):
     def is_macro(self):
         return self._is_macro
 
-    def _invoke(self, args):
-        raise NotImplementedError()
-
     def get_consts(self):
         raise NotImplementedError()
 
@@ -116,8 +113,11 @@ class BaseCode(object.Object):
         return 0
 
     def invoke(self, args):
-        result = self._invoke(args)
+        result = self.invoke(args)
         return result
+
+    def invoke_with(self, args, this_fn):
+        return self.invoke(args)
 
 
 class MultiArityFn(BaseCode):
@@ -155,8 +155,11 @@ class MultiArityFn(BaseCode):
 
         affirm(False, u"Wrong number of args to fn: got " + unicode(str(arity)) + u" expected " + u",".join(acc))
 
-    def _invoke(self, args):
-        return self.get_fn(len(args)).invoke(args)
+    def invoke(self, args):
+        return self.invoke_with(args, self)
+
+    def invoke_with(self, args, self_fn):
+        return self.get_fn(len(args)).invoke_with(args, self_fn)
 
 
 
@@ -171,11 +174,14 @@ class NativeFn(BaseCode):
     def type(self):
         return NativeFn._type
 
-    def _invoke(self, args):
+    def invoke(self, args):
         return self.inner_invoke(args)
 
     def inner_invoke(self, args):
         raise NotImplementedError()
+
+    def invoke_with(self, args, this_fn):
+        return self.invoke(args)
 
 
 class Code(BaseCode):
@@ -201,9 +207,12 @@ class Code(BaseCode):
     def get_debug_points(self):
         return self._debug_points
 
-    def _invoke(self, args):
+    def invoke(self, args):
+        return self.invoke_with(args, self)
+
+    def invoke_with(self, args, this_fn):
         try:
-            return interpret(self, args)
+            return interpret(self, args, self_obj=this_fn)
         except object.WrappedException as ex:
             ex._ex._trace.append(object.PixieCodeInfo(self._name))
             raise
@@ -242,20 +251,23 @@ class VariadicCode(BaseCode):
     def with_meta(self, meta):
         return VariadicCode(self._code, self._required_arity, meta)
 
-    def _invoke(self, args):
+    def invoke(self, args):
+        return self.invoke_with(args, self)
+
+    def invoke_with(self, args, self_fn):
         from pixie.vm.array import array
         argc = len(args)
         if self._required_arity == 0:
-            return self._code.invoke([array(args)])
+            return self._code.invoke_with([array(args)], self_fn)
         if argc == self._required_arity:
             new_args = resize_list(args, len(args) + 1)
             new_args[len(args)] = array([])
-            return self._code.invoke(new_args)
+            return self._code.invoke_with(new_args, self_fn)
         elif argc > self._required_arity:
             start = slice_from_start(args, self._required_arity, 1)
             rest = slice_to_end(args, self._required_arity)
             start[self._required_arity] = array(rest)
-            return self._code.invoke(start)
+            return self._code.invoke_with(start, self_fn)
         affirm(False, u"Got " + unicode(str(argc)) + u" arg(s) need at least " + unicode(str(self._required_arity)))
 
 class Closure(BaseCode):
@@ -274,9 +286,12 @@ class Closure(BaseCode):
     def with_meta(self, meta):
         return Closure(self._code, self._closed_overs, meta)
 
-    def _invoke(self, args):
+    def invoke(self, args):
+        return self.invoke_with(args, self)
+
+    def invoke_with(self, args, self_fn):
         try:
-            return interpret(self, args)
+            return interpret(self, args, self_obj=self_fn)
         except object.WrappedException as ex:
             ex._ex._trace.append(object.PixieCodeInfo(self._code._name))
             raise
@@ -381,7 +396,10 @@ class Var(BaseCode):
     def is_defined(self):
         return self._root is not undefined
 
-    def _invoke(self, args):
+    def invoke_with(self, args, this_fn):
+        return self.invoke(args)
+
+    def invoke(self, args):
         return self.deref().invoke(args)
 
 class bindings(py_object):
@@ -510,7 +528,7 @@ class DefaultProtocolFn(NativeFn):
     def __init__(self, pfn):
         self._pfn = pfn
 
-    def _invoke(self, args):
+    def invoke(self, args):
         from pixie.vm.string import String
         tp = args[0].type()._name
         affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
@@ -574,7 +592,7 @@ class PolymorphicFn(BaseCode):
         fn = self._dict.get(tp, self._default_fn)
         return promote(fn)
 
-    def _invoke(self, args):
+    def invoke(self, args):
         a = args[0].type()
         fn = self.get_protocol_fn(a, self._rev)
         try:
@@ -621,7 +639,7 @@ class DoublePolymorphicFn(BaseCode):
         fn = d1.get(tp2, self._default_fn)
         return promote(fn)
 
-    def _invoke(self, args):
+    def invoke(self, args):
         affirm(len(args) >= 2, u"DoublePolymorphicFunctions take at least two args")
         a = args[0].type()
         b = args[1].type()

@@ -57,7 +57,7 @@ class WrappedHandler(BaseCode):
     def type(self):
         return WrappedHandler._type
 
-    def _invoke(self, args):
+    def invoke(self, args):
         affirm(len(args) == 1, u"Only one arg to continuation allowed")
         global_state._from = global_state._to
         global_state._to = self

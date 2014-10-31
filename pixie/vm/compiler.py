@@ -275,7 +275,7 @@ def call_macro(var, form, ctx):
 class CompileMapRf(code.NativeFn):
     def __init__(self, ctx):
         self._ctx = ctx
-    def _invoke(self, args):
+    def invoke(self, args):
         map_entry = args[1]
         compile_form(rt.key(map_entry), self._ctx)
         compile_form(rt.val(map_entry), self._ctx)
@@ -407,7 +407,7 @@ def compile_platform_eq(form, ctx):
 def add_args(name, args, ctx):
     required_args = -1
     local_idx = 0
-    #ctx.add_local(name, Self())
+    ctx.add_local(name, Self())
     for x in range(rt.count(args)):
         arg = rt.nth(args, rt.wrap(x))
         affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
@@ -456,7 +456,7 @@ def compile_fn(form, ctx):
 
 def compile_fn_body(name, args, body, ctx):
     new_ctx = Context(name._str, rt.count(args), ctx)
-    required_args = add_args(name, args, new_ctx)
+    required_args = add_args(name._str, args, new_ctx)
     bc = 0
 
     if name is not None:

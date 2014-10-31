@@ -31,11 +31,13 @@ class Frame(object):
                        "base_code",
                        "closed_overs[*]",
                        "finished",
-                       "_is_continuation"
+                       "_is_continuation",
+                       "self_obj"
     ]
-    def __init__(self, code_obj, args):
+    def __init__(self, code_obj, args, self_obj):
         self = hint(self, access_directly=True, fresh_virtualizable=True)
         self.code_obj = code_obj
+        self.self_obj = self_obj
         self.sp = r_uint(0)
         self.ip = r_uint(0)
         self.stack = [None] * code_obj.stack_size()
@@ -169,7 +171,7 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
 
     if frame is None:
         assert code_obj is not None
-        frame = Frame(code_obj, args)
+        frame = Frame(code_obj, args, self_obj or code_obj)
 
 
 
@@ -302,7 +304,7 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
             argc = frame.get_inst()
             args = frame.pop_n(argc)
 
-            frame = Frame(frame.code_obj, args)
+            frame = Frame(frame.code_obj, args, frame.self_obj)
 
             jitdriver.can_enter_jit(bc=frame.bc,
                                   ip=frame.ip,
@@ -313,7 +315,7 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
             continue
 
         if inst == code.PUSH_SELF:
-            frame.push(frame.code_obj)
+            frame.push(frame.self_obj)
             continue
 
         if inst == code.DUP_NTH:
