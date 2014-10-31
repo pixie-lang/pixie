@@ -3,6 +3,7 @@ from pixie.vm.reader import StringReader, read, eof, PromptReader, MetaDataReade
 from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
+from rpython.rlib.rfile import create_stdio
 from rpython.annotator.policy import AnnotatorPolicy
 from pixie.vm.code import wrap_fn, NativeFn, intern_var
 from pixie.vm.stacklet import with_stacklets
@@ -75,7 +76,7 @@ class ReplFn(NativeFn):
 
 class BatchModeFn(NativeFn):
     def __init__(self, args):
-        self._cmd  = args[0]
+        self._file = args[0]
         self._argv = args[1:]
 
     def inner_invoke(self, args):
@@ -91,7 +92,13 @@ class BatchModeFn(NativeFn):
 
         PROGRAM_ARGUMENTS.set_root(acc)
 
-        rt.load_file(rt.wrap(self._cmd))
+        with with_ns(u"user"):
+            if self._file == '-':
+                stdin, _, _ = create_stdio()
+                code = stdin.read()
+                interpret(compile(read(StringReader(unicode(code)), True)))
+            else:
+                rt.load_file(rt.wrap(self._file))
 
 class EvalFn(NativeFn):
     def __init__(self, expr):
@@ -113,7 +120,7 @@ def entry_point(args):
     while i < len(args):
         arg = args[i]
 
-        if arg.startswith('-'):
+        if arg.startswith('-') and arg != '-':
             if arg == '-v' or arg == '--version':
                 print "Pixie 0.1"
                 return 0
@@ -137,7 +144,7 @@ def entry_point(args):
                 return 1
         else:
             interactive = False
-            script_args = args[(i+1):]
+            script_args = args[i:]
             break
 
         i += 1
