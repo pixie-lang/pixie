@@ -120,7 +120,7 @@ class FFIFn(object.Object):
             ret_offset = transfer_size
             transfer_size += get_native_size(self._ret_type)
 
-            cd = lltype.malloc(CIF_DESCRIPTION, 1, flavor="raw")
+            cd = lltype.malloc(CIF_DESCRIPTION, len(self._arg_types), flavor="raw")
             cd.abi = clibffi.FFI_DEFAULT_ABI
             cd.nargs = len(self._arg_types)
             cd.rtype = get_clibffi_type(self._ret_type)

@@ -10,13 +10,13 @@
 
 (defmacro deftest [nm & body]
   `(do (defn ~nm []
-           (print ".")
-           (try
-             ~@body
-             (swap! *stats* update-in [:pass] (fnil inc 0))
-             (catch ex
+         (print "Running: " (str (namespace (var ~nm)) "/" (name (var ~nm))))
+         (try
+           ~@body
+           (swap! *stats* update-in [:pass] (fnil inc 0))
+           (catch ex
                (swap! *stats* update-in [:fail] (fnil inc 0))
-               (swap! *stats* update-in [:errors] (fnil conj []) ex))))
+             (swap! *stats* update-in [:errors] (fnil conj []) ex))))
        (swap! tests assoc (symbol (str (namespace (var ~nm)) "/" (name (var ~nm)))) ~nm)))
 
 
@@ -24,15 +24,11 @@
 (defn run-tests []
   (push-binding-frame!)
   (set! (var *stats*) (atom {:fail 0 :pass 0}))
+  (print @tests)
 
-  (reduce
-   (fn
-     ([_ f]
-        ((val f))
-        nil)
-     ([_] nil))
-   nil
-   @tests)
+  (foreach [test @tests]
+           ((val test)))
+
   (let [stats @*stats*]
     (print stats)
     (pop-binding-frame!)
@@ -42,7 +38,7 @@
 (defn load-all-tests []
   (print "Looking for tests...")
   (foreach [path @load-paths]
-    (print "Looking for tests in: " path)
+           (print "Looking for tests in: " path)
            (foreach [desc (pixie.path/file-list path)]
                     (if (= (nth desc 1) :file)
                       (let [filename (nth desc 2)]

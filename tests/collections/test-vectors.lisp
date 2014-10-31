@@ -1,6 +1,8 @@
 (ns collections.test-vectors
   (require pixie.test :as t))
 
+
+
 (def MAX-SIZE 2000)
 
 (t/deftest vector-creation

@@ -1,8 +1,5 @@
 (require pixie.test :as t)
 
-
-(swap! load-paths conj "./tests/")
-
 (print @load-paths)
 
 (t/load-all-tests)

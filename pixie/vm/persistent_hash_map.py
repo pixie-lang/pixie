@@ -224,7 +224,7 @@ class HashCollisionNode(INode):
                 continue
 
             val = self._array[x + 1]
-            init = f.invoke([init, val])
+            init = f.invoke([init, rt.map_entry(key_or_nil, val)])
             if rt.reduced_QMARK_(init):
                 return init
         return init
