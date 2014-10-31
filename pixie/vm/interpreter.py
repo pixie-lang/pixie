@@ -363,7 +363,7 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
         if inst == code.YIELD:
             if not frame.is_continuation():
                 frame.set_continuation()
-                frame = jit.hint(frame, force_virtualizable=True)
+                #frame = jit.hint(frame, force_virtualizable=True)
                 k = ShallowContinuation(frame, frame.pop())
                 return k
             else:
