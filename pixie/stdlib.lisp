@@ -220,6 +220,35 @@
                   (apply = y rest)
                   false)))
 
+(defn <
+  ([x] true)
+  ([x y] (-lt x y))
+  ([x y & rest] (if (-lt x y)
+                  (apply < y rest)
+                  false)))
+
+(defn >
+  ([x] true)
+  ([x y] (-gt x y))
+  ([x y & rest] (if (-gt x y)
+                  (apply > y rest)
+                  false)))
+
+(defn <=
+  ([x] true)
+  ([x y] (-lte x y))
+  ([x y & rest] (if (-lte x y)
+                  (apply <= y rest)
+                  false)))
+
+(defn >=
+  ([x] true)
+  ([x y] (-gte x y))
+  ([x y & rest] (if (-gte x y)
+                  (apply >= y rest)
+                  false)))
+
+
 (def inc (fn [x] (+ x 1)))
 
 (def dec (fn [x] (- x 1)))
@@ -471,3 +500,27 @@
             (if r# r# ~y)))
   ([x y & more] `(let [r# ~x]
                    (if r# r# (or ~y ~@more)))))
+
+
+(deftype Range [:start :stop :step]
+  IReduce
+  (-reduce [self f init]
+    (let [start (. self :start)
+          stop (. self :stop)
+          step (. self :step)]
+      (loop [i start
+             acc init]
+        (if (or (and (> step 0) (< i stop))
+                (and (< step 0) (> i stop))
+                (and (= step 0)))
+          (let [acc (f acc i)]
+            (if (reduced? acc)
+              @acc
+              (recur (+ i step) acc)))
+          acc)))))
+
+(defn range
+  ([] (->Range 0 MAX-NUMBER 1))
+  ([stop] (->Range 0 stop 1))
+  ([start stop] (->Range start stop 1))
+  ([start stop step] (->Range start stop step)))

@@ -67,8 +67,14 @@ _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
 _sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))
 _mul = as_var("-mul")(DoublePolymorphicFn(u"-mul", IMath))
 _div = as_var("-div")(DoublePolymorphicFn(u"-div", IMath))
+_lt = as_var("-lt")(DoublePolymorphicFn(u"-lt", IMath))
+_gt = as_var("-gt")(DoublePolymorphicFn(u"-gt", IMath))
+_lte = as_var("-lte")(DoublePolymorphicFn(u"-lte", IMath))
+_gte = as_var("-gte")(DoublePolymorphicFn(u"-gte", IMath))
 _num_eq = as_var("-num-eq")(DoublePolymorphicFn(u"-num-eq", IMath))
 _num_eq.set_default_fn(wrap_fn(lambda a, b: false))
+
+as_var("MAX-NUMBER")(Integer(100000)) # TODO: set this to a real max number
 
 
 num_op_template = """@extend({pfn}, {ty1}._type, {ty2}._type)
@@ -92,8 +98,9 @@ def define_num_ops():
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)
-            extend_num_op("_num_eq", c1, c2, conv1, "==", conv2,
-                          wrap_start = "true if ", wrap_end = " else false")
+            for (op, sym) in [("_num_eq", "=="), ("_lt", "<"), ("_gt", ">"), ("_lte", "<="), ("_gte", ">=")]:
+                extend_num_op(op, c1, c2, conv1, sym, conv2,
+                              wrap_start = "true if ", wrap_end = " else false")
 
 define_num_ops()
 
