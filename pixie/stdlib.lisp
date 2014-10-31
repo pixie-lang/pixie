@@ -367,6 +367,20 @@
   ([mp k not-found]
      (-val-at mp k not-found)))
 
+(defn get-in
+  ([m ks]
+     (reduce get m ks))
+  ([m ks not-found]
+     (loop [sentinel 'x
+            mi m
+            ks (seq ks)]
+       (if ks
+         (let [mi (get m (first ks) sentinel)]
+           (if (identical? sentinel mi)
+             not-found
+             (recur sentinel mi (next ks))))
+         m))))
+
 (defmacro assert
   ([test]
      `(if ~test
