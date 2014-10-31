@@ -3,6 +3,7 @@ from pixie.vm.reader import StringReader, read, eof, PromptReader, MetaDataReade
 from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
+from rpython.rlib.rfile import create_stdio
 from rpython.annotator.policy import AnnotatorPolicy
 from pixie.vm.code import wrap_fn, NativeFn, intern_var
 from pixie.vm.stacklet import with_stacklets
@@ -41,6 +42,10 @@ class ReplFn(NativeFn):
         from pixie.vm.string import String
         import pixie.vm.persistent_vector as vector
 
+        print "Pixie 0.1 - Interactive REPL"
+        print "(" + platform.name + ", " + platform.cc + ")"
+        print "----------------------------"
+
         with with_ns(u"user"):
             NS_VAR.deref().include_stdlib()
 
@@ -69,12 +74,85 @@ class ReplFn(NativeFn):
                 assert isinstance(val, String), "str should always return a string"
                 print val._str
 
-def entry_point(args):
-    print "Pixie 0.1 - Interactive REPL"
-    print "(" + platform.name + ", " + platform.cc + ")"
-    print "----------------------------"
+class BatchModeFn(NativeFn):
+    def __init__(self, args):
+        self._file = args[0]
+        self._argv = args[1:]
 
-    with_stacklets(ReplFn(args))
+    def inner_invoke(self, args):
+        import pixie.vm.rt as rt
+        import pixie.vm.persistent_vector as vector
+
+        with with_ns(u"user"):
+            NS_VAR.deref().include_stdlib()
+
+        acc = vector.EMPTY
+        for x in self._argv:
+            acc = rt.conj(acc, rt.wrap(x))
+
+        PROGRAM_ARGUMENTS.set_root(acc)
+
+        with with_ns(u"user"):
+            if self._file == '-':
+                stdin, _, _ = create_stdio()
+                code = stdin.read()
+                interpret(compile(read(StringReader(unicode(code)), True)))
+            else:
+                rt.load_file(rt.wrap(self._file))
+
+class EvalFn(NativeFn):
+    def __init__(self, expr):
+        self._expr = expr
+
+    def inner_invoke(self, args):
+        import pixie.vm.rt as rt
+
+        with with_ns(u"user"):
+            NS_VAR.deref().include_stdlib()
+
+            interpret(compile(read(StringReader(unicode(self._expr)), True)))
+
+def entry_point(args):
+    interactive = True
+    script_args = []
+
+    i = 1
+    while i < len(args):
+        arg = args[i]
+
+        if arg.startswith('-') and arg != '-':
+            if arg == '-v' or arg == '--version':
+                print "Pixie 0.1"
+                return 0
+            elif arg == '-h' or arg == '--help':
+                print args[0] + " [<options>] [<file>]"
+                print "  -h|--help     print this help"
+                print "  -v|--version  print the version number"
+                print "  -e|--eval     evaluate the given expression"
+                return 0
+            elif arg == '-e' or arg == '--eval':
+                i += 1
+                if i < len(args):
+                    expr = args[i]
+                    with_stacklets(EvalFn(expr))
+                    return 0
+                else:
+                    print "Expected argument for " + arg
+                    return 1
+            else:
+                print "Unknown option " + arg
+                return 1
+        else:
+            interactive = False
+            script_args = args[i:]
+            break
+
+        i += 1
+
+    if interactive:
+        with_stacklets(ReplFn(args))
+    else:
+        with_stacklets(BatchModeFn(script_args))
 
     return 0
 
