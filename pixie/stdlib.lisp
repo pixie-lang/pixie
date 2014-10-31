@@ -370,6 +370,16 @@
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
 
+(defn keys [m]
+  (reduce (fn [ks e] (conj ks (key e))) nil m))
+
+(defn vals [m]
+  (reduce (fn [ks e] (conj ks (val e))) nil m))
+
+(extend -seq PersistentHashMap
+        (fn [m]
+          (reduce conj nil m)))
+
 (extend -str PersistentHashMap
         (fn [v]
             (apply str "{" (conj (transduce (comp cat (interpose " ")) conj v) "}"))))
