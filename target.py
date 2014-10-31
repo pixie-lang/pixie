@@ -41,6 +41,10 @@ class ReplFn(NativeFn):
         from pixie.vm.string import String
         import pixie.vm.persistent_vector as vector
 
+        print "Pixie 0.1 - Interactive REPL"
+        print "(" + platform.name + ", " + platform.cc + ")"
+        print "----------------------------"
+
         with with_ns(u"user"):
             NS_VAR.deref().include_stdlib()
 
@@ -70,10 +74,6 @@ class ReplFn(NativeFn):
                 print val._str
 
 def entry_point(args):
-    print "Pixie 0.1 - Interactive REPL"
-    print "(" + platform.name + ", " + platform.cc + ")"
-    print "----------------------------"
-
     with_stacklets(ReplFn(args))
 
     return 0
