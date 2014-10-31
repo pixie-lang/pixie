@@ -578,10 +578,10 @@ def compile_recur(form, ctx):
 
 
 def compile_let(form, ctx):
-    form = next(form)
+    form = rt.next(form)
     bindings = rt.first(form)
     affirm(isinstance(bindings, PersistentVector), u"Bindings must be a vector")
-    body = next(form)
+    body = rt.next(form)
 
     ctc = ctx.can_tail_call
     ctx.disable_tail_call()
@@ -614,10 +614,10 @@ def compile_let(form, ctx):
     ctx.bytecode.append(binding_count)
 
 def compile_loop(form, ctx):
-    form = next(form)
+    form = rt.next(form)
     bindings = rt.first(form)
     affirm(isinstance(bindings, PersistentVector), u"Loop bindings must be a vector")
-    body = next(form)
+    body = rt.next(form)
 
     ctc = ctx.can_tail_call
     ctx.disable_tail_call()
@@ -639,7 +639,7 @@ def compile_loop(form, ctx):
     ctx.push_recur_point(LoopRecurPoint(binding_count, ctx))
     while True:
         compile_form(rt.first(body), ctx)
-        body = next(body)
+        body = rt.next(body)
 
         if body is nil:
             break
