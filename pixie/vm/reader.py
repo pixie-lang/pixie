@@ -415,7 +415,7 @@ def parse_int(m):
         radix = 16
         num = m.group(3)
     elif m.group(4):
-        radix = 7
+        radix = 8
         num = m.group(4)
     elif m.group(5):
         radix = int(m.group(5))
