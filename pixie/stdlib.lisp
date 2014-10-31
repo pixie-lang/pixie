@@ -6,13 +6,6 @@
 (def program-arguments [])
 
 
-(def map (fn ^{:doc "map - creates a transducer that applies f to every input element" :added "0.1"}
-             map [f]
-             (fn [xf]
-                 (fn
-                  ([] (xf))
-                  ([result] (xf result))
-                  ([result item] (xf result (f item)))))))
 
 (def conj (fn conj
            ([] [])
@@ -38,6 +31,19 @@
                 (let [f (xform rf)
                       result (-reduce coll f init)]
                       (f result)))))
+
+(def map (fn ^{:doc "map - creates a transducer that applies f to every input element"
+               :added "0.1"}
+           map
+           ([f]
+             (fn [xf]
+                (fn
+                  ([] (xf))
+                  ([result] (xf result))
+                  ([result item] (xf result (f item))))))
+           ([f coll]
+             (transduce (map f) conj coll))))
+
 
 (def reduce (fn [rf init col]
               (-reduce col rf init)))
@@ -184,6 +190,7 @@
                                 ([h] (h :end)))
                               data)))]
           (stacklet->lazy-seq f)))))
+
 
 (extend -seq PersistentVector sequence)
 (extend -seq Array sequence)
@@ -557,6 +564,17 @@
   ([start stop] (->Range start stop 1))
   ([start stop step] (->Range start stop step)))
 
+(defn iterator [coll]
+  (-iterator coll))
+
+(defn move-next! [i]
+  (-move-next! i)
+  i)
+
+(defn at-end? [i]
+  (-at-end? i)
+  i)
+
 
 (extend -reduce ShallowContinuation
         (fn [k f init]
@@ -568,3 +586,22 @@
                 (let [acc (f acc (-current k))]
                   (-move-next! k)
                   (recur acc)))))))
+
+(defn filter [f]
+  (fn [xf]
+    (fn
+      ([] (xf))
+      ([acc] (xf acc))
+      ([acc i] (if (f i)
+                 (xf acc i)
+                 acc)))))
+
+(defn keep [f]
+  (fn [xf]
+    (fn
+      ([] (xf))
+      ([acc] (xf acc))
+      ([acc i] (let [result (f i)]
+                 (if result
+                   (xf acc result)
+                   acc))))))
