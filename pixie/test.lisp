@@ -24,7 +24,7 @@
 (defn run-tests []
   (push-binding-frame!)
   (set! (var *stats*) (atom {:fail 0 :pass 0}))
-  (print @tests)
+  (print "Running: " (count@tests) " tests")
 
   (foreach [test @tests]
            ((val test)))

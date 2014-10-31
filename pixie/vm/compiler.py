@@ -85,7 +85,7 @@ class Context(object):
             self._max_sp = self._sp
 
     def sub_sp(self, v):
-        assert self._sp >= v
+        assert self._sp >= v, (v, self._sp)
         if self._max_sp < self._sp:
             self._max_sp = self._sp
         self._sp -= v
@@ -289,7 +289,8 @@ def compile_map_literal(form, ctx):
     size = rt.count(form) * 2
     ctx.bytecode.append(code.INVOKE)
     ctx.bytecode.append(r_uint(size) + 1)
-    ctx.sub_sp(size - 1)
+    if size > 0:
+        ctx.sub_sp(size - 1)
 
     compile_meta(rt.meta(form), ctx)
 

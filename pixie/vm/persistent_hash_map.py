@@ -305,6 +305,11 @@ def hashmap__args(args):
     return acc
 
 
+@extend(proto._count, PersistentHashMap)
+def _count(self):
+    assert isinstance(self, PersistentHashMap)
+    return rt.wrap(self._cnt)
+
 
 @extend(proto._val_at, PersistentHashMap)
 def _val_at(self, key, not_found):
