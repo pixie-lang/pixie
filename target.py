@@ -73,8 +73,55 @@ class ReplFn(NativeFn):
                 assert isinstance(val, String), "str should always return a string"
                 print val._str
 
+class BatchModeFn(NativeFn):
+    def __init__(self, args):
+        self._cmd  = args[0]
+        self._argv = args[1:]
+
+    def inner_invoke(self, args):
+        import pixie.vm.rt as rt
+        import pixie.vm.persistent_vector as vector
+
+        with with_ns(u"user"):
+            NS_VAR.deref().include_stdlib()
+
+        acc = vector.EMPTY
+        for x in self._argv:
+            acc = rt.conj(acc, rt.wrap(x))
+
+        PROGRAM_ARGUMENTS.set_root(acc)
+
+        rt.load_file(rt.wrap(self._cmd))
+
 def entry_point(args):
-    with_stacklets(ReplFn(args))
+    interactive = True
+    n = 0
+    script_args = []
+
+    for arg in args[1:]:
+        if arg.startswith('-'):
+            if arg == '-v' or arg == '--version':
+                print "Pixie 0.1"
+                return 0
+            elif arg == '-h' or arg == '--help':
+                print args[0] + " [<options>] [<file>]"
+                print "  -h|--help     print this help"
+                print "  -v|--version  print the version number"
+                return 0
+            else:
+                print "Unknown option " + arg
+                return 1
+        else:
+            interactive = False
+            script_args = args[(n+1):]
+            break
+
+        n += 1
+
+    if interactive:
+        with_stacklets(ReplFn(args))
+    else:
+        with_stacklets(BatchModeFn(script_args))
 
     return 0
 
