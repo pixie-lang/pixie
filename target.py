@@ -93,12 +93,26 @@ class BatchModeFn(NativeFn):
 
         rt.load_file(rt.wrap(self._cmd))
 
+class EvalFn(NativeFn):
+    def __init__(self, expr):
+        self._expr = expr
+
+    def inner_invoke(self, args):
+        import pixie.vm.rt as rt
+
+        with with_ns(u"user"):
+            NS_VAR.deref().include_stdlib()
+
+            interpret(compile(read(StringReader(unicode(self._expr)), True)))
+
 def entry_point(args):
     interactive = True
-    n = 0
     script_args = []
 
-    for arg in args[1:]:
+    i = 1
+    while i < len(args):
+        arg = args[i]
+
         if arg.startswith('-'):
             if arg == '-v' or arg == '--version':
                 print "Pixie 0.1"
@@ -107,16 +121,26 @@ def entry_point(args):
                 print args[0] + " [<options>] [<file>]"
                 print "  -h|--help     print this help"
                 print "  -v|--version  print the version number"
+                print "  -e|--eval     evaluate the given expression"
                 return 0
+            elif arg == '-e' or arg == '--eval':
+                i += 1
+                if i < len(args):
+                    expr = args[i]
+                    with_stacklets(EvalFn(expr))
+                    return 0
+                else:
+                    print "Expected argument for " + arg
+                    return 1
             else:
                 print "Unknown option " + arg
                 return 1
         else:
             interactive = False
-            script_args = args[(n+1):]
+            script_args = args[(i+1):]
             break
 
-        n += 1
+        i += 1
 
     if interactive:
         with_stacklets(ReplFn(args))
