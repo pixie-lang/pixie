@@ -381,6 +381,15 @@
              (recur sentinel mi (next ks))))
          m))))
 
+(defn assoc-in
+  ([m ks v]
+     (let [ks (seq ks)
+           k  (first ks)
+           ks (next ks)]
+       (if ks
+         (assoc m k (assoc-in (get m k) ks v))
+         (assoc m k v)))))
+
 (defmacro assert
   ([test]
      `(if ~test
