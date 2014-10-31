@@ -1,3 +1,4 @@
 *.pyc
 externals
+pixie-vm
 .idea
