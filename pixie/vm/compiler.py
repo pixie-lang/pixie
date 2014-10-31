@@ -85,6 +85,7 @@ class Context(object):
             self._max_sp = self._sp
 
     def sub_sp(self, v):
+        assert self._sp >= v
         if self._max_sp < self._sp:
             self._max_sp = self._sp
         self._sp -= v
@@ -107,6 +108,10 @@ class Context(object):
         self.bytecode.append(r_uint(idx))
         self.add_sp(1)
 
+
+    def pop_locals(self, i=1):
+        for x in range(i):
+            self.locals.pop()
 
     def add_local(self, name, arg):
         self.locals.append(self.locals[-1].copy())
@@ -208,6 +213,7 @@ class LetBinding(LocalType):
 
     def emit(self, ctx):
         ctx.bytecode.append(code.DUP_NTH)
+        assert 0 <= ctx.sp() - self.sp < 100000
         ctx.bytecode.append(r_uint(ctx.sp() - self.sp))
         ctx.add_sp(1)
 
@@ -437,6 +443,7 @@ def compile_fn(form, ctx):
         for x in arities:
             ctx.bytecode.append(r_uint(x))
 
+        ctx.add_sp(1) # result
         ctx.sub_sp(len(arities))
 
     else:
@@ -612,6 +619,7 @@ def compile_let(form, ctx):
     ctx.bytecode.append(code.POP_UP_N)
     ctx.sub_sp(binding_count)
     ctx.bytecode.append(binding_count)
+    ctx.pop_locals(binding_count)
 
 def compile_loop(form, ctx):
     form = rt.next(form)
@@ -650,6 +658,7 @@ def compile_loop(form, ctx):
     ctx.bytecode.append(code.POP_UP_N)
     ctx.sub_sp(binding_count)
     ctx.bytecode.append(binding_count)
+    ctx.pop_locals(binding_count)
 
 def compile_comment(form, ctx):
     ctx.push_const(nil)

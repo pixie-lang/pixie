@@ -74,8 +74,8 @@ class Frame(object):
 
 
     def nth(self, delta):
-        assert delta >= 0
-        assert self.sp - 1 >= delta
+        affirm(delta >= 0, u"Invalid nth value, (compiler error)")
+        affirm(self.sp - 1 >= delta, u"interpreter nth out of range, (compiler error) ")
         return self.stack[self.sp - delta - 1]
 
     def push_nth(self, delta):
@@ -141,8 +141,6 @@ def interpret(code_obj, args=[], self_obj = None):
                                   base_code=frame.base_code,
                                   frame=frame)
         inst = frame.get_inst()
-
-        #print code.BYTECODES[inst]
 
         if inst == code.LOAD_CONST:
             arg = frame.get_inst()
