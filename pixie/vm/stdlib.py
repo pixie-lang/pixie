@@ -10,6 +10,7 @@ import rpython.rlib.jit as jit
 import os.path as path
 import rpython.rlib.rstacklet as rstacklet
 from rpython.rlib.rarithmetic import r_uint
+from pixie.vm.interpreter import ShallowContinuation
 
 
 defprotocol("pixie.stdlib", "ISeq", ["-first", "-next"])
@@ -54,7 +55,7 @@ defprotocol("pixie.stdlib", "IToTransient", ["-transient"])
 defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
 
 defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
-defprotocol("pixie.stdlib", "IIterator", ["-current", "-has-next?", "-move-next!"])
+defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
 
 
 def __make_code_overrides(x):
@@ -165,10 +166,27 @@ def __name(self):
 def __name(_):
     return nil
 
+@extend(_current, ShallowContinuation)
+def _current(self):
+    assert isinstance(self, ShallowContinuation)
+    return self._val
+
+@extend(_at_end_QMARK_, ShallowContinuation)
+def _(self):
+    assert isinstance(self, ShallowContinuation)
+    return true if self.is_finished() else false
+
+@extend(_move_next_BANG_, ShallowContinuation)
+def _(self):
+    assert isinstance(self, ShallowContinuation)
+    self.invoke([nil])
+    return self
+
 @returns(r_uint)
 @as_var("hash")
 def __hash(x):
     return rt._hash(x)
+
 
 
 _count_driver = jit.JitDriver(name="pixie.stdlib.count",
@@ -472,3 +490,5 @@ def _merge__args(args):
     for x in range(1, len(args)):
         acc = rt._reduce(acc, merge_fn, args[x])
     return acc
+
+

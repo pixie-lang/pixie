@@ -517,6 +517,9 @@
   ([x y & more] `(let [r# ~x]
                    (if r# r# (or ~y ~@more)))))
 
+(defmacro when [test & body]
+  `(if ~test (do ~@body)))
+
 
 (deftype Range [:start :stop :step]
   IReduce
@@ -533,10 +536,35 @@
             (if (reduced? acc)
               @acc
               (recur (+ i step) acc)))
-          acc)))))
+          acc))))
+  IIterable
+  (-iterator [self]
+    (let [start (. self :start)
+          stop (. self :stop)
+          step (. self :step)]
+      (loop [i start]
+        (when (or (and (> step 0) (< i stop))
+                (and (< step 0) (> i stop))
+                (and (= step 0)))
+          (yield i)
+          (recur (+ i step)))))))
+
+
 
 (defn range
   ([] (->Range 0 MAX-NUMBER 1))
   ([stop] (->Range 0 stop 1))
   ([start stop] (->Range start stop 1))
   ([start stop step] (->Range start stop step)))
+
+
+(extend -reduce ShallowContinuation
+        (fn [k f init]
+          (loop [acc init]
+            (if (reduced? init)
+              @init
+              (if (-at-end? k)
+                acc
+                (let [acc (f acc (-current k))]
+                  (-move-next! k)
+                  (recur acc)))))))

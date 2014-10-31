@@ -695,6 +695,13 @@ def compile_var(form, ctx):
 def compile_catch(form, ctx):
     affirm(False, u"Catch used outside of try")
 
+def compile_yield(form, ctx):
+    affirm(rt.count(form) == 2, u"yield takes a single argument")
+    arg = rt.first(rt.next(form))
+    compile_form(arg, ctx)
+    ctx.bytecode.append(code.YIELD)
+
+
 builtins = {u"fn": compile_fn,
             u"if": compile_if,
             u"platform=": compile_platform_eq,
@@ -708,7 +715,8 @@ builtins = {u"fn": compile_fn,
             u"var": compile_var,
             u"__ns__": compile_ns,
             u"catch": compile_catch,
-            u"this-ns-name": compile_this_ns}
+            u"this-ns-name": compile_this_ns,
+            u"yield": compile_yield}
 
 def compiler_special(s):
     if isinstance(s, symbol.Symbol):

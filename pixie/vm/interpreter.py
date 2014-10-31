@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, affirm, WrappedException
+from pixie.vm.object import Object, affirm, WrappedException, Type
 import pixie.vm.code as code
 import pixie.vm.numbers as numbers
 from pixie.vm.primitives import nil, true, false
@@ -29,7 +29,8 @@ class Frame(object):
                        "debug_points",
                        "args[*]",
                        "base_code",
-                       "closed_overs[*]"
+                       "closed_overs[*]",
+                       "finished"
 ]
     def __init__(self, code_obj, args):
         self = hint(self, access_directly=True, fresh_virtualizable=True)
@@ -40,6 +41,7 @@ class Frame(object):
         self.args = debug.make_sure_not_resized(args)
         self.base_code = code_obj.get_base_code()
         self.debug_points = code_obj.get_debug_points()
+        self.finished = False
         if code_obj is not None:
             self.unpack_code_obj()
 
@@ -132,8 +134,37 @@ def make_multi_arity(frame, argc):
 
     return code.MultiArityFn(d, required_arity, rest_fn)
 
-def interpret(code_obj, args=[], self_obj = None):
-    frame = Frame(code_obj, args)
+class ShallowContinuation(Object):
+    _type = Type(u"pixie.stdlib.ShallowContinuation")
+
+    def __init__(self, frame, val):
+        assert isinstance(frame, Frame)
+        self._frame = frame
+        self._val = val
+
+    def type(self):
+        return ShallowContinuation._type
+
+
+    def is_finished(self):
+        return self._frame.finished
+
+    def invoke(self, args):
+        affirm(len(args) == 1, u"Generators only take one argument")
+        arg = args[0]
+        self._frame.push(arg)
+        val = interpret(orig_frame=self._frame)
+        self._val = val
+        return self._val
+
+def interpret(code_obj=None, args=[], self_obj = None, orig_frame=None):
+
+    if orig_frame is None:
+        assert code_obj is not None
+        frame = Frame(code_obj, args)
+    else:
+        frame = orig_frame
+
     while True:
         jitdriver.jit_merge_point(bc=frame.bc,
                                   ip=frame.ip,
@@ -188,7 +219,7 @@ def interpret(code_obj, args=[], self_obj = None):
 
         if inst == code.RETURN:
             val = frame.pop()
-
+            frame.finished = True
             return val
 
         if inst == code.COND_BR:
@@ -317,6 +348,14 @@ def interpret(code_obj, args=[], self_obj = None):
             frame.push(code.VariadicCode(code_object, required_arity))
 
             continue
+
+        if inst == code.YIELD:
+            if orig_frame is None:
+                frame = jit.hint(frame, force_virtualizable=True)
+                k = ShallowContinuation(frame, frame.pop())
+                return k
+            else:
+                return frame.pop()
 
 
         affirm(False, u"NO DISPATCH FOR: " + unicode(code.BYTECODES[inst]))
