@@ -8,10 +8,10 @@ import rpython.rlib.jit as jit
 import rpython.rlib.debug as debug
 import pixie.vm.rt as rt
 
-def get_location(ip, sp, bc, base_code):
+def get_location(ip, sp, is_continuation, bc, base_code):
     return code.BYTECODES[bc[ip]] + " in " + str(base_code._name)
 
-jitdriver = JitDriver(greens=["ip", "sp", "bc", "base_code"], reds=["frame"], virtualizables=["frame"],
+jitdriver = JitDriver(greens=["ip", "sp", "is_continuation", "bc", "base_code"], reds=["frame"], virtualizables=["frame"],
                       get_printable_location=get_location)
 
 
@@ -30,8 +30,9 @@ class Frame(object):
                        "args[*]",
                        "base_code",
                        "closed_overs[*]",
-                       "finished"
-]
+                       "finished",
+                       "_is_continuation"
+    ]
     def __init__(self, code_obj, args):
         self = hint(self, access_directly=True, fresh_virtualizable=True)
         self.code_obj = code_obj
@@ -42,8 +43,16 @@ class Frame(object):
         self.base_code = code_obj.get_base_code()
         self.debug_points = code_obj.get_debug_points()
         self.finished = False
+        self._is_continuation = 0
         if code_obj is not None:
             self.unpack_code_obj()
+
+    def set_continuation(self):
+        self._is_continuation = 1
+
+    def is_continuation(self):
+        return self._is_continuation == 1
+
 
     def unpack_code_obj(self):
         self.bc = self.code_obj.get_bytecode()
@@ -151,26 +160,26 @@ class ShallowContinuation(Object):
 
     def invoke(self, args):
         affirm(len(args) == 1, u"Generators only take one argument")
-        arg = args[0]
-        self._frame.push(arg)
-        val = interpret(orig_frame=self._frame)
+        self._frame.push(args[0])
+        val = interpret(frame=self._frame)
         self._val = val
         return self._val
 
-def interpret(code_obj=None, args=[], self_obj = None, orig_frame=None):
+def interpret(code_obj=None, args=[], self_obj = None, frame=None):
 
-    if orig_frame is None:
+    if frame is None:
         assert code_obj is not None
         frame = Frame(code_obj, args)
-    else:
-        frame = orig_frame
+
+
 
     while True:
         jitdriver.jit_merge_point(bc=frame.bc,
                                   ip=frame.ip,
                                   sp=frame.sp,
                                   base_code=frame.base_code,
-                                  frame=frame)
+                                  frame=frame,
+                                  is_continuation=frame._is_continuation)
         inst = frame.get_inst()
 
         if inst == code.LOAD_CONST:
@@ -299,7 +308,8 @@ def interpret(code_obj=None, args=[], self_obj = None, orig_frame=None):
                                   ip=frame.ip,
                                   sp=frame.sp,
                                   base_code=frame.base_code,
-                                  frame=frame)
+                                  frame=frame,
+                                  is_continuation=frame._is_continuation)
             continue
 
         if inst == code.PUSH_SELF:
@@ -334,7 +344,8 @@ def interpret(code_obj=None, args=[], self_obj = None, orig_frame=None):
                                   ip=frame.ip,
                                   sp=frame.sp,
                                   base_code=frame.base_code,
-                                  frame=frame)
+                                  frame=frame,
+                                  is_continuation=frame._is_continuation)
             continue
 
         if inst == code.MAKE_MULTI_ARITY:
@@ -350,8 +361,9 @@ def interpret(code_obj=None, args=[], self_obj = None, orig_frame=None):
             continue
 
         if inst == code.YIELD:
-            if orig_frame is None:
-                frame = jit.hint(frame, force_virtualizable=True)
+            if not frame.is_continuation():
+                frame.set_continuation()
+                #frame = jit.hint(frame, force_virtualizable=True)
                 k = ShallowContinuation(frame, frame.pop())
                 return k
             else:
