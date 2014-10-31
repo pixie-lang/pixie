@@ -490,11 +490,13 @@
 
 
 (defmacro and
+  ([] true)
   ([x] x)
   ([x y] `(if ~x ~y nil))
   ([x y & more] `(if ~x (and ~y ~@more))))
 
 (defmacro or
+  ([] false)
   ([x] x)
   ([x y] `(let [r# ~x]
             (if r# r# ~y)))
