@@ -390,6 +390,29 @@
   ([mp k not-found]
      (-val-at mp k not-found)))
 
+(defn get-in
+  ([m ks]
+     (reduce get m ks))
+  ([m ks not-found]
+     (loop [sentinel 'x
+            mi m
+            ks (seq ks)]
+       (if ks
+         (let [mi (get m (first ks) sentinel)]
+           (if (identical? sentinel mi)
+             not-found
+             (recur sentinel mi (next ks))))
+         m))))
+
+(defn assoc-in
+  ([m ks v]
+     (let [ks (seq ks)
+           k  (first ks)
+           ks (next ks)]
+       (if ks
+         (assoc m k (assoc-in (get m k) ks v))
+         (assoc m k v)))))
+
 (defmacro assert
   ([test]
      `(if ~test
@@ -512,11 +535,13 @@
 
 
 (defmacro and
+  ([] true)
   ([x] x)
   ([x y] `(if ~x ~y nil))
   ([x y & more] `(if ~x (and ~y ~@more))))
 
 (defmacro or
+  ([] false)
   ([x] x)
   ([x y] `(let [r# ~x]
             (if r# r# ~y)))
