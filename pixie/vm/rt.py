@@ -58,6 +58,7 @@ def init():
     import pixie.vm.lazy_seq
     import pixie.vm.persistent_list
     import pixie.vm.persistent_hash_map
+    import pixie.vm.persistent_hash_set
     import pixie.vm.custom_types
     import pixie.vm.compiler as compiler
     import pixie.vm.map_entry

@@ -388,6 +388,12 @@
         (fn [v]
           (transduce cat unordered-hash-reducing-fn v)))
 
+(extend -seq PersistentHashSet sequence)
+
+(extend -str PersistentHashSet
+        (fn [s]
+          (apply str "#{" (conj (transduce (interpose " ") conj s) "}"))))
+
 (extend -str Keyword
   (fn [k]
     (if (namespace k)
