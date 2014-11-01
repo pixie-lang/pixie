@@ -13,6 +13,7 @@ from pixie.vm.libs.readline import _readline
 from pixie.vm.string import String
 from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
+from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
 import pixie.vm.stdlib as proto
 import pixie.vm.compiler as compiler
 
@@ -380,6 +381,30 @@ class MetaReader(ReaderHandler):
 
         return obj
 
+class SetReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        acc = EMPTY_SET
+        while True:
+            eat_whitespace(rdr)
+            ch = rdr.read()
+            if ch == u"}":
+                return acc
+
+            rdr.unread(ch)
+            acc = acc.conj(read(rdr, True))
+
+dispatch_handlers = {
+    u"{":  SetReader()
+}
+
+class DispatchReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        ch = rdr.read()
+        handler = dispatch_handlers[ch]
+        if handler is None:
+            raise Exception("unknown dispatch #" + ch)
+        return handler.invoke(rdr, ch)
+
 handlers = {u"(": ListReader(),
             u")": UnmachedListReader(),
             u"[": VectorReader(),
@@ -392,7 +417,9 @@ handlers = {u"(": ListReader(),
             u"@": DerefReader(),
             u"`": SyntaxQuoteReader(),
             u"~": UnquoteReader(),
-            u"^": MetaReader()}
+            u"^": MetaReader(),
+            u"#": DispatchReader()
+}
 
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
 #                           sign      hex                    oct      radix                           decimal
@@ -466,12 +493,15 @@ def read_number(rdr, ch):
         return parsed
     return Symbol(joined)
 
+def is_terminating_macro(ch):
+    return ch != u"#" and ch != u"'" and ch != u"%" and ch in handlers
+
 def read_symbol(rdr, ch):
     acc = [ch]
     try:
         while True:
             ch = rdr.read()
-            if is_whitespace(ch) or ch in handlers:
+            if is_whitespace(ch) or is_terminating_macro(ch):
                 rdr.unread(ch)
                 break
             acc.append(ch)
