@@ -399,6 +399,10 @@
       (str ":" (namespace k) "/" (name k))
       (str ":" (name k)))))
 
+(extend -invoke Keyword
+  (fn [k m]
+    (-val-at m k nil)))
+
 (defn get
   ([mp k]
      (get mp k nil))
