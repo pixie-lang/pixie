@@ -140,14 +140,11 @@
 
 (extend -str PersistentVector
   (fn [v]
-    (apply str "[" (conj (transduce (interpose ", ") conj v) "]"))))
-
-
-
+    (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
 
 (extend -str Cons
   (fn [v]
-    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
 
 (extend -hash Cons
         (fn [v]
@@ -155,11 +152,11 @@
 
 (extend -str PersistentList
   (fn [v]
-    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
 
 (extend -str LazySeq
   (fn [v]
-    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
 
 (extend -hash PersistentVector
   (fn [v]
@@ -379,7 +376,7 @@
 
 (extend -str MapEntry
         (fn [v]
-            (apply str "[" (conj (transduce (interpose ", ") conj v) "]"))))
+            (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
 
 (extend -hash MapEntry
   (fn [v]
@@ -387,7 +384,8 @@
 
 (extend -str PersistentHashMap
         (fn [v]
-            (apply str "{" (conj (transduce (comp cat (interpose " ")) conj v) "}"))))
+          (let [entry->str (map (fn [e] (vector (key e) " " (val e))))]
+            (apply str "{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
 
 (extend -hash PersistentHashMap
         (fn [v]
