@@ -353,6 +353,15 @@
   ([obj sym & args]
      (apply (get-field obj sym) args)))
 
+(defn number? [v] (instance? Number))
+(defn string? [v] (instance? String v))
+(defn keyword? [v] (instance? Keyword v))
+
+(defn list? [v] (instance? PersistentList v))
+(defn map? [v] (satisfies? IMap v))
+
+(defn indexed? [v] (satisfies? IIndexed v))
+(defn counted? [v] (satisfies? ICounted v))
 
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn [self idx not-found]

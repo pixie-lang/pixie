@@ -6,12 +6,13 @@ from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
 import pixie.vm.rt as rt
 
 class Number(object.Object):
-    pass
+    _type = object.Type(u"pixie.stdlib.Number")
 
-
+    def type(self):
+        return Number._type
 
 class Integer(Number):
-    _type = object.Type(u"pixie.stdlib.Integer")
+    _type = object.Type(u"pixie.stdlib.Integer", Number._type)
     _immutable_fields_ = ["_int_val"]
 
     def __init__(self, i_val):
@@ -33,7 +34,7 @@ zero_int = Integer(0)
 one_int = Integer(1)
 
 class Float(Number):
-    _type = object.Type(u"pixie.stdlib.Float")
+    _type = object.Type(u"pixie.stdlib.Float", Number._type)
     _immutable_fields_ = ["_float_val"]
 
     def __init__(self, f_val):
@@ -46,7 +47,7 @@ class Float(Number):
         return Float._type
 
 class Ratio(Number):
-    _type = object.Type(u"pixie.stdlib.Ratio")
+    _type = object.Type(u"pixie.stdlib.Ratio", Number._type)
     _immutable_fields_ = ["_numerator", "_denominator"]
 
     def __init__(self, numerator, denominator):
