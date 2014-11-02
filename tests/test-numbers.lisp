@@ -1,4 +1,4 @@
-(ns pixie.test-numbers
+(ns pixie.tests.test-numbers
   (require pixie.test :as t))
 
 (t/deftest integer-literals
