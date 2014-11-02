@@ -380,6 +380,13 @@ def _val_at(self, key, not_found):
     else:
         return not_found
 
+@extend(proto._contains_key, PersistentVector)
+def _contains_key(self, key):
+    if not isinstance(key, Integer):
+        return false
+    else:
+        return true if key.int_val() >= 0 and key.int_val() < intmask(self._cnt) else false
+
 @extend(proto._conj, PersistentVector)
 def _conj(self, v):
     assert isinstance(self, PersistentVector)

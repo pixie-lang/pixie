@@ -33,7 +33,7 @@ defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
 defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
 
-defprotocol("pixie.stdlib", "IAssociative", ["-assoc"])
+defprotocol("pixie.stdlib", "IAssociative", ["-assoc", "-contains-key"])
 
 defprotocol("pixie.stdlib", "ILookup", ["-val-at"])
 

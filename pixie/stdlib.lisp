@@ -302,6 +302,9 @@
   ([m k v & rest]
      (apply assoc (-assoc m k v) rest)))
 
+(defn contains? [coll key]
+  (-contains-key coll key))
+
 (def slot-tp (create-type :slot [:val]))
 
 (defn ->Slot [x]

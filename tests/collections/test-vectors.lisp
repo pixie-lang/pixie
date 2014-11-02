@@ -1,8 +1,6 @@
 (ns collections.test-vectors
   (require pixie.test :as t))
 
-
-
 (def MAX-SIZE 2000)
 
 (t/deftest vector-creation
@@ -12,3 +10,12 @@
       (do (dotimes [j (count acc)]
             (t/assert= j (nth acc j)))
           (recur (conj acc (count acc)))))))
+
+(t/deftest vector-contains
+  (let [v [1 2 3]
+        c [0 1 2]
+        n [-1 3]]
+    (foreach [c c]
+             (t/assert= (contains? v c) true))
+    (foreach [n n]
+             (t/assert= (contains? v n) false))))
