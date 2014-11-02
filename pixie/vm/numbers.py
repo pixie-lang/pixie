@@ -67,6 +67,8 @@ _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
 _sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))
 _mul = as_var("-mul")(DoublePolymorphicFn(u"-mul", IMath))
 _div = as_var("-div")(DoublePolymorphicFn(u"-div", IMath))
+_quot = as_var("-quot")(DoublePolymorphicFn(u"-quot", IMath))
+_rem = as_var("-rem")(DoublePolymorphicFn(u"-rem", IMath))
 _lt = as_var("-lt")(DoublePolymorphicFn(u"-lt", IMath))
 _gt = as_var("-gt")(DoublePolymorphicFn(u"-gt", IMath))
 _lte = as_var("-lte")(DoublePolymorphicFn(u"-lte", IMath))
@@ -94,7 +96,7 @@ def define_num_ops():
     num_classes = [(Integer, "int_val"), (Float, "float_val")]
     for (c1, conv1) in num_classes:
         for (c2, conv2) in num_classes:
-            for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
+            for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/"), ("_quot", "/"), ("_rem", "%")]:
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)

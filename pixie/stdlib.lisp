@@ -236,6 +236,12 @@
   ([x y & args]
       (reduce -div (-div x y) args)))
 
+(defn quot [num div]
+  (-quot num div))
+
+(defn rem [num div]
+  (-rem num div))
+
 (defn =
   ([x] true)
   ([x y] (eq x y))
@@ -551,6 +557,10 @@
 (defmacro when [test & body]
   `(if ~test (do ~@body)))
 
+(defn abs [x]
+  (if (< x 0)
+    (* -1 x)
+    x))
 
 (deftype Range [:start :stop :step]
   IReduce
