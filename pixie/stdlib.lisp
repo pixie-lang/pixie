@@ -245,6 +245,11 @@
                   (apply = y rest)
                   false)))
 
+(defn not=
+  ([x] false)
+  ([x y] (not (eq x y)))
+  ([x y & rest] (not (apply = x y rest))))
+
 (defn <
   ([x] true)
   ([x y] (-lt x y))
