@@ -1,6 +1,7 @@
 from pixie.vm.object import Object, _type_registry, affirm, InterpreterCodeInfo
 from pixie.vm.primitives import nil, true, false, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
+from pixie.vm.persistent_hash_set import PersistentHashSet
 import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons, Cons
 import pixie.vm.symbol as symbol
@@ -297,6 +298,17 @@ def compile_map_literal(form, ctx):
 
     compile_meta(rt.meta(form), ctx)
 
+class ConsReduce(code.NativeFn):
+    def _invoke(self, args):
+        return rt.cons(args[1], args[0])
+
+def compile_set_literal(form, ctx):
+    vals = rt.reduce(ConsReduce(), nil, form)
+    vector_call = rt.cons(rt.symbol(rt.wrap(u"vector")), vals)
+    set_call = rt.cons(rt.symbol(rt.wrap(u"set")), rt.cons(vector_call, nil))
+
+    compile_cons(set_call, ctx)
+
 def compile_meta(meta, ctx):
     ctx.push_const(code.intern_var(u"pixie.stdlib", u'with-meta'))
     ctx.bytecode.append(code.DUP_NTH)
@@ -369,6 +381,10 @@ def compile_form(form, ctx):
 
         compile_meta(rt.meta(form), ctx)
 
+        return
+
+    if isinstance(form, PersistentHashSet):
+        compile_set_literal(form, ctx)
         return
 
     if rt.instance_QMARK_(rt.IMap.deref(), form):
