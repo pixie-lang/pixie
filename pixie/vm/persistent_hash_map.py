@@ -364,8 +364,9 @@ def _eq(self, obj):
     seq = rt.seq(self)
     while seq is not nil:
         entry = rt.first(seq)
-        found = _contains_key(obj, entry._key)
-        if not found or not rt.eq(entry._value, rt.get(obj, entry._key)):
+        key = rt._key(entry)
+        found = rt._contains_key(obj, key)
+        if not found or not rt.eq(rt._val(entry), rt.get(obj, key)):
             return false
         seq = rt.next(seq)
 
