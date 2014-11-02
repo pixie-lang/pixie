@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo
+from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           resize_list, list_copy, returns, get_var_if_defined
 import pixie.vm.code as code
@@ -101,7 +101,7 @@ def seq(x):
 
 @as_var("seq?")
 def seq_QMARK_(x):
-    return true if rt.instance_QMARK_(rt.ISeq.deref(), x) else false
+    return true if rt.satisfies_QMARK_(rt.ISeq.deref(), x) else false
 
 
 @as_var("type")
@@ -221,7 +221,7 @@ def __with_meta(a, b):
 @returns(bool)
 @as_var("has-meta?")
 def __has_meta(a):
-    return true if rt.instance_QMARK_(rt.IMeta.deref(), a) else false
+    return true if rt.satisfies_QMARK_(rt.IMeta.deref(), a) else false
 
 @as_var("conj")
 def conj(a, b):
@@ -244,8 +244,8 @@ def str__args(args):
 @jit.unroll_safe
 def apply__args(args):
     last_itm = args[len(args) - 1]
-    if not rt.instance_QMARK_(rt.IIndexed.deref(), last_itm) or \
-        not rt.instance_QMARK_(rt.ICounted.deref(), last_itm):
+    if not rt.satisfies_QMARK_(rt.IIndexed.deref(), last_itm) or \
+        not rt.satisfies_QMARK_(rt.ICounted.deref(), last_itm):
         raise ValueError("Last item to apply must be bost IIndexed and ICounted")
 
     fn = args[0]
@@ -267,7 +267,14 @@ def apply__args(args):
 
 @returns(bool)
 @as_var("instance?")
-def _instance(proto, o):
+def _instance(c, o):
+    affirm(isinstance(c, Type), u"c must be a type")
+
+    return true if istypeinstance(o, c) else false
+
+@returns(bool)
+@as_var("satisfies?")
+def _satisfies(proto, o):
     affirm(isinstance(proto, Protocol), u"proto must be a Protocol")
 
     return true if proto.satisfies(o.type()) else false
@@ -373,7 +380,7 @@ def identical(a, b):
 
 @as_var("vector?")
 def vector_QMARK_(a):
-    return true if rt.instance_QMARK_(rt.IVector.deref(), a) else false
+    return true if rt.satisfies_QMARK_(rt.IVector.deref(), a) else false
 
 @returns(bool)
 @as_var("eq")
