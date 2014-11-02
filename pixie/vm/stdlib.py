@@ -89,11 +89,23 @@ _meta.set_default_fn(wrap_fn(lambda x: nil))
 
 @as_var("first")
 def first(x):
-    return rt._first(x)
+    if rt.satisfies_QMARK_(ISeq, x):
+        return rt._first(x)
+
+    seq = rt.seq(x)
+    if seq is nil:
+        return nil
+    return rt._first(seq)
 
 @as_var("next")
 def next(x):
-    return rt.seq(rt._next(x))
+    if rt.satisfies_QMARK_(ISeq, x):
+        return rt._next(x)
+    seq = rt.seq(x)
+    if seq is nil:
+        return nil
+    else:
+        return rt.seq(rt._next(seq))
 
 @as_var("seq")
 def seq(x):
