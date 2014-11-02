@@ -205,6 +205,9 @@
 
 (set-macro! defmacro)
 
+(defn not [x]
+  (if x false true))
+
 (defn +
   ([] 0)
   ([x] x)
@@ -316,10 +319,6 @@
   ([f1 f2 f3]
      (fn [& args]
        (f1 (f2 (apply f3 args))))))
-
-
-(defn not [x]
-  (if x false true))
 
 (defmacro cond
   ([] nil)
