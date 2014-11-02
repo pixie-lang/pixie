@@ -5,6 +5,8 @@ import rpython.rlib.jit as jit
 from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
 import pixie.vm.rt as rt
 
+import math
+
 class Number(object.Object):
     _type = object.Type(u"pixie.stdlib.Number")
 
@@ -104,6 +106,8 @@ def define_num_ops():
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)
+            extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
+            extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
             for (op, sym) in [("_num_eq", "=="), ("_lt", "<"), ("_gt", ">"), ("_lte", "<="), ("_gte", ">=")]:
                 extend_num_op(op, c1, c2, conv1, sym, conv2,
                               wrap_start = "true if ", wrap_end = " else false")
