@@ -381,6 +381,7 @@ class MetaReader(ReaderHandler):
 
         return obj
 
+<<<<<<< HEAD
 class SetReader(ReaderHandler):
     def invoke(self, rdr, ch):
         acc = EMPTY_SET
@@ -404,6 +405,21 @@ class DispatchReader(ReaderHandler):
         if handler is None:
             raise Exception("unknown dispatch #" + ch)
         return handler.invoke(rdr, ch)
+    
+class LineCommentReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        self.skip_line(rdr)
+        return read(rdr, True)
+
+    def skip_line(self, rdr):
+        while True:
+            ch = rdr.read()
+            if ch == u"\n":
+                return
+            elif ch == u"\r":
+                ch2 = rdr.read()
+                if ch2 == u"\n":
+                    return
 
 handlers = {u"(": ListReader(),
             u")": UnmachedListReader(),
@@ -418,7 +434,8 @@ handlers = {u"(": ListReader(),
             u"`": SyntaxQuoteReader(),
             u"~": UnquoteReader(),
             u"^": MetaReader(),
-            u"#": DispatchReader()
+            u"#": DispatchReader(),
+            u";": LineCommentReader()
 }
 
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
@@ -539,17 +556,6 @@ def throw_syntax_error_with_data(rdr, txt):
     raise object.WrappedException(err)
 
 
-
-def skip_line(rdr):
-    while True:
-        ch = rdr.read()
-        if ch == u"\n":
-            return
-        elif ch == u"\r":
-            ch2 = rdr.read()
-            if ch2 == u"\n":
-                return
-
 def read(rdr, error_on_eof):
     try:
         eat_whitespace(rdr)
@@ -582,9 +588,6 @@ def read(rdr, error_on_eof):
         else:
             rdr.unread(ch2)
             itm = read_symbol(rdr, ch)
-    elif ch == u";":
-        skip_line(rdr)
-        return read(rdr, error_on_eof)
 
     else:
         itm = read_symbol(rdr, ch)
