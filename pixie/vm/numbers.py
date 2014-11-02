@@ -92,12 +92,15 @@ def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap
                                 wrap_start=wrap_start, wrap_end=wrap_end)
     exec tp
 
+extend_num_op("_quot", Integer, Integer, "int_val", "/", "int_val")
+extend_num_op("_rem", Integer, Integer, "int_val", "%", "int_val")
+
 def define_num_ops():
     # maybe define get_val() instead of using tuples?
     num_classes = [(Integer, "int_val"), (Float, "float_val")]
     for (c1, conv1) in num_classes:
         for (c2, conv2) in num_classes:
-            for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/"), ("_quot", "/"), ("_rem", "%")]:
+            for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)
