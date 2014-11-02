@@ -279,6 +279,14 @@
 
 (def dec (fn [x] (- x 1)))
 
+(defn second [x]
+  (first (next x)))
+
+(defn third [x]
+  (first (next (next x))))
+
+(defn fourth [x]
+  (first (next (next (next x)))))
 
 (defn assoc
   ([m] m)
