@@ -9,3 +9,13 @@
              (t/assert= (contains? m c) true))
     (foreach [n n]
              (t/assert= (contains? m c) false))))
+
+(t/deftest map-equals
+  (let [m {:a 1, :b 2, :c 3}]
+    (t/assert= (-eq {} {}) true)
+    (t/assert= (-eq m m) true)
+    (t/assert= (-eq m {:a 1, :b 2, :c 3}) true)
+
+    (t/assert= (-eq m {}) false)
+    (t/assert= (-eq m {:a 1, :b 2} false))
+    (t/assert= (-eq m [[:a 1] [:b 2] [:c 3]]) false)))
