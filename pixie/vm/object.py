@@ -70,12 +70,12 @@ class Type(Object):
 Type._type = Type(u"Type")
 
 def istypeinstance(obj, t):
-    if obj._type == t:
+    if obj._type is t:
         return True
-    elif obj._type._parent != None:
+    elif obj._type._parent is not None:
         obj_type = obj._type._parent
-        while obj_type != None:
-            if obj_type == t:
+        while obj_type is not None:
+            if obj_type is t:
                 return True
             obj_type = obj_type._parent
         return False
