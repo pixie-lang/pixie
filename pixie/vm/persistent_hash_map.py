@@ -364,12 +364,12 @@ def _eq(self, obj):
     seq = rt.seq(self)
     while seq is not nil:
         entry = rt.first(seq)
-        found = _contains_key(entry._key)
-        if not found or rt.eq(entry._value, rt.get(obj, entry._key)) is not true:
+        found = _contains_key(obj, entry._key)
+        if not found or not rt.eq(entry._value, rt.get(obj, entry._key)):
             return false
         seq = rt.next(seq)
 
-    return True
+    return true
 
 @extend(proto._contains_key, PersistentHashMap)
 def _contains_key(self, key):
