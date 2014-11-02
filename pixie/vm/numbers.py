@@ -180,6 +180,26 @@ def _rem(a, b):
     q = rt.wrap((a.numerator() * b.denominator()) / (a.denominator() * b.numerator()))
     return rt._sub(a, rt._mul(q, b))
 
+@extend(_lt, Ratio._type, Ratio._type)
+def _lt(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return true if a.numerator() * b.denominator() < b.numerator() * a.denominator() else false
+
+@extend(_gt, Ratio._type, Ratio._type)
+def _gt(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return rt._lt(b, a)
+
+@extend(_lte, Ratio._type, Ratio._type)
+def _lte(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return true if rt._lt(b, a) is false else false
+
+@extend(_gte, Ratio._type, Ratio._type)
+def gte(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return true if rt._lt(a, b) is false else false
+
 @extend(_num_eq, Ratio._type, Ratio._type)
 def _num_eq(a, b):
     assert isinstance(a, Ratio) and isinstance(b, Ratio)
@@ -217,12 +237,12 @@ def to_float_conv(c):
 
 def define_ratio_ops():
     for (c1, c2) in [(Integer, Ratio), (Ratio, Integer)]:
-        for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_num_eq"]:
+        for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_lt", "_gt", "_lte", "_gte", "_num_eq"]:
             code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_ratio_conv(c1), conv2=to_ratio_conv(c2))
             exec code
 
     for (c1, c2) in [(Float, Ratio), (Ratio, Float)]:
-        for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_num_eq"]:
+        for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_lt", "_gt", "_lte", "_gte", "_num_eq"]:
             code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_float_conv(c1), conv2=to_float_conv(c2))
             exec code
 
