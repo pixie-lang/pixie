@@ -353,7 +353,7 @@
   ([obj sym & args]
      (apply (get-field obj sym) args)))
 
-(defn number? [v] (instance? Number))
+(defn number? [v] (instance? Number v))
 (defn string? [v] (instance? String v))
 (defn keyword? [v] (instance? Keyword v))
 
