@@ -291,12 +291,12 @@ SEQ = symbol(u"seq")
 LIST = symbol(u"list")
 
 def is_unquote(form):
-    return True if rt.instance_QMARK_(rt.ISeq.deref(), form) \
+    return True if rt.satisfies_QMARK_(rt.ISeq.deref(), form) \
                    and rt.eq(rt.first(form), UNQUOTE) \
            else False
 
 def is_unquote_splicing(form):
-    return True if rt.instance_QMARK_(rt.ISeq.deref(), form) \
+    return True if rt.satisfies_QMARK_(rt.ISeq.deref(), form) \
                    and rt.eq(rt.first(form), UNQUOTE_SPLICING) \
            else False
 
@@ -376,7 +376,7 @@ class MetaReader(ReaderHandler):
         if isinstance(meta, Keyword):
             meta = rt.hashmap(meta, true)
 
-        if rt.instance_QMARK_(rt.IMeta.deref(), obj):
+        if rt.satisfies_QMARK_(rt.IMeta.deref(), obj):
             return rt.with_meta(obj, rt.merge(meta, rt.meta(obj)))
 
         return obj

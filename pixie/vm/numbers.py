@@ -5,13 +5,16 @@ import rpython.rlib.jit as jit
 from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
 import pixie.vm.rt as rt
 
+import math
+
 class Number(object.Object):
-    pass
+    _type = object.Type(u"pixie.stdlib.Number")
 
-
+    def type(self):
+        return Number._type
 
 class Integer(Number):
-    _type = object.Type(u"pixie.stdlib.Integer")
+    _type = object.Type(u"pixie.stdlib.Integer", Number._type)
     _immutable_fields_ = ["_int_val"]
 
     def __init__(self, i_val):
@@ -33,7 +36,7 @@ zero_int = Integer(0)
 one_int = Integer(1)
 
 class Float(Number):
-    _type = object.Type(u"pixie.stdlib.Float")
+    _type = object.Type(u"pixie.stdlib.Float", Number._type)
     _immutable_fields_ = ["_float_val"]
 
     def __init__(self, f_val):
@@ -46,7 +49,7 @@ class Float(Number):
         return Float._type
 
 class Ratio(Number):
-    _type = object.Type(u"pixie.stdlib.Ratio")
+    _type = object.Type(u"pixie.stdlib.Ratio", Number._type)
     _immutable_fields_ = ["_numerator", "_denominator"]
 
     def __init__(self, numerator, denominator):
@@ -67,6 +70,8 @@ _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
 _sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))
 _mul = as_var("-mul")(DoublePolymorphicFn(u"-mul", IMath))
 _div = as_var("-div")(DoublePolymorphicFn(u"-div", IMath))
+_quot = as_var("-quot")(DoublePolymorphicFn(u"-quot", IMath))
+_rem = as_var("-rem")(DoublePolymorphicFn(u"-rem", IMath))
 _lt = as_var("-lt")(DoublePolymorphicFn(u"-lt", IMath))
 _gt = as_var("-gt")(DoublePolymorphicFn(u"-gt", IMath))
 _lte = as_var("-lte")(DoublePolymorphicFn(u"-lte", IMath))
@@ -89,6 +94,9 @@ def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap
                                 wrap_start=wrap_start, wrap_end=wrap_end)
     exec tp
 
+extend_num_op("_quot", Integer, Integer, "int_val", "/", "int_val")
+extend_num_op("_rem", Integer, Integer, "int_val", "%", "int_val")
+
 def define_num_ops():
     # maybe define get_val() instead of using tuples?
     num_classes = [(Integer, "int_val"), (Float, "float_val")]
@@ -98,6 +106,8 @@ def define_num_ops():
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)
+            extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
+            extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
             for (op, sym) in [("_num_eq", "=="), ("_lt", "<"), ("_gt", ">"), ("_lte", "<="), ("_gte", ">=")]:
                 extend_num_op(op, c1, c2, conv1, sym, conv2,
                               wrap_start = "true if ", wrap_end = " else false")
@@ -159,6 +169,37 @@ def _div(a, b):
     return rt._div(rt.wrap(b.denominator() * a.numerator()),
                    rt.wrap(b.numerator() * a.denominator()))
 
+@extend(_quot, Ratio._type, Ratio._type)
+def _quot(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return rt.wrap((a.numerator() * b.denominator()) / (a.denominator() * b.numerator()))
+
+@extend(_rem, Ratio._type, Ratio._type)
+def _rem(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    q = rt.wrap((a.numerator() * b.denominator()) / (a.denominator() * b.numerator()))
+    return rt._sub(a, rt._mul(q, b))
+
+@extend(_lt, Ratio._type, Ratio._type)
+def _lt(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return true if a.numerator() * b.denominator() < b.numerator() * a.denominator() else false
+
+@extend(_gt, Ratio._type, Ratio._type)
+def _gt(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return rt._lt(b, a)
+
+@extend(_lte, Ratio._type, Ratio._type)
+def _lte(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return true if rt._lt(b, a) is false else false
+
+@extend(_gte, Ratio._type, Ratio._type)
+def gte(a, b):
+    assert isinstance(a, Ratio) and isinstance(b, Ratio)
+    return true if rt._lt(a, b) is false else false
+
 @extend(_num_eq, Ratio._type, Ratio._type)
 def _num_eq(a, b):
     assert isinstance(a, Ratio) and isinstance(b, Ratio)
@@ -196,12 +237,12 @@ def to_float_conv(c):
 
 def define_ratio_ops():
     for (c1, c2) in [(Integer, Ratio), (Ratio, Integer)]:
-        for op in ["_add", "_sub", "_mul", "_div", "_num_eq"]:
+        for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_lt", "_gt", "_lte", "_gte", "_num_eq"]:
             code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_ratio_conv(c1), conv2=to_ratio_conv(c2))
             exec code
 
     for (c1, c2) in [(Float, Ratio), (Ratio, Float)]:
-        for op in ["_add", "_sub", "_mul", "_div", "_num_eq"]:
+        for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_lt", "_gt", "_lte", "_gte", "_num_eq"]:
             code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_float_conv(c1), conv2=to_float_conv(c2))
             exec code
 

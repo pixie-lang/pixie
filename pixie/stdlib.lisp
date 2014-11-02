@@ -140,14 +140,11 @@
 
 (extend -str PersistentVector
   (fn [v]
-    (apply str "[" (conj (transduce (interpose ", ") conj v) "]"))))
-
-
-
+    (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
 
 (extend -str Cons
   (fn [v]
-    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
 
 (extend -hash Cons
         (fn [v]
@@ -155,11 +152,11 @@
 
 (extend -str PersistentList
   (fn [v]
-    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
 
 (extend -str LazySeq
   (fn [v]
-    (apply str "(" (conj (transduce (interpose ", ") conj v) ")"))))
+    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
 
 (extend -hash PersistentVector
   (fn [v]
@@ -235,6 +232,12 @@
   ([x y] (-div x y))
   ([x y & args]
       (reduce -div (-div x y) args)))
+
+(defn quot [num div]
+  (-quot num div))
+
+(defn rem [num div]
+  (-rem num div))
 
 (defn =
   ([x] true)
@@ -347,6 +350,18 @@
   ([obj sym & args]
      (apply (get-field obj sym) args)))
 
+(defn true? [v] (identical? v true))
+(defn false? [v] (identical? v false))
+
+(defn number? [v] (instance? Number v))
+(defn string? [v] (instance? String v))
+(defn keyword? [v] (instance? Keyword v))
+
+(defn list? [v] (instance? PersistentList v))
+(defn map? [v] (satisfies? IMap v))
+
+(defn indexed? [v] (satisfies? IIndexed v))
+(defn counted? [v] (satisfies? ICounted v))
 
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn [self idx not-found]
@@ -364,7 +379,7 @@
 
 (extend -str MapEntry
         (fn [v]
-            (apply str "[" (conj (transduce (interpose ", ") conj v) "]"))))
+            (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
 
 (extend -hash MapEntry
   (fn [v]
@@ -382,7 +397,8 @@
 
 (extend -str PersistentHashMap
         (fn [v]
-            (apply str "{" (conj (transduce (comp cat (interpose " ")) conj v) "}"))))
+          (let [entry->str (map (fn [e] (vector (key e) " " (val e))))]
+            (apply str "{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
 
 (extend -hash PersistentHashMap
         (fn [v]
@@ -399,6 +415,10 @@
     (if (namespace k)
       (str ":" (namespace k) "/" (name k))
       (str ":" (name k)))))
+
+(extend -invoke Keyword
+  (fn [k m]
+    (-val-at m k nil)))
 
 (defn get
   ([mp k]
@@ -567,6 +587,10 @@
 (defmacro when [test & body]
   `(if ~test (do ~@body)))
 
+(defn abs [x]
+  (if (< x 0)
+    (* -1 x)
+    x))
 
 (deftype Range [:start :stop :step]
   IReduce
@@ -594,7 +618,27 @@
                 (and (< step 0) (> i stop))
                 (and (= step 0)))
           (yield i)
-          (recur (+ i step)))))))
+          (recur (+ i step))))))
+  ICounted
+  (-count [self]
+    (let [start (. self :start)
+          stop  (. self :stop)
+          step  (. self :step)]
+      (if (or (and (< start stop) (< step 0))
+              (and (> start stop) (> step 0))
+              (= step 0))
+        0
+        (abs (quot (- start stop) step)))))
+  IIndexed
+  (-nth [self idx]
+    (let [start (. self :start)
+          stop (. self :stop)
+          step (. self :step)
+          cmp (if (< start stop) < >)
+          val (+ start (* idx step))]
+      (if (cmp val stop)
+        val
+        nil))))
 
 
 
