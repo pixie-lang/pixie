@@ -1,7 +1,7 @@
 import pixie.vm.rt as rt
 from pixie.vm.object import Object, Type
 from pixie.vm.code import extend, as_var
-from pixie.vm.primitives import nil
+from pixie.vm.primitives import nil, true, false
 import pixie.vm.stdlib as proto
 import pixie.vm.numbers as numbers
 import pixie.vm.util as util
@@ -38,6 +38,11 @@ def _nth(self, idx):
         return Character(ord(self._str[i]))
     raise IndexError()
 
+@extend(proto._eq, String)
+def _eq(self, v):
+    if not isinstance(v, String):
+        return false
+    return true if self._str == v._str else false
 
 class Character(Object):
     _type = Type(u"pixie.stdlib.Character")
