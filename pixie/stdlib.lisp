@@ -588,7 +588,27 @@
                 (and (< step 0) (> i stop))
                 (and (= step 0)))
           (yield i)
-          (recur (+ i step)))))))
+          (recur (+ i step))))))
+  ICounted
+  (-count [self]
+    (let [start (. self :start)
+          stop  (. self :stop)
+          step  (. self :step)]
+      (if (or (and (< start stop) (< step 0))
+              (and (> start stop) (> step 0))
+              (= step 0))
+        0
+        (abs (quot (- start stop) step)))))
+  IIndexed
+  (-nth [self idx]
+    (let [start (. self :start)
+          stop (. self :stop)
+          step (. self :step)
+          cmp (if (< start stop) < >)
+          val (+ start (* idx step))]
+      (if (cmp val stop)
+        val
+        nil))))
 
 
 
