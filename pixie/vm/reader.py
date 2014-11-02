@@ -381,7 +381,6 @@ class MetaReader(ReaderHandler):
 
         return obj
 
-<<<<<<< HEAD
 class SetReader(ReaderHandler):
     def invoke(self, rdr, ch):
         acc = EMPTY_SET
@@ -405,7 +404,7 @@ class DispatchReader(ReaderHandler):
         if handler is None:
             raise Exception("unknown dispatch #" + ch)
         return handler.invoke(rdr, ch)
-    
+
 class LineCommentReader(ReaderHandler):
     def invoke(self, rdr, ch):
         self.skip_line(rdr)
