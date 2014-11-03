@@ -683,6 +683,8 @@
 
 (extend -seq IIterator iterator-seq)
 
+(extend -eq ISeqable -seq-eq)
+
 (extend -reduce ShallowContinuation
         (fn [k f init]
           (loop [acc init]

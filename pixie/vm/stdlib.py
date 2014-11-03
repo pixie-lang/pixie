@@ -115,6 +115,22 @@ def seq(x):
 def seq_QMARK_(x):
     return true if rt.satisfies_QMARK_(rt.ISeq.deref(), x) else false
 
+@as_var("-seq-eq")
+def _seq_eq(a, b):
+    print "seq eq"
+    if a is b:
+        return true
+    if not (rt.satisfies_QMARK_(rt.ISeqable.deref(), b) or rt.satisfies_QMARK_(rt.ISeq.deref(), b)):
+        return false
+
+    a = rt.seq(a)
+    b = rt.seq(b)
+    while a is not nil:
+        if b is nil or not rt.eq(rt.first(a), rt.first(b)):
+            return false
+        a = rt.next(a)
+        b = rt.next(b)
+    return true if b is nil else false
 
 @as_var("type")
 def type(x):
