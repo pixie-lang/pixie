@@ -59,16 +59,27 @@ _type_registry = TypeRegistry()
 
 class Type(Object):
     def __init__(self, name, parent = None):
-        #assert isinstance(name, unicode), u"Type names must be unicode"
+        assert isinstance(name, unicode), u"Type names must be unicode"
         _type_registry.register_type(name, self)
         self._name = name
         self._parent = parent
+        if parent is not None:
+            parent.add_subclass(self)
+
+        self._subclasses = []
 
     def type(self):
         return Type._type
 
+    def add_subclass(self, tp):
+        self._subclasses.append(tp)
+
+    def subclasses(self):
+        return self._subclasses
+
 Type._type = Type(u"Type")
 
+@jit.elidable_promote()
 def istypeinstance(obj, t):
     if obj._type is t:
         return True

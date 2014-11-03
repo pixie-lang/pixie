@@ -576,20 +576,53 @@ class PolymorphicFn(BaseCode):
         self._rev = 0
         self._protocol = protocol
         self._default_fn = DefaultProtocolFn(self)
+        self._fn_cache = {}
         protocol.add_method(self)
 
     def extend(self, tp, fn):
         self._dict[tp] = fn
         self._rev += 1
+        self._fn_cache = {}
         self._protocol.add_satisfies(tp)
+
+    def _find_parent_fn(self, tp):
+        ## Search the entire object tree to find the function to execute
+        assert isinstance(tp, object.Type)
+
+        protos = []
+        for p, fn in self._dict.iteritems():
+            if isinstance(p, Protocol):
+                protos.append(p)
+
+        find_tp = tp
+        while True:
+            result = self._dict.get(find_tp, None)
+            if result is not None:
+                return result
+
+            for proto in protos:
+                if proto.satisfies(find_tp):
+                    return self._dict[proto]
+
+            find_tp = find_tp._parent
+            if find_tp is None:
+                break
+
+        return self._default_fn
+
 
     def set_default_fn(self, fn):
         self._default_fn = fn
         self._rev += 1
+        self._fn_cache = {}
 
     @elidable_promote()
     def get_protocol_fn(self, tp, rev):
-        fn = self._dict.get(tp, self._default_fn)
+        fn = self._fn_cache.get(tp, None)
+        if fn is None:
+            fn = self._find_parent_fn(tp)
+            self._fn_cache[tp] = fn
+
         return promote(fn)
 
     def invoke(self, args):

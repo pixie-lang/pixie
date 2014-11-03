@@ -650,6 +650,7 @@
 
 
 
+
 (defn range
   ([] (->Range 0 MAX-NUMBER 1))
   ([stop] (->Range 0 stop 1))
@@ -664,9 +665,17 @@
   i)
 
 (defn at-end? [i]
-  (-at-end? i)
-  i)
+  (-at-end? i))
 
+(defn current [i]
+  (-current i))
+
+(defn iterator-seq [i]
+  (if (at-end? i)
+    nil
+    (cons (current i) (lazy-seq (iterator-seq (move-next! i))))))
+
+(extend -seq IIterator iterator-seq)
 
 (extend -reduce ShallowContinuation
         (fn [k f init]
