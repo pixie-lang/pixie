@@ -76,6 +76,14 @@ def _repr(self):
         return rt.wrap(u"\\"+unicode(chr(cv)))
     return rt.wrap(u"\\u"+unicode(str(cv)))
 
+@extend(proto._eq, Character)
+def _eq(self, obj):
+    assert isinstance(self, Character)
+    if self is obj:
+        return true
+    if not isinstance(obj, Character):
+        return false
+    return true if self.char_val() == obj.char_val() else false
 
 @extend(proto._name, String)
 def _name(self):
