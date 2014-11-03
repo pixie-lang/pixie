@@ -100,7 +100,7 @@ def first(x):
 @as_var("next")
 def next(x):
     if rt.satisfies_QMARK_(ISeq, x):
-        return rt._next(x)
+        return rt.seq(rt._next(x))
     seq = rt.seq(x)
     if seq is nil:
         return nil
