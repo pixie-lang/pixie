@@ -319,6 +319,10 @@ def load_file(filename):
         data = f.read()
         f.close()
 
+        if data.startswith("#!"):
+            newline_pos = data.find("\n")
+            if newline_pos > 0:
+                data = data[newline_pos:]
         rdr = reader.StringReader(unicode(data))
 
         with compiler.with_ns(u"user"):
