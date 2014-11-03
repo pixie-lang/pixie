@@ -38,6 +38,11 @@ def _count(self):
     assert isinstance(self, PersistentHashSet)
     return rt._count(self._map)
 
+@extend(proto._val_at, PersistentHashSet)
+def _val_at(self, key, not_found):
+    assert isinstance(self, PersistentHashSet)
+    return rt._val_at(self._map, key, not_found)
+
 @extend(proto._contains_key, PersistentHashSet)
 def _contains_key(self, key):
     assert isinstance(self, PersistentHashSet)

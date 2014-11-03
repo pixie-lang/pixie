@@ -430,9 +430,9 @@
       (str ":" (namespace k) "/" (name k))
       (str ":" (name k)))))
 
-(extend -invoke Keyword
-  (fn [k m]
-    (-val-at m k nil)))
+(extend -invoke Keyword (fn [k m] (-val-at m k nil)))
+(extend -invoke PersistentHashMap (fn [m k] (-val-at m k nil)))
+(extend -invoke PersistentHashSet (fn [m k] (-val-at m k nil)))
 
 (defn get
   ([mp k]
