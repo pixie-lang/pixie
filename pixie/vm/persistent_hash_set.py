@@ -43,6 +43,23 @@ def _contains_key(self, key):
     assert isinstance(self, PersistentHashSet)
     return rt._contains_key(self._map, key)
 
+@extend(proto._eq, PersistentHashSet)
+def _eq(self, obj):
+    assert isinstance(self, PersistentHashSet)
+    if self is obj:
+        return true
+    if not isinstance(obj, PersistentHashSet):
+        return false
+    if self._map._cnt != obj._map._cnt:
+        return false
+
+    seq = rt.seq(obj)
+    while seq is not nil:
+        if rt._contains_key(self, rt.first(seq)) is false:
+            return false
+        seq = rt.next(seq)
+    return true
+
 @extend(proto._conj, PersistentHashSet)
 def _conj(self, v):
     assert isinstance(self, PersistentHashSet)

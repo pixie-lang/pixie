@@ -14,3 +14,14 @@
              (t/assert= (contains? s c) true))
     (foreach [n n]
              (t/assert= (contains? s n) false))))
+
+(t/deftest test-eq
+  (let [s  #{1 2 3}]
+    (t/assert= s s)
+    (t/assert= s #{1 2 3})
+    (t/assert= #{1 2 3} s)
+
+    (t/assert= (= s [1 2 3]) false)
+    (t/assert= (= s '(1 2 3)) false)
+    (t/assert= (= s #{1 2}) false)
+    (t/assert= (= s #{1 2 3 4}) false)))
