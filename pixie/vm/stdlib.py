@@ -117,7 +117,6 @@ def seq_QMARK_(x):
 
 @as_var("-seq-eq")
 def _seq_eq(a, b):
-    print "seq eq"
     if a is b:
         return true
     if not (rt.satisfies_QMARK_(rt.ISeqable.deref(), b) or rt.satisfies_QMARK_(rt.ISeq.deref(), b)):
