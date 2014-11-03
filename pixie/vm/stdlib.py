@@ -366,7 +366,7 @@ def refer(ns, refer, alias):
 @as_var("extend")
 def extend(proto_fn, tp, fn):
     affirm(isinstance(proto_fn, PolymorphicFn), u"First argument to extend should be a PolymorphicFn")
-    affirm(isinstance(tp, (Type, Protocol)), u"Second argument to extend must be a Type or Protocol")
+    affirm(isinstance(tp, Type) or isinstance(tp, Protocol), u"Second argument to extend must be a Type or Protocol")
     affirm(isinstance(fn, BaseCode), u"Last argument to extend must be a function")
     proto_fn.extend(tp, fn)
     return nil
