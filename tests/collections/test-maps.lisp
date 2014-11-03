@@ -22,3 +22,11 @@
 
     (t/assert= (-eq m {:a 1, :b 2, :c 4}) false)
     (t/assert= (-eq m {:a 3, :b 2, :c 1}) false)))
+
+(t/deftest map-val-at-and-invoke
+  (let [m {:a 1, :b 2, :c 3}]
+    (foreach [e m]
+             (t/assert= (get m (key e)) (val e))
+             (t/assert= (m (key e)) (val e)))
+    (t/assert= (get m :d) nil)
+    (t/assert= (m :d) nil)))

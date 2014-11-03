@@ -25,3 +25,12 @@
     (t/assert= (= s '(1 2 3)) false)
     (t/assert= (= s #{1 2}) false)
     (t/assert= (= s #{1 2 3 4}) false)))
+
+(t/deftest test-invoke
+  (let [s #{1 2 3}]
+    (t/assert= (s 1) 1)
+    (t/assert= (s 2) 2)
+    (t/assert= (s 3) 3)
+
+    (t/assert= (s -1) nil)
+    (t/assert= (s 4) nil)))
