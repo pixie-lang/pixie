@@ -682,6 +682,7 @@
     (cons (current i) (lazy-seq (iterator-seq (move-next! i))))))
 
 (extend -seq IIterator iterator-seq)
+(extend -seq IIterable (comp seq iterator))
 
 (extend -eq ISeqable -seq-eq)
 
