@@ -19,3 +19,14 @@
              (t/assert= (contains? v c) true))
     (foreach [n n]
              (t/assert= (contains? v n) false))))
+
+(t/deftest vector-equals
+  (let [v [1 2 3]]
+    (t/assert= v v)
+    (t/assert= v [1 2 3])
+    (t/assert= v '(1 2 3))
+
+    (t/assert= (= v [1 2]) false)
+    (t/assert= (= v [1 2 3 4]) false)
+    (t/assert= (= v '(1 2)) false)
+    (t/assert= (= v '(1 2 3 4)) false)))
