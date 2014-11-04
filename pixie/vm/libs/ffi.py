@@ -82,7 +82,7 @@ def get_ret_val(ptr, tp):
         if pnt[0] == lltype.nullptr(rffi.CCHARP.TO):
             return nil
         else:
-            return String(rffi.charp2str(pnt[0]))
+            return String(unicode(rffi.charp2str(pnt[0])))
 
     assert False
 
