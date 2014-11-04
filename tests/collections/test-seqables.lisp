@@ -28,3 +28,12 @@
 
     (t/assert= (next (next (next l))) nil)
     (t/assert= (next (next (next v))) nil)))
+
+(t/deftest test-equals
+  (let [l '(1 2 3)]
+    (t/assert= l l)
+    (t/assert= l '(1 2 3))
+    (t/assert= l [1 2 3])
+
+    (t/assert= (= l '(1 2 3 4)) false)
+    (t/assert= (= l [1 2 3 4]) false)))
