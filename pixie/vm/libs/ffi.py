@@ -4,6 +4,7 @@ import pixie.vm.code as code
 from pixie.vm.code import as_var, affirm
 import pixie.vm.rt as rt
 from rpython.rtyper.lltypesystem import rffi, lltype
+from pixie.vm.primitives import nil
 from pixie.vm.numbers import Integer
 from pixie.vm.string import String
 from rpython.rlib.jit_libffi import CIF_DESCRIPTION
@@ -76,6 +77,12 @@ def get_ret_val(ptr, tp):
         pnt = rffi.cast(rffi.LONGP, ptr)
         val = pnt[0]
         return Integer(val)
+    if tp == String._type:
+        pnt = rffi.cast(rffi.CCHARPP, ptr)
+        if pnt[0] == lltype.nullptr(rffi.CCHARP.TO):
+            return nil
+        else:
+            return String(rffi.charp2str(pnt[0]))
 
     assert False
 
