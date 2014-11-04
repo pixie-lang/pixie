@@ -352,26 +352,6 @@ def _with_meta(self, meta):
     assert isinstance(self, PersistentHashMap)
     return self.with_meta(meta)
 
-@extend(proto._eq, PersistentHashMap)
-def _eq(self, obj):
-    if self is obj:
-        return true
-    elif not isinstance(obj, PersistentHashMap):
-        return false
-    elif self._cnt != obj._cnt:
-        return false
-
-    seq = rt.seq(self)
-    while seq is not nil:
-        entry = rt.first(seq)
-        key = rt._key(entry)
-        found = rt._contains_key(obj, key)
-        if not found or not rt.eq(rt._val(entry), rt.get(obj, key)):
-            return false
-        seq = rt.next(seq)
-
-    return true
-
 @extend(proto._contains_key, PersistentHashMap)
 def _contains_key(self, key):
     assert isinstance(self, PersistentHashMap)

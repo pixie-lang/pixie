@@ -685,6 +685,24 @@
 
 (extend -eq ISeqable -seq-eq)
 
+(deftype Unknown [])
+(def unknown (->Unknown))
+
+(extend -eq PersistentHashMap
+        (fn [self other]
+          (cond
+           (not (map? other)) false
+           (not= (count self) (count other)) false
+           :else (reduce (fn
+                           ([_] true)
+                           ([_ entry]
+                              (let [other-val (get other (key entry) unknown)]
+                                (if (not= other-val (val entry))
+                                  (reduced false)
+                                  true))))
+                         true
+                         self))))
+
 (extend -reduce ShallowContinuation
         (fn [k f init]
           (loop [acc init]
