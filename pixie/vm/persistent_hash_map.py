@@ -36,7 +36,7 @@ class PersistentHashMap(object.Object):
         added_leaf = Box()
 
         new_root = (BitmapIndexedNode_EMPTY if self._root is None else self._root) \
-                   .assoc_inode(r_uint(0), rt.hash(key), key, val, added_leaf)
+                   .assoc_inode(r_uint(0), rt.hash(key) & MASK_32, key, val, added_leaf)
 
         if new_root is self._root:
             return self
@@ -44,7 +44,7 @@ class PersistentHashMap(object.Object):
         return PersistentHashMap(self._cnt if added_leaf._val is None else self._cnt + 1, new_root, self._meta)
 
     def val_at(self, key, not_found):
-        return not_found if self._root is None else self._root.find(r_uint(0), rt.hash(key), key, not_found)
+        return not_found if self._root is None else self._root.find(r_uint(0), rt.hash(key) & MASK_32, key, not_found)
 
 
 
@@ -124,7 +124,7 @@ class BitmapIndexedNode(INode):
                         else:
                             nodes[i] = BitmapIndexedNode_EMPTY.assoc_inode(shift + 5, rt.hash(self._array[j]),
                                                                self._array[j], self._array[j + 1], added_leaf)
-                        j += 1
+                        j += 2
 
                 return ArrayNode(None, n + 1, nodes)
             else:
