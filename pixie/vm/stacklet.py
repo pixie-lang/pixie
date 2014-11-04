@@ -49,21 +49,44 @@ def shutdown():
 
     global_state.reset()
 
+class FinishedToken(BaseCode):
+    _type = object.Type(u"pixie.stdlib.FinishedToken")
+    def __init__(self):
+        pass
+
+    def type(self):
+        return FinishedToken._type
+
+finished_token = FinishedToken()
+
 class WrappedHandler(BaseCode):
     _type = object.Type(u"Stacklet")
     def __init__(self, h):
         self._h = h
+        self._is_finished = False
+        self._val = nil
+
 
     def type(self):
         return WrappedHandler._type
 
+    def is_finished(self):
+        return self._is_finished
+
     def invoke(self, args):
         affirm(len(args) == 1, u"Only one arg to continuation allowed")
+        affirm(not self._is_finished, u"Execution of this stacklet has completed")
+
         global_state._from = global_state._to
         global_state._to = self
         global_state._op = OP_SWITCH
         global_state._val = args[0]
         global_state._h = global_state._th.switch(global_state._h)
+
+        if global_state._val is finished_token:
+            global_state._from._is_finished = True
+
+        global_state._from._val = global_state._val
 
         return global_state._val
 
@@ -85,17 +108,14 @@ def new_handler(h, o):
     global_state._val = None
 
 
-
     global_state._op = OP_SWITCH
     global_state.switch_back()
     global_state._h = global_state._th.switch(h)
 
+
     #try:
     f.invoke([global_state._from])
-    #except Exception as ex:
-    #    print "Uncaught Exception" + str(ex)
-
-
+    global_state._from.invoke([finished_token])
 
     return global_state._h
 
@@ -149,5 +169,22 @@ def with_stacklets(f):
 
 @as_var("create-stacklet")
 def _new_stacklet(f):
-    return new_stacklet(f)
+    stacklet = new_stacklet(f)
+    stacklet.invoke([nil])   # prime it
+    return stacklet
 
+@extend(proto._at_end_QMARK_, WrappedHandler)
+def _at_end(self):
+    assert isinstance(self, WrappedHandler)
+    return rt.wrap(self.is_finished())
+
+@extend(proto._move_next_BANG_, WrappedHandler)
+def _move_next(self):
+    assert isinstance(self, WrappedHandler)
+    self.invoke([nil])
+    return self
+
+@extend(proto._current, WrappedHandler)
+def _current(self):
+    assert isinstance(self, WrappedHandler)
+    return self._val

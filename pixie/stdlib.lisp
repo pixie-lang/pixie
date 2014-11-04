@@ -164,19 +164,18 @@
 
 
 (def stacklet->lazy-seq
-  (fn [f]
-    (let [val (f nil)]
-      (if (identical? val :end)
-        nil
-        (cons val (lazy-seq* (fn [] (stacklet->lazy-seq f))))))))
+  (fn [k]
+    (if (-at-end? k)
+      nil
+      (cons (-current k)
+            (lazy-seq* (fn [] (stacklet->lazy-seq (-move-next! k))))))))
 
 (def sequence
   (fn
     ([data]
        (let [f (create-stacklet
                  (fn [h]
-                   (reduce (fn ([h item] (h item) h)) h data)
-                   (h :end)))]
+                   (reduce (fn ([h item] (h item) h)) h data)))]
           (stacklet->lazy-seq f)))
     ([xform data]
         (let [f (create-stacklet
@@ -184,7 +183,7 @@
                    (transduce xform
                               (fn ([] h)
                                 ([h item] (h item) h)
-                                ([h] (h :end)))
+                                ([h] nil))
                               data)))]
           (stacklet->lazy-seq f)))))
 
