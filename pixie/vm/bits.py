@@ -30,6 +30,11 @@ def bit_and(x, y):
     affirm(isinstance(x, Integer) and isinstance(y, Integer), u"x and y must be Integers")
     return rt.wrap(x.int_val() & y.int_val())
 
+@as_var("bit-and-not")
+def bit_and_not(x, y):
+    affirm(isinstance(x, Integer) and isinstance(y, Integer), u"x and y must be Integers")
+    return rt.wrap(x.int_val() & ~y.int_val())
+
 @as_var("bit-or")
 def bit_or(x, y):
     affirm(isinstance(x, Integer) and isinstance(y, Integer), u"x and y must be Integers")
