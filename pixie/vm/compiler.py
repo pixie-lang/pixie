@@ -299,7 +299,7 @@ def compile_map_literal(form, ctx):
     compile_meta(rt.meta(form), ctx)
 
 class ConsReduce(code.NativeFn):
-    def _invoke(self, args):
+    def invoke(self, args):
         return rt.cons(args[1], args[0])
 
 def compile_set_literal(form, ctx):

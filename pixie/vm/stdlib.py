@@ -33,7 +33,7 @@ defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
 defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
 
-defprotocol("pixie.stdlib", "IAssociative", ["-assoc"])
+defprotocol("pixie.stdlib", "IAssociative", ["-assoc", "-contains-key"])
 
 defprotocol("pixie.stdlib", "ILookup", ["-val-at"])
 
@@ -100,7 +100,7 @@ def first(x):
 @as_var("next")
 def next(x):
     if rt.satisfies_QMARK_(ISeq, x):
-        return rt._next(x)
+        return rt.seq(rt._next(x))
     seq = rt.seq(x)
     if seq is nil:
         return nil
@@ -115,6 +115,21 @@ def seq(x):
 def seq_QMARK_(x):
     return true if rt.satisfies_QMARK_(rt.ISeq.deref(), x) else false
 
+@as_var("-seq-eq")
+def _seq_eq(a, b):
+    if a is b:
+        return true
+    if not (rt.satisfies_QMARK_(rt.ISeqable.deref(), b) or rt.satisfies_QMARK_(rt.ISeq.deref(), b)):
+        return false
+
+    a = rt.seq(a)
+    b = rt.seq(b)
+    while a is not nil:
+        if b is nil or not rt.eq(rt.first(a), rt.first(b)):
+            return false
+        a = rt.next(a)
+        b = rt.next(b)
+    return true if b is nil else false
 
 @as_var("type")
 def type(x):

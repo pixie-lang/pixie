@@ -205,6 +205,9 @@
 
 (set-macro! defmacro)
 
+(defn not [x]
+  (if x false true))
+
 (defn +
   ([] 0)
   ([x] x)
@@ -244,6 +247,11 @@
   ([x y & rest] (if (eq x y)
                   (apply = y rest)
                   false)))
+
+(defn not=
+  ([x] false)
+  ([x y] (not (eq x y)))
+  ([x y & rest] (not (apply = x y rest))))
 
 (defn <
   ([x] true)
@@ -294,6 +302,9 @@
   ([m k v & rest]
      (apply assoc (-assoc m k v) rest)))
 
+(defn contains? [coll key]
+  (-contains-key coll key))
+
 (def slot-tp (create-type :slot [:val]))
 
 (defn ->Slot [x]
@@ -311,10 +322,6 @@
   ([f1 f2 f3]
      (fn [& args]
        (f1 (f2 (apply f3 args))))))
-
-
-(defn not [x]
-  (if x false true))
 
 (defmacro cond
   ([] nil)
@@ -423,9 +430,9 @@
       (str ":" (namespace k) "/" (name k))
       (str ":" (name k)))))
 
-(extend -invoke Keyword
-  (fn [k m]
-    (-val-at m k nil)))
+(extend -invoke Keyword (fn [k m] (-val-at m k nil)))
+(extend -invoke PersistentHashMap (fn [m k] (-val-at m k nil)))
+(extend -invoke PersistentHashSet (fn [m k] (-val-at m k nil)))
 
 (defn get
   ([mp k]
@@ -676,6 +683,27 @@
     (cons (current i) (lazy-seq (iterator-seq (move-next! i))))))
 
 (extend -seq IIterator iterator-seq)
+(extend -seq IIterable (comp seq iterator))
+
+(extend -eq ISeqable -seq-eq)
+
+(deftype Unknown [])
+(def unknown (->Unknown))
+
+(extend -eq PersistentHashMap
+        (fn [self other]
+          (cond
+           (not (map? other)) false
+           (not= (count self) (count other)) false
+           :else (reduce (fn
+                           ([_] true)
+                           ([_ entry]
+                              (let [other-val (get other (key entry) unknown)]
+                                (if (not= other-val (val entry))
+                                  (reduced false)
+                                  true))))
+                         true
+                         self))))
 
 (extend -reduce ShallowContinuation
         (fn [k f init]

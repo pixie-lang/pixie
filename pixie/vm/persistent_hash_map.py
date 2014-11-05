@@ -11,6 +11,8 @@ import pixie.vm.rt as rt
 
 MASK_32 = r_uint(0xFFFFFFFF)
 
+NOT_FOUND = object.Object()
+
 class Box(py_object):
     def __init__(self):
         self._val = None
@@ -349,3 +351,11 @@ def _meta(self):
 def _with_meta(self, meta):
     assert isinstance(self, PersistentHashMap)
     return self.with_meta(meta)
+
+@extend(proto._contains_key, PersistentHashMap)
+def _contains_key(self, key):
+    assert isinstance(self, PersistentHashMap)
+    if self._root is not None:
+        return true if self._root.find(r_uint(0), rt.hash(key), key, NOT_FOUND) is not NOT_FOUND else false
+    else:
+        return false
