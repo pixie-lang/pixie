@@ -99,7 +99,7 @@ class BitmapIndexedNode(INode):
                 return BitmapIndexedNode(None, self._bitmap, clone_and_set(self._array, 2 * idx + 1, n))
 
 
-            if key_or_null is None or rt.eq(key, key_or_null):
+            if rt.eq(key, key_or_null):
                 if val is val_or_node:
                     return self
                 return BitmapIndexedNode(None, self._bitmap, clone_and_set(self._array, 2 * idx + 1, val))
@@ -108,7 +108,7 @@ class BitmapIndexedNode(INode):
             return BitmapIndexedNode(None, self._bitmap,
                 clone_and_set2(self._array,
                                2 * idx, None,
-                               2 * idx + 1, create_node(shift+ 5, key_or_null, val_or_node, hash_val, key, val)))
+                               2 * idx + 1, create_node(shift + 5, key_or_null, val_or_node, hash_val, key, val)))
         else:
             n = bit_count(self._bitmap)
             if n >= 16:
@@ -237,7 +237,7 @@ def create_node(shift, key1, val1, key2hash, key2, val2):
         return HashCollisionNode(None, key1hash, [key1, val1, key2, val2])
     added_leaf = Box()
     return BitmapIndexedNode_EMPTY.assoc_inode(shift, key1hash, key1, val1, added_leaf) \
-                                  .assoc_inode(shift, key1hash, key1, val1, added_leaf)
+                                  .assoc_inode(shift, key2hash, key2, val2, added_leaf)
 
 def bit_count(i):
     assert isinstance(i, r_uint)
