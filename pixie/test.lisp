@@ -15,8 +15,11 @@
            ~@body
            (swap! *stats* update-in [:pass] (fnil inc 0))
            (catch ex
+               (print "while running " ~(name nm) " " (quote (do ~@body)))
+
                (swap! *stats* update-in [:fail] (fnil inc 0))
-             (swap! *stats* update-in [:errors] (fnil conj []) ex))))
+               (print (str ex))
+               (swap! *stats* update-in [:errors] (fnil conj []) ex))))
        (swap! tests assoc (symbol (str (namespace (var ~nm)) "/" (name (var ~nm)))) ~nm)))
 
 
@@ -51,3 +54,4 @@
 
 (defn assert= [x y]
   (assert (= x y) (str x " != " y)))
+

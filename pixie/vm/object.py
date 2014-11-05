@@ -134,6 +134,9 @@ def affirm(val, msg):
         import pixie.vm.rt as rt
         raise WrappedException(RuntimeException(rt.wrap(msg)))
 
+def runtime_error(msg):
+    import pixie.vm.rt as rt
+    raise WrappedException(RuntimeException(rt.wrap(msg)))
 
 class ErrorInfo(Object):
     _type = Type(u"pixie.stdlib.ErrorInfo")
