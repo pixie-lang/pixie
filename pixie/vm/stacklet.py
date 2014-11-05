@@ -20,6 +20,7 @@ OP_CONTINUE = 0x03
 OP_EXIT = 0x04
 OP_YIELD = 0x05
 OP_NEXT_PENDING = 0x06
+OP_NEW_THREAD = 0x07
 
 class GlobalState(py_object):
     def __init__(self):
@@ -103,6 +104,12 @@ def new_stacklet(f):
     val = global_state._val
     return val
 
+def new_thread(f):
+    global_state._op = OP_NEW_THREAD
+    global_state._val = f
+    global_state._h = global_state._th.switch(global_state._h)
+
+
 def yield_stacklet():
     global_state._op = OP_YIELD
     global_state._val = nil
@@ -126,6 +133,25 @@ def new_handler(h, o):
     global_state._from.invoke([finished_token])
 
     return global_state._h
+
+def new_thread_handler(h, o):
+    global_state._h = h
+
+    affirm(global_state._val is not None, u"Internal Stacklet Error")
+    f = global_state._val
+    global_state._val = None
+
+    global_state._h = global_state._th.switch(global_state._h)
+
+
+    #try:
+    f.invoke([global_state._from])
+
+    global_state._op = OP_NEXT_PENDING
+    global_state._h = global_state._th.switch(global_state._h)
+
+    return global_state._h
+
 
 
 def init_handler(h, o):
@@ -169,6 +195,15 @@ def with_stacklets(f):
             global_state._val = wh
             continue
 
+        elif global_state._op == OP_NEW_THREAD:
+            wh = WrappedHandler(global_state._th.get_null_handle())
+            global_state._to = wh
+            wh._h = global_state._th.new(new_thread_handler)
+            pending_stacklets.push(wh)
+            pending_stacklets.push(global_state._from)
+            global_state._op = OP_NEXT_PENDING
+            continue
+
         elif global_state._op == OP_SWITCH:
             to = global_state._to
             to._h = global_state._th.switch(global_state._to._h)
@@ -201,6 +236,12 @@ def _new_stacklet(f):
     stacklet = new_stacklet(f)
     stacklet.invoke([nil])   # prime it
     return stacklet
+
+@as_var("create-thread")
+def _new_stacklet(f):
+    stacklet = new_thread(f)
+
+    return nil
 
 @as_var("yield-stacklet")
 def _stacklet_yield():
