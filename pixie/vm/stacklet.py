@@ -6,9 +6,11 @@ from pixie.vm.code import BaseCode
 from pixie.vm.numbers import Integer
 import pixie.vm.stdlib as proto
 from  pixie.vm.code import extend, as_var
-from rpython.rlib.rarithmetic import r_uint as r_uint32, intmask, widen
+from rpython.rlib.rarithmetic import r_uint, intmask, widen
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
+import pixie.vm.libs.uv as uv
+import pixie.vm.libs.ring_buffer as ring_buffer
 import rpython.rlib.rstacklet as rstacklet
 from rpython.rtyper.lltypesystem import lltype, rffi
 
@@ -16,6 +18,8 @@ OP_NEW = 0x01
 OP_SWITCH = 0x02
 OP_CONTINUE = 0x03
 OP_EXIT = 0x04
+OP_YIELD = 0x05
+OP_NEXT_PENDING = 0x06
 
 class GlobalState(py_object):
     def __init__(self):
@@ -99,6 +103,10 @@ def new_stacklet(f):
     val = global_state._val
     return val
 
+def yield_stacklet():
+    global_state._op = OP_YIELD
+    global_state._val = nil
+    global_state._h = global_state._th.switch(global_state._h)
 
 def new_handler(h, o):
     global_state._h = h
@@ -137,6 +145,7 @@ def init_handler(h, o):
 
 
 def with_stacklets(f):
+    loop = uv.loop_new()
 
     init()
     global_state._init_fn = f
@@ -144,7 +153,15 @@ def with_stacklets(f):
     main_h = global_state._th.new(init_handler)
     global_state._from = WrappedHandler(main_h)
 
+    pending_stacklets = ring_buffer.RingBuffer(r_uint(32))
+    pending_stacklets.push(1)
+    assert pending_stacklets.pop() == 1
+    pending_stacklets.push(2)
+    assert pending_stacklets.pop() == 2
+
+    print "Entrance"
     while True:
+        print global_state._op
         if global_state._op == OP_NEW:
             wh = WrappedHandler(global_state._th.get_null_handle())
             global_state._to = wh
@@ -161,6 +178,18 @@ def with_stacklets(f):
             shutdown()
             return global_state._val
 
+        elif global_state._op == OP_YIELD:
+            assert global_state._from
+            pending_stacklets.push(global_state._from)
+            global_state._op = OP_NEXT_PENDING
+            continue
+
+        elif global_state._op == OP_NEXT_PENDING:
+            f = pending_stacklets.pop()
+            global_state._from = f
+            f._h = global_state._th.switch(f._h)
+            continue
+
         else:
             break
 
@@ -172,6 +201,11 @@ def _new_stacklet(f):
     stacklet = new_stacklet(f)
     stacklet.invoke([nil])   # prime it
     return stacklet
+
+@as_var("yield-stacklet")
+def _stacklet_yield():
+    yield_stacklet()
+    return nil
 
 @extend(proto._at_end_QMARK_, WrappedHandler)
 def _at_end(self):
