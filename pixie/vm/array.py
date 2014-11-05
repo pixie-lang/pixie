@@ -1,5 +1,6 @@
 import pixie.vm.rt as rt
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.code import extend, as_var
 from pixie.vm.numbers import Integer
 from pixie.vm.primitives import nil
@@ -33,11 +34,6 @@ class Array(object.Object):
             init = f.invoke([init, self._list[x]])
         return init
 
-
-
-
-
-
 @extend(proto._count, Array)
 def _count(self):
     assert isinstance(self, Array)
@@ -55,8 +51,22 @@ def reduce(self, f, init):
         return self.reduce_large(f, init)
     return self.reduce_small(f, init)
 
-
 def array(lst):
     assert isinstance(lst, list)
     return Array(lst)
 
+@as_var("aget")
+def aget(self, idx):
+    assert isinstance(self, Array)
+    return self._list[idx.int_val()]
+
+@as_var("aset")
+def aset(self, idx, val):
+    assert isinstance(self, Array)
+    self._list[idx.int_val()] = val
+    return val
+
+@as_var("make-array")
+def make_array(l):
+    affirm(isinstance(l, Integer), u"l must be an Integer")
+    return Array([nil] * l.int_val())
