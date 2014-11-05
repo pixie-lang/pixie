@@ -66,6 +66,11 @@ def aset(self, idx, val):
     self._list[idx.int_val()] = val
     return val
 
+@as_var("alength")
+def alength(self):
+    assert isinstance(self, Array)
+    return rt.wrap(len(self._list))
+
 @as_var("make-array")
 def make_array(l):
     affirm(isinstance(l, Integer), u"l must be an Integer")
