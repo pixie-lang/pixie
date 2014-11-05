@@ -66,6 +66,17 @@ def aset(self, idx, val):
     self._list[idx.int_val()] = val
     return val
 
+@as_var("aslice")
+def aslice(self, offset):
+    assert isinstance(self, Array)
+    affirm(isinstance(offset, Integer), u"offset must be an integer")
+    return Array(self._list[offset.int_val():])
+
+@as_var("aconcat")
+def aconcat(self, other):
+    assert isinstance(self, Array) and isinstance(other, Array)
+    return Array(self._list + other._list)
+
 @as_var("alength")
 def alength(self):
     assert isinstance(self, Array)
