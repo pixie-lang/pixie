@@ -68,9 +68,13 @@ def aset(self, idx, val):
 
 @as_var("aslice")
 def aslice(self, offset):
-    assert isinstance(self, Array)
-    affirm(isinstance(offset, Integer), u"offset must be an integer")
-    return Array(self._list[offset.int_val():])
+    assert isinstance(self, Array) and isinstance(offset, Integer)
+
+    offset = offset.int_val()
+    if offset >= 0:
+        return Array(self._list[offset:])
+    else:
+        rt.throw(rt.wrap(u"offset must be an Integer >= 0"))
 
 @as_var("aconcat")
 def aconcat(self, other):
