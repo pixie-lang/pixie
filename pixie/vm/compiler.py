@@ -294,7 +294,7 @@ def compile_map_literal(form, ctx):
     ctx.bytecode.append(code.INVOKE)
     ctx.bytecode.append(r_uint(size) + 1)
     if size > 0:
-        ctx.sub_sp(size - 1)
+        ctx.sub_sp(size)
 
     compile_meta(rt.meta(form), ctx)
 
@@ -492,10 +492,9 @@ def compile_fn_body(name, args, body, ctx):
             if rt.next(body) is nil:
                 new_ctx.enable_tail_call()
             compile_form(rt.first(body), new_ctx)
-            if rt.next(body) is not nil:
-                new_ctx.pop()
-            bc += 1
             body = rt.next(body)
+            if body is not nil:
+                new_ctx.pop()
 
     new_ctx.bytecode.append(code.RETURN)
     closed_overs = new_ctx.closed_overs

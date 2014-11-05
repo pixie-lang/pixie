@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, affirm, WrappedException, Type
+from pixie.vm.object import Object, affirm, WrappedException, Type, runtime_error
 import pixie.vm.code as code
 import pixie.vm.numbers as numbers
 from pixie.vm.primitives import nil, true, false
@@ -88,7 +88,8 @@ class Frame(object):
 
     def nth(self, delta):
         affirm(delta >= 0, u"Invalid nth value, (compiler error)")
-        affirm(self.sp - 1 >= delta, u"interpreter nth out of range, (compiler error) ")
+        if not self.sp - 1 >= delta:
+            runtime_error(u"Interpreter nth out of range: " + unicode(str(self.sp - 1)) + u", " + unicode(str(delta)))
         return self.stack[self.sp - delta - 1]
 
     def push_nth(self, delta):
