@@ -48,6 +48,7 @@ def init():
     sys.setrecursionlimit(10000) # Yeah we blow the stack sometimes, we promise it's not a bug
 
     import pixie.vm.numbers as numbers
+    import pixie.vm.bits as bits
     from pixie.vm.code import wrap_fn
     import pixie.vm.interpreter
     import pixie.vm.stacklet as stacklet
