@@ -23,6 +23,9 @@ OP_NEXT_PENDING = 0x06
 OP_NEW_THREAD = 0x07
 OP_EXECUTE_UV = 0x08
 
+def to_main_loop():
+    global_state._h = global_state._th.switch(global_state._h)
+
 class GlobalState(py_object):
     def __init__(self):
         self.reset()
@@ -35,11 +38,12 @@ class GlobalState(py_object):
         self._op = 0x00
         self._fn = None
         self._init_fn = None
-        self._from = None
+        self._current = None
+        self._parent = None
 
     def switch_back(self):
-        tmp = self._from
-        self._from = self._to
+        tmp = self._current
+        self._current = self._to
         self._to = tmp
 
 
@@ -83,16 +87,21 @@ class WrappedHandler(BaseCode):
         affirm(len(args) == 1, u"Only one arg to continuation allowed")
         affirm(not self._is_finished, u"Execution of this stacklet has completed")
 
-        global_state._from = global_state._to
-        global_state._to = self
+        global_state._parent = global_state._current
+        global_state._current = self
         global_state._op = OP_SWITCH
         global_state._val = args[0]
-        global_state._h = global_state._th.switch(global_state._h)
 
+        print "from ", self
+        to_main_loop()
+        print "to ", self
+
+        print global_state._val, self._val, self
         if global_state._val is finished_token:
-            global_state._from._is_finished = True
+            global_state._parent._is_finished = True
 
-        global_state._from._val = global_state._val
+
+        global_state._parent._val = global_state._val
 
         return global_state._val
 
@@ -100,15 +109,14 @@ class WrappedHandler(BaseCode):
 def new_stacklet(f):
     global_state._op = OP_NEW
     global_state._val = f
-    global_state.switch_back()
-    global_state._h = global_state._th.switch(global_state._h)
+    to_main_loop()
     val = global_state._val
     return val
 
 def new_thread(f):
     global_state._op = OP_NEW_THREAD
     global_state._val = f
-    global_state._h = global_state._th.switch(global_state._h)
+    to_main_loop()
 
 def enqueue_stacklet(k):
     pending_stacklets.push(k)
@@ -116,32 +124,30 @@ def enqueue_stacklet(k):
 def yield_stacklet():
     global_state._op = OP_YIELD
     global_state._val = nil
-    global_state._h = global_state._th.switch(global_state._h)
+    to_main_loop()
 
 def execute_uv_func(func):
     assert isinstance(func, uv.UVFunction)
     global_state._op = OP_EXECUTE_UV
     global_state._val = func
-    global_state._h = global_state._th.switch(global_state._h)
+    to_main_loop()
 
 
 def new_handler(h, o):
     global_state._h = h
-
+    parent = global_state._parent
     affirm(global_state._val is not None, u"Internal Stacklet Error")
     f = global_state._val
     global_state._val = None
 
-
-    global_state._op = OP_SWITCH
-    global_state.switch_back()
-    global_state._h = global_state._th.switch(h)
+    to_main_loop()
 
 
     #try:
-    f.invoke([global_state._from])
-    global_state._from.invoke([finished_token])
-
+    f.invoke([global_state._parent])
+    global_state._parent.invoke([finished_token])
+    print "ENDED! Should never see this"
+    assert False
     return global_state._h
 
 def new_thread_handler(h, o):
@@ -151,14 +157,14 @@ def new_thread_handler(h, o):
     f = global_state._val
     global_state._val = None
 
-    global_state._h = global_state._th.switch(global_state._h)
+    to_main_loop()
 
 
     #try:
-    f.invoke([global_state._from])
+    f.invoke([global_state._current])
 
     global_state._op = OP_NEXT_PENDING
-    global_state._h = global_state._th.switch(global_state._h)
+    to_main_loop()
 
     return global_state._h
 
@@ -189,20 +195,19 @@ def with_stacklets(f):
     global_state._init_fn = f
 
     main_h = global_state._th.new(init_handler)
-    global_state._from = WrappedHandler(main_h)
-
-    pending_stacklets.push(1)
-    assert pending_stacklets.pop() == 1
-    pending_stacklets.push(2)
-    assert pending_stacklets.pop() == 2
+    global_state._current = WrappedHandler(main_h)
 
     while True:
-        print global_state._op
+        print "OP - ", global_state._op
         if global_state._op == OP_NEW:
-            wh = WrappedHandler(global_state._th.get_null_handle())
-            global_state._to = wh
-            wh._h = global_state._th.new(new_handler)
+            assert global_state._current
+            global_state._parent = global_state._current
+            new_h = global_state._th.new(new_handler)
+            wh = WrappedHandler(new_h)
             global_state._val = wh
+            assert global_state._parent
+            global_state._current = global_state._parent
+            global_state._op = OP_SWITCH
             continue
 
         elif global_state._op == OP_NEW_THREAD:
@@ -210,13 +215,13 @@ def with_stacklets(f):
             global_state._to = wh
             wh._h = global_state._th.new(new_thread_handler)
             pending_stacklets.push(wh)
-            pending_stacklets.push(global_state._from)
+            pending_stacklets.push(global_state._current)
             global_state._op = OP_NEXT_PENDING
             continue
 
         elif global_state._op == OP_SWITCH:
-            to = global_state._to
-            to._h = global_state._th.switch(global_state._to._h)
+            cur = global_state._current
+            cur._h = global_state._th.switch(cur._h)
             continue
 
         elif global_state._op == OP_EXIT:
@@ -224,14 +229,14 @@ def with_stacklets(f):
             return global_state._val
 
         elif global_state._op == OP_YIELD:
-            assert global_state._from
-            pending_stacklets.push(global_state._from)
+            assert global_state._current
+            pending_stacklets.push(global_state._current)
             global_state._op = OP_NEXT_PENDING
             continue
 
         elif global_state._op == OP_EXECUTE_UV:
-            assert global_state._from
-            k = global_state._from
+            assert global_state._current
+            k = global_state._current
             f = global_state._val
             f.execute_uv(loop, k)
             global_state._op = OP_NEXT_PENDING
@@ -247,12 +252,13 @@ def with_stacklets(f):
                     uv.run(loop, uv.RUN_DEFAULT | uv.RUN_NO_WAIT)
                     break
             f = pending_stacklets.pop()
-            global_state._from = f
+            assert f
+            global_state._current = f
             f._h = global_state._th.switch(f._h)
             continue
 
         else:
-            break
+            assert False
 
     shutdown()
     return None

@@ -40,15 +40,18 @@ uv_timer = lltype.Ptr(uv_timer_t)
 
 uv_timer_cb = lltype.Ptr(lltype.FuncType([uv_timer, rffi.INT], lltype.Void))
 
-uv_callback = lltype.Ptr(lltype.FuncType([rffi.VOIDP, rffi.INT], lltype.Void))
+uv_callback_t = rffi.CCallback([rffi.VOIDP, rffi.INT], lltype.Void)
 
 data_container = {}
 
-def as_cb(T, fn):
-    return llhelper(T, rffi._make_wrapper_for(T, fn))
+def as_cb(T):
+    def _inner(fn):
+        return llhelper(T, fn)
+    return _inner
 
 def _timer_cb(timer_t, status):
-    print status, " status"
+    print status, " status\n"
+    print "done"
     import pixie.vm.stacklet as stacklet
     casted = rffi.cast(rffi.INT, timer_t)
     data = data_container[casted]
@@ -61,7 +64,7 @@ def set_timeout(loop, cont, timeout, repeat):
     data_container[rffi.cast(rffi.INT, timer)] = cont
     assert not timer_init(loop, timer)
     print "setting timeout", timeout, repeat
-    assert not timer_start(timer, as_cb(uv_timer_cb, _timer_cb), timeout, repeat)
+    assert not timer_start(timer, _timer_cb, timeout, repeat)
 
 
 
@@ -69,9 +72,9 @@ loop_new = llexternal('uv_loop_new', [], rffi.VOIDP)
 run = llexternal("uv_run", [rffi.VOIDP, rffi.INT], rffi.SIZE_T)
 
 timer_init = llexternal("uv_timer_init", [rffi.VOIDP, uv_timer], rffi.INT)
-timer_start = llexternal("uv_timer_start", [uv_timer, uv_timer_cb, rffi.INT, rffi.UINT], rffi.INT)
+timer_start = llexternal("uv_timer_start", [uv_timer, uv_timer_cb, rffi.ULONGLONG, rffi.ULONGLONG], rffi.INT)
 
-ffi_run = llexternal("uv_ffi_run", [rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, uv_callback], rffi.INT)
+ffi_run = llexternal("uv_ffi_run", [rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, uv_callback_t], rffi.INT)
 ffi_make_baton = llexternal("uv_ffi_make_baton", [], rffi.VOIDP)
 
 RUN_DEFAULT = 0
@@ -89,6 +92,18 @@ class SleepUVFunction(UVFunction):
     def execute_uv(self, loop, k):
         set_timeout(loop, k, self._time, 0)
 
+
+def _work_cb(baton, status):
+    print "------------------done\n"
+    print status, " status\n"
+    print "done"
+    import pixie.vm.stacklet as stacklet
+    casted = rffi.cast(rffi.INT, baton)
+    data = data_container[casted]
+    del data_container[casted]
+    stacklet.pending_stacklets.push(data)
+    print "timeout completed"
+
 class RunFFIFunc(UVFunction):
     def __init__(self, fn, args):
 
@@ -100,8 +115,22 @@ class RunFFIFunc(UVFunction):
         baton = ffi_make_baton()
         data_container[rffi.cast(rffi.INT, baton)] = k
         exb = self._fn.prep_exb(self._args)
+        print "nargs inside", self._fn._cd.nargs
+        buffer_array = rffi.cast(rffi.VOIDPP, exb)
+        cif = self._fn._cd
+        for i in range(cif.nargs):
+            data = rffi.ptradd(exb, cif.exchange_args[i])
+            buffer_array[i] = data
+        resultdata = rffi.ptradd(exb,
+                                 cif.exchange_result_libffi)
 
-        ffi_run(baton, loop, ffi._cd, ffi._f_ptr, exb, as_cb(uv_timer_cb, _timer_cb))
+        ffi_run(baton,
+                loop,
+                rffi.cast(rffi.VOIDP, self._fn._cd),
+                rffi.cast(rffi.VOIDP, self._fn._f_ptr),
+                rffi.cast(rffi.VOIDP, exb),
+                rffi.cast(rffi.VOIDP, resultdata),
+                _work_cb)
 
 @as_var("run_blocking")
 def _run_blocking(fn, arg):

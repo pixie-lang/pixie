@@ -1,5 +1,11 @@
 (__ns__ pixie.stdlib)
 
+ (def libc (ffi-library pixie.platform/lib-c-name))
+ (def exit (ffi-fn libc "exit" [Integer] Integer))
+ (def puts (ffi-fn libc "puts" [String] Integer))
+
+ (run_blocking puts "heyoooo-------------")
+
 (def reset! -reset!)
 
 (def load-paths (atom ["./"]))

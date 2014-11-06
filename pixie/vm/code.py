@@ -112,10 +112,6 @@ class BaseCode(object.Object):
     def stack_size(self):
         return 0
 
-    def invoke(self, args):
-        result = self.invoke(args)
-        return result
-
     def invoke_with(self, args, this_fn):
         return self.invoke(args)
 
