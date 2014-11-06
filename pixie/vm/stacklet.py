@@ -21,6 +21,7 @@ OP_EXIT = 0x04
 OP_YIELD = 0x05
 OP_NEXT_PENDING = 0x06
 OP_NEW_THREAD = 0x07
+OP_EXECUTE_UV = 0x08
 
 class GlobalState(py_object):
     def __init__(self):
@@ -109,11 +110,20 @@ def new_thread(f):
     global_state._val = f
     global_state._h = global_state._th.switch(global_state._h)
 
+def enqueue_stacklet(k):
+    pending_stacklets.push(k)
 
 def yield_stacklet():
     global_state._op = OP_YIELD
     global_state._val = nil
     global_state._h = global_state._th.switch(global_state._h)
+
+def execute_uv_func(func):
+    assert isinstance(func, uv.UVFunction)
+    global_state._op = OP_EXECUTE_UV
+    global_state._val = func
+    global_state._h = global_state._th.switch(global_state._h)
+
 
 def new_handler(h, o):
     global_state._h = h
@@ -169,6 +179,8 @@ def init_handler(h, o):
     global_state._op = OP_EXIT
     return global_state._h
 
+pending_stacklets = ring_buffer.RingBuffer(r_uint(32))
+
 
 def with_stacklets(f):
     loop = uv.loop_new()
@@ -179,13 +191,11 @@ def with_stacklets(f):
     main_h = global_state._th.new(init_handler)
     global_state._from = WrappedHandler(main_h)
 
-    pending_stacklets = ring_buffer.RingBuffer(r_uint(32))
     pending_stacklets.push(1)
     assert pending_stacklets.pop() == 1
     pending_stacklets.push(2)
     assert pending_stacklets.pop() == 2
 
-    print "Entrance"
     while True:
         print global_state._op
         if global_state._op == OP_NEW:
@@ -219,7 +229,23 @@ def with_stacklets(f):
             global_state._op = OP_NEXT_PENDING
             continue
 
+        elif global_state._op == OP_EXECUTE_UV:
+            assert global_state._from
+            k = global_state._from
+            f = global_state._val
+            f.execute_uv(loop, k)
+            global_state._op = OP_NEXT_PENDING
+            continue
+
         elif global_state._op == OP_NEXT_PENDING:
+            print "running with", pending_stacklets.pending()
+            while True:
+                if pending_stacklets.pending() == 0:
+                    uv.run(loop, uv.RUN_DEFAULT)
+                    continue
+                else:
+                    uv.run(loop, uv.RUN_DEFAULT | uv.RUN_NO_WAIT)
+                    break
             f = pending_stacklets.pop()
             global_state._from = f
             f._h = global_state._th.switch(f._h)

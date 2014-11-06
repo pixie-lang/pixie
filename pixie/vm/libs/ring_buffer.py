@@ -9,11 +9,8 @@ class RingBuffer(object):
         self._head = 0
         self._tail = 0
 
-    def push(self, obj):
-        if self._count == self._size:
-            self.resize_larger(self._size * 2)
-
-        self._array[self._idx] = obj
+    def pending(self):
+        return self._array_len - self._length
 
     def pop(self):
         if not self._length == 0:
@@ -27,7 +24,7 @@ class RingBuffer(object):
     def push(self, x):
         self._array[self._head] = x
         self._head = (self._head + 1) % self._array_len
-        self._length -= 1
+        self._length += 1
 
     def unbounded_push(self, x):
         if self._length - 1 == 0:
