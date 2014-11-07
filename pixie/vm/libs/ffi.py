@@ -132,6 +132,7 @@ class FFIFn(object.Object):
             cd.nargs = len(self._arg_types)
             cd.rtype = get_clibffi_type(self._ret_type)
             atypes = lltype.malloc(clibffi.FFI_TYPE_PP.TO, len(self._arg_types), flavor="raw")
+
             for x in range(len(self._arg_types)):
                 atypes[x] = get_clibffi_type(self._arg_types[x])
 
@@ -160,7 +161,7 @@ class FFIFn(object.Object):
         self._is_inited = False
 
     @jit.unroll_safe
-    def _invoke(self, args):
+    def prep_exb(self, args):
         if not self._is_inited:
             self.thaw()
         exb = lltype.malloc(rffi.CCHARP.TO, self._transfer_size, flavor="raw")
@@ -168,10 +169,19 @@ class FFIFn(object.Object):
 
         for x in range(len(self._arg_types)):
             offset_p = set_native_value(offset_p, args[x], self._arg_types[x])
+        return exb
 
-        jit_ffi_call(self._cd, self._f_ptr, exb)
-        offset_p = rffi.ptradd(exb, self._ret_offset)
+    def get_ret_val_from_buffer(self, exb):
+        offset_p = rffi.ptradd(exb, self._cd.exchange_result_libffi)
         ret_val = get_ret_val(offset_p, self._ret_type)
+        return ret_val
+
+    @jit.unroll_safe
+    def _invoke(self, args):
+
+        exb = self.prep_exb(args)
+        jit_ffi_call(self._cd, self._f_ptr, exb)
+        ret_val = self.get_ret_val_from_buffer(exb)
         lltype.free(exb, flavor="raw")
         return ret_val
 
