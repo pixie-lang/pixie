@@ -293,7 +293,7 @@ def read_unicode_char(rdr, token, offset, length, base):
         throw_syntax_error_with_data(rdr, u"Invalid unicode character: \\" + token)
     c = 0
     for i in range(offset, offset + length):
-        d = int(token[i:i+1], base)
+        d = int(str(token[i:i+1]), base)
         c = c * base + d
     return c
 
@@ -302,17 +302,17 @@ class LiteralCharacterReader(ReaderHandler):
         token = read_token(rdr)
         if len(token) == 1:
             return Character(ord(token[0]))
-        elif token == "newline":
+        elif token == u"newline":
             return Character(ord("\n"))
-        elif token == "space":
+        elif token == u"space":
             return Character(ord(" "))
-        elif token == "tab":
+        elif token == u"tab":
             return Character(ord("\t"))
-        elif token == "backspace":
+        elif token == u"backspace":
             return Character(ord("\b"))
-        elif token == "formfeed":
+        elif token == u"formfeed":
             return Character(ord("\f"))
-        elif token == "return":
+        elif token == u"return":
             return Character(ord("\r"))
         elif token.startswith("u"):
             c = read_unicode_char(rdr, token, 1, 4, 16)
