@@ -49,6 +49,16 @@ class PersistentHashMap(object.Object):
         return not_found if self._root is None else self._root.find(r_uint(0), rt.hash(key) & MASK_32, key, not_found)
 
 
+    def without(self, key):
+        if self._root is None:
+            return self
+
+        new_root = self._root.without_inode(0, rt.hash(key) & MASK_32, key)
+
+        if new_root is self._root:
+            return self
+        return PersistentHashMap(self._cnt - 1, new_root, self._meta)
+
 
 
 
@@ -65,6 +75,9 @@ class INode(object.Object):
         pass
 
     def reduce_inode(self, f, init):
+        pass
+
+    def without(self, shift, hash, key):
         pass
 
 def mask(hash, shift):
@@ -151,6 +164,7 @@ class BitmapIndexedNode(INode):
             return val_or_node
         return not_found
 
+
     def reduce_inode(self, f, init):
         for x in range(0, len(self._array), 2):
             key_or_none = self._array[x]
@@ -162,6 +176,33 @@ class BitmapIndexedNode(INode):
             if rt.reduced_QMARK_(init):
                 return init
         return init
+
+    def without_inode(self, shift, hash, key):
+        bit = bitpos(hash, shift)
+        if self._bitmap & bit == 0:
+            return self
+
+        idx = self.index(bit)
+        key_or_none = self._array[2 * idx]
+        val_or_node = self._array[2 * idx + 1]
+
+        if key_or_none is None:
+            n = val_or_node.without_inode(shift + 5, hash, key)
+            if n is val_or_node:
+                return self
+            if n is not None:
+                return BitmapIndexedNode(None, self._bitmap, clone_and_set(self._array, 2 * idx + 1, n))
+
+            if self._bitmap == bit:
+                return None
+
+            return BitmapIndexedNode(None, self._bitmap ^ bit, remove_pair(self._array, idx))
+
+        if rt.eq(key, key_or_none):
+            return BitmapIndexedNode(None, self._bitmap ^ bit, remove_pair(self._array, idx))
+
+        return self
+
 
 
 BitmapIndexedNode_EMPTY = BitmapIndexedNode(None, r_uint(0), [])
@@ -184,6 +225,47 @@ class ArrayNode(INode):
         if n is node:
             return self
         return ArrayNode(None, self._cnt, clone_and_set(self._array, idx, n))
+
+    def without_inode(self, shift, hash, key):
+        idx = mask(hash, shift)
+        node = self._array[idx]
+        if node is None:
+            return self
+        n = node.without_inode(shift + 5, hash, key)
+        if n is node:
+            return self
+        if n is None:
+            if self._cnt <= 8:  # shrink
+                return self.pack(None, idx)
+            return ArrayNode(None, self._cnt - 1, clone_and_set(self._array, idx, n))
+        else:
+            return ArrayNode(None, self._cnt, clone_and_set(self._array, idx, n))
+
+    def pack(self, idx):
+        new_array = [None] * (2 * (self._cnt - 1))
+        j = r_uint(1)
+        bitmap = r_uint(0)
+
+        i = r_uint(0)
+        while i < idx:
+            if self._array[i] is not None:
+                new_array[j] = self._array[i]
+                bitmap |= 1 << i
+                j += 2
+
+            i += 1
+
+        i = r_uint(idx) + 1
+        while i < len(self._array):
+            if self._array[i] is not None:
+                new_array[j] = self._array[i]
+                bitmap |= 1 << i
+                j += 2
+
+            i += 1
+
+        return BitmapIndexedNode(None, bitmap, new_array)
+
 
     def find(self, shift, hash_val, key, not_found):
         idx = mask(hash_val, shift)
@@ -230,6 +312,26 @@ class HashCollisionNode(INode):
             if rt.reduced_QMARK_(init):
                 return init
         return init
+
+    def find_index(self, key):
+        i = 0
+        while i < len(self._array):
+            if rt.eq(key, self._array[i]):
+                return i
+
+            i += 2
+
+        return -1
+
+    def without(self, shift, hash, key):
+        idx = self.find_index(key)
+        if idx == -1:
+            return self
+
+        if len(self._array) == 1:
+            return None
+
+        return HashCollisionNode(None, self._hash, remove_pair(self._array, idx / 2))
 
 
 
@@ -284,6 +386,11 @@ def clone_and_set2(array, i, a, j, b):
     clone[j] = b
     return clone
 
+def remove_pair(array, i):
+    new_array = [None] * (len(array) - 2)
+    list_copy(array, 0, new_array, 0, 2 * i)
+    list_copy(array, 2 * (i + 1), new_array, 2 * i, len(new_array) - (2 * i))
+    return new_array
 
 ### hook into RT
 
@@ -333,6 +440,11 @@ def _reduce(self, f, init):
 def _assoc(self, key, val):
     assert isinstance(self, PersistentHashMap)
     return self.assoc(key, val)
+
+@extend(proto._dissoc, PersistentHashMap)
+def _dissoc(self, key):
+    assert isinstance(self, PersistentHashMap)
+    return self.without(key)
 
 proto.IMap.add_satisfies(PersistentHashMap._type)
 

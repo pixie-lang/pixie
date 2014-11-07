@@ -319,6 +319,11 @@
   ([m k v & rest]
      (apply assoc (-assoc m k v) rest)))
 
+(defn dissoc
+  ([m] m)
+  ([m & ks]
+    (reduce -dissoc m ks)))
+
 (defn contains? [coll key]
   (-contains-key coll key))
 

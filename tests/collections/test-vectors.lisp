@@ -1,7 +1,7 @@
 (ns collections.test-vectors
   (require pixie.test :as t))
 
-(def MAX-SIZE 2000)
+(def MAX-SIZE 1064)
 
 (t/deftest vector-creation
   (loop [acc []]

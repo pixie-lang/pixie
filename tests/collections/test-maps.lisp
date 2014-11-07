@@ -32,3 +32,9 @@
              (t/assert= (m (key e)) (val e)))
     (t/assert= (get m :d) nil)
     (t/assert= (m :d) nil)))
+
+(t/deftest map-without
+  (let [m {:a 1 :b 2}]
+    (t/assert= m m)
+    (t/assert= (dissoc m :a) {:b 2})
+    (t/assert= (dissoc m :a :b) {})))
