@@ -112,9 +112,38 @@ class EvalFn(NativeFn):
 
             interpret(compile(read(StringReader(unicode(self._expr)), True)))
 
+@wrap_fn
+def run_load_stdlib():
+    import pixie.vm.compiler as compiler
+    import pixie.vm.reader as reader
+    f = open("pixie/stdlib.lisp")
+    data = f.read()
+    f.close()
+    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
+    result = nil
+
+    with compiler.with_ns(u"pixie.stdlib"):
+        while True:
+            form = reader.read(rdr, False)
+            if form is reader.eof:
+                return result
+            result = compiler.compile(form).invoke([])
+
+def load_stdlib():
+
+
+
+
+
+
+
+    stacklet.with_stacklets(run_load_stdlib)
+
 def entry_point(args):
     interactive = True
     script_args = []
+
+    load_stdlib()
 
     i = 1
     while i < len(args):
@@ -206,7 +235,7 @@ def run_debug(argv):
 
 import pixie.vm.rt as rt
 rt.init()
-stacklet.global_state = stacklet.GlobalState()
+#stacklet.global_state = stacklet.GlobalState()
 
 def target(*args):
     import pixie.vm.rt as rt

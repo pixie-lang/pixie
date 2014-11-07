@@ -1,5 +1,6 @@
 import pixie.vm.rt as rt
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.code import extend, as_var
 from pixie.vm.numbers import Integer
 from pixie.vm.primitives import nil
@@ -33,11 +34,6 @@ class Array(object.Object):
             init = f.invoke([init, self._list[x]])
         return init
 
-
-
-
-
-
 @extend(proto._count, Array)
 def _count(self):
     assert isinstance(self, Array)
@@ -55,8 +51,42 @@ def reduce(self, f, init):
         return self.reduce_large(f, init)
     return self.reduce_small(f, init)
 
-
 def array(lst):
     assert isinstance(lst, list)
     return Array(lst)
 
+@as_var("aget")
+def aget(self, idx):
+    assert isinstance(self, Array)
+    return self._list[idx.int_val()]
+
+@as_var("aset")
+def aset(self, idx, val):
+    assert isinstance(self, Array)
+    self._list[idx.int_val()] = val
+    return val
+
+@as_var("aslice")
+def aslice(self, offset):
+    assert isinstance(self, Array) and isinstance(offset, Integer)
+
+    offset = offset.int_val()
+    if offset >= 0:
+        return Array(self._list[offset:])
+    else:
+        rt.throw(rt.wrap(u"offset must be an Integer >= 0"))
+
+@as_var("aconcat")
+def aconcat(self, other):
+    assert isinstance(self, Array) and isinstance(other, Array)
+    return Array(self._list + other._list)
+
+@as_var("alength")
+def alength(self):
+    assert isinstance(self, Array)
+    return rt.wrap(len(self._list))
+
+@as_var("make-array")
+def make_array(l):
+    affirm(isinstance(l, Integer), u"l must be an Integer")
+    return Array([nil] * l.int_val())

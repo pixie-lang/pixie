@@ -290,6 +290,14 @@
                   (apply >= y rest)
                   false)))
 
+(defn pos? [x]
+  (> x 0))
+
+(defn neg? [x]
+  (< x 0))
+
+(defn zero? [x]
+  (= x 0))
 
 (def inc (fn [x] (+ x 1)))
 

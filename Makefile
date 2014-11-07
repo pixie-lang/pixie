@@ -37,5 +37,5 @@ run_interactive:
 run_built_tests: pixie-vm
 	./pixie-vm run-tests.lisp
 
-run_interpreted_tests: pixie-vm
+run_interpreted_tests: target.py
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.lisp

@@ -17,7 +17,7 @@ def init():
     _type_registry.set_registry(code._ns_registry)
 
     def unwrap(fn):
-        if isinstance(fn, code.Var) and hasattr(fn.deref(), "_returns"):
+        if isinstance(fn, code.Var) and fn.is_defined() and hasattr(fn.deref(), "_returns"):
             tp = fn.deref()._returns
             if tp is bool:
                 def wrapper(*args):
@@ -48,6 +48,7 @@ def init():
     sys.setrecursionlimit(10000) # Yeah we blow the stack sometimes, we promise it's not a bug
 
     import pixie.vm.numbers as numbers
+    import pixie.vm.bits as bits
     from pixie.vm.code import wrap_fn
     import pixie.vm.interpreter
     import pixie.vm.stacklet as stacklet
@@ -123,29 +124,34 @@ def init():
             else:
                 globals()[name] = var
 
-    f = open("pixie/stdlib.lisp")
-    data = f.read()
-    f.close()
-    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
-    result = nil
+    #f = open("pixie/stdlib.lisp")
+    #data = f.read()
+    #f.close()
+    #rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
+    #result = nil
+    #
+    # @wrap_fn
+    # def run_load_stdlib():
+    #     with compiler.with_ns(u"pixie.stdlib"):
+    #         while True:
+    #             form = reader.read(rdr, False)
+    #             if form is reader.eof:
+    #                 return result
+    #             result = compiler.compile(form).invoke([])
+    #             reinit()
+    #
+    # stacklet.with_stacklets(run_load_stdlib)
 
-    @wrap_fn
-    def run_load_stdlib():
-        with compiler.with_ns(u"pixie.stdlib"):
-            while True:
-                form = reader.read(rdr, False)
-                if form is reader.eof:
-                    return result
-                result = compiler.compile(form).invoke([])
-                reinit()
 
-    stacklet.with_stacklets(run_load_stdlib)
+    init_fns = [u"reduce", u"get", u"reset!", u"assoc", u"key", u"val", u"keys", u"vals"]
+    for x in init_fns:
+        globals()[py_str(code.munge(x))] = unwrap(code.intern_var(u"pixie.stdlib", x))
 
-
-
+    init_vars = [u"load-paths"]
+    for x in init_vars:
+        globals()[py_str(code.munge(x))] = code.intern_var(u"pixie.stdlib", x)
 
     globals()["__inited__"] = True
-
 
 
 
