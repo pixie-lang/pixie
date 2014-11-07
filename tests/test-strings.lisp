@@ -71,3 +71,17 @@
   (t/assert= (s/trimr "hey   ") "hey")
   (t/assert= (s/trimr "   hey  ") "   hey")
   (t/assert= (s/trimr "   h  ey   ") "   h  ey"))
+
+(t/deftest test-char-literals
+  (let [s "hey"]
+    (t/assert= (nth s 0) \h)
+    (t/assert= (nth s 0) \o150)
+    (t/assert= (nth s 0) \u0068)
+
+    (t/assert= (nth s 1) \e)
+    (t/assert= (nth s 1) \o145)
+    (t/assert= (nth s 1) \u0065)
+
+    (t/assert= (nth s 2) \y)
+    (t/assert= (nth s 2) \o171)
+    (t/assert= (nth s 2) \u0079)))
