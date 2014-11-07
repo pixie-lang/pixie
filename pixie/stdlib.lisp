@@ -500,7 +500,7 @@
 (defmacro require [ns kw as-nm]
   (assert (= kw :as) "Require expects :as as the second argument")
   `(do (load-file (quote ~ns))
-       (refer (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
+       (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
 
 (defmacro ns [nm & body]
   `(do (__ns__ ~nm)
@@ -609,6 +609,9 @@
 
 (defmacro when [test & body]
   `(if ~test (do ~@body)))
+
+(defmacro when-not [test & body]
+  `(if (not ~test) (do ~@body)))
 
 (defn abs [x]
   (if (< x 0)
@@ -742,3 +745,27 @@
                  (if result
                    (xf acc result)
                    acc))))))
+
+(defn refer [ns-sym & filters]
+  (let [ns (or (the-ns ns-sym) (throw (str "No such namespace: " ns-sym)))
+        filters (apply hashmap filters)
+        nsmap (ns-map ns)
+        rename (or (:rename filters) {})
+        exclude (set (:exclude filters))
+        refers (if (= :all (:refer filters))
+                 (keys nsmap)
+                 (or (:refer filters) (:only filters) (keys nsmap)))]
+    (when (and refers (not (satisfies? ISeqable refers)))
+      (throw ":only/:refer must be a collection of symbols"))
+    (loop [syms (seq refers)]
+      (if (not syms)
+        nil
+        (do
+          (let [sym (first syms)]
+            (when-not (exclude sym)
+              (let [v (nsmap sym)]
+                (when-not v
+                  (throw (str sym "does not exist")))
+                (refer-symbol *ns* (or (rename sym) sym) v))))
+          (recur (next syms)))))
+    nil))
