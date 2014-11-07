@@ -104,7 +104,7 @@ However there are a few features of pixie that although may not be uncommon, are
 
 ## Contributing
 
-Currently there isn't a whole lot that newcomers can help out with, since the entire codebase is in quite a bit of flux, and the main primitives are still under development. However, we do want to have a very open contribution process. If you have a feature you'd like to implement, submit a PR or file an issue and we'll see what we can do.
+We have a very open contribution process. If you have a feature you'd like to implement, submit a PR or file an issue and we'll see what we can do. Most PRs are either rejected (if there is a techincal flaw) or accepted within a day, so send an improvement our way and see what happens. 
 
 ## Implementation Notes
 
