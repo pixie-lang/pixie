@@ -4,6 +4,8 @@ script:
   - make run_built_tests
 
 before_install:
+  - sudo apt-add-repository ppa:linuxjedi/ppa
+  - sudo apt-get update
   - sudo apt-get install libffi-dev libuv
 
 os:
