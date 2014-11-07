@@ -9,10 +9,6 @@
  (def rand (ffi-fn libc "rand" [Integer] Integer))
  (def srand (ffi-fn libc "srand" [Integer] Integer))
 
- (srand 44)
-
- (puts (str (run_blocking readline "heooo") "<-----"))
-
 (def reset! -reset!)
 
 (def load-paths (atom ["./"]))

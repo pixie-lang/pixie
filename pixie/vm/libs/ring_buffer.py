@@ -1,13 +1,16 @@
 from rpython.rlib.rarithmetic import r_uint
+from pixie.vm.primitives import nil
+
+empty_slot = (nil, nil)
 
 class RingBuffer(object):
     def __init__(self, size):
         assert isinstance(size, r_uint)
-        self._array = [None] * size
+        self._array = [empty_slot] * size
         self._array_len = size
         self._length = size
-        self._head = 0
-        self._tail = 0
+        self._head = r_uint(0)
+        self._tail = r_uint(0)
 
     def pending(self):
         return self._array_len - self._length
@@ -15,11 +18,11 @@ class RingBuffer(object):
     def pop(self):
         if not self._length == 0:
             x = self._array[self._tail]
-            self._array[self._tail] = None
+            self._array[self._tail] = empty_slot
             self._tail = (self._tail + 1) % self._array_len
             self._length -= 1
             return x
-        return None
+        return empty_slot
 
     def push(self, x):
         self._array[self._head] = x
@@ -27,7 +30,7 @@ class RingBuffer(object):
         self._length += 1
 
     def unbounded_push(self, x):
-        if self._length - 1 == 0:
+        if self._length == 0:
             self.resize()
         self.push(x)
 

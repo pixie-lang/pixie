@@ -34,7 +34,6 @@ uv_work = rffi_platform.Struct("uv_work_t",
 
 uv_timer_t = rffi.COpaque("uv_timer_t", compilation_info=compilation_info)
 
-#print rffi.sizeof(uv_timer_t)
 
 uv_timer = lltype.Ptr(uv_timer_t)
 
@@ -50,20 +49,16 @@ def as_cb(T):
     return _inner
 
 def _timer_cb(timer_t, status):
-    print status, " status\n"
-    print "done"
     import pixie.vm.stacklet as stacklet
     casted = rffi.cast(rffi.INT, timer_t)
     data = data_container[casted]
     del data_container[casted]
-    stacklet.pending_stacklets.push(data)
-    print "timeout completed"
+    stacklet.pending_stacklets.push((data, nil))
 
 def set_timeout(loop, cont, timeout, repeat):
     timer = lltype.malloc(uv_timer_t, flavor="raw", track_allocation="false")
     data_container[rffi.cast(rffi.INT, timer)] = cont
     assert not timer_init(loop, timer)
-    print "setting timeout", timeout, repeat
     assert not timer_start(timer, _timer_cb, timeout, repeat)
 
 
@@ -96,19 +91,15 @@ class SleepUVFunction(UVFunction):
 work_data_container = {}
 
 def _work_cb(baton, status):
-    print "------------------done\n"
-    print status, " status\n"
-    print "done"
     import pixie.vm.stacklet as stacklet
     casted = rffi.cast(rffi.INT, baton)
     (k, exb, fn) = work_data_container[casted]
     del work_data_container[casted]
     retval = fn.get_ret_val_from_buffer(exb)
-    print retval, "<----"
+
     stacklet.pending_stacklets.push((k, retval))
     lltype.free(exb, flavor="raw")
     #lltype.free(baton, flavor="raw")
-    print "timeout completed"
 
 class RunFFIFunc(UVFunction):
     def __init__(self, fn, args):
@@ -120,7 +111,7 @@ class RunFFIFunc(UVFunction):
     def execute_uv(self, loop, k):
         baton = ffi_make_baton()
         exb = self._fn.prep_exb(self._args)
-        print "nargs inside", self._fn._cd.nargs
+
         buffer_array = rffi.cast(rffi.VOIDPP, exb)
         work_data_container[rffi.cast(rffi.INT, baton)] = (k, exb, self._fn)
         cif = self._fn._cd
