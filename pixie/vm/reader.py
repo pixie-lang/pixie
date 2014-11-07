@@ -429,11 +429,14 @@ class FnReader(ReaderHandler):
 
         try:
             ARG_ENV.set_value(rt.assoc(EMPTY_MAP, ARG_MAX, rt.wrap(-1)))
+
             rdr.unread(ch)
             form = read(rdr, True)
+
             args = EMPTY_VECTOR
             percent_args = ARG_ENV.deref()
             max_arg = rt.get(percent_args, ARG_MAX)
+
             for i in range(1, max_arg.int_val() + 1):
                 arg = rt.get(percent_args, rt.wrap(i))
                 if arg is nil:
@@ -444,7 +447,7 @@ class FnReader(ReaderHandler):
             if rest_arg is not nil:
                 args = rt.conj(args, ARG_AMP)
                 args = rt.conj(args, rest_arg)
-            print "fn_reader: ", rt.name(rt.str(rt.cons(symbol(u"fn"), rt.cons(args, rt.cons(form, nil)))))
+
             return rt.cons(symbol(u"fn"), rt.cons(args, rt.cons(form, nil)))
         finally:
             ARG_ENV.set_value(nil)
