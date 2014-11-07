@@ -602,6 +602,9 @@
 (defmacro when [test & body]
   `(if ~test (do ~@body)))
 
+(defmacro when-not [test & body]
+  `(if (not ~test) (do ~@body)))
+
 (defn abs [x]
   (if (< x 0)
     (* -1 x)
