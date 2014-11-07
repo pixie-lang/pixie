@@ -12,16 +12,19 @@ import rpython.tool.udir as udir
 import os
 import shutil
 import pixie.vm.libs.ffi as ffi
+import rpython.rlib.rgc as rgc
 
 
 pkgpath = py.path.local(__file__).dirpath()
 srcpath = pkgpath.join("c")
 
 shutil.copyfile(str(srcpath / "uv_ffi.c"), str(udir.udir / "uv_ffi.c"))
+shutil.copyfile(str(srcpath / "uv_ffi.h"), str(udir.udir / "uv_ffi.h"))
 
 
 compilation_info = ExternalCompilationInfo(
-        includes=['uv.h', "ffi.h"],
+        includes=['uv.h', "ffi.h", "uv_ffi.h"],
+        include_dirs=[srcpath],
         libraries=["uv", "ffi"],
         separate_module_files=[udir.udir / "uv_ffi.c"]).merge(ExternalCompilationInfo.from_pkg_config("libffi"))
 
@@ -33,6 +36,7 @@ uv_work = rffi_platform.Struct("uv_work_t",
                                [("data", rffi.VOIDP)])
 
 uv_timer_t = rffi.COpaque("uv_timer_t", compilation_info=compilation_info)
+uv_baton_t = rffi.COpaque("work_baton_t", compilation_info=compilation_info)
 
 
 uv_timer = lltype.Ptr(uv_timer_t)
@@ -69,7 +73,7 @@ run = llexternal("uv_run", [rffi.VOIDP, rffi.INT], rffi.SIZE_T)
 timer_init = llexternal("uv_timer_init", [rffi.VOIDP, uv_timer], rffi.INT)
 timer_start = llexternal("uv_timer_start", [uv_timer, uv_timer_cb, rffi.ULONGLONG, rffi.ULONGLONG], rffi.INT)
 
-ffi_run = llexternal("uv_ffi_run", [rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, uv_callback_t], rffi.INT)
+ffi_run = llexternal("uv_ffi_run", [rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, rffi.VOIDP, uv_callback_t], rffi.SIZE_T)
 ffi_make_baton = llexternal("uv_ffi_make_baton", [], rffi.VOIDP)
 
 RUN_DEFAULT = 0
@@ -109,7 +113,8 @@ class RunFFIFunc(UVFunction):
         self._args = args
 
     def execute_uv(self, loop, k):
-        baton = ffi_make_baton()
+        baton = lltype.malloc(uv_baton_t, flavor="raw")
+        rgc.pin(baton)
         exb = self._fn.prep_exb(self._args)
 
         buffer_array = rffi.cast(rffi.VOIDPP, exb)
@@ -123,7 +128,7 @@ class RunFFIFunc(UVFunction):
 
         ffi_run(baton,
                 loop,
-                rffi.cast(rffi.VOIDP, self._fn._cd),
+                rffi.cast(rffi.VOIDP, cif),
                 rffi.cast(rffi.VOIDP, self._fn._f_ptr),
                 rffi.cast(rffi.VOIDP, exb),
                 rffi.cast(rffi.VOIDP, resultdata),

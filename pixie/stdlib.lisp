@@ -9,6 +9,8 @@
  (def rand (ffi-fn libc "rand" [Integer] Integer))
  (def srand (ffi-fn libc "srand" [Integer] Integer))
 
+ (run_blocking puts "async-io works")
+
 (def reset! -reset!)
 
 (def load-paths (atom ["./"]))
