@@ -34,7 +34,6 @@ class GlobalState(py_object):
         self._th = None
         self._val = None
         self._ex = None
-        self._to = None
         self._op = 0x00
         self._fn = None
         self._init_fn = None
@@ -131,6 +130,7 @@ def execute_uv_func(func):
     global_state._op = OP_EXECUTE_UV
     global_state._val = func
     to_main_loop()
+    return global_state._val
 
 
 def new_handler(h, o):
@@ -251,10 +251,12 @@ def with_stacklets(f):
                 else:
                     uv.run(loop, uv.RUN_DEFAULT | uv.RUN_NO_WAIT)
                     break
-            f = pending_stacklets.pop()
-            assert f
-            global_state._current = f
-            f._h = global_state._th.switch(f._h)
+            (k, val) = pending_stacklets.pop()
+            assert k
+            print val, "---->"
+            global_state._val = val
+            global_state._current = k
+            k._h = global_state._th.switch(k._h)
             continue
 
         else:

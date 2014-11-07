@@ -93,15 +93,21 @@ class SleepUVFunction(UVFunction):
         set_timeout(loop, k, self._time, 0)
 
 
+work_data_container = {}
+
 def _work_cb(baton, status):
     print "------------------done\n"
     print status, " status\n"
     print "done"
     import pixie.vm.stacklet as stacklet
     casted = rffi.cast(rffi.INT, baton)
-    data = data_container[casted]
-    del data_container[casted]
-    stacklet.pending_stacklets.push(data)
+    (k, exb, fn) = work_data_container[casted]
+    del work_data_container[casted]
+    retval = fn.get_ret_val_from_buffer(exb)
+    print retval, "<----"
+    stacklet.pending_stacklets.push((k, retval))
+    lltype.free(exb, flavor="raw")
+    #lltype.free(baton, flavor="raw")
     print "timeout completed"
 
 class RunFFIFunc(UVFunction):
@@ -113,10 +119,10 @@ class RunFFIFunc(UVFunction):
 
     def execute_uv(self, loop, k):
         baton = ffi_make_baton()
-        data_container[rffi.cast(rffi.INT, baton)] = k
         exb = self._fn.prep_exb(self._args)
         print "nargs inside", self._fn._cd.nargs
         buffer_array = rffi.cast(rffi.VOIDPP, exb)
+        work_data_container[rffi.cast(rffi.INT, baton)] = (k, exb, self._fn)
         cif = self._fn._cd
         for i in range(cif.nargs):
             data = rffi.ptradd(exb, cif.exchange_args[i])
@@ -135,8 +141,7 @@ class RunFFIFunc(UVFunction):
 @as_var("run_blocking")
 def _run_blocking(fn, arg):
     from pixie.vm.stacklet import execute_uv_func
-    execute_uv_func(RunFFIFunc(fn, [arg]))
-    return nil
+    return execute_uv_func(RunFFIFunc(fn, [arg]))
 
 @as_var("sleep")
 def _sleep(ms):

@@ -4,7 +4,14 @@
  (def exit (ffi-fn libc "exit" [Integer] Integer))
  (def puts (ffi-fn libc "puts" [String] Integer))
 
- (run_blocking puts "heyoooo-------------")
+ (def libreadline (ffi-library "libreadline.dylib"))
+ (def readline (ffi-fn libreadline "readline" [String] String))
+ (def rand (ffi-fn libc "rand" [Integer] Integer))
+ (def srand (ffi-fn libc "srand" [Integer] Integer))
+
+ (srand 44)
+
+ (puts (str (run_blocking readline "heooo") "<-----"))
 
 (def reset! -reset!)
 
