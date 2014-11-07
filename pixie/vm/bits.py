@@ -20,6 +20,11 @@ def bit_flip(x, n):
     affirm(isinstance(x, Integer) and isinstance(n, Integer), u"x and n must be Integers")
     return rt.wrap(x.int_val() ^ (1 << n.int_val()))
 
+@as_var("bit-not")
+def bit_not(x):
+    affirm(isinstance(x, Integer), u"x must be an Integer")
+    return rt.wrap(~x.int_val())
+
 @as_var("bit-test")
 def bit_test(x, n):
     affirm(isinstance(x, Integer) and isinstance(n, Integer), u"x and n must be Integers")

@@ -366,7 +366,25 @@ def the_ns(ns_name):
 
     return code._ns_registry.get(rt.name(ns_name), nil)
 
-@as_var("refer")
+@as_var("ns-map")
+def ns_map(ns):
+    from pixie.vm.symbol import Symbol
+
+    affirm(isinstance(ns, code.Namespace) or isinstance(ns, Symbol), u"ns must be a symbol or a namespace")
+
+    if isinstance(ns, Symbol):
+        ns = rt.the_ns(ns)
+        if ns is nil:
+            return nil
+
+    m = rt.hashmap()
+    for name in ns._registry:
+        var = ns._registry.get(name, nil)
+        m = rt.assoc(m, rt.symbol(rt.wrap(name)), var)
+
+    return m
+
+@as_var("refer-ns")
 def refer(ns, refer, alias):
     from pixie.vm.symbol import Symbol
 
@@ -377,6 +395,16 @@ def refer(ns, refer, alias):
     ns.add_refer(refer, rt.name(alias))
     return nil
 
+@as_var("refer-symbol")
+def refer_symbol(ns, sym, var):
+    from pixie.vm.symbol import Symbol
+
+    affirm(isinstance(ns, code.Namespace), u"First argument must be a namespace")
+    affirm(isinstance(sym, Symbol) and rt.namespace(sym) is None, u"Second argument must be a non-namespaced symbol")
+    affirm(isinstance(var, code.Var), u"Third argument must be a var")
+
+    ns.add_refer_symbol(sym, var)
+    return nil
 
 @as_var("extend")
 def _extend(proto_fn, tp, fn):

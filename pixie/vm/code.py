@@ -448,6 +448,17 @@ class Namespace(object.Object):
 
         self._refers[as_nm] = Refer(ns, refer_all=refer_all)
 
+    def add_refer_symbol(self, sym, var):
+        assert isinstance(self, Namespace)
+
+        name = rt.name(sym)
+        prev_binding = self._registry.get(name, None)
+        if prev_binding is not None:
+            print rt.str(rt.wrap(u"Warning: "), sym, rt.wrap(u" already refers to "), prev_binding)._str
+
+        self._registry[name] = var
+        return var
+
     def include_stdlib(self):
         stdlib = _ns_registry.find_or_make(u"pixie.stdlib")
         self.add_refer(stdlib, refer_all=True)
