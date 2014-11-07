@@ -12,7 +12,7 @@ from pixie.vm.object import RuntimeException, WrappedException
 from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
 import sys
-
+import os
 
 class DebugIFace(JitHookInterface):
     def on_abort(self, reason, jitdriver, greenkey, greenkey_repr, logops, operations):
@@ -93,12 +93,16 @@ class BatchModeFn(NativeFn):
         PROGRAM_ARGUMENTS.set_root(acc)
 
         with with_ns(u"user"):
-            if self._file == '-':
-                stdin, _, _ = create_stdio()
-                code = stdin.read()
-                interpret(compile(read(StringReader(unicode(code)), True)))
-            else:
-                rt.load_file(rt.wrap(self._file))
+            try:
+                if self._file == '-':
+                    stdin, _, _ = create_stdio()
+                    code = stdin.read()
+                    interpret(compile(read(StringReader(unicode(code)), True)))
+                else:
+                    rt.load_file(rt.wrap(self._file))
+            except WrappedException as ex:
+                print "Error: ", ex._ex.__repr__()
+                os._exit(1)
 
 class EvalFn(NativeFn):
     def __init__(self, expr):
