@@ -303,23 +303,23 @@ class LiteralCharacterReader(ReaderHandler):
         if len(token) == 1:
             return Character(ord(token[0]))
         elif token == "newline":
-            return Character(ord(u"\n"))
+            return Character(ord("\n"))
         elif token == "space":
-            return Character(ord(u" "))
+            return Character(ord(" "))
         elif token == "tab":
-            return Character(ord(u"\t"))
+            return Character(ord("\t"))
         elif token == "backspace":
-            return Character(ord(u"\b"))
+            return Character(ord("\b"))
         elif token == "formfeed":
-            return Character(ord(u"\f"))
+            return Character(ord("\f"))
         elif token == "return":
-            return Character(ord(u"\r"))
-        elif token.startswith(u"u"):
+            return Character(ord("\r"))
+        elif token.startswith("u"):
             c = read_unicode_char(rdr, token, 1, 4, 16)
             if c >= 0xd800 and c <= 0xdfff:
                 throw_syntax_error_with_data(rdr, u"Invalid character constant: \\" + token)
             return Character(c)
-        elif token.startswith(u"o"):
+        elif token.startswith("o"):
             l = len(token) - 1
             if l > 3:
                 throw_syntax_error_with_data(rdr, u"Invalid octal escape sequence: \\" + token)
@@ -328,7 +328,7 @@ class LiteralCharacterReader(ReaderHandler):
                 throw_syntax_error_with_data(rdr, u"Octal escape sequences must be in range [0, 377]")
             return Character(c)
         else:
-            throw_syntax_error_with_data(rdr, u"Unsupported character: \\" + unicode(token))
+            throw_syntax_error_with_data(rdr, u"Unsupported character: \\" + token)
 
 class DerefReader(ReaderHandler):
     def invoke(self, rdr, ch):
