@@ -310,6 +310,13 @@ def _satisfies(proto, o):
 import pixie.vm.rt as rt
 
 
+@as_var("read-string")
+def _read_string(s):
+    import pixie.vm.reader as reader
+
+    return reader.read(reader.StringReader(unicode(rt.name(s))), True)
+
+
 @as_var("load-file")
 def load_file(filename):
     import pixie.vm.reader as reader

@@ -633,6 +633,7 @@ class PolymorphicFn(BaseCode):
         return promote(fn)
 
     def invoke(self, args):
+        affirm(len(args) >= 1, u"Wrong number of args")
         a = args[0].type()
         fn = self.get_protocol_fn(a, self._rev)
         try:

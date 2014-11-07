@@ -783,3 +783,7 @@
                 (refer-symbol *ns* (or (rename sym) sym) v))))
           (recur (next syms)))))
     nil))
+
+
+(defn vec [coll]
+  (transduce conj! coll))
