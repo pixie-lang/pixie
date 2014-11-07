@@ -10,7 +10,7 @@ from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
-from pixie.vm.string import String
+from pixie.vm.string import Character, String
 from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
@@ -184,6 +184,9 @@ def is_whitespace(ch):
 def is_digit(ch):
     return ch in u"0123456789"
 
+def is_terminating_macro(ch):
+    return ch != u"#" and ch != u"'" and ch != u"%" and ch in handlers
+
 def eat_whitespace(rdr):
     while True:
         ch = rdr.read()
@@ -191,7 +194,6 @@ def eat_whitespace(rdr):
             continue
         rdr.unread(ch)
         return
-
 
 class ReaderHandler(py_object):
     def invoke(self, rdr, ch):
@@ -276,6 +278,57 @@ class LiteralStringReader(ReaderHandler):
             if v == "\"":
                 return rt.wrap(u"".join(acc))
             acc.append(v)
+
+def read_token(rdr):
+    acc = u""
+    while True:
+        ch = rdr.read()
+        if is_whitespace(ch) or is_terminating_macro(ch):
+            rdr.unread(ch)
+            return acc
+        acc += ch
+
+def read_unicode_char(rdr, token, offset, length, base):
+    if len(token) != offset + length:
+        throw_syntax_error_with_data(rdr, u"Invalid unicode character: \\" + token)
+    c = 0
+    for i in range(offset, offset + length):
+        d = int(token[i:i+1], base)
+        c = c * base + d
+    return c
+
+class LiteralCharacterReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        token = read_token(rdr)
+        if len(token) == 1:
+            return Character(ord(token[0]))
+        elif token == "newline":
+            return Character(ord(u"\n"))
+        elif token == "space":
+            return Character(ord(u" "))
+        elif token == "tab":
+            return Character(ord(u"\t"))
+        elif token == "backspace":
+            return Character(ord(u"\b"))
+        elif token == "formfeed":
+            return Character(ord(u"\f"))
+        elif token == "return":
+            return Character(ord(u"\r"))
+        elif token.startswith(u"u"):
+            c = read_unicode_char(rdr, token, 1, 4, 16)
+            if c >= 0xd800 and c <= 0xdfff:
+                throw_syntax_error_with_data(rdr, u"Invalid character constant: \\" + token)
+            return Character(c)
+        elif token.startswith(u"o"):
+            l = len(token) - 1
+            if l > 3:
+                throw_syntax_error_with_data(rdr, u"Invalid octal escape sequence: \\" + token)
+            c = read_unicode_char(rdr, token, 1, l, 8)
+            if c > 0377:
+                throw_syntax_error_with_data(rdr, u"Octal escape sequences must be in range [0, 377]")
+            return Character(c)
+        else:
+            throw_syntax_error_with_data(rdr, u"Unsupported character: \\" + unicode(token))
 
 class DerefReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -429,6 +482,7 @@ handlers = {u"(": ListReader(),
             u"'": QuoteReader(),
             u":": KeywordReader(),
             u"\"": LiteralStringReader(),
+            u"\\": LiteralCharacterReader(),
             u"@": DerefReader(),
             u"`": SyntaxQuoteReader(),
             u"~": UnquoteReader(),
@@ -508,9 +562,6 @@ def read_number(rdr, ch):
     if parsed is not None:
         return parsed
     return Symbol(joined)
-
-def is_terminating_macro(ch):
-    return ch != u"#" and ch != u"'" and ch != u"%" and ch in handlers
 
 def read_symbol(rdr, ch):
     acc = [ch]
