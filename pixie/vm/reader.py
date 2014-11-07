@@ -28,6 +28,12 @@ GEN_SYM_ENV = code.intern_var(u"pixie.stdlib.reader", u"*gen-sym-env*")
 GEN_SYM_ENV.set_dynamic()
 GEN_SYM_ENV.set_value(EMPTY_MAP)
 
+ARG_AMP = symbol(u"&")
+ARG_MAX = keyword(u"max-arg")
+ARG_ENV = code.intern_var(u"pixie.stdlib.reader", u"*arg-env*")
+ARG_ENV.set_dynamic()
+ARG_ENV.set_value(nil)
+
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
 
@@ -381,6 +387,68 @@ class MetaReader(ReaderHandler):
 
         return obj
 
+class ArgReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        if ARG_ENV.deref() is nil:
+            return read_symbol(rdr, ch)
+
+        ch = rdr.read()
+        rdr.unread(ch)
+        if is_whitespace(ch) or is_terminating_macro(ch):
+            return ArgReader.register_next_arg(1)
+
+        n = read(rdr, True)
+        if rt.eq(n, ARG_AMP):
+            return ArgReader.register_next_arg(-1)
+        if not isinstance(n, numbers.Integer):
+            throw_syntax_error_with_data(rdr, u"%-arg must be %, %<integer> or %&")
+        return ArgReader.register_next_arg(n.int_val())
+
+    @staticmethod
+    def register_next_arg(n):
+        arg_env = ARG_ENV.deref()
+        max_arg = rt.get(arg_env, ARG_MAX)
+        if n > max_arg.int_val():
+            arg_env = rt.assoc(arg_env, ARG_MAX, rt.wrap(n))
+        arg = ArgReader.gen_arg(n)
+        arg_env = rt.assoc(arg_env, rt.wrap(n), arg)
+        ARG_ENV.set_value(arg_env)
+        return arg
+
+    @staticmethod
+    def gen_arg(n):
+        s = unicode(str(n))
+        if n == -1:
+            s = u"_rest"
+        return rt.gensym(rt.wrap(u"arg" + s + u"__"))
+
+class FnReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        if ARG_ENV.deref() is not nil:
+            throw_syntax_error_with_data(rdr, u"Nested #()s are not allowed")
+
+        try:
+            ARG_ENV.set_value(rt.assoc(EMPTY_MAP, ARG_MAX, rt.wrap(-1)))
+            rdr.unread(ch)
+            form = read(rdr, True)
+            args = EMPTY_VECTOR
+            percent_args = ARG_ENV.deref()
+            max_arg = rt.get(percent_args, ARG_MAX)
+            for i in range(1, max_arg.int_val() + 1):
+                arg = rt.get(percent_args, rt.wrap(i))
+                if arg is nil:
+                    arg = ArgReader.gen_arg(i)
+                args = rt.conj(args, arg)
+
+            rest_arg = rt.get(percent_args, rt.wrap(-1))
+            if rest_arg is not nil:
+                args = rt.conj(args, ARG_AMP)
+                args = rt.conj(args, rest_arg)
+            print "fn_reader: ", rt.name(rt.str(rt.cons(symbol(u"fn"), rt.cons(args, rt.cons(form, nil)))))
+            return rt.cons(symbol(u"fn"), rt.cons(args, rt.cons(form, nil)))
+        finally:
+            ARG_ENV.set_value(nil)
+
 class SetReader(ReaderHandler):
     def invoke(self, rdr, ch):
         acc = EMPTY_SET
@@ -394,7 +462,8 @@ class SetReader(ReaderHandler):
             acc = acc.conj(read(rdr, True))
 
 dispatch_handlers = {
-    u"{":  SetReader()
+    u"{":  SetReader(),
+    u"(": FnReader()
 }
 
 class DispatchReader(ReaderHandler):
@@ -434,7 +503,8 @@ handlers = {u"(": ListReader(),
             u"~": UnquoteReader(),
             u"^": MetaReader(),
             u"#": DispatchReader(),
-            u";": LineCommentReader()
+            u";": LineCommentReader(),
+            u"%": ArgReader()
 }
 
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
