@@ -9,6 +9,7 @@ from rpython.rlib.rgc import pin, unpin
 from pixie.vm.code import as_var, extend, NativeFn
 from pixie.vm.primitives import nil
 import rpython.tool.udir as udir
+from pixie.vm.object import affirm
 import os
 import shutil
 import pixie.vm.libs.ffi as ffi
@@ -103,12 +104,11 @@ def _work_cb(baton, status):
 
     stacklet.pending_stacklets.push((k, retval))
     lltype.free(exb, flavor="raw")
-    #lltype.free(baton, flavor="raw")
+    lltype.free(baton, flavor="raw")
 
 class RunFFIFunc(UVFunction):
     def __init__(self, fn, args):
-
-        assert isinstance(fn, ffi.FFIFn)
+        affirm(isinstance(fn, ffi.FFIFn), u"Can only use blocking-call against a ffi function")
         self._fn = fn
         self._args = args
 
@@ -134,10 +134,17 @@ class RunFFIFunc(UVFunction):
                 rffi.cast(rffi.VOIDP, resultdata),
                 _work_cb)
 
-@as_var("run_blocking")
-def _run_blocking(fn, arg):
+@as_var("blocking-call")
+def _run_blocking__args(args):
+    affirm(len(args) > 0, u"At least one arg must be supplied to blocking-call")
+    fn = args[0]
+    argc = len(args) - 1
+    new_args = [None] * argc
+    for x in range(argc):
+        new_args[x] = args[x + 1]
+
     from pixie.vm.stacklet import execute_uv_func
-    return execute_uv_func(RunFFIFunc(fn, [arg]))
+    return execute_uv_func(RunFFIFunc(fn, new_args))
 
 @as_var("sleep")
 def _sleep(ms):

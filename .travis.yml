@@ -3,5 +3,8 @@ script:
   - ./make-with-jit
   - make run_built_tests
 
+before_install:
+  - sudo apt-get install libffi-dev libuv-dev
+
 os:
   - osx
