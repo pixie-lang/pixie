@@ -22,6 +22,11 @@
     (t/assert= (s/ends-with s "hey") false)
     (t/assert= (s/ends-with s "foo") false)))
 
+(t/deftest test-split
+  (let [s "hey,ho,huh"]
+    (t/assert= (s/split s ",") ["hey" "ho" "huh"])
+    (t/assert= (s/split s "h") ["" "ey," "o," "u" ""])))
+
 (t/deftest test-index-of
   (let [s "heyhohuh"]
     (t/assert= (s/index-of s "hey") 0)

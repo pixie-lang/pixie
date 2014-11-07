@@ -7,6 +7,7 @@ from pixie.vm.keyword import keyword
 from pixie.vm.numbers import Integer
 from rpython.rlib.clibffi import get_libc_name
 from rpython.rlib.unicodedata import unicodedb_6_2_0 as unicodedb
+import rpython.rlib.rstring as rstring
 import os
 import pixie.vm.rt as rt
 
@@ -21,12 +22,13 @@ def startswith(a, b):
 def endswith(a, b):
     return rt.wrap(rt.name(a).endswith(rt.name(b)))
 
-# @as_var("pixie.string", "split")
-# def split(a, b):
-#     v = rt.vector()
-#     for s in rt.name(a).split(rt.name(b)):
-#         v = rt.conj(v, rt.wrap(s))
-#     return v
+@as_var("pixie.string", "split")
+def split(a, b):
+    affirm(rt.count(b) > 0, u"seperator can't be empty")
+    v = rt.vector()
+    for s in rstring.split(rt.name(a), rt.name(b)):
+        v = rt.conj(v, rt.wrap(s))
+    return v
 
 def index_of2(a, sep):
     return rt.wrap(rt.name(a).find(rt.name(sep)))
