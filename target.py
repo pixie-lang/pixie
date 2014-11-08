@@ -31,6 +31,14 @@ def jitpolicy(driver):
 PROGRAM_ARGUMENTS = intern_var(u"pixie.stdlib", u"program-arguments")
 PROGRAM_ARGUMENTS.set_root(nil)
 
+STAR_1 = intern_var(u"pixie.stdlib", u"*1")
+STAR_1.set_root(nil)
+STAR_2 = intern_var(u"pixie.stdlib", u"*2")
+STAR_2.set_root(nil)
+STAR_3 = intern_var(u"pixie.stdlib", u"*3")
+STAR_3.set_root(nil)
+STAR_E = intern_var(u"pixie.stdlib", u"*e")
+STAR_E.set_root(nil)
 
 class ReplFn(NativeFn):
     def __init__(self, args):
@@ -55,7 +63,6 @@ class ReplFn(NativeFn):
 
         PROGRAM_ARGUMENTS.set_root(acc)
 
-
         rdr = MetaDataReader(PromptReader())
         with with_ns(u"user"):
             while True:
@@ -64,15 +71,27 @@ class ReplFn(NativeFn):
                     if val is eof:
                         break
                     val = interpret(compile(val))
+                    self.set_recent_vars(val)
                 except WrappedException as ex:
                     print "Error: ", ex._ex.__repr__()
                     rdr.reset_line()
+                    self.set_error_var(ex._ex)
                     continue
                 if val is keyword(u"exit-repl"):
                     break
                 val = rt.str(val)
                 assert isinstance(val, String), "str should always return a string"
                 print val._str
+
+    def set_recent_vars(self, val):
+        if rt.eq(val, STAR_1.deref()):
+            return
+        STAR_3.set_root(STAR_2.deref())
+        STAR_2.set_root(STAR_1.deref())
+        STAR_1.set_root(val)
+
+    def set_error_var(self, ex):
+        STAR_E.set_root(ex)
 
 class BatchModeFn(NativeFn):
     def __init__(self, args):
