@@ -376,6 +376,10 @@
 (defn false? [v] (identical? v false))
 
 (defn number? [v] (instance? Number v))
+(defn integer? [v] (instance? Integer v))
+(defn float? [v] (instance? Float v))
+(defn ratio? [v] (instance? Ratio v))
+
 (defn string? [v] (instance? String v))
 (defn keyword? [v] (instance? Keyword v))
 
