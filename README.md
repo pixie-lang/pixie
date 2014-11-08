@@ -17,6 +17,11 @@ Some planned and implemented features:
 * Easy FFI (TODO)
 * Pattern matching (TODO)
 
+## Dependencies
+
+*  libuv
+*  libffi-dev
+
 ## Building
 
     ./checkout-externals
