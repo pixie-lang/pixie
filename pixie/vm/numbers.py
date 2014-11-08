@@ -1,6 +1,7 @@
 import pixie.vm.object as object
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
 from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
 import pixie.vm.rt as rt
@@ -127,6 +128,26 @@ def define_num_ops():
 
 define_num_ops()
 
+bigint_ops_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
+def _{pfn}_{ty1}_{ty2}(a, b):
+    assert isinstance(a, {ty1}) and isinstance(b, {ty2})
+    return rt.wrap({conv1}(a.{get1}()).{op}({conv2}(b.{get2}())))
+"""
+
+def define_bigint_ops():
+    num_classes = [(Integer, "rbigint.fromint", "int_val"), (BigInteger, "", "bigint_val")]
+    for (c1, conv1, get1) in num_classes:
+        for (c2, conv2, get2) in num_classes:
+            if c1 == Integer and c2 == Integer:
+                continue
+            for (pfn, op) in [("_add", "add"), ("_sub", "sub"), ("_mul", "mul"), ("_div", "div"),
+                              ("_num_eq", "eq"), ("_lt", "lt"), ("_gt", "gt"), ("_lte", "le"), ("_gte", "ge")]:
+                code = bigint_ops_tmpl.format(pfn=pfn, op=op,
+                                              ty1=c1.__name__, conv1=conv1, get1=get1,
+                                              ty2=c2.__name__, conv2=conv2, get2=get2)
+                exec code
+
+define_bigint_ops()
 
 def gcd(u, v):
     while v != 0:
@@ -218,7 +239,7 @@ def _num_eq(a, b):
     assert isinstance(a, Ratio) and isinstance(b, Ratio)
     return true if a.numerator() == b.numerator() and a.denominator() == b.denominator() else false
 
-ratio_op_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
+mixed_op_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
 def {pfn}_{ty1}_{ty2}(a, b):
     assert isinstance(a, {ty1}) and isinstance(b, {ty2})
     return rt.{pfn}({conv1}(a), {conv2}(b))
@@ -239,8 +260,11 @@ def to_ratio_conv(c):
 def to_float(x):
     if isinstance(x, Float):
         return x
-    else:
+    if isinstance(x, Ratio):
         return rt.wrap(x.numerator() / float(x.denominator()))
+    if isinstance(x, BigInteger):
+        return rt.wrap(x.bigint_val().tofloat())
+    assert False
 
 def to_float_conv(c):
     if c == Float:
@@ -248,18 +272,23 @@ def to_float_conv(c):
     else:
         return "to_float"
 
-def define_ratio_ops():
+def define_mixed_ops():
     for (c1, c2) in [(Integer, Ratio), (Ratio, Integer)]:
         for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_lt", "_gt", "_lte", "_gte", "_num_eq"]:
-            code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_ratio_conv(c1), conv2=to_ratio_conv(c2))
+            code = mixed_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_ratio_conv(c1), conv2=to_ratio_conv(c2))
             exec code
 
     for (c1, c2) in [(Float, Ratio), (Ratio, Float)]:
         for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_lt", "_gt", "_lte", "_gte", "_num_eq"]:
-            code = ratio_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_float_conv(c1), conv2=to_float_conv(c2))
+            code = mixed_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_float_conv(c1), conv2=to_float_conv(c2))
             exec code
 
-define_ratio_ops()
+    for (c1, c2) in [(Float, BigInteger), (BigInteger, Float)]:
+        for op in ["_add", "_sub", "_mul", "_div", "_quot", "_rem", "_lt", "_gt", "_lte", "_gte", "_num_eq"]:
+            code = mixed_op_tmpl.format(pfn=op, ty1=c1.__name__, ty2=c2.__name__, conv1=to_float_conv(c1), conv2=to_float_conv(c2))
+            exec code
+
+define_mixed_ops()
 
 # def add(a, b):
 #     if isinstance(a, Integer):
