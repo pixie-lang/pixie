@@ -17,6 +17,9 @@
              ([result] (-persistent! result))
              ([result item] (-conj! result item))))
 
+(def transient (fn [coll] (-transient coll)))
+
+(def persistent! (fn [coll] (-persistent! coll)))
 
 (def transduce (fn transduce
               ([f coll]
