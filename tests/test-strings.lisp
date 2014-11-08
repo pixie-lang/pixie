@@ -39,6 +39,16 @@
 
     (t/assert= (s/index-of s "h" 1 2) -1)))
 
+(t/deftest test-substring
+  (let [s "heyhohuh"]
+    (t/assert= (s/substring s 0) s)
+    (t/assert= (s/substring s 3) (s/substring s 3 (count s)))
+    (t/assert= (s/substring s 0 0) "")
+    (t/assert= (s/substring s 0 3) "hey")
+    (t/assert= (s/substring s 3 5) "ho")
+    (t/assert= (s/substring s 5 8) "huh")
+    (t/assert= (s/substring s 3 10000) "hohuh")))
+
 (t/deftest test-upper-case
   (t/assert= (s/lower-case "") "")
   (t/assert= (s/upper-case "hey") "HEY")

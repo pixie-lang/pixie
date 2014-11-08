@@ -485,6 +485,8 @@
          (assoc m k (assoc-in (get m k) ks v))
          (assoc m k v)))))
 
+(def subs pixie.string/substring)
+
 (defmacro assert
   ([test]
      `(if ~test
