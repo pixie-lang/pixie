@@ -76,4 +76,12 @@ def list__args(args):
         i -= 1
     return acc
 
+@extend(proto._meta, PersistentList)
+def _meta(self):
+    assert isinstance(self, PersistentList)
+    return self.meta()
 
+@extend(proto._with_meta, PersistentList)
+def _with_meta(self, meta):
+    assert isinstance(self, PersistentList)
+    return self.with_meta(meta)
