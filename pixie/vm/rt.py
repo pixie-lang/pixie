@@ -72,6 +72,7 @@ def init():
     import pixie.vm.symbol
     import pixie.vm.libs.path
     import pixie.vm.libs.string
+    import pixie.vm.libs.uv_file
 
 
 
@@ -111,7 +112,6 @@ def init():
 
     for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():
         name = munge(name)
-        print name
         if isinstance(var.deref(), BaseCode):
             globals()[name] = unwrap(var)
         else:
@@ -119,6 +119,14 @@ def init():
 
 
     import pixie.vm.bootstrap
+
+
+    for k, v in sys.modules.iteritems():
+        if k.startswith("pixie."):
+            f = getattr(v, "__module_init__", None)
+            if f is not None:
+                print "Calling init on module: ", v.__name__
+                f()
 
     def reinit():
         for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():

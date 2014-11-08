@@ -9,6 +9,9 @@
  (def rand (ffi-fn libc "rand" [Integer] Integer))
  (def srand (ffi-fn libc "srand" [Integer] Integer))
 
+
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+
 (def reset! -reset!)
 
 (def load-paths (atom ["./"]))

@@ -11,6 +11,7 @@ import pixie.vm.stacklet as stacklet
 from pixie.vm.object import RuntimeException, WrappedException
 from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
+from rpython.rlib.objectmodel import we_are_translated
 import sys
 
 
@@ -122,21 +123,25 @@ def run_load_stdlib():
     rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
     result = nil
 
+    if not we_are_translated():
+        print "Hold on tight...loading stdlib..."
+
     with compiler.with_ns(u"pixie.stdlib"):
         while True:
+            if not we_are_translated():
+                sys.stdout.write(".")
+
             form = reader.read(rdr, False)
             if form is reader.eof:
-                return result
+                break
             result = compiler.compile(form).invoke([])
 
+    if not we_are_translated():
+        print "done"
+
+    return nil
+
 def load_stdlib():
-
-
-
-
-
-
-
     stacklet.with_stacklets(run_load_stdlib)
 
 def entry_point(args):
