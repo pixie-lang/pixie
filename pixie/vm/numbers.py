@@ -35,6 +35,19 @@ class Integer(Number):
 zero_int = Integer(0)
 one_int = Integer(1)
 
+class BigInteger(Number):
+    _type = object.Type(u"pixie.stdlib.BigInteger", Number._type)
+    _immutable_fields_ = ["_bigint_val"]
+
+    def __init__(self, bi_val):
+        self._bigint_val = bi_val
+
+    def bigint_val(self):
+        return self._bigint_val
+
+    def type(self):
+        return self._type
+
 class Float(Number):
     _type = object.Type(u"pixie.stdlib.Float", Number._type)
     _immutable_fields_ = ["_float_val"]
@@ -274,6 +287,14 @@ def init():
     @extend(proto._repr, Integer._type)
     def _repr(i):
         return rt.wrap(unicode(str(i.int_val())))
+
+    @extend(proto._str, BigInteger._type)
+    def _str(b):
+        return rt.wrap(unicode(b.bigint_val().format('0123456789', suffix='N')))
+
+    @extend(proto._repr, BigInteger._type)
+    def _repr(b):
+        return rt.wrap(unicode(b.bigint_val().format('0123456789', suffix='N')))
 
     @extend(proto._str, Float._type)
     def _str(f):
