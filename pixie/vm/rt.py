@@ -6,11 +6,12 @@ from rpython.rtyper.lltypesystem import lltype, rffi
 
 
 
+
 def init():
 
     import pixie.vm.code as code
     from pixie.vm.object import affirm, _type_registry
-    from rpython.rlib.rarithmetic import r_uint
+    from rpython.rlib.rarithmetic import r_uint, intmask
     from pixie.vm.primitives import nil, true, false
     from pixie.vm.string import String
     from pixie.vm.object import Object
@@ -77,6 +78,8 @@ def init():
 
     @specialize.argtype(0)
     def wrap(x):
+        if isinstance(x, r_uint):
+            return numbers.Integer(intmask(x))
         if isinstance(x, bool):
             return true if x else false
         if isinstance(x, int):
