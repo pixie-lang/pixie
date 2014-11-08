@@ -421,6 +421,18 @@
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
 
+(defn last [coll]
+  (if (next coll)
+    (recur (next coll))
+    (first coll)))
+
+(defn butlast [coll]
+  (loop [res []
+         coll coll]
+    (if (next coll)
+      (recur (conj res (first coll)) (next coll))
+      (seq res))))
+
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn [self idx not-found]
                           (cond (= idx 0) (-key self)
