@@ -51,6 +51,10 @@
 (def reduce (fn [rf init col]
               (-reduce col rf init)))
 
+(def into (fn [to from]
+            (if (satisfies? IToTransient to)
+              (persistent! (reduce conj! (transient to) from))
+              (reduce conj to from))))
 
 (def interpose
      (fn interpose [val]
