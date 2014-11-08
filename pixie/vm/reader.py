@@ -17,6 +17,7 @@ from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
 import pixie.vm.stdlib as proto
 import pixie.vm.compiler as compiler
 
+from rpython.rlib.rbigint import rbigint
 from rpython.rlib.rsre import rsre_re as re
 
 LINE_NUMBER_KW = keyword(u"line-number")
@@ -565,9 +566,9 @@ handlers = {u"(": ListReader(),
 }
 
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
-#                           sign      hex                    oct      radix                           decimal
-#                           1         2      3               4        5                 6             7
-int_matcher = re.compile(u'^([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))$')
+#                           sign      hex                    oct      radix                           decimal  biginteger
+#                           1         2      3               4        5                 6             7        8
+int_matcher = re.compile(u'^([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))(N)?$')
 
 float_matcher = re.compile(u'^([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)$')
 ratio_matcher = re.compile(u'^([-+]?[0-9]+)/([0-9]+)$')
@@ -593,7 +594,10 @@ def parse_int(m):
     else:
         return None
 
-    return rt.wrap(sign * int(str(num), radix))
+    if m.group(8):
+        return rt.wrap(rbigint.fromstr(str(m.group(1) + num), radix))
+    else:
+        return rt.wrap(sign * int(str(num), radix))
 
 def parse_float(m):
     return rt.wrap(float(str(m.group(0))))
