@@ -79,8 +79,6 @@ def init():
 
     @specialize.argtype(0)
     def wrap(x):
-        if isinstance(x, r_uint):
-            return numbers.Integer(intmask(x))
         if isinstance(x, bool):
             return true if x else false
         if isinstance(x, int):
