@@ -2,6 +2,7 @@ __config__ = None
 py_list = list
 py_str = str
 from rpython.rlib.objectmodel import specialize
+from rpython.rtyper.lltypesystem import lltype, rffi
 
 
 
@@ -88,6 +89,9 @@ def init():
             return String(unicode(x))
         if isinstance(x, Object):
             return x
+        if x is None:
+            return nil
+
         affirm(False, u"Bad wrap")
 
     globals()["wrap"] = wrap
