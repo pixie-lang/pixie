@@ -2,6 +2,7 @@ from pixie.vm.code import as_var
 from pixie.vm.object import affirm
 
 from pixie.vm.numbers import Integer
+from rpython.rlib.rarithmetic import intmask
 
 import pixie.vm.rt as rt
 
@@ -60,7 +61,10 @@ def bit_shift_right(x, n):
     affirm(isinstance(x, Integer) and isinstance(n, Integer), u"x and n must be Integers")
     return rt.wrap(x.int_val() >> n.int_val())
 
-# unsigned-bit-shift-right (sets sign bit to zero)
+@as_var("unsigned-bit-shift-right")
+def unsigned_bit_shift_right(x, n):
+    affirm(isinstance(x, Integer) and isinstance(n, Integer), u"x and n must be Integers")
+    return rt.wrap(intmask(x.r_uint_val() >> n.int_val()))
 
 digits = "0123456789abcdefghijklmnopqrstuvwxyz"
 
