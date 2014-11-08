@@ -2,11 +2,12 @@ from rpython.rtyper.lltypesystem import lltype, rffi
 from rpython.rtyper.lltypesystem.lloperation import llop
 import rpython.rtyper.tool.rffi_platform as rffi_platform
 import pixie.vm.rt as rt
-from pixie.vm.code import as_var
+from pixie.vm.code import as_var, affirm
 from pixie.vm.libs.uv import UVFunction, llexternal
 from pixie.vm.stacklet import execute_uv_func, pending_stacklets
 from pixie.vm.object import Object, Type
 from pixie.vm.primitives import nil
+from pixie.vm.array import ByteArray
 
 def __module_init__():
     def define_int_const(ns, nm, header):
@@ -36,7 +37,10 @@ class FileHandle(Object):
         return FileHandle._type
 
 def fs_cb(req):
-    (k, charp) = fs_open_data[rffi.cast(rffi.SIZE_T, req)]
+    key = rffi.cast(rffi.SIZE_T, req)
+    (k, charp) = fs_open_data[key]
+    del fs_open_data[key]
+
     result = req.c_result
     lltype.free(charp, flavor="raw")
     if result == -1:
@@ -63,3 +67,39 @@ def _open(name, flags, mode):
     return execute_uv_func(FSOpen(name, flags, mode))
 
 ## End File Open
+
+
+## File Read
+
+fs_read_data = {}
+uv_fs_read = llexternal("uv_fs_read", [rffi.VOIDP, uv_fs_t_p, rffi.INT, rffi.VOIDP, rffi.SIZE_T, rffi.LONG, uv_fs_cb], rffi.INT)
+
+def uv_fs_read_cb(req):
+    print "handler"
+    key = rffi.cast(rffi.SIZE_T, req)
+    k = fs_read_data[key]
+    del fs_read_data[key]
+
+    pending_stacklets.push((k, rt.wrap(req.c_result)))
+
+    lltype.free(req, flavor="raw")
+
+
+
+class FSRead(UVFunction):
+    def __init__(self, file, buffer, read_bytes):
+        affirm(isinstance(buffer, ByteArray), u"Buffer must be a ByteArray")
+        affirm(isinstance(file, FileHandle), u"File must be a FileHandler")
+        self._file = file
+        self._buffer = buffer
+        self._read_bytes = read_bytes.int_val()
+        affirm(self._read_bytes <= buffer._cnt, u"Can't read more bytes than the size of the buffer")
+
+    def execute_uv(self, loop, k):
+        req = lltype.malloc(uv_fs_t, flavor="raw")
+        fs_read_data[rffi.cast(rffi.SIZE_T, req)] = k
+        uv_fs_read(loop, req, self._file._fs_handle, self._buffer._buffer, self._read_bytes, -1, uv_fs_read_cb)
+
+@as_var("pixie.io", "read")
+def _read(fh, buffer, size):
+    return execute_uv_func(FSRead(fh, buffer, size))

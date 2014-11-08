@@ -11,6 +11,9 @@
 
 
 (def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def ba (byte-array 10))
+(pixie.io/read f ba 10)
+(puts (str (vec ba)))
 
 (def reset! -reset!)
 
