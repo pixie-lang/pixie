@@ -24,7 +24,7 @@ def endswith(a, b):
 
 @as_var("pixie.string", "split")
 def split(a, b):
-    affirm(rt.count(b) > 0, u"seperator can't be empty")
+    affirm(rt.count(b) > 0, u"separator can't be empty")
     v = rt.vector()
     for s in rstring.split(rt.name(a), rt.name(b)):
         v = rt.conj(v, rt.wrap(s))
@@ -48,7 +48,7 @@ def index_of4(a, sep, start, end):
     if start > 0 and end > 0:
         return rt.wrap(rt.name(a).find(rt.name(sep), start, end))
     else:
-        runtime_error(u"Third and fourth argument must non-negative integers")
+        runtime_error(u"Third and fourth argument must be non-negative integers")
 
 index_of = intern_var(u"pixie.string", u"index-of")
 index_of.set_root(MultiArityFn({2: wrap_fn(index_of2), 3: wrap_fn(index_of3), 4: wrap_fn(index_of4)},
