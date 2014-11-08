@@ -178,9 +178,9 @@ def entry_point(args):
                 return 0
             elif arg == '-h' or arg == '--help':
                 print args[0] + " [<options>] [<file>]"
-                print "  -h|--help     print this help"
-                print "  -v|--version  print the version number"
-                print "  -e|--eval     evaluate the given expression"
+                print "  -h, --help     print this help"
+                print "  -v, --version  print the version number"
+                print "  -e, --eval     evaluate the given expression"
                 return 0
             elif arg == '-e' or arg == '--eval':
                 i += 1
