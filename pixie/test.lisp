@@ -57,6 +57,10 @@
          yr# ~y]
      (assert (= xr# yr#) (str (show '~x xr#) " != " (show '~y yr#)))))
 
+(defmacro assert [x]
+  `(let [x# ~x]
+     (assert x# (str '~x " is " x#))))
+
 (defn show
   ([val] (if (instance? String val) (-repr val) val))
   ([orig res]
