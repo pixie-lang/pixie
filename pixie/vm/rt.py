@@ -11,7 +11,8 @@ def init():
 
     import pixie.vm.code as code
     from pixie.vm.object import affirm, _type_registry
-    from rpython.rlib.rarithmetic import r_uint, intmask
+    from rpython.rlib.rarithmetic import r_uint
+    from rpython.rlib.rbigint import rbigint
     from pixie.vm.primitives import nil, true, false
     from pixie.vm.string import String
     from pixie.vm.object import Object
@@ -84,6 +85,8 @@ def init():
             return true if x else false
         if isinstance(x, int):
             return numbers.Integer(x)
+        if isinstance(x, rbigint):
+            return numbers.BigInteger(x)
         if isinstance(x, float):
             return numbers.Float(x)
         if isinstance(x, unicode):
