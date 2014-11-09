@@ -562,7 +562,7 @@
                   (cond
                    (symbol? body) (cond
                                    (= body 'Object) [body (second res) (third res)]
-                                   (protocol? @(resolve body)) [@(resolve body) (second res) (third res)]
+                                   (protocol? @(resolve body)) [@(resolve body) (second res) (conj (third res) body)]
                                    :else (throw (str "can only extend protocols or Object, not " body)))
                    (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
                                  (if (protocol? proto)

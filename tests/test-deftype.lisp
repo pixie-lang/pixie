@@ -13,6 +13,13 @@
                (t/assert= (. o :val) v)
                (t/assert= (.val o) v)))))
 
+(deftype MagicalVectorMap [] IMap IVector)
+
+(t/deftest test-satisfies
+  (let [mvm (->MagicalVectorMap)]
+    (t/assert (satisfies? IVector mvm))
+    (t/assert (satisfies? IMap mvm))))
+
 (deftype Count [:val]
   ICounted
   (-count [self] val))
@@ -29,6 +36,7 @@
                    v (second obj-and-val)]
                (t/assert= (. o :val) v)
                (t/assert= (.val o) v)
+               (t/assert (satisfies? ICounted o))
                (t/assert= (-count o) v)
                (t/assert= (count o) v)))))
 
@@ -65,6 +73,7 @@
                (t/assert= (. o :three) three)
                (t/assert= (.three o) three)
 
+               (t/assert (satisfies? ICounted o))
                (t/assert= (-count o) (+ one two three))
                (t/assert= (count o) (+ one two three))
 
