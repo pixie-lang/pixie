@@ -656,46 +656,34 @@
 (deftype Range [:start :stop :step]
   IReduce
   (-reduce [self f init]
-    (let [start (. self :start)
-          stop (. self :stop)
-          step (. self :step)]
-      (loop [i start
-             acc init]
-        (if (or (and (> step 0) (< i stop))
-                (and (< step 0) (> i stop))
-                (and (= step 0)))
-          (let [acc (f acc i)]
-            (if (reduced? acc)
-              @acc
-              (recur (+ i step) acc)))
-          acc))))
+    (loop [i start
+           acc init]
+      (if (or (and (> step 0) (< i stop))
+              (and (< step 0) (> i stop))
+              (and (= step 0)))
+        (let [acc (f acc i)]
+          (if (reduced? acc)
+            @acc
+            (recur (+ i step) acc)))
+        acc)))
   IIterable
   (-iterator [self]
-    (let [start (. self :start)
-          stop (. self :stop)
-          step (. self :step)]
-      (loop [i start]
-        (when (or (and (> step 0) (< i stop))
+    (loop [i start]
+      (when (or (and (> step 0) (< i stop))
                 (and (< step 0) (> i stop))
                 (and (= step 0)))
-          (yield i)
-          (recur (+ i step))))))
+        (yield i)
+        (recur (+ i step)))))
   ICounted
   (-count [self]
-    (let [start (. self :start)
-          stop  (. self :stop)
-          step  (. self :step)]
-      (if (or (and (< start stop) (< step 0))
-              (and (> start stop) (> step 0))
-              (= step 0))
-        0
-        (abs (quot (- start stop) step)))))
+    (if (or (and (< start stop) (< step 0))
+            (and (> start stop) (> step 0))
+            (= step 0))
+      0
+      (abs (quot (- start stop) step))))
   IIndexed
   (-nth [self idx]
-    (let [start (. self :start)
-          stop (. self :stop)
-          step (. self :step)
-          cmp (if (< start stop) < >)
+    (let [cmp (if (< start stop) < >)
           val (+ start (* idx step))]
       (if (cmp val stop)
         val
