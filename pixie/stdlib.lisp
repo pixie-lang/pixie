@@ -397,7 +397,7 @@
   ([obj sym]
      (get-field obj sym))
   ([obj sym & args]
-     (apply (get-field obj sym) args)))
+     (apply (get-field obj sym) obj args)))
 
 (defn true? [v] (identical? v true))
 (defn false? [v] (identical? v false))
