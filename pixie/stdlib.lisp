@@ -535,20 +535,15 @@
 (defmacro lazy-seq [& body]
   `(lazy-seq* (fn [] ~@body)))
 
+(def Protocol @(resolve (symbol "/Protocol")))
+
+(defn protocol? [x]
+  (instance? Protocol x))
+
 (defmacro deftype [nm fields & body]
   (let [ctor-name (symbol (str "->" (name nm)))
         fields (transduce (map (comp keyword name)) conj fields)
-        type-decl `(def ~nm (create-type ~(keyword (name nm)) ~fields))
         field-syms (transduce (map (comp symbol name)) conj fields)
-        inst (gensym)
-        ctor `(defn ~ctor-name ~field-syms
-                (let [~inst (new ~nm)]
-                  ~@(transduce
-                     (map (fn [field]
-                            `(set-field! ~inst ~field ~(symbol (name field)))))
-                     conj
-                     fields)
-                  ~inst))
         mk-body (fn [body]
                   (let [fn-name (first body)
                         _ (assert (symbol? fn-name) "protocol override must have a name")
@@ -562,6 +557,37 @@
                                               conj fields)
                         rest (next (next body))]
                     `(fn ~fn-name ~args (let ~field-lets ~@rest))))
+        bodies (reduce
+                (fn [res body]
+                  (cond
+                   (symbol? body) (cond
+                                   (= body 'Object) [body (second res) (third res)]
+                                   (protocol? @(resolve body)) [@(resolve body) (second res) (third res)]
+                                   :else (throw (str "can only extend protocols or Object, not " body)))
+                   (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
+                                 (if (protocol? proto)
+                                   [proto tbs (conj pbs body)]
+                                   [proto (conj tbs body) pbs]))))
+                [nil [] []]
+                body)
+        type-bodies (second bodies)
+        proto-bodies (third bodies)
+        all-fields (reduce (fn [r tb] (conj r (keyword (name (first tb))))) fields type-bodies)
+        type-decl `(def ~nm (create-type ~(keyword (name nm)) ~all-fields))
+        inst (gensym)
+        ctor `(defn ~ctor-name ~field-syms
+                (let [~inst (new ~nm)]
+                  ~@(transduce
+                     (map (fn [field]
+                            `(set-field! ~inst ~field ~(symbol (name field)))))
+                     conj
+                     fields)
+                  ~@(transduce
+                     (map (fn [type-body]
+                            `(set-field! ~inst ~(keyword (name (first type-body))) ~(mk-body type-body))))
+                     conj
+                     type-bodies)
+                  ~inst))
         proto-bodies (transduce
                       (map (fn [body]
                              (cond
@@ -569,7 +595,7 @@
                               (seq? body) `(extend ~(first body) ~nm ~(mk-body body))
                               :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
                       conj
-                      body)]
+                      proto-bodies)]
     `(do ~type-decl
          ~ctor
          ~@proto-bodies)))
