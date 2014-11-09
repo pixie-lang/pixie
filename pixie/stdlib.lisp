@@ -549,11 +549,24 @@
                      conj
                      fields)
                   ~inst))
+        mk-body (fn [body]
+                  (let [fn-name (first body)
+                        _ (assert (symbol? fn-name) "protocol override must have a name")
+                        args (second body)
+                        _ (assert (vector? args) "protocol override must have arguments")
+                        self-arg (first args)
+                        _ (assert (symbol? self-arg) "protocol override must have at least one `self' argument")
+                        field-lets (transduce (comp (map (fn [f]
+                                                           [(symbol (name f)) (list 'get-field self-arg f)]))
+                                                    cat)
+                                              conj fields)
+                        rest (next (next body))]
+                    `(fn ~fn-name ~args (let ~field-lets ~@rest))))
         proto-bodies (transduce
                       (map (fn [body]
                              (cond
                               (symbol? body) `(satisfy ~body ~nm)
-                              (seq? body) `(extend ~(first body) ~nm (fn ~@body))
+                              (seq? body) `(extend ~(first body) ~nm ~(mk-body body))
                               :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
                       conj
                       body)]
