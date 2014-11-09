@@ -204,7 +204,20 @@
 
 (def concat (fn [& args] (transduce cat conj args)))
 
-(def defn (fn [nm & rest] `(def ~nm (fn ~nm ~@rest))))
+(def key (fn [x] (-key x)))
+(def val (fn [x] (-val x)))
+
+(def defn (fn [nm & rest]
+            (let [meta (if (instance? String (first rest))
+                         {:doc (first rest)}
+                         {})
+                  rest (if (instance? String (first rest)) (next rest) rest)
+                  meta (if (satisfies? IMap (first rest))
+                         (merge meta (first rest))
+                         meta)
+                  rest (if (satisfies? IMap (first rest)) (next rest) rest)
+                  nm (with-meta nm meta)]
+              `(def ~nm (fn ~nm ~@rest)))))
 (set-macro! defn)
 
 (defn defmacro [nm & rest]
@@ -404,12 +417,6 @@
                           (cond (= idx 0) (-key self)
                                 (= idx 1) (-val self)
                                 :else not-found)))
-
-(defn key [x]
-  (-key x))
-
-(defn val [x]
-  (-val x))
 
 (extend -reduce MapEntry indexed-reduce)
 
