@@ -436,6 +436,9 @@ class MetaReader(ReaderHandler):
         if isinstance(meta, Keyword):
             meta = rt.hashmap(meta, true)
 
+        if isinstance(meta, Symbol):
+            meta = rt.hashmap(keyword(u"tag"), meta)
+
         if rt.satisfies_QMARK_(rt.IMeta.deref(), obj):
             return rt.with_meta(obj, rt.merge(meta, rt.meta(obj)))
 
