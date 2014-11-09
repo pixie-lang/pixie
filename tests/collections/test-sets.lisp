@@ -34,3 +34,9 @@
 
     (t/assert= (s -1) nil)
     (t/assert= (s 4) nil)))
+
+(t/deftest test-has-meta
+  (let [m {:has-meta true}
+        s (with-meta #{} m)]
+    (t/assert= (meta #{}) nil)
+    (t/assert= (meta s) m)))
