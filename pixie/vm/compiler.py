@@ -312,7 +312,8 @@ def compile_set_literal(form, ctx):
 def macroexpand(form):
     sym = rt.first(form)
     if isinstance(sym, symbol.Symbol):
-        if rt.name(sym).startswith("."):
+        s = rt.name(sym)
+        if s.startswith(".") and s != u".":
             if rt.count(form) < 2:
                 raise Exception("malformed dot expression, expecting (.member obj ...)")
 
