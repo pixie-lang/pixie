@@ -537,6 +537,7 @@
 
 (defmacro deftype [nm fields & body]
   (let [ctor-name (symbol (str "->" (name nm)))
+        fields (transduce (map (comp keyword name)) conj fields)
         type-decl `(def ~nm (create-type ~(keyword (name nm)) ~fields))
         field-syms (transduce (map (comp symbol name)) conj fields)
         inst (gensym)
