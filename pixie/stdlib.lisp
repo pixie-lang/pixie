@@ -211,7 +211,20 @@
 
 (def concat (fn [& args] (transduce cat conj args)))
 
-(def defn (fn [nm & rest] `(def ~nm (fn ~nm ~@rest))))
+(def key (fn [x] (-key x)))
+(def val (fn [x] (-val x)))
+
+(def defn (fn [nm & rest]
+            (let [meta (if (instance? String (first rest))
+                         {:doc (first rest)}
+                         {})
+                  rest (if (instance? String (first rest)) (next rest) rest)
+                  meta (if (satisfies? IMap (first rest))
+                         (merge meta (first rest))
+                         meta)
+                  rest (if (satisfies? IMap (first rest)) (next rest) rest)
+                  nm (with-meta nm meta)]
+              `(def ~nm (fn ~nm ~@rest)))))
 (set-macro! defn)
 
 (defn defmacro [nm & rest]
@@ -413,7 +426,7 @@
   ([obj sym]
      (get-field obj sym))
   ([obj sym & args]
-     (apply (get-field obj sym) args)))
+     (apply (get-field obj sym) obj args)))
 
 (defn true? [v] (identical? v true))
 (defn false? [v] (identical? v false))
@@ -449,12 +462,6 @@
                           (cond (= idx 0) (-key self)
                                 (= idx 1) (-val self)
                                 :else not-found)))
-
-(defn key [x]
-  (-key x))
-
-(defn val [x]
-  (-val x))
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -575,10 +582,45 @@
 (defmacro lazy-seq [& body]
   `(lazy-seq* (fn [] ~@body)))
 
+(def Protocol @(resolve (symbol "/Protocol")))
+
+(defn protocol? [x]
+  (instance? Protocol x))
+
 (defmacro deftype [nm fields & body]
   (let [ctor-name (symbol (str "->" (name nm)))
-        type-decl `(def ~nm (create-type ~(keyword (name nm)) ~fields))
+        fields (transduce (map (comp keyword name)) conj fields)
         field-syms (transduce (map (comp symbol name)) conj fields)
+        mk-body (fn [body]
+                  (let [fn-name (first body)
+                        _ (assert (symbol? fn-name) "protocol override must have a name")
+                        args (second body)
+                        _ (assert (vector? args) "protocol override must have arguments")
+                        self-arg (first args)
+                        _ (assert (symbol? self-arg) "protocol override must have at least one `self' argument")
+                        field-lets (transduce (comp (map (fn [f]
+                                                           [(symbol (name f)) (list 'get-field self-arg f)]))
+                                                    cat)
+                                              conj fields)
+                        rest (next (next body))]
+                    `(fn ~fn-name ~args (let ~field-lets ~@rest))))
+        bodies (reduce
+                (fn [res body]
+                  (cond
+                   (symbol? body) (cond
+                                   (= body 'Object) [body (second res) (third res)]
+                                   (protocol? @(resolve body)) [@(resolve body) (second res) (conj (third res) body)]
+                                   :else (throw (str "can only extend protocols or Object, not " body)))
+                   (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
+                                 (if (protocol? proto)
+                                   [proto tbs (conj pbs body)]
+                                   [proto (conj tbs body) pbs]))))
+                [nil [] []]
+                body)
+        type-bodies (second bodies)
+        proto-bodies (third bodies)
+        all-fields (reduce (fn [r tb] (conj r (keyword (name (first tb))))) fields type-bodies)
+        type-decl `(def ~nm (create-type ~(keyword (name nm)) ~all-fields))
         inst (gensym)
         ctor `(defn ~ctor-name ~field-syms
                 (let [~inst (new ~nm)]
@@ -587,19 +629,56 @@
                             `(set-field! ~inst ~field ~(symbol (name field)))))
                      conj
                      fields)
+                  ~@(transduce
+                     (map (fn [type-body]
+                            `(set-field! ~inst ~(keyword (name (first type-body))) ~(mk-body type-body))))
+                     conj
+                     type-bodies)
                   ~inst))
         proto-bodies (transduce
                       (map (fn [body]
                              (cond
                               (symbol? body) `(satisfy ~body ~nm)
-                              (seq? body) `(extend ~(first body) ~nm (fn ~@body))
+                              (seq? body) `(extend ~(first body) ~nm ~(mk-body body))
                               :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
                       conj
-                      body)]
+                      proto-bodies)]
     `(do ~type-decl
          ~ctor
          ~@proto-bodies)))
 
+(defmacro defrecord [nm fields & body]
+  (let [ctor-name (symbol (str "->" (name nm)))
+        map-ctor-name (symbol (str "map" (name ctor-name)))
+        fields (transduce (map (comp keyword name)) conj fields)
+        type-from-map `(defn ~map-ctor-name [m]
+                         (apply ~ctor-name (map #(get m %) ~fields)))
+        default-bodies ['IAssociative
+                        `(-assoc [self k v]
+                                 (let [m (reduce (fn [m k] (assoc m k (. self k))) {} ~fields)]
+                                   (~map-ctor-name (assoc m k v))))
+                        `(-contains-key [self k]
+                                        (contains? ~(set fields) k))
+                        `(-dissoc [self k]
+                                  (throw "dissoc is not supported on defrecords"))
+                        'ILookup
+                        `(-val-at [self k not-found]
+                                  (if (contains? ~(set fields) k)
+                                    (. self k)
+                                    not-found))
+                        'IObject
+                        `(-str [self]
+                               (str "<" ~(name nm) " " (reduce (fn [m k] (assoc m k (. self k))) {} ~fields) ">"))
+                        `(-eq [self other]
+                              (and (instance? ~nm other)
+                                   ~@(map (fn [field]
+                                            `(= (. self ~field) (. other ~field)))
+                                          fields)))
+                        `(-hash [self]
+                                (throw "not implemented"))]
+        deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
+    `(do ~type-from-map
+         ~deftype-decl)))
 
  (def libc (ffi-library pixie.platform/lib-c-name))
  (def exit (ffi-fn libc "exit" [Integer] Integer))
@@ -657,7 +736,7 @@
 (defmacro and
   ([] true)
   ([x] x)
-  ([x y] `(if ~x ~y nil))
+  ([x y] `(if ~x ~y false))
   ([x y & more] `(if ~x (and ~y ~@more))))
 
 (defmacro or
@@ -682,46 +761,34 @@
 (deftype Range [:start :stop :step]
   IReduce
   (-reduce [self f init]
-    (let [start (. self :start)
-          stop (. self :stop)
-          step (. self :step)]
-      (loop [i start
-             acc init]
-        (if (or (and (> step 0) (< i stop))
-                (and (< step 0) (> i stop))
-                (and (= step 0)))
-          (let [acc (f acc i)]
-            (if (reduced? acc)
-              @acc
-              (recur (+ i step) acc)))
-          acc))))
+    (loop [i start
+           acc init]
+      (if (or (and (> step 0) (< i stop))
+              (and (< step 0) (> i stop))
+              (and (= step 0)))
+        (let [acc (f acc i)]
+          (if (reduced? acc)
+            @acc
+            (recur (+ i step) acc)))
+        acc)))
   IIterable
   (-iterator [self]
-    (let [start (. self :start)
-          stop (. self :stop)
-          step (. self :step)]
-      (loop [i start]
-        (when (or (and (> step 0) (< i stop))
+    (loop [i start]
+      (when (or (and (> step 0) (< i stop))
                 (and (< step 0) (> i stop))
                 (and (= step 0)))
-          (yield i)
-          (recur (+ i step))))))
+        (yield i)
+        (recur (+ i step)))))
   ICounted
   (-count [self]
-    (let [start (. self :start)
-          stop  (. self :stop)
-          step  (. self :step)]
-      (if (or (and (< start stop) (< step 0))
-              (and (> start stop) (> step 0))
-              (= step 0))
-        0
-        (abs (quot (- start stop) step)))))
+    (if (or (and (< start stop) (< step 0))
+            (and (> start stop) (> step 0))
+            (= step 0))
+      0
+      (abs (quot (- start stop) step))))
   IIndexed
   (-nth [self idx]
-    (let [start (. self :start)
-          stop (. self :stop)
-          step (. self :step)
-          cmp (if (< start stop) < >)
+    (let [cmp (if (< start stop) < >)
           val (+ start (* idx step))]
       (if (cmp val stop)
         val

@@ -309,6 +309,23 @@ def compile_set_literal(form, ctx):
 
     compile_cons(set_call, ctx)
 
+def macroexpand(form):
+    sym = rt.first(form)
+    if isinstance(sym, symbol.Symbol):
+        s = rt.name(sym)
+        if s.startswith(".") and s != u".":
+            if rt.count(form) < 2:
+                raise Exception("malformed dot expression, expecting (.member obj ...)")
+
+            method = rt.keyword(rt.wrap(rt.name(sym)[1:]))
+            obj = rt.first(rt.next(form))
+            dot = rt.symbol(rt.wrap(u"."))
+            call = rt.cons(dot, rt.cons(obj, rt.cons(method, rt.next(rt.next(form)))))
+
+            return call
+
+    return form
+
 def compile_meta(meta, ctx):
     ctx.push_const(code.intern_var(u"pixie.stdlib", u'with-meta'))
     ctx.bytecode.append(code.DUP_NTH)
@@ -328,6 +345,7 @@ def compile_form(form, ctx):
         return
 
     if rt.satisfies_QMARK_(rt.ISeq.deref(), form) and form is not nil:
+        form = macroexpand(form)
         return compile_cons(form, ctx)
     if isinstance(form, numbers.Integer):
         ctx.push_const(form)
