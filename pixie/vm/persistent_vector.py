@@ -226,7 +226,7 @@ class TransientVector(object.Object):
             new_root = Node(self._root._edit)
             new_root._array[0] = self._root
             new_root._array[1] = new_path(self._root._edit, self._shift, tail_node)
-            new_shift += 1
+            new_shift += 5
 
         else:
             new_root = self.push_tail(self._shift, self._root, tail_node)

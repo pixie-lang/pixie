@@ -112,10 +112,6 @@ class BaseCode(object.Object):
     def stack_size(self):
         return 0
 
-    def invoke(self, args):
-        result = self.invoke(args)
-        return result
-
     def invoke_with(self, args, this_fn):
         return self.invoke(args)
 
@@ -637,6 +633,7 @@ class PolymorphicFn(BaseCode):
         return promote(fn)
 
     def invoke(self, args):
+        affirm(len(args) >= 1, u"Wrong number of args")
         a = args[0].type()
         fn = self.get_protocol_fn(a, self._rev)
         try:

@@ -33,7 +33,7 @@ defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
 defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
 
-defprotocol("pixie.stdlib", "IAssociative", ["-assoc", "-contains-key"])
+defprotocol("pixie.stdlib", "IAssociative", ["-assoc", "-contains-key", "-dissoc"])
 
 defprotocol("pixie.stdlib", "ILookup", ["-val-at"])
 
@@ -308,6 +308,13 @@ def _satisfies(proto, o):
 
 
 import pixie.vm.rt as rt
+
+
+@as_var("read-string")
+def _read_string(s):
+    import pixie.vm.reader as reader
+
+    return reader.read(reader.StringReader(unicode(rt.name(s))), True)
 
 
 @as_var("load-file")

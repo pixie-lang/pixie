@@ -10,13 +10,14 @@ from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.readline import _readline
-from pixie.vm.string import String
+from pixie.vm.string import Character, String
 from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
 import pixie.vm.stdlib as proto
 import pixie.vm.compiler as compiler
 
+from rpython.rlib.rbigint import rbigint
 from rpython.rlib.rsre import rsre_re as re
 
 LINE_NUMBER_KW = keyword(u"line-number")
@@ -27,6 +28,12 @@ FILE_KW = keyword(u"file")
 GEN_SYM_ENV = code.intern_var(u"pixie.stdlib.reader", u"*gen-sym-env*")
 GEN_SYM_ENV.set_dynamic()
 GEN_SYM_ENV.set_value(EMPTY_MAP)
+
+ARG_AMP = symbol(u"&")
+ARG_MAX = keyword(u"max-arg")
+ARG_ENV = code.intern_var(u"pixie.stdlib.reader", u"*arg-env*")
+ARG_ENV.set_dynamic()
+ARG_ENV.set_value(nil)
 
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
@@ -184,6 +191,9 @@ def is_whitespace(ch):
 def is_digit(ch):
     return ch in u"0123456789"
 
+def is_terminating_macro(ch):
+    return ch != u"#" and ch != u"'" and ch != u"%" and ch in handlers
+
 def eat_whitespace(rdr):
     while True:
         ch = rdr.read()
@@ -191,7 +201,6 @@ def eat_whitespace(rdr):
             continue
         rdr.unread(ch)
         return
-
 
 class ReaderHandler(py_object):
     def invoke(self, rdr, ch):
@@ -276,6 +285,57 @@ class LiteralStringReader(ReaderHandler):
             if v == "\"":
                 return rt.wrap(u"".join(acc))
             acc.append(v)
+
+def read_token(rdr):
+    acc = u""
+    while True:
+        ch = rdr.read()
+        if is_whitespace(ch) or is_terminating_macro(ch):
+            rdr.unread(ch)
+            return acc
+        acc += ch
+
+def read_unicode_char(rdr, token, offset, length, base):
+    if len(token) != offset + length:
+        throw_syntax_error_with_data(rdr, u"Invalid unicode character: \\" + token)
+    c = 0
+    for i in range(offset, offset + length):
+        d = int(str(token[i:i+1]), base)
+        c = c * base + d
+    return c
+
+class LiteralCharacterReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        token = read_token(rdr)
+        if len(token) == 1:
+            return Character(ord(token[0]))
+        elif token == u"newline":
+            return Character(ord("\n"))
+        elif token == u"space":
+            return Character(ord(" "))
+        elif token == u"tab":
+            return Character(ord("\t"))
+        elif token == u"backspace":
+            return Character(ord("\b"))
+        elif token == u"formfeed":
+            return Character(ord("\f"))
+        elif token == u"return":
+            return Character(ord("\r"))
+        elif token.startswith("u"):
+            c = read_unicode_char(rdr, token, 1, 4, 16)
+            if c >= 0xd800 and c <= 0xdfff:
+                throw_syntax_error_with_data(rdr, u"Invalid character constant: \\" + token)
+            return Character(c)
+        elif token.startswith("o"):
+            l = len(token) - 1
+            if l > 3:
+                throw_syntax_error_with_data(rdr, u"Invalid octal escape sequence: \\" + token)
+            c = read_unicode_char(rdr, token, 1, l, 8)
+            if c > 0377:
+                throw_syntax_error_with_data(rdr, u"Octal escape sequences must be in range [0, 377]")
+            return Character(c)
+        else:
+            throw_syntax_error_with_data(rdr, u"Unsupported character: \\" + token)
 
 class DerefReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -381,6 +441,71 @@ class MetaReader(ReaderHandler):
 
         return obj
 
+class ArgReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        if ARG_ENV.deref() is nil:
+            return read_symbol(rdr, ch)
+
+        ch = rdr.read()
+        rdr.unread(ch)
+        if is_whitespace(ch) or is_terminating_macro(ch):
+            return ArgReader.register_next_arg(1)
+
+        n = read(rdr, True)
+        if rt.eq(n, ARG_AMP):
+            return ArgReader.register_next_arg(-1)
+        if not isinstance(n, numbers.Integer):
+            throw_syntax_error_with_data(rdr, u"%-arg must be %, %<integer> or %&")
+        return ArgReader.register_next_arg(n.int_val())
+
+    @staticmethod
+    def register_next_arg(n):
+        arg_env = ARG_ENV.deref()
+        max_arg = rt.get(arg_env, ARG_MAX)
+        if n > max_arg.int_val():
+            arg_env = rt.assoc(arg_env, ARG_MAX, rt.wrap(n))
+        arg = ArgReader.gen_arg(n)
+        arg_env = rt.assoc(arg_env, rt.wrap(n), arg)
+        ARG_ENV.set_value(arg_env)
+        return arg
+
+    @staticmethod
+    def gen_arg(n):
+        s = unicode(str(n))
+        if n == -1:
+            s = u"_rest"
+        return rt.gensym(rt.wrap(u"arg" + s + u"__"))
+
+class FnReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        if ARG_ENV.deref() is not nil:
+            throw_syntax_error_with_data(rdr, u"Nested #()s are not allowed")
+
+        try:
+            ARG_ENV.set_value(rt.assoc(EMPTY_MAP, ARG_MAX, rt.wrap(-1)))
+
+            rdr.unread(ch)
+            form = read(rdr, True)
+
+            args = EMPTY_VECTOR
+            percent_args = ARG_ENV.deref()
+            max_arg = rt.get(percent_args, ARG_MAX)
+
+            for i in range(1, max_arg.int_val() + 1):
+                arg = rt.get(percent_args, rt.wrap(i))
+                if arg is nil:
+                    arg = ArgReader.gen_arg(i)
+                args = rt.conj(args, arg)
+
+            rest_arg = rt.get(percent_args, rt.wrap(-1))
+            if rest_arg is not nil:
+                args = rt.conj(args, ARG_AMP)
+                args = rt.conj(args, rest_arg)
+
+            return rt.cons(symbol(u"fn"), rt.cons(args, rt.cons(form, nil)))
+        finally:
+            ARG_ENV.set_value(nil)
+
 class SetReader(ReaderHandler):
     def invoke(self, rdr, ch):
         acc = EMPTY_SET
@@ -394,7 +519,8 @@ class SetReader(ReaderHandler):
             acc = acc.conj(read(rdr, True))
 
 dispatch_handlers = {
-    u"{":  SetReader()
+    u"{":  SetReader(),
+    u"(": FnReader()
 }
 
 class DispatchReader(ReaderHandler):
@@ -429,18 +555,20 @@ handlers = {u"(": ListReader(),
             u"'": QuoteReader(),
             u":": KeywordReader(),
             u"\"": LiteralStringReader(),
+            u"\\": LiteralCharacterReader(),
             u"@": DerefReader(),
             u"`": SyntaxQuoteReader(),
             u"~": UnquoteReader(),
             u"^": MetaReader(),
             u"#": DispatchReader(),
-            u";": LineCommentReader()
+            u";": LineCommentReader(),
+            u"%": ArgReader()
 }
 
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
-#                           sign      hex                    oct      radix                           decimal
-#                           1         2      3               4        5                 6             7
-int_matcher = re.compile(u'^([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))$')
+#                           sign      hex                    oct      radix                           decimal  biginteger
+#                           1         2      3               4        5                 6             7        8
+int_matcher = re.compile(u'^([-+]?)(?:(0[xX])([0-9a-fA-F]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9a-zA-Z]+)|([0-9]*))(N)?$')
 
 float_matcher = re.compile(u'^([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)$')
 ratio_matcher = re.compile(u'^([-+]?[0-9]+)/([0-9]+)$')
@@ -466,7 +594,10 @@ def parse_int(m):
     else:
         return None
 
-    return rt.wrap(sign * int(str(num), radix))
+    if m.group(8):
+        return rt.wrap(rbigint.fromstr(str(m.group(1) + num), radix))
+    else:
+        return rt.wrap(sign * int(str(num), radix))
 
 def parse_float(m):
     return rt.wrap(float(str(m.group(0))))
@@ -508,9 +639,6 @@ def read_number(rdr, ch):
     if parsed is not None:
         return parsed
     return Symbol(joined)
-
-def is_terminating_macro(ch):
-    return ch != u"#" and ch != u"'" and ch != u"%" and ch in handlers
 
 def read_symbol(rdr, ch):
     acc = [ch]

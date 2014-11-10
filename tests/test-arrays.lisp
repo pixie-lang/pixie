@@ -43,3 +43,9 @@
                (t/assert= (aget a1 i) (+ i 3)))
       (foreach [i (range 0 3)]
                (t/assert= (aget a2 i) (+ i 7))))))
+
+
+(t/deftest test-byte-array-creation
+  (let [ba (byte-array 10)]
+    (t/assert= (vec ba) [0 0 0 0 0 0 0 0 0 0])
+    (t/assert= (count ba) 10)))

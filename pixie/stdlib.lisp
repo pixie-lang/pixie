@@ -1,5 +1,14 @@
 (__ns__ pixie.stdlib)
 
+ (def libc (ffi-library pixie.platform/lib-c-name))
+ (def exit (ffi-fn libc "exit" [Integer] Integer))
+ (def puts (ffi-fn libc "puts" [String] Integer))
+
+ (def libreadline (ffi-library (str "libreadline." pixie.platform/so-ext)))
+ (def readline (ffi-fn libreadline "readline" [String] String))
+ (def rand (ffi-fn libc "rand" [Integer] Integer))
+ (def srand (ffi-fn libc "srand" [Integer] Integer))
+
 (def reset! -reset!)
 
 (def load-paths (atom ["./"]))
@@ -316,6 +325,11 @@
      (-assoc m k v))
   ([m k v & rest]
      (apply assoc (-assoc m k v) rest)))
+
+(defn dissoc
+  ([m] m)
+  ([m & ks]
+    (reduce -dissoc m ks)))
 
 (defn contains? [coll key]
   (-contains-key coll key))
@@ -780,3 +794,7 @@
                 (refer-symbol *ns* (or (rename sym) sym) v))))
           (recur (next syms)))))
     nil))
+
+
+(defn vec [coll]
+  (transduce conj! coll))

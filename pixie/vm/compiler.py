@@ -7,7 +7,7 @@ from pixie.vm.cons import cons, Cons
 import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword, keyword
-from pixie.vm.string import String
+from pixie.vm.string import Character, String
 from pixie.vm.atom import Atom
 import pixie.vm.stdlib as proto
 from rpython.rlib.rarithmetic import r_uint
@@ -332,6 +332,9 @@ def compile_form(form, ctx):
     if isinstance(form, numbers.Integer):
         ctx.push_const(form)
         return
+    if isinstance(form, numbers.BigInteger):
+        ctx.push_const(form)
+        return
     if isinstance(form, numbers.Float):
         ctx.push_const(form)
         return
@@ -392,6 +395,10 @@ def compile_form(form, ctx):
         return
 
     if isinstance(form, String):
+        ctx.push_const(form)
+        return
+
+    if isinstance(form, Character):
         ctx.push_const(form)
         return
 
