@@ -7,6 +7,7 @@ from pixie.vm.primitives import nil
 import pixie.vm.stdlib as proto
 import rpython.rlib.jit as jit
 from rpython.rtyper.lltypesystem import lltype, rffi
+from rpython.rlib.rarithmetic import intmask
 from rpython.rlib.rarithmetic import build_int
 
 UNROLL_IF_SMALLER_THAN = 8
@@ -155,6 +156,6 @@ def _nth(self, idx):
     return nil
 
 @extend(proto._count, ByteArray)
-def _nth(self):
+def _count(self):
     assert isinstance(self, ByteArray)
-    return rt.wrap(self._cnt)
+    return rt.wrap(intmask(self._cnt))
