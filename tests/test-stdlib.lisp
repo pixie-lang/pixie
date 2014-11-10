@@ -45,8 +45,4 @@
 (t/deftest test-keep
   (let [v [-1 0 1 2 3 4 5]]
     (t/assert= (vec (keep pos?) v) [true true true true true])
-    (comment
-
-    (t/assert= (vec (keep pos? v)) (vec (keep pos?) v))
-      ))
-)
+    (t/assert= (vec (keep pos? v)) (vec (keep pos?) v))))

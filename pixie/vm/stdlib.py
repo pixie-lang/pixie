@@ -271,9 +271,9 @@ def str__args(args):
 @jit.unroll_safe
 def apply__args(args):
     last_itm = args[len(args) - 1]
-    if not rt.satisfies_QMARK_(rt.IIndexed.deref(), last_itm) or \
-        not rt.satisfies_QMARK_(rt.ICounted.deref(), last_itm):
-        raise ValueError("Last item to apply must be bost IIndexed and ICounted")
+    if not (rt.satisfies_QMARK_(rt.IIndexed.deref(), last_itm) and
+            rt.satisfies_QMARK_(rt.ICounted.deref(), last_itm)):
+        last_itm = rt.vec(last_itm)
 
     fn = args[0]
     argc = r_uint(len(args) - 2)

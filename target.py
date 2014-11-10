@@ -13,6 +13,7 @@ from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
 import sys
 import os
+from rpython.rlib.objectmodel import we_are_translated
 
 class DebugIFace(JitHookInterface):
     def on_abort(self, reason, jitdriver, greenkey, greenkey_repr, logops, operations):
@@ -145,12 +146,21 @@ def run_load_stdlib():
     rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
     result = nil
 
+    if not we_are_translated():
+        print "Loading stdlib while interpreted, this will take some time..."
+
     with compiler.with_ns(u"pixie.stdlib"):
         while True:
+            if not we_are_translated():
+                sys.stdout.write(".")
+                sys.stdout.flush()
             form = reader.read(rdr, False)
             if form is reader.eof:
-                return result
+                break
             result = compiler.compile(form).invoke([])
+
+    if not we_are_translated():
+        print "done"
 
 def load_stdlib():
 

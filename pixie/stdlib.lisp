@@ -54,7 +54,13 @@
                   ([result] (xf result))
                   ([result item] (xf result (f item))))))
            ([f coll]
-             (transduce (map f) conj coll))))
+              (let [i (iterator coll)]
+                (loop []
+                  (if (at-end? i)
+                    nil
+                    (do (yield (f (current i)))
+                        (move-next! i)
+                        (recur))))))))
 
 
 (def reduce (fn [rf init col]
@@ -818,6 +824,10 @@
            (do ~@body
                (recur (inc ~b))))))))
 
+(extend -iterator PersistentVector
+        (fn [v]
+          (dotimes [x (count v)]
+            (yield (nth v x)))))
 
 (defmacro and
   ([] true)
@@ -964,7 +974,7 @@
      (iterate [x coll]
               (let [result (f x)]
                 (if result
-                  (yield x))))))
+                  (yield result))))))
 
 (defn refer [ns-sym & filters]
   (let [ns (or (the-ns ns-sym) (throw (str "No such namespace: " ns-sym)))
