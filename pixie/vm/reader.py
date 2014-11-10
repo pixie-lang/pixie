@@ -467,8 +467,11 @@ class ArgReader(ReaderHandler):
         max_arg = rt.get(arg_env, ARG_MAX)
         if n > max_arg.int_val():
             arg_env = rt.assoc(arg_env, ARG_MAX, rt.wrap(n))
-        arg = ArgReader.gen_arg(n)
-        arg_env = rt.assoc(arg_env, rt.wrap(n), arg)
+
+        arg = rt.get(arg_env, rt.wrap(n), nil)
+        if arg is nil:
+            arg = ArgReader.gen_arg(n)
+            arg_env = rt.assoc(arg_env, rt.wrap(n), arg)
         ARG_ENV.set_value(arg_env)
         return arg
 
