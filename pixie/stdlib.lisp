@@ -26,6 +26,9 @@
              ([result] (-persistent! result))
              ([result item] (-conj! result item))))
 
+(def transient (fn [coll] (-transient coll)))
+
+(def persistent! (fn [coll] (-persistent! coll)))
 
 (def transduce (fn transduce
               ([f coll]
@@ -57,6 +60,10 @@
 (def reduce (fn [rf init col]
               (-reduce col rf init)))
 
+(def into (fn [to from]
+            (if (satisfies? IToTransient to)
+              (persistent! (reduce conj! (transient to) from))
+              (reduce conj to from))))
 
 (def interpose
      (fn interpose [val]
@@ -390,6 +397,10 @@
 (defn false? [v] (identical? v false))
 
 (defn number? [v] (instance? Number v))
+(defn integer? [v] (instance? Integer v))
+(defn float? [v] (instance? Float v))
+(defn ratio? [v] (instance? Ratio v))
+
 (defn string? [v] (instance? String v))
 (defn keyword? [v] (instance? Keyword v))
 
