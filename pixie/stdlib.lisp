@@ -730,7 +730,7 @@
                          (apply ~ctor-name (map #(get m %) ~fields)))
         default-bodies ['IAssociative
                         `(-assoc [self k v]
-                                 (let [m (reduce (fn [m k] (assoc m k (. self k))) {} ~fields)]
+                                 (let [m (reduce #(assoc %1 %2 (. self %2)) {} ~fields)]
                                    (~map-ctor-name (assoc m k v))))
                         `(-contains-key [self k]
                                         (contains? ~(set fields) k))
@@ -743,7 +743,7 @@
                                     not-found))
                         'IObject
                         `(-str [self]
-                               (str "<" ~(name nm) " " (reduce (fn [m k] (assoc m k (. self k))) {} ~fields) ">"))
+                               (str "<" ~(name nm) " " (reduce #(assoc %1 %2 (. self %2)) {} ~fields) ">"))
                         `(-eq [self other]
                               (and (instance? ~nm other)
                                    ~@(map (fn [field]
