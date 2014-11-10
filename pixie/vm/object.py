@@ -35,7 +35,6 @@ class TypeRegistry(object):
             self.var_for_type_and_name(nm, tp)
 
     def var_for_type_and_name(self, nm, tp):
-        from pixie.vm.symbol import symbol
         splits = nm.split(u".")
         size = len(splits) - 1
         assert size >= 0

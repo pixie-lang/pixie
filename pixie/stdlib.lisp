@@ -11,9 +11,18 @@
 
 
 (def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
-(def ba (byte-array 10))
-(pixie.io/read f ba 10)
-(puts (str (-nth ba 0)))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+(def f (pixie.io/open "README.md" pixie.io/O_RDONLY 0))
+
+;(def ba (byte-array 10))
+;(pixie.io/read f ba 10)
+;(puts (str (-nth ba 0)))
 
 (def reset! -reset!)
 

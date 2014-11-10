@@ -40,13 +40,14 @@ class FileHandle(Object):
         return FileHandle._type
 
 def fs_cb(req):
+    print "in cb"
     uv_fs_req_cleanup(req)
     key = rffi.cast(rffi.SIZE_T, req)
-    (k, charp) = fs_open_data[key]
+    (k, path, buf, is_pinned, is_raw) = fs_open_data[key]
     del fs_open_data[key]
 
     result = req.c_result
-    lltype.free(charp, flavor="raw")
+    rffi.free_nonmovingbuffer(path, buf, is_pinned, is_raw)
     if result == -1:
         pending_stacklets.push((k, nil))
     else:
@@ -56,15 +57,18 @@ def fs_cb(req):
 
 class FSOpen(UVFunction):
     def __init__(self, path, flags, mode):
-        self._path = rt.name(path)
+        self._path = str(rt.name(path))
         self._flags = flags.int_val()
         self._mode = mode.int_val()
 
     def execute_uv(self, loop, k):
+        print "exec"
         req = lltype.malloc(uv_fs_t, flavor="raw")
-        charp = rffi.str2charp(str(self._path))
-        fs_open_data[rffi.cast(rffi.SIZE_T, req)] = (k, charp)
-        uv_fs_open(loop, req, charp, self._flags, self._mode, fs_cb)
+        (buf, is_pinned, is_raw) = rffi.get_nonmovingbuffer(self._path)
+        fs_open_data[rffi.cast(rffi.SIZE_T, req)] = (k, self._path, buf, is_pinned, is_raw)
+        print "begin open"
+        uv_fs_open(loop, req, buf, self._flags, self._mode, fs_cb)
+        print "after open"
 
 @as_var("pixie.io", "open")
 def _open(name, flags, mode):
