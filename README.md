@@ -106,6 +106,8 @@ However there are a few features of pixie that although may not be uncommon, are
 
 * CSP for concurrency. We already have stacklets, it's not that hard to use them for CSP style concurrency as well. 
 
+## Where do the devs hangout?
+Mostly on FreeNode at `#pixie-lang` stop by and say "hello".
 
 ## Contributing
 
