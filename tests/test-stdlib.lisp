@@ -23,3 +23,30 @@
     (t/assert= (butlast v) res)
     (t/assert= (butlast l) res)
     (t/assert= (butlast r) res)))
+
+
+(t/deftest test-keys
+  (let [v {:a 1 :b 2 :c 3}]
+    (t/assert= (keys v) #{:a :b :c})
+    (t/assert= (transduce (keys) conj! v) (keys v))))
+
+(t/deftest test-vals
+  (let [v {:a 1 :b 2 :c 3}]
+    (t/assert= (vals v) #{1 2 3})
+    (t/assert= (transduce (vals) conj! v) (vals v))))
+
+
+(t/deftest test-vec
+  (let [v '(1 2 3 4 5)]
+    (t/assert= (vec v) [1 2 3 4 5])
+    (t/assert= (vec (map inc) v) [2 3 4 5 6])))
+
+
+(t/deftest test-keep
+  (let [v [-1 0 1 2 3 4 5]]
+    (t/assert= (vec (keep pos?) v) [true true true true true])
+    (comment
+
+    (t/assert= (vec (keep pos? v)) (vec (keep pos?) v))
+      ))
+)

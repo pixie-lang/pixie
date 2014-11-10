@@ -625,7 +625,8 @@ def compile_recur(form, ctx):
     ctx.get_recur_point().emit(ctx, args)
     if ctc:
         ctx.enable_tail_call()
-    ctx.sub_sp(r_uint(args - 1))
+    if args > 0:
+        ctx.sub_sp(r_uint(args - 1))
 
 
 def compile_let(form, ctx):
