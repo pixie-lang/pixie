@@ -221,6 +221,28 @@
 
 (set-macro! defmacro)
 
+(defmacro ->
+  [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+                       (with-meta `(~(first form) ~x ~@(next form)) (meta form))
+                       (list form x))]
+        (recur threaded (next forms)))
+      x)))
+
+(defmacro ->>
+  [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+                       (with-meta `(~(first form) ~@(next form)  ~x) (meta form))
+                       (list form x))]
+        (recur threaded (next forms)))
+      x)))
+
 (defn not [x]
   (if x false true))
 
@@ -410,6 +432,18 @@
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
 
+(defn last [coll]
+  (if (next coll)
+    (recur (next coll))
+    (first coll)))
+
+(defn butlast [coll]
+  (loop [res []
+         coll coll]
+    (if (next coll)
+      (recur (conj res (first coll)) (next coll))
+      (seq res))))
+
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn [self idx not-found]
                           (cond (= idx 0) (-key self)
@@ -495,6 +529,8 @@
        (if ks
          (assoc m k (assoc-in (get m k) ks v))
          (assoc m k v)))))
+
+(def subs pixie.string/substring)
 
 (defmacro assert
   ([test]

@@ -24,7 +24,7 @@ def endswith(a, b):
 
 @as_var("pixie.string", "split")
 def split(a, b):
-    affirm(rt.count(b) > 0, u"seperator can't be empty")
+    affirm(rt.count(b) > 0, u"separator can't be empty")
     v = rt.vector()
     for s in rstring.split(rt.name(a), rt.name(b)):
         v = rt.conj(v, rt.wrap(s))
@@ -48,11 +48,28 @@ def index_of4(a, sep, start, end):
     if start > 0 and end > 0:
         return rt.wrap(rt.name(a).find(rt.name(sep), start, end))
     else:
-        runtime_error(u"Third and fourth argument must non-negative integers")
+        runtime_error(u"Third and fourth argument must be non-negative integers")
 
 index_of = intern_var(u"pixie.string", u"index-of")
 index_of.set_root(MultiArityFn({2: wrap_fn(index_of2), 3: wrap_fn(index_of3), 4: wrap_fn(index_of4)},
                                required_arity = 2))
+
+def substring2(a, start):
+    return substring3(a, start, rt._count(a))
+
+def substring3(a, start, end):
+    affirm(isinstance(a, String), u"First argument must be a string")
+    affirm(isinstance(start, Integer) and isinstance(end, Integer), u"Second and third argument must be integers")
+    start = start.int_val()
+    end = end.int_val()
+    if start >= 0 and end >= 0:
+        return rt.wrap(rt.name(a)[start:end])
+    else:
+        runtime_error(u"Second and third argument must be non-negative integers")
+
+substring = intern_var(u"pixie.string", u"substring")
+substring.set_root(MultiArityFn({2: wrap_fn(substring2), 3: wrap_fn(substring3)},
+                                required_arity = 2))
 
 @as_var("pixie.string", "upper-case")
 def upper_case(a):

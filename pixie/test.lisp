@@ -52,6 +52,18 @@
                               (load-file fullpath)))))))))
 
 
-(defn assert= [x y]
-  (assert (= x y) (str x " != " y)))
+(defmacro assert= [x y]
+  `(let [xr# ~x
+         yr# ~y]
+     (assert (= xr# yr#) (str (show '~x xr#) " != " (show '~y yr#)))))
 
+(defmacro assert [x]
+  `(let [x# ~x]
+     (assert x# (str '~x " is " x#))))
+
+(defn show
+  ([val] (if (instance? String val) (-repr val) val))
+  ([orig res]
+     (if (= orig res)
+       (show orig)
+       (str (show orig) " = " (show res)))))

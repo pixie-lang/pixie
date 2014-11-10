@@ -16,13 +16,20 @@ class PersistentHashSet(object.Object):
     def type(self):
         return PersistentHashSet._type
 
-    def __init__(self, m):
+    def __init__(self, meta, m):
+        self._meta = meta
         self._map = m
 
     def conj(self, v):
-        return PersistentHashSet(self._map.assoc(v, v))
+        return PersistentHashSet(self._meta, self._map.assoc(v, v))
 
-EMPTY = PersistentHashSet(persistent_hash_map.EMPTY)
+    def meta(self):
+        return self._meta
+
+    def with_meta(self, meta):
+        return PersistentHashSet(meta, self._map)
+
+EMPTY = PersistentHashSet(nil, persistent_hash_map.EMPTY)
 
 @as_var("set")
 def _create(coll):
@@ -74,3 +81,13 @@ def _conj(self, v):
 def _reduce(self, f, init):
     assert isinstance(self, PersistentHashSet)
     return rt._reduce(rt.keys(self._map), f, init)
+
+@extend(proto._meta, PersistentHashSet)
+def _meta(self):
+    assert isinstance(self, PersistentHashSet)
+    return self.meta()
+
+@extend(proto._with_meta, PersistentHashSet)
+def _with_meta(self, meta):
+    assert isinstance(self, PersistentHashSet)
+    return self.with_meta(meta)
