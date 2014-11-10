@@ -256,10 +256,18 @@
         (recur threaded (next forms)))
       x)))
 
-(defn not [x]
+(defn not
+  {:doc "Inverts the input, if a truthy value is supplied, returns false, otherwise
+         returns true"
+   :signatures [[arg]]
+   :added "0.1"}
+  [x]
   (if x false true))
 
 (defn +
+  {:doc "Adds the arguments"
+   :signatures [[& args]]
+   :added "0.1"}
   ([] 0)
   ([x] x)
   ([x y] (-add x y))
@@ -293,6 +301,10 @@
   (-rem num div))
 
 (defn =
+  {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses
+         -eq to perform equality checks."
+   :signatures [[& args]]
+   :added "0.1"}
   ([x] true)
   ([x y] (eq x y))
   ([x y & rest] (if (eq x y)
@@ -300,6 +312,10 @@
                   false)))
 
 (defn not=
+  {:doc "Returns true if one (or more) of the arguments are not equivalent to the others. Uses
+         -eq to perform equality checks."
+   :signatures [[& args]]
+   :added "0.1"}
   ([x] false)
   ([x y] (not (eq x y)))
   ([x y & rest] (not (apply = x y rest))))
@@ -332,27 +348,80 @@
                   (apply >= y rest)
                   false)))
 
-(defn pos? [x]
+(defn pos?
+  {:doc "Returns true if x is greater than zero"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
   (> x 0))
 
-(defn neg? [x]
+(defn neg?
+  {:doc "Returns true if x is less than zero"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
   (< x 0))
 
-(defn zero? [x]
+(defn zero?
+  {:doc "Returns true if x is equal to zero"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
   (= x 0))
 
-(def inc (fn [x] (+ x 1)))
+(defn inc
+  {:doc "Increments x by one"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
+  (+ x 1))
 
-(def dec (fn [x] (- x 1)))
+(defn dec
+  {:doc "Decrements x by one"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
+  (- x 1))
 
-(defn second [x]
-  (first (next x)))
+(defn first
+  {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
+         the item from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IIndexed coll)
+    (nth coll 0)
+    (-first coll)))
 
-(defn third [x]
-  (first (next (next x))))
+(defn second
+  {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retreive
+         the item from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IIndexed coll)
+    (nth coll 1)
+    (first (next coll))))
 
-(defn fourth [x]
-  (first (next (next (next x)))))
+(defn third
+  {:doc "Returns the third item in coll, if coll implements IIndexed nth will be used to retreive
+         the item from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IIndexed coll)
+    (nth coll 2)
+    (first (next (next coll)))))
+
+(defn fourth
+  {:doc "Returns the fourth item in coll, if coll implements IIndexed nth will be used to retreive
+         the item from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IIndexed coll)
+    (nth coll 3)
+    (first (next (next (next coll))))))
 
 (defn assoc
   ([m] m)
@@ -368,12 +437,6 @@
 
 (defn contains? [coll key]
   (-contains-key coll key))
-
-(def slot-tp (create-type :slot [:val]))
-
-(defn ->Slot [x]
-  (let [inst (new slot-tp)]
-    (set-field! inst :val x)))
 
 (defn get-val [inst]
   (get-field inst :val))
@@ -473,11 +536,23 @@
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
 
-(defn keys [m]
-  (reduce (fn [ks e] (conj ks (key e))) nil m))
+(defn keys
+  {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
+   a collection, will assume that it is a hashmap and return a vector of all keys from the collection."
+   :signatures [[] [coll]]
+   :added "0.1"}
+  ([] (map key))
+  ([m]
+     (transduce (map key) conj! m)))
 
-(defn vals [m]
-  (reduce (fn [ks e] (conj ks (val e))) nil m))
+(defn vals
+  {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
+   a collection, will assume that it is a hashmap and return a vector of all keys from the collection."
+   :signatures [[] [coll]]
+   :added "0.1"}
+  ([] (map val))
+  ([m]
+     (transduce (map val) conj! m)))
 
 (extend -seq PersistentHashMap
         (fn [m]
@@ -722,6 +797,17 @@
     nil
     ~(nth binding 1)))
 
+(defmacro iterate [binding & body]
+  (assert (= 2 (count binding)) "binding and collection required")
+  `(let [i# (iterator ~(second binding))]
+     (loop []
+       (if (at-end? i#)
+         nil
+         (let [~(first binding) (current i#)]
+           ~@body
+           (move-next! i#)
+           (recur))))))
+
 
 (defmacro dotimes [bind & body]
   (let [b (nth bind 0)]
@@ -864,15 +950,21 @@
                  (xf acc i)
                  acc)))))
 
-(defn keep [f]
-  (fn [xf]
-    (fn
-      ([] (xf))
-      ([acc] (xf acc))
-      ([acc i] (let [result (f i)]
-                 (if result
-                   (xf acc result)
-                   acc))))))
+(defn keep
+  ([f]
+     (fn [xf]
+       (fn
+         ([] (xf))
+         ([acc] (xf acc))
+         ([acc i] (let [result (f i)]
+                    (if result
+                      (xf acc result)
+                      acc))))))
+  ([f coll]
+     (iterate [x coll]
+              (let [result (f x)]
+                (if result
+                  (yield x))))))
 
 (defn refer [ns-sym & filters]
   (let [ns (or (the-ns ns-sym) (throw (str "No such namespace: " ns-sym)))
@@ -899,5 +991,11 @@
     nil))
 
 
-(defn vec [coll]
-  (transduce conj! coll))
+(defn vec
+  {:doc "Converts a reducable collection into a vector using the (optional) transducer."
+   :signatures [[coll] [xform coll]]
+   :added "0.1"}
+  ([coll]
+     (transduce conj! coll))
+  ([xform coll]
+     (transduce xform conj! coll)))
