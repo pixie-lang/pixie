@@ -600,6 +600,38 @@
          ~ctor
          ~@proto-bodies)))
 
+(defmacro defrecord [nm fields & body]
+  (let [ctor-name (symbol (str "->" (name nm)))
+        map-ctor-name (symbol (str "map" (name ctor-name)))
+        fields (transduce (map (comp keyword name)) conj fields)
+        type-from-map `(defn ~map-ctor-name [m]
+                         (apply ~ctor-name (map #(get m %) ~fields)))
+        default-bodies ['IAssociative
+                        `(-assoc [self k v]
+                                 (let [m (reduce (fn [m k] (assoc m k (. self k))) {} ~fields)]
+                                   (~map-ctor-name (assoc m k v))))
+                        `(-contains-key [self k]
+                                        (contains? ~(set fields) k))
+                        `(-dissoc [self k]
+                                  (throw "dissoc is not supported on defrecords"))
+                        'ILookup
+                        `(-val-at [self k not-found]
+                                  (if (contains? ~(set fields) k)
+                                    (. self k)
+                                    not-found))
+                        'IObject
+                        `(-str [self]
+                               (str "<" ~(name nm) " " (reduce (fn [m k] (assoc m k (. self k))) {} ~fields) ">"))
+                        `(-eq [self other]
+                              (and (instance? ~nm other)
+                                   ~@(map (fn [field]
+                                            `(= (. self ~field) (. other ~field)))
+                                          fields)))
+                        `(-hash [self]
+                                (throw "not implemented"))]
+        deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
+    `(do ~type-from-map
+         ~deftype-decl)))
 
  (def libc (ffi-library pixie.platform/lib-c-name))
  (def exit (ffi-fn libc "exit" [Integer] Integer))
@@ -657,7 +689,7 @@
 (defmacro and
   ([] true)
   ([x] x)
-  ([x y] `(if ~x ~y nil))
+  ([x y] `(if ~x ~y false))
   ([x y & more] `(if ~x (and ~y ~@more))))
 
 (defmacro or
