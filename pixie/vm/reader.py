@@ -14,6 +14,7 @@ from pixie.vm.string import Character, String
 from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
+from pixie.vm.persistent_list import EmptyList
 import pixie.vm.stdlib as proto
 import pixie.vm.compiler as compiler
 
@@ -213,6 +214,8 @@ class ListReader(ReaderHandler):
             eat_whitespace(rdr)
             ch = rdr.read()
             if ch == u")":
+                if len(lst) == 0:
+                    return EmptyList()
                 acc = nil
                 for x in range(len(lst) - 1, -1, -1):
                     acc = cons(lst[x], acc)

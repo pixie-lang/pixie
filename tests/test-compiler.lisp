@@ -16,3 +16,7 @@
   (t/assert= (let [] 1) 1)
   (t/assert= (let [x 1]) nil)
   (t/assert= (let []) nil))
+
+(t/deftest test-lists
+  (t/assert= (vec '()) [])
+  (t/assert= (vec '()) ()))

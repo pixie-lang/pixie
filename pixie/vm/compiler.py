@@ -11,6 +11,7 @@ from pixie.vm.string import Character, String
 from pixie.vm.atom import Atom
 import pixie.vm.stdlib as proto
 from rpython.rlib.rarithmetic import r_uint
+from pixie.vm.persistent_list import EmptyList
 
 import pixie.vm.rt as rt
 from pixie.vm.util import *
@@ -775,6 +776,10 @@ def is_compiler_special(s):
     return True if compiler_special(s) is not None else False
 
 def compile_cons(form, ctx):
+    if isinstance(form, EmptyList):
+        ctx.push_const(form)
+        return
+
     if isinstance(rt.first(form), symbol.Symbol):
         special = compiler_special(rt.first(form))
         if special is not None:
