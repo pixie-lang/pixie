@@ -11,3 +11,6 @@ before_install:
 
 os:
   - osx
+
+notifications:
+  irc: "chat.freenode.net#pixie-lang"
