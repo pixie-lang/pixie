@@ -8,6 +8,7 @@ from pixie.vm.stacklet import execute_uv_func, pending_stacklets
 from pixie.vm.object import Object, Type
 from pixie.vm.primitives import nil
 from pixie.vm.array import ByteArray
+from rpython.rlib.rarithmetic import intmask
 
 def __module_init__():
     def define_int_const(ns, nm, header):
@@ -17,13 +18,15 @@ def __module_init__():
     for x in fcntl_consts.split(" "):
         define_int_const("pixie.io", x, "fcntl.h")
 
+uv_file = rffi_platform.getsimpletype("uv_file", "#include<uv.h>")
 
-uv_fs_t = rffi_platform.getstruct("uv_fs_t", "#include<uv.h>", [("result", rffi.INT)])
+uv_fs_t = rffi_platform.getstruct("uv_fs_t", "#include<uv.h>", [("result", uv_file)])
 uv_fs_t_p = lltype.Ptr(uv_fs_t)
+
 
 uv_fs_cb = rffi.CCallback([uv_fs_t_p], lltype.Void)
 uv_fs_open = llexternal("uv_fs_open", [rffi.VOIDP, uv_fs_t_p, rffi.CCHARP, rffi.INT, rffi.INT, uv_fs_cb], rffi.VOIDP)
-
+uv_fs_req_cleanup = llexternal("uv_fs_req_cleanup", [uv_fs_t_p], lltype.Void)
 
 # File Open
 fs_open_data = {}
@@ -37,6 +40,7 @@ class FileHandle(Object):
         return FileHandle._type
 
 def fs_cb(req):
+    uv_fs_req_cleanup(req)
     key = rffi.cast(rffi.SIZE_T, req)
     (k, charp) = fs_open_data[key]
     del fs_open_data[key]
@@ -72,14 +76,16 @@ def _open(name, flags, mode):
 ## File Read
 
 fs_read_data = {}
-uv_fs_read = llexternal("uv_fs_read", [rffi.VOIDP, uv_fs_t_p, rffi.INT, rffi.VOIDP, rffi.SIZE_T, rffi.LONG, uv_fs_cb], rffi.INT)
+uv_fs_read = llexternal("uv_fs_read", [rffi.VOIDP, uv_fs_t_p, uv_file, rffi.VOIDP, rffi.SIZE_T, rffi.LONG, uv_fs_cb], rffi.INT)
+
 
 def uv_fs_read_cb(req):
     print "handler"
+    uv_fs_req_cleanup(req)
     key = rffi.cast(rffi.SIZE_T, req)
-    k = fs_read_data[key]
+    (k, sc) = fs_read_data[key]
     del fs_read_data[key]
-
+    sc.__exit__()
     pending_stacklets.push((k, rt.wrap(req.c_result)))
 
     lltype.free(req, flavor="raw")
@@ -91,14 +97,22 @@ class FSRead(UVFunction):
         affirm(isinstance(buffer, ByteArray), u"Buffer must be a ByteArray")
         affirm(isinstance(file, FileHandle), u"File must be a FileHandler")
         self._file = file
-        self._buffer = buffer
+        self._byte_array = buffer
         self._read_bytes = read_bytes.int_val()
-        affirm(self._read_bytes <= buffer._cnt, u"Can't read more bytes than the size of the buffer")
+        affirm(self._read_bytes <= intmask(buffer._cnt), u"Can't read more bytes than the size of the buffer")
 
     def execute_uv(self, loop, k):
+        print "reading", self._read_bytes
         req = lltype.malloc(uv_fs_t, flavor="raw")
-        fs_read_data[rffi.cast(rffi.SIZE_T, req)] = k
-        uv_fs_read(loop, req, self._file._fs_handle, self._buffer._buffer, self._read_bytes, -1, uv_fs_read_cb)
+        print "after malloc"
+        sc = rffi.scoped_alloc_buffer(self._read_bytes)
+        print "scoping"
+        fs_read_data[rffi.cast(rffi.SIZE_T, req)] = (k, sc)
+        sc.__enter__()
+        print "about to exec"
+        uv_fs_read(loop, req, self._file._fs_handle, sc.raw, self._read_bytes, 0, uv_fs_read_cb)
+        print "done reading"
+
 
 @as_var("pixie.io", "read")
 def _read(fh, buffer, size):

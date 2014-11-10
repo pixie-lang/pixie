@@ -30,7 +30,7 @@ compilation_info = ExternalCompilationInfo(
         separate_module_files=[udir.udir / "uv_ffi.c"]).merge(ExternalCompilationInfo.from_pkg_config("libffi"))
 
 def llexternal(*args, **kwargs):
-    return rffi.llexternal(*args, compilation_info=compilation_info, **kwargs)
+    return rffi.llexternal(*args, compilation_info=compilation_info, releasegil=False, random_effects_on_gcobjs=True, **kwargs)
 
 
 uv_work = rffi_platform.Struct("uv_work_t",

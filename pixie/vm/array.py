@@ -102,10 +102,8 @@ class ByteArray(object.Object):
     _type = object.Type(u"pixie.stdlib.ByteArray")
 
     def __init__(self, size):
+        self._buffer = "\0" * size
         self._cnt = size
-        self._buffer = lltype.malloc(ARRAY_OF_UCHAR, size, flavor="raw")
-        for x in range(size):
-            self._buffer[x] = chr(0)
 
     def type(self):
         return ByteArray._type
