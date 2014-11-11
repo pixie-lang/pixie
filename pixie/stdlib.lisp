@@ -11,7 +11,6 @@
 
 (def reset! -reset!)
 
-(def load-paths (atom ["./"]))
 (def program-arguments [])
 
 
