@@ -197,9 +197,10 @@ def entry_point(args):
                 return 0
             elif arg == '-h' or arg == '--help':
                 print args[0] + " [<options>] [<file>]"
-                print "  -h, --help     print this help"
-                print "  -v, --version  print the version number"
-                print "  -e, --eval     evaluate the given expression"
+                print "  -h, --help             print this help"
+                print "  -v, --version          print the version number"
+                print "  -e, --eval=<expr>      evaluate the given expression"
+                print "  -l, --load-path=<path> add <path> to pixie.stdlib/load-paths"
                 return 0
             elif arg == '-e' or arg == '--eval':
                 i += 1
@@ -207,6 +208,14 @@ def entry_point(args):
                     expr = args[i]
                     with_stacklets(EvalFn(expr))
                     return 0
+                else:
+                    print "Expected argument for " + arg
+                    return 1
+            elif arg == '-l' or arg == '--load-path':
+                i += 1
+                if i < len(args):
+                    path = args[i]
+                    add_to_load_paths(path)
                 else:
                     print "Expected argument for " + arg
                     return 1
@@ -226,6 +235,9 @@ def entry_point(args):
         with_stacklets(BatchModeFn(script_args))
 
     return 0
+
+def add_to_load_paths(path):
+    rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
 
 def init_load_path(self_path):
     base_path = dirname(rpath.rabspath(self_path))
