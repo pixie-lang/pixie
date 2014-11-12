@@ -285,9 +285,27 @@ class LiteralStringReader(ReaderHandler):
                 v = rdr.read()
             except EOFError:
                 raise Exception("unmatched quote")
+            
             if v == "\"":
                 return rt.wrap(u"".join(acc))
-            acc.append(v)
+            elif v == "\\":
+                #inside escape... TODO handle everything.
+                try:
+                    esc = rdr.read()
+                    if esc == "\"":
+                        acc.append("\"")
+                    elif esc == "n":
+                        acc.append("\n")
+                    elif esc == "r":
+                        acc.append("\r")
+                    elif esc == "t":
+                        acc.append("\t")
+                    else:
+                        acc.append(v)
+                except EOFError:
+                    raise Exception("eof after escape character")
+            else:
+                acc.append(v)
 
 def read_token(rdr):
     acc = u""
