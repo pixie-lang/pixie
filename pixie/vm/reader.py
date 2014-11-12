@@ -291,17 +291,19 @@ class LiteralStringReader(ReaderHandler):
             elif v == "\\":
                 #inside escape... TODO handle everything.
                 try:
-                    esc = rdr.read()
-                    if esc == "\"":
+                    v = rdr.read()
+                    if v == "\"":
                         acc.append("\"")
-                    elif esc == "n":
+                    elif v == "n":
                         acc.append("\n")
-                    elif esc == "r":
+                    elif v == "\\":
+                        acc.append("\\")
+                    elif v == "r":
                         acc.append("\r")
-                    elif esc == "t":
+                    elif v == "t":
                         acc.append("\t")
                     else:
-                        acc.append(v)
+                        raise Exception("unhandled escape character")
                 except EOFError:
                     raise Exception("eof after escape character")
             else:
