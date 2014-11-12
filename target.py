@@ -15,6 +15,7 @@ from pixie.vm.atom import Atom
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 import sys
 import os
+import os.path as path
 import rpython.rlib.rpath as rpath
 import rpython.rlib.rpath as rposix
 from rpython.rlib.objectmodel import we_are_translated
@@ -241,7 +242,10 @@ def add_to_load_paths(path):
     rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
 
 def init_load_path(self_path):
-    base_path = dirname(rpath.rabspath(self_path))
+    base_path = rpath.rabspath(self_path)
+    if path.islink(base_path):
+        base_path = os.readlink(base_path)
+    base_path = dirname(base_path)
     # runtime is not loaded yet, so we have to do it manually
     LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(base_path))))
     # just for run_load_stdlib (global variables can't be assigned to)
