@@ -1,6 +1,21 @@
 (ns pixie.tests.test-stdlib
   (require pixie.test :as t))
 
+(t/deftest test-first
+  (t/assert= (first []) nil)
+  (t/assert= (first '()) nil)
+  (t/assert= (first (make-array 0)) nil)
+  (comment (t/assert= (first {}) nil))
+  (comment (t/assert= (first #{}) nil))
+
+  (t/assert= (first [1 2 3]) 1)
+  (t/assert= (first '(1 2 3)) 1)
+  (let [a (make-array 3)]
+    (aset a 0 1)
+    (aset a 1 2)
+    (aset a 2 3)
+    (t/assert= (first a) 1)))
+
 (t/deftest test-last
   (let [v [1 2 3 4 5]
         l '(1 2 3 4 5)
@@ -34,6 +49,17 @@
   (let [v {:a 1 :b 2 :c 3}]
     (t/assert= (vals v) #{1 2 3})
     (t/assert= (transduce (vals) conj! v) (vals v))))
+
+
+(t/deftest test-empty
+  (t/assert= (empty '(1 2 3)) '())
+  (t/assert= (empty (list 1 2 3)) '())
+  (t/assert= (empty (lazy-seq)) '())
+  (t/assert= (empty '()) '())
+  (t/assert= (empty [1 2 3]) [])
+  (t/assert= (empty (make-array 3)) (make-array 0))
+  (t/assert= (empty {:a 1, :b 2, :c 3}) {})
+  (t/assert= (empty #{1 2 3}) #{}))
 
 
 (t/deftest test-vec

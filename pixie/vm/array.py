@@ -45,7 +45,11 @@ def _count(self):
 @extend(proto._nth, Array)
 def _nth(self, idx):
     assert isinstance(self, Array)
-    return self._list[idx.int_val()]
+    ival = idx.int_val()
+    if ival < len(self._list):
+        return self._list[ival]
+    else:
+        return nil
 
 @extend(proto._reduce, Array)
 def reduce(self, f, init):
