@@ -579,6 +579,23 @@
         (fn [s]
           (apply str "#{" (conj (transduce (interpose " ") conj s) "}"))))
 
+(extend -empty Cons (fn [_] '()))
+(extend -empty LazySeq (fn [_] '()))
+(extend -empty PersistentList (fn [_] '()))
+(extend -empty EmptyList (fn [_] '()))
+(extend -empty PersistentVector (fn [_] []))
+(extend -empty Array (fn [_] (make-array 0)))
+(extend -empty PersistentHashMap (fn [_] {}))
+(extend -empty PersistentHashSet (fn [_] #{}))
+
+(defn empty
+  {:doc "Returns an empty collection of the same type, or nil."
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IEmpty coll)
+    (-empty coll)
+    nil))
+
 (extend -str Keyword
   (fn [k]
     (if (namespace k)

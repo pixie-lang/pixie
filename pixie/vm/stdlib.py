@@ -22,6 +22,8 @@ defprotocol("pixie.stdlib", "IIndexed", ["-nth"])
 
 defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
 
+defprotocol("pixie.stdlib", "IEmpty", ["-empty"])
+
 defprotocol("pixie.stdlib", "IObject", ["-hash", "-eq", "-str", "-repr"])
 _eq.set_default_fn(wrap_fn(lambda a, b: false))
 

@@ -36,6 +36,17 @@
     (t/assert= (transduce (vals) conj! v) (vals v))))
 
 
+(t/deftest test-empty
+  (t/assert= (empty '(1 2 3)) '())
+  (t/assert= (empty (list 1 2 3)) '())
+  (t/assert= (empty (lazy-seq)) '())
+  (t/assert= (empty '()) '())
+  (t/assert= (empty [1 2 3]) [])
+  (t/assert= (empty (make-array 3)) (make-array 0))
+  (t/assert= (empty {:a 1, :b 2, :c 3}) {})
+  (t/assert= (empty #{1 2 3}) #{}))
+
+
 (t/deftest test-vec
   (let [v '(1 2 3 4 5)]
     (t/assert= (vec v) [1 2 3 4 5])
