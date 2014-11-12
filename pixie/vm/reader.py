@@ -294,10 +294,10 @@ class LiteralStringReader(ReaderHandler):
                     v = rdr.read()
                     if v == "\"":
                         acc.append("\"")
-                    elif v == "n":
-                        acc.append("\n")
                     elif v == "\\":
                         acc.append("\\")
+                    elif v == "n":
+                        acc.append("\n")
                     elif v == "r":
                         acc.append("\r")
                     elif v == "t":
