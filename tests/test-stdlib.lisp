@@ -4,7 +4,7 @@
 (t/deftest test-first
   (t/assert= (first []) nil)
   (t/assert= (first '()) nil)
-  (comment (t/assert= (first (make-array 0)) nil))
+  (t/assert= (first (make-array 0)) nil)
   (comment (t/assert= (first {}) nil))
   (comment (t/assert= (first #{}) nil))
 
