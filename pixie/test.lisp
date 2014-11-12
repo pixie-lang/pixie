@@ -1,4 +1,5 @@
-(ns pixie.test)
+(ns pixie.test
+  (require pixie.string :as s))
 
 (def tests (atom {}))
 
@@ -24,13 +25,19 @@
 
 
 
-(defn run-tests []
+(defn run-tests [& args]
   (push-binding-frame!)
   (set! (var *stats*) (atom {:fail 0 :pass 0}))
-  (print "Running: " (count@tests) " tests")
 
-  (foreach [test @tests]
-           ((val test)))
+  (let [match (or (first args) "")
+        tests (transduce (comp (filter #(>= (s/index-of (str (key %1)) match) 0))
+                               (map val))
+                         conj
+                         @tests)]
+    (print "Running: " (count tests) " tests")
+
+    (foreach [test tests]
+             (test)))
 
   (let [stats @*stats*]
     (print stats)
