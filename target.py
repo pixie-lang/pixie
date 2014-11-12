@@ -186,6 +186,7 @@ def entry_point(args):
 
     init_load_path(args[0])
     load_stdlib()
+    add_to_load_paths(".")
 
     i = 1
     while i < len(args):
