@@ -1,6 +1,21 @@
 (ns pixie.tests.test-stdlib
   (require pixie.test :as t))
 
+(t/deftest test-first
+  (t/assert= (first []) nil)
+  (t/assert= (first '()) nil)
+  (comment (t/assert= (first (make-array 0)) nil))
+  (comment (t/assert= (first {}) nil))
+  (comment (t/assert= (first #{}) nil))
+
+  (t/assert= (first [1 2 3]) 1)
+  (t/assert= (first '(1 2 3)) 1)
+  (let [a (make-array 3)]
+    (aset a 0 1)
+    (aset a 1 2)
+    (aset a 2 3)
+    (t/assert= (first a) 1)))
+
 (t/deftest test-last
   (let [v [1 2 3 4 5]
         l '(1 2 3 4 5)
