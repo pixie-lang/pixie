@@ -313,9 +313,15 @@ import pixie.vm.rt as rt
 @as_var("read-string")
 def _read_string(s):
     import pixie.vm.reader as reader
-
     return reader.read(reader.StringReader(unicode(rt.name(s))), True)
 
+# XXX seems broken under jit.
+@as_var("eval")
+def eval(form):
+    from pixie.vm.compiler import compile
+    from pixie.vm.interpreter import interpret
+    val = interpret(compile(form))
+    return val
 
 @as_var("load-file")
 def load_file(filename):
