@@ -5,14 +5,18 @@ from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
 from rpython.rlib.rfile import create_stdio
 from rpython.annotator.policy import AnnotatorPolicy
-from pixie.vm.code import wrap_fn, NativeFn, intern_var
+from pixie.vm.code import wrap_fn, NativeFn, intern_var, Var
 from pixie.vm.stacklet import with_stacklets
 import pixie.vm.stacklet as stacklet
 from pixie.vm.object import RuntimeException, WrappedException
 from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
+from pixie.vm.atom import Atom
+from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 import sys
 import os
+import rpython.rlib.rpath as rpath
+import rpython.rlib.rpath as rposix
 from rpython.rlib.objectmodel import we_are_translated
 
 class DebugIFace(JitHookInterface):
@@ -31,6 +35,10 @@ def jitpolicy(driver):
 
 PROGRAM_ARGUMENTS = intern_var(u"pixie.stdlib", u"program-arguments")
 PROGRAM_ARGUMENTS.set_root(nil)
+
+LOAD_PATHS = intern_var(u"pixie.stdlib", u"load-paths")
+LOAD_PATHS.set_root(nil)
+load_path = Var(u"", u"internal-load-path")
 
 STAR_1 = intern_var(u"pixie.stdlib", u"*1")
 STAR_1.set_root(nil)
@@ -140,7 +148,7 @@ class EvalFn(NativeFn):
 def run_load_stdlib():
     import pixie.vm.compiler as compiler
     import pixie.vm.reader as reader
-    f = open("pixie/stdlib.lisp")
+    f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.lisp"))
     data = f.read()
     f.close()
     rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
@@ -176,6 +184,7 @@ def entry_point(args):
     interactive = True
     script_args = []
 
+    init_load_path(args[0])
     load_stdlib()
 
     i = 1
@@ -188,9 +197,10 @@ def entry_point(args):
                 return 0
             elif arg == '-h' or arg == '--help':
                 print args[0] + " [<options>] [<file>]"
-                print "  -h, --help     print this help"
-                print "  -v, --version  print the version number"
-                print "  -e, --eval     evaluate the given expression"
+                print "  -h, --help             print this help"
+                print "  -v, --version          print the version number"
+                print "  -e, --eval=<expr>      evaluate the given expression"
+                print "  -l, --load-path=<path> add <path> to pixie.stdlib/load-paths"
                 return 0
             elif arg == '-e' or arg == '--eval':
                 i += 1
@@ -198,6 +208,14 @@ def entry_point(args):
                     expr = args[i]
                     with_stacklets(EvalFn(expr))
                     return 0
+                else:
+                    print "Expected argument for " + arg
+                    return 1
+            elif arg == '-l' or arg == '--load-path':
+                i += 1
+                if i < len(args):
+                    path = args[i]
+                    add_to_load_paths(path)
                 else:
                     print "Expected argument for " + arg
                     return 1
@@ -218,7 +236,18 @@ def entry_point(args):
 
     return 0
 
+def add_to_load_paths(path):
+    rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
 
+def init_load_path(self_path):
+    base_path = dirname(rpath.rabspath(self_path))
+    # runtime is not loaded yet, so we have to do it manually
+    LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(base_path))))
+    # just for run_load_stdlib (global variables can't be assigned to)
+    load_path.set_root(rt.wrap(base_path))
+
+def dirname(path):
+    return rpath.sep.join(path.split(rpath.sep)[0:-1])
 
 from rpython.rtyper.lltypesystem import lltype
 from rpython.jit.metainterp import warmspot
