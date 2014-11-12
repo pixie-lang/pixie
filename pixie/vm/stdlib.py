@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
-                          resize_list, list_copy, returns, get_var_if_defined
+                          resize_list, list_copy, returns, get_var_if_defined, intern_var
 import pixie.vm.code as code
 from types import MethodType
 from pixie.vm.primitives import true, false, nil
@@ -59,6 +59,28 @@ defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
 defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
 defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
 
+@as_var("pixie.stdlib.internal", "-defprotocol")
+def _defprotocol(name, methods):
+    from pixie.vm.compiler import NS_VAR
+    from pixie.vm.persistent_vector import PersistentVector
+    from pixie.vm.symbol import Symbol
+    affirm(isinstance(name, Symbol), u"protocol name must be a symbol")
+    affirm(isinstance(methods, PersistentVector), u"protocol methods must be a vector of symbols")
+    method_list = []
+    for i in range(0, rt.count(methods)):
+        method_sym = rt.nth(methods, rt.wrap(i))
+        affirm(isinstance(method_sym, Symbol), u"protocol methods must be a vector of symbols")
+        method_list.append(rt.name(method_sym))
+
+    proto =  Protocol(rt.name(name))
+    ns = rt.name(NS_VAR.deref())
+    intern_var(ns, rt.name(name)).set_root(proto)
+    for method in method_list:
+        method = unicode(method)
+        poly = PolymorphicFn(method,  proto)
+        intern_var(ns, method).set_root(poly)
+
+    return name
 
 def __make_code_overrides(x):
     @extend(_meta, x._type)
