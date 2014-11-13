@@ -587,6 +587,23 @@
 (extend -empty PersistentHashMap (fn [_] {}))
 (extend -empty PersistentHashSet (fn [_] #{}))
 
+(extend -conj PersistentHashMap
+        (fn [coll x]
+            (cond 
+             (instance? MapEntry x)
+             (assoc coll (key x) (val x))
+
+             (instance? PersistentVector x)
+             (if (= (count x) 2)
+                 (assoc coll (nth x 0) (nth x 1))
+                 (throw "Vector arg to map conj must be a pair"))
+             
+             (satisfies? ISeqable x)
+             (reduce conj coll (-seq x))
+
+             :else
+             (throw (str (type x) " cannot be conjed to a map")))))
+ 
 (defn empty
   {:doc "Returns an empty collection of the same type, or nil."
    :added "0.1"}
