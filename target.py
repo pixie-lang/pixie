@@ -242,17 +242,29 @@ def add_to_load_paths(path):
     rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
 
 def init_load_path(self_path):
-    base_path = rpath.rabspath(self_path)
-    if path.islink(base_path):
-        base_path = os.readlink(base_path)
-    base_path = dirname(base_path)
+    if not path.isfile(self_path):
+        self_path = find_in_path(self_path)
+        assert self_path is not None
+    if path.islink(self_path):
+        self_path = os.readlink(self_path)
+    self_path = dirname(rpath.rabspath(self_path))
     # runtime is not loaded yet, so we have to do it manually
-    LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(base_path))))
+    LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(self_path))))
     # just for run_load_stdlib (global variables can't be assigned to)
-    load_path.set_root(rt.wrap(base_path))
+    load_path.set_root(rt.wrap(self_path))
 
 def dirname(path):
     return rpath.sep.join(path.split(rpath.sep)[0:-1])
+
+def find_in_path(exe_name):
+    paths = os.environ.get('PATH')
+    print "PATH: " + paths
+    paths = paths.split(path.pathsep)
+    for p in paths:
+        exe_path = path.join(p, exe_name)
+        if path.isfile(exe_path):
+            return exe_path
+    return None
 
 from rpython.rtyper.lltypesystem import lltype
 from rpython.jit.metainterp import warmspot
