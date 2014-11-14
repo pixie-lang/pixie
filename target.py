@@ -123,12 +123,20 @@ class BatchModeFn(NativeFn):
 
         with with_ns(u"user"):
             try:
+                f = None
                 if self._file == '-':
-                    stdin, _, _ = create_stdio()
-                    code = stdin.read()
-                    interpret(compile(read(StringReader(unicode(code)), True)))
+                    f, _, _ = create_stdio()
                 else:
-                    rt.load_file(rt.wrap(self._file))
+                    f = open(self._file)
+                data = f.read()
+                f.close()
+
+                if data.startswith("#!"):
+                    newline_pos = data.find("\n")
+                    if newline_pos > 0:
+                        data = data[newline_pos:]
+
+                interpret(compile(read(StringReader(unicode(data)), True)))
             except WrappedException as ex:
                 print "Error: ", ex._ex.__repr__()
                 os._exit(1)
@@ -248,6 +256,7 @@ def init_load_path(self_path):
     if path.islink(self_path):
         self_path = os.readlink(self_path)
     self_path = dirname(rpath.rabspath(self_path))
+
     # runtime is not loaded yet, so we have to do it manually
     LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(self_path))))
     # just for run_load_stdlib (global variables can't be assigned to)
@@ -258,7 +267,6 @@ def dirname(path):
 
 def find_in_path(exe_name):
     paths = os.environ.get('PATH')
-    print "PATH: " + paths
     paths = paths.split(path.pathsep)
     for p in paths:
         exe_path = path.join(p, exe_name)
