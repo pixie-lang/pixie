@@ -127,6 +127,9 @@ class BatchModeFn(NativeFn):
                 if self._file == '-':
                     f, _, _ = create_stdio()
                 else:
+                    if not path.isfile(self._file):
+                        print "Error: Cannot open '" + self._file + "'"
+                        os._exit(1)
                     f = open(self._file)
                 data = f.read()
                 f.close()
