@@ -1,9 +1,51 @@
+import rpython.rlib.jit as jit
 
 class Object(object):
     """
     Base class of all Pixie Object
     """
-    pass
+    def invoke_Ef(self, args):
+        """
+        Everything is technically invokable, may throw an exception though
+        """
+
+class ArgList(object):
+    _immutable_ = True
+    _immutable_fields_ = "_args_w[*]"
+    def __init__(self, args=[]):
+        self._args_w = args
+
+    @jit.unroll_safe
+    def append(self, arg):
+        old_args = self._args_w
+        new_args = [None] * (len(old_args) + 1)
+        x = 0
+        while x < len(old_args):
+            new_args[x] = old_args[x]
+            x += 1
+
+        new_args[len(old_args)] = arg
+        return ArgList(new_args)
+
+    def get_arg(self, idx):
+        return self._args_w[idx]
+
+    def arg_count(self):
+        return len(self._args_w)
+
+_type_registry = {}
+
+class Type(Object):
+    def __init__(self, name, parent = None):
+        assert isinstance(name, unicode), u"Type names must be unicode"
+        self._name = name
+        self._parent = parent
+        _type_registry[name] = self
+
+    def type(self):
+        return Type._type
+
+Type._type = Type(u"Type")
 
 class EffectObject(object):
     """
@@ -91,14 +133,6 @@ class Continuation(object):
         """
         Continue execution, x is the value returned by the effect.
         """
-        raise NotImplementedError()
-
-class Fn(Object):
-    """
-    An app-level callable.
-    """
-    _immutable_ = True
-    def invoke_Ef(self, args):
         raise NotImplementedError()
 
 def answer(x):

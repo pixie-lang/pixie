@@ -71,12 +71,6 @@ class Type(Object):
     def type(self):
         return Type._type
 
-    def add_subclass(self, tp):
-        self._subclasses.append(tp)
-
-    def subclasses(self):
-        return self._subclasses
-
 Type._type = Type(u"Type")
 
 @jit.elidable_promote()
