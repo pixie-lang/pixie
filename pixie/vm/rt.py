@@ -3,14 +3,15 @@ py_list = list
 py_str = str
 from rpython.rlib.objectmodel import specialize
 from rpython.rtyper.lltypesystem import lltype, rffi
-from pixie.vm.effects.effects import ArgList, raise_Ef, Continuation
+from pixie.vm.effects.effects import ArgList, raise_Ef, Continuation, answer_k
 from pixie.vm.effects.environment import Resolve
 from pixie.vm.keyword import keyword
 
 from pixie.vm.effects.effect_transform import cps
 
 
-_inited_fns = ["first"]
+def munge(s):
+     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
 
 def wrap(nm):
     kw_nm = keyword(unicode(nm))
@@ -32,9 +33,25 @@ def wrap(nm):
     return wrapper
 
 
-for x in _inited_fns:
-    globals()[x+"_Ef"] = wrap(x)
+_inited_fns = ["first"]
 
+for x in _inited_fns:
+    globals()[munge(x+"_Ef")] = wrap(x)
+
+_inited_vals = ["load-paths"]
+
+
+def wrap_val(nm):
+    kw_nm = keyword(unicode(nm))
+    kw_ns = keyword(unicode("pixie.stdlib"))
+
+    def wrapper():
+        return raise_Ef(Resolve(kw_ns, kw_nm), answer_k)
+
+    return wrapper
+
+for x in _inited_vals:
+    globals()[munge(x+"_Ef")] = wrap_val(x)
 
 
 #

@@ -1,8 +1,9 @@
 py_object = object
 import pixie.vm.object as object
-import pixie.vm.effects.effect_transform as transform
+from pixie.vm.effects.effect_transform import cps
 
-from pixie.vm.effects.effects import Object, Type
+from pixie.vm.effects.effects import Object, Type, raise_Ef
+from pixie.vm.effects.environment import FindPolymorphicOverride
 
 
 class NativeFn(Object):
@@ -15,9 +16,8 @@ class NativeFn(Object):
     
 ## PYTHON FLAGS
 CO_VARARGS = 0x4
-def wrap_fn(fn, cps=True):
-    if cps:
-        fn = transform.cps(fn)
+def wrap_fn(fn):
+    fn = cps(fn)
 
     """Converts a native Python function into a pixie function."""
     def as_native_fn(f):
@@ -89,6 +89,25 @@ def wrap_fn(fn, cps=True):
 
         assert False, "implement more"
 
+
+
+class PolymorphcFn(Object):
+    _type = Type(u"pixie.stdlib.PolymorphicFn")
+
+    def __init__(self, name):
+        self._w_name = name
+
+    @cps
+    def invoke_Ef(self, args):
+        if args.arg_count() == 0:
+            pass
+            # TODO throw exception effect
+
+        tp = args.get_arg(0).type()
+        eff = FindPolymorphicOverride(self._w_name, tp)
+        result = raise_Ef(eff)
+
+        return result.invoke_Ef(args)
 
 
 
@@ -809,8 +828,7 @@ def wrap_fn(fn, cps=True):
 # #             return self._elidable_invoke_2(fn, args[0].promote(), args[1].promote()).promote()
 # #         affirm(False, u"Too many args to Elidable Fn")
 #
-# def munge(s):
-#     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
+#
 #
 # import inspect
 # def defprotocol(ns, name, methods):
