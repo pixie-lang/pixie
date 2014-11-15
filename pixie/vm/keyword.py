@@ -1,11 +1,5 @@
-from pixie.vm.object import Object, Type, affirm
-from pixie.vm.primitives import nil, true, false
-from pixie.vm.string import String
-import pixie.vm.stdlib as proto
-from pixie.vm.code import extend, as_var
-import pixie.vm.rt as rt
-import pixie.vm.util as util
-from rpython.rlib.rarithmetic import intmask
+from pixie.vm.effects.effects import Object, Type
+from pixie.vm.primitives import nil
 
 
 class Keyword(Object):
@@ -52,27 +46,27 @@ _kw_cache = KeywordCache()
 def keyword(nm):
     return _kw_cache.intern(nm)
 
-
-@extend(proto._name, Keyword)
-def _name(self):
-    assert isinstance(self, Keyword)
-    self.init_names()
-    return self._w_name
-
-@extend(proto._namespace, Keyword)
-def _namespace(self):
-    assert isinstance(self, Keyword)
-    self.init_names()
-    return self._w_ns
-
-@extend(proto._hash, Keyword)
-def _hash(self):
-    assert isinstance(self, Keyword)
-    if self._hash == 0:
-        self._hash = util.hash_unencoded_chars(self._str)
-    return rt.wrap(intmask(self._hash))
-
-@as_var("keyword")
-def _keyword(s):
-    affirm(isinstance(s, String), u"Symbol name must be a string")
-    return keyword(s._str)
+#
+# @extend(proto._name, Keyword)
+# def _name(self):
+#     assert isinstance(self, Keyword)
+#     self.init_names()
+#     return self._w_name
+#
+# @extend(proto._namespace, Keyword)
+# def _namespace(self):
+#     assert isinstance(self, Keyword)
+#     self.init_names()
+#     return self._w_ns
+#
+# @extend(proto._hash, Keyword)
+# def _hash(self):
+#     assert isinstance(self, Keyword)
+#     if self._hash == 0:
+#         self._hash = util.hash_unencoded_chars(self._str)
+#     return rt.wrap(intmask(self._hash))
+#
+# @as_var("keyword")
+# def _keyword(s):
+#     affirm(isinstance(s, String), u"Symbol name must be a string")
+#     return keyword(s._str)
