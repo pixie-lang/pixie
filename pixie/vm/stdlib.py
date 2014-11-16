@@ -186,7 +186,7 @@ def __assoc(_, k, v):
     return rt.hashmap(k, v)
 
 @extend(_reduce, nil._type)
-def __reudce(self, f, init):
+def __reduce(self, f, init):
     return init
 
 @extend(_val_at, nil._type)
