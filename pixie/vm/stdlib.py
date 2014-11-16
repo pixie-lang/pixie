@@ -357,7 +357,7 @@ def load_file(filename):
     if isinstance(filename, symbol.Symbol):
 
         affirm(rt.namespace(filename) is None, u"load-file takes a un-namespaced symbol")
-        filename_str = rt.name(filename).replace(u".", u"/") + u".lisp"
+        filename_str = rt.name(filename).replace(u".", u"/") + u".pxi"
 
         loaded_ns = code._ns_registry.get(rt.name(filename), None)
         if loaded_ns is not None:
@@ -378,7 +378,7 @@ def load_file(filename):
             break
 
     if f is None:
-        affirm(False, u"File does not exist in any directory found in load-paths")
+        affirm(False, u"File '" + rt.name(filename) + u"' does not exist in any directory found in load-paths")
     else:
         data = f.read()
         f.close()

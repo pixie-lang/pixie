@@ -15,6 +15,7 @@ from pixie.vm.atom import Atom
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 import sys
 import os
+import os.path as path
 import rpython.rlib.rpath as rpath
 import rpython.rlib.rpath as rposix
 from rpython.rlib.objectmodel import we_are_translated
@@ -122,12 +123,23 @@ class BatchModeFn(NativeFn):
 
         with with_ns(u"user"):
             try:
+                f = None
                 if self._file == '-':
-                    stdin, _, _ = create_stdio()
-                    code = stdin.read()
-                    interpret(compile(read(StringReader(unicode(code)), True)))
+                    f, _, _ = create_stdio()
                 else:
-                    rt.load_file(rt.wrap(self._file))
+                    if not path.isfile(self._file):
+                        print "Error: Cannot open '" + self._file + "'"
+                        os._exit(1)
+                    f = open(self._file)
+                data = f.read()
+                f.close()
+
+                if data.startswith("#!"):
+                    newline_pos = data.find("\n")
+                    if newline_pos > 0:
+                        data = data[newline_pos:]
+
+                interpret(compile(read(StringReader(unicode(data)), True)))
             except WrappedException as ex:
                 print "Error: ", ex._ex.__repr__()
                 os._exit(1)
@@ -148,7 +160,7 @@ class EvalFn(NativeFn):
 def run_load_stdlib():
     import pixie.vm.compiler as compiler
     import pixie.vm.reader as reader
-    f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.lisp"))
+    f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.pxi"))
     data = f.read()
     f.close()
     rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
@@ -186,6 +198,7 @@ def entry_point(args):
 
     init_load_path(args[0])
     load_stdlib()
+    add_to_load_paths(".")
 
     i = 1
     while i < len(args):
@@ -240,14 +253,29 @@ def add_to_load_paths(path):
     rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
 
 def init_load_path(self_path):
-    base_path = dirname(rpath.rabspath(self_path))
+    if not path.isfile(self_path):
+        self_path = find_in_path(self_path)
+        assert self_path is not None
+    if path.islink(self_path):
+        self_path = os.readlink(self_path)
+    self_path = dirname(rpath.rabspath(self_path))
+
     # runtime is not loaded yet, so we have to do it manually
-    LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(base_path))))
+    LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(self_path))))
     # just for run_load_stdlib (global variables can't be assigned to)
-    load_path.set_root(rt.wrap(base_path))
+    load_path.set_root(rt.wrap(self_path))
 
 def dirname(path):
     return rpath.sep.join(path.split(rpath.sep)[0:-1])
+
+def find_in_path(exe_name):
+    paths = os.environ.get('PATH')
+    paths = paths.split(path.pathsep)
+    for p in paths:
+        exe_path = path.join(p, exe_name)
+        if path.isfile(exe_path):
+            return exe_path
+    return None
 
 from rpython.rtyper.lltypesystem import lltype
 from rpython.jit.metainterp import warmspot
