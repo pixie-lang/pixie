@@ -132,7 +132,7 @@ def init():
             else:
                 globals()[name] = var
 
-    #f = open("pixie/stdlib.lisp")
+    #f = open("pixie/stdlib.pxi")
     #data = f.read()
     #f.close()
     #rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
