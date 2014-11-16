@@ -53,7 +53,7 @@
                     (if (= (nth desc 1) :file)
                       (let [filename (nth desc 2)]
                         (if (pixie.string/starts-with filename "test-")
-                          (if (pixie.string/ends-with filename ".lisp")
+                          (if (pixie.string/ends-with filename ".pxi")
                             (let [fullpath (str (nth desc 0) "/" filename)]
                               (print "Loading " fullpath)
                               (load-file fullpath)))))))))
