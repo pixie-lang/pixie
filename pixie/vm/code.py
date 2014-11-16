@@ -162,7 +162,7 @@ class MultiArityFn(BaseCode):
 
 class NativeFn(BaseCode):
     """Wrapper for a native function"""
-    _type = object.Type(u"NativeFn")
+    _type = object.Type(u"pixie.stdlib.NativeFn")
 
     def __init__(self):
         BaseCode.__init__(self)
@@ -182,7 +182,7 @@ class NativeFn(BaseCode):
 
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
-    _type = object.Type(u"Code")
+    _type = object.Type(u"pixie.stdlib.Code")
     __immutable_fields__ = ["_consts[*]", "_bytecode", "_stack_size", "_meta"]
 
     def type(self):
@@ -267,7 +267,7 @@ class VariadicCode(BaseCode):
         affirm(False, u"Got " + unicode(str(argc)) + u" arg(s) need at least " + unicode(str(self._required_arity)))
 
 class Closure(BaseCode):
-    _type = object.Type(u"Closure")
+    _type = object.Type(u"pixie.stdlib.Closure")
     __immutable_fields__ = ["_closed_overs[*]", "_code", "_meta"]
     def type(self):
         return Closure._type
@@ -314,7 +314,7 @@ class Closure(BaseCode):
         return self._code.get_debug_points()
 
 class Undefined(object.Object):
-    _type = object.Type(u"Undefined")
+    _type = object.Type(u"pixie.stdlib.Undefined")
 
     def type(self):
         return Undefined._type
@@ -340,7 +340,7 @@ class DynamicVars(py_object):
 _dynamic_vars = DynamicVars()
 
 class Var(BaseCode):
-    _type = object.Type(u"Var")
+    _type = object.Type(u"pixie.stdlib.Var")
     _immutable_fields_ = ["_rev?"]
 
     def type(self):
@@ -542,7 +542,7 @@ class DefaultProtocolFn(NativeFn):
 
 
 class Protocol(object.Object):
-    _type = object.Type(u"Protocol")
+    _type = object.Type(u"pixie.stdlib.Protocol")
 
     __immutable_fields__ = ["_rev?"]
     def type(self):
@@ -571,7 +571,7 @@ class Protocol(object.Object):
 
 
 class PolymorphicFn(BaseCode):
-    _type = object.Type(u"PolymorphicFn")
+    _type = object.Type(u"pixie.stdlib.PolymorphicFn")
     def type(self):
         return PolymorphicFn._type
 
@@ -644,7 +644,7 @@ class PolymorphicFn(BaseCode):
 
 class DoublePolymorphicFn(BaseCode):
     """A function that is polymorphic on the first two arguments"""
-    _type = object.Type(u"DoublePolymorphicFn")
+    _type = object.Type(u"pixie.stdlib.DoublePolymorphicFn")
 
     def type(self):
         return DefaultProtocolFn._type
