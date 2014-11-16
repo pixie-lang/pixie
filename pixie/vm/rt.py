@@ -8,10 +8,10 @@ from pixie.vm.effects.environment import Resolve
 from pixie.vm.keyword import keyword
 
 from pixie.vm.effects.effect_transform import cps
+from pixie.vm.code import munge
+import pixie.vm.stdlib
 
 
-def munge(s):
-     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
 
 def wrap(nm):
     kw_nm = keyword(unicode(nm))
@@ -33,7 +33,7 @@ def wrap(nm):
     return wrapper
 
 
-_inited_fns = ["first"]
+_inited_fns = ["first", "count"]
 
 for x in _inited_fns:
     globals()[munge(x+"_Ef")] = wrap(x)

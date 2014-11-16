@@ -45,6 +45,12 @@ class Type(Object):
     def type(self):
         return Type._type
 
+    def __repr__(self):
+        return "<type " + str(self._name) + ">"
+
+    def __str__(self):
+        return self.__repr__()
+
 Type._type = Type(u"Type")
 
 class EffectObject(object):
@@ -290,5 +296,13 @@ class ConstantValueContinuation(Continuation):
 
     def step(self, _):
         return Answer(self._w_val)
+
+
+class ExceptionEffect(Effect):
+    def __init__(self, kw, msg=None):
+        self._w_kw = kw
+        self._msg = msg
+
+
 
 ## End Default Handler

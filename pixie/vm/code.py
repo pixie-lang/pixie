@@ -2,9 +2,11 @@ py_object = object
 import pixie.vm.object as object
 from pixie.vm.effects.effect_transform import cps
 
-from pixie.vm.effects.effects import Object, Type, raise_Ef
-from pixie.vm.effects.environment import FindPolymorphicOverride
+from pixie.vm.effects.effects import Object, Type, raise_Ef, ExceptionEffect
+from pixie.vm.effects.environment import FindPolymorphicOverride, extend_builtin, extend_builtin2, add_builtin
 
+def munge(s):
+     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
 
 class NativeFn(Object):
     _immutable_ = True
@@ -91,7 +93,7 @@ def wrap_fn(fn):
 
 
 
-class PolymorphcFn(Object):
+class PolymorphicFn(Object):
     _type = Type(u"pixie.stdlib.PolymorphicFn")
 
     def __init__(self, name):
@@ -107,9 +109,59 @@ class PolymorphcFn(Object):
         eff = FindPolymorphicOverride(self._w_name, tp)
         result = raise_Ef(eff)
 
+        if result is None:
+            from pixie.vm.keyword import keyword
+
+            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"))
+            raise_Ef(eff)
+
         return result.invoke_Ef(args)
 
 
+def extend(pfn, tp1, tp2=None):
+    """Extends a protocol to the given Type (not python type), with the decorated function
+       wraps the decorated function"""
+
+    from pixie.vm.keyword import keyword
+
+    pfn = keyword(unicode(pfn))
+
+    if isinstance(tp1, type):
+        tp1 = tp1._type
+
+    def extend_inner(fn):
+        if tp2 is None:
+            extend_builtin(pfn, tp1, wrap_fn(fn))
+        else:
+            extend_builtin2(pfn, tp1, tp2, wrap_fn(fn))
+
+        return pfn
+
+    return extend_inner
+
+
+import inspect
+def defprotocol(ns, name, methods):
+    """Define a protocol in the given namespace with the given name and methods, vars will
+       be created in the namespace for the protocol and methods. This function will dump
+       variables for the created protocols/methods in the globals() where this function is called."""
+
+    from pixie.vm.keyword import keyword
+    from pixie.vm.rt import munge
+
+    ns = unicode(ns)
+    name = unicode(name)
+    methods = map(unicode, methods)
+    gbls = inspect.currentframe().f_back.f_globals
+    #proto =  Protocol(name)
+    #intern_var(ns, name).set_root(proto)
+    #gbls[munge(name)] = proto
+
+    for method in methods:
+        pkw = keyword(ns+"."+method)
+        poly = PolymorphicFn(pkw)
+        add_builtin(keyword(ns), keyword(method), poly)
+        gbls[munge(method)] = poly
 
 
 

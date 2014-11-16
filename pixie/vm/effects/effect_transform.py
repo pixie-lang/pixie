@@ -270,8 +270,6 @@ def cps(f):
         pprint(code.get_code())
         raise
 
-    dis.dis(new_func)
-
     f.func_globals[cls_name] = type(cls_name, (Continuation,), {"step": new_func, "_immutable_": True})
 
 
