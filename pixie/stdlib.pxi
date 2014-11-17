@@ -453,7 +453,10 @@
        (f1 (apply f2 args))))
   ([f1 f2 f3]
      (fn [& args]
-       (f1 (f2 (apply f3 args))))))
+       (f1 (f2 (apply f3 args)))))
+  ([f1 f2 f3 & fs]
+     (fn [& args]
+       (apply (transduce comp (apply list f1 f2 f3 fs)) args))))
 
 (defmacro cond
   ([] nil)
