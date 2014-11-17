@@ -590,6 +590,18 @@
       (recur (conj res (first coll)) (next coll))
       (seq res))))
 
+(defn complement
+  {:doc "Given a function, return a new function which takes the same arguments
+         but returns the opposite truth value"}
+  [f] 
+  (if (not (fn? f))
+    (throw "Complement must be passed a function")
+    (fn
+      ([] (not (f)))
+      ([x] (not (f x)))
+      ([x y] (not (f x y)))
+      ([x y & more] (not (apply f x y more))))))
+
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn [self idx not-found]
                           (cond (= idx 0) (-key self)
