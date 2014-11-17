@@ -383,7 +383,6 @@ def load_ns(filename):
 def load_file(filename):
     from pixie.vm.string import String
     import pixie.vm.reader as reader
-    import pixie.vm.compiler as compiler
     import os.path as path
 
     affirm(isinstance(filename, String), u"filename must be a string")
@@ -398,7 +397,14 @@ def load_file(filename):
         newline_pos = data.find("\n")
         if newline_pos > 0:
             data = data[newline_pos:]
-    rdr = reader.StringReader(unicode(data))
+
+    rt.load_reader(reader.StringReader(unicode(data)))
+    return nil
+
+@as_var("load-reader")
+def load_reader(rdr):
+    import pixie.vm.reader as reader
+    import pixie.vm.compiler as compiler
 
     with compiler.with_ns(u"user"):
         while True:
