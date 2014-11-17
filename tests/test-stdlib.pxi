@@ -88,5 +88,13 @@
   (t/assert= (fn? 1) false)
   (t/assert= (fn? and) false)
   (t/assert= (fn? "foo") false)
-  (t/assert (fn? (let [x 8] (fn [y] (+ x y)))) true))
+  (t/assert= (fn? (let [x 8] (fn [y] (+ x y)))) true))
 
+(t/deftest test-macro?
+  (t/assert= (macro? and) true)
+  (t/assert= (macro? or) true)
+  (t/assert= (macro? defn) true)
+  (t/assert= (macro? inc) false)
+  (t/assert= (macro? 1) false)
+  (t/assert= (macro? :foo) false)
+  (t/assert= (macro? "foo") false))
