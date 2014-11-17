@@ -72,7 +72,6 @@ def mix_coll_hash(hash, count):
 
 from pixie.vm.object import Object, Type
 import pixie.vm.code as code
-from pixie.vm.code import as_var
 import pixie.vm.rt as rt
 import pixie.vm.numbers as numbers
 
@@ -99,27 +98,27 @@ class HashingState(Object):
     def finish(self):
         return rt.wrap(intmask(mix_coll_hash(self._hash, self._n)))
 
-
-@as_var("new-hash-state")
-def new_hash_state():
-    return HashingState()
-
-@as_var("update-hash-ordered!")
-def update_hash_ordered(acc, val):
-    affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
-    return acc.update_hash_ordered(val)
-
-@as_var("update-hash-unordered!")
-def update_hash_ordered(acc, val):
-    affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
-    return acc.update_hash_unordered(val)
-
-@as_var("finish-hash-state")
-def finish_hash_state(acc):
-    affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
-    return acc.finish()
-
-@as_var("hash-int")
-def _hash_int(acc):
-    return rt.wrap(intmask(hash_int(acc.r_uint_val())))
+#
+# @as_var("new-hash-state")
+# def new_hash_state():
+#     return HashingState()
+#
+# @as_var("update-hash-ordered!")
+# def update_hash_ordered(acc, val):
+#     affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
+#     return acc.update_hash_ordered(val)
+#
+# @as_var("update-hash-unordered!")
+# def update_hash_ordered(acc, val):
+#     affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
+#     return acc.update_hash_unordered(val)
+#
+# @as_var("finish-hash-state")
+# def finish_hash_state(acc):
+#     affirm(isinstance(acc, HashingState), u"Expected HashingState as first argument")
+#     return acc.finish()
+#
+# @as_var("hash-int")
+# def _hash_int(acc):
+#     return rt.wrap(intmask(hash_int(acc.r_uint_val())))
 

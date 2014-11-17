@@ -137,6 +137,10 @@ def cps(f):
         if nm == LOOKUP_METHOD:
             code[0] = (LOAD_ATTR, arg)
 
+        # PyPy creates this bytecode, convert it so we can translate easier
+        if nm == JUMP_IF_NOT_DEBUG:
+            code[0] = (NOP, arg)
+
         # Convert this as well
         if nm == CALL_METHOD:
             code[0] = (CALL_FUNCTION, arg)
@@ -304,3 +308,90 @@ def cps(f):
 
     return f
 
+
+def resource_effect(f):
+    global iname
+
+    locals = f.func_code.co_varnames[:f.func_code.co_argcount]
+    c = []
+
+    iname += 1
+    cls_name = "_opaque_effect_" + str(f.func_code.co_name) + "_class"
+
+    c = BytecodeRewriter([])
+    c.insert(LOAD_GLOBAL, cls_name)
+    c.insert(CALL_FUNCTION, 0)
+    c.insert(STORE_FAST, BUILDING_NAME)
+
+    for local in locals:
+        c.insert(LOAD_FAST, local)
+        c.insert(LOAD_FAST, BUILDING_NAME)
+        c.insert(STORE_ATTR, "_K_" + str(iname) + "_" + local)
+
+    c.insert(LOAD_CONST, answer_k)
+    c.insert(LOAD_FAST, BUILDING_NAME)
+    c.insert(STORE_ATTR, "_k")
+
+    c.insert(LOAD_FAST, BUILDING_NAME)
+    c.insert(RETURN_VALUE)
+
+    ctor_cd = Code(code=c.get_code(), freevars=[], args=f.func_code.co_varnames[:f.func_code.co_argcount],
+             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
+             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
+             docstring=f.func_code.__doc__)
+
+    ctor_method = types.FunctionType(ctor_cd.to_code(), f.func_globals, f.func_code.co_name)
+
+    code = Code.from_code(f.func_code)
+    c = BytecodeRewriter(code.code)
+
+    # Load locals
+    for x in locals:
+        c.insert(LOAD_FAST, BUILDING_NAME)
+        c.insert(LOAD_ATTR, "_K_" + str(iname) + "_" + x)
+        c.insert(STORE_FAST, x)
+
+
+    mthd_cd = Code(code=c.get_code(), freevars=[], args=[BUILDING_NAME],
+             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
+             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
+             docstring=f.func_code.__doc__)
+
+    try:
+        mthd = types.FunctionType(mthd_cd.to_code(), f.func_globals, "execute_resource")
+    except:
+        print f.func_code.co_name
+        pprint(c.get_code())
+        raise
+
+    c = BytecodeRewriter([])
+    c.insert(LOAD_GLOBAL, cls_name)
+    c.insert(CALL_FUNCTION, 0)
+    c.insert(STORE_FAST, BUILDING_NAME)
+
+    for local in locals:
+        c.insert(LOAD_FAST, SELF_NAME)
+        c.insert(LOAD_ATTR, "_K_" + str(iname) + "_" + local)
+        c.insert(LOAD_FAST, BUILDING_NAME)
+        c.insert(STORE_ATTR, "_K_" + str(iname) + "_" + local)
+
+    c.insert(LOAD_FAST, BUILDING_NAME)
+    c.insert(RETURN_VALUE)
+
+    without_cd =  Code(code=c.get_code(), freevars=[], args=[SELF_NAME],
+             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name + "_without_k",
+             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
+             docstring=f.func_code.__doc__)
+
+    try:
+        without = types.FunctionType(without_cd.to_code(), f.func_globals, "without_k")
+    except:
+        print f.func_code.co_name
+        pprint(c.get_code())
+        raise
+
+    f.func_globals[cls_name] = type(cls_name, (OpaqueResource,), {"execute_resource": mthd, "_immutable_": True,
+                                                                  "without_k": without})
+
+
+    return ctor_method

@@ -52,6 +52,7 @@ defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"]
 
 link_builtins("-count", "count")
 
+
 # @as_var("pixie.stdlib.internal", "-defprotocol")
 # def _defprotocol(name, methods):
 #     from pixie.vm.compiler import NS_VAR

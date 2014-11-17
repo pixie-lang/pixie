@@ -73,6 +73,14 @@ class Effect(EffectObject):
         """
         raise NotImplementedError()
 
+class OpaqueResource(Effect):
+    """
+    Base class for an effect that mutates some resource.
+    """
+    _immutable_ = True
+
+    def execute_resource(self):
+        raise NotImplementedError()
 
 class Answer(EffectObject):
     """
