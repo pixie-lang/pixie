@@ -139,12 +139,7 @@ class BatchModeFn(NativeFn):
                     if newline_pos > 0:
                         data = data[newline_pos:]
 
-                rdr = StringReader(unicode(data))
-                while True:
-                    form = read(rdr, False)
-                    if form is eof:
-                        return
-                    interpret(compile(form))
+                rt.load_reader(StringReader(unicode(data)))
             except WrappedException as ex:
                 print "Error: ", ex._ex.__repr__()
                 os._exit(1)
