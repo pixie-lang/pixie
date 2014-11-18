@@ -15,7 +15,7 @@ class Number(Object):
         return Number._type
 
 class Integer(Number):
-    _immutable_ = True
+    _immutable_fields_ = ["_int_val"]
     _type = Type(u"pixie.stdlib.Integer", Number._type)
 
     def __init__(self, i_val):

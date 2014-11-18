@@ -3,6 +3,7 @@ from pixie.vm.reader import StringReader, read_Ef
 from pixie.vm.effects.environment import *
 from pixie.vm.code import wrap_fn
 from pixie.vm.persistent_list import PersistentList
+from pixie.vm.persistent_vector import PersistentVector
 from pixie.vm.numbers import Integer
 from pixie.vm.symbol import Symbol, symbol
 import unittest
@@ -14,7 +15,7 @@ data = {u"(1 2)": (1, 2,),
         u"2": 2,
         u"((42))": ((42,),),
         u"(platform+ 1 2)": (symbol(u"platform+"), 1, 2),
-        #u"[42 43 44]": [42, 43, 44],
+        u"[42 43 44]": [42, 43, 44],
         u"(1 2 ; 7 8 9\n3)": (1, 2, 3,),
         u"(1 2 ; 7 8 9\r\n3)": (1, 2, 3,)
 }
@@ -113,7 +114,7 @@ def _compare(frm, to):
         assert isinstance(frm, PersistentVector)
 
         for x in range(len(to)):
-            _compare(rt.nth(frm, rt.wrap(x)), to[x])
+            _compare(frm.nth(x, None), to[x])
 
     else:
         raise Exception("Don't know how to handle " + str(type(to)))

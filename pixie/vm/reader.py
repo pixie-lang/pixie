@@ -3,6 +3,7 @@ from pixie.vm.effects.effects import Object, ArgList, Type
 from pixie.vm.effects.effect_transform import cps, resource_effect
 from pixie.vm.string import wrap_char
 from pixie.vm.persistent_list import PersistentList, EmptyList
+from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.code import wrap_fn
 from pixie.vm.keyword import keyword
@@ -295,17 +296,21 @@ class UnmachedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
         throw_syntax_error_with_data(rdr, u"Unmatched list close ')'")
 
+CLOSE_BRACKET = wrap_char(ord(u"]"))
+
 class VectorReader(ReaderHandler):
-    def invoke(self, rdr, ch):
+    @cps
+    def invoke_Ef(self, rdr, ch):
         acc = EMPTY_VECTOR
         while True:
-            eat_whitespace(rdr)
+            eat_whitespace_Ef(rdr)
             ch = rdr.read()
-            if ch == u"]":
+            if ch is CLOSE_BRACKET:
                 return acc
 
             rdr.unread(ch)
-            acc = rt.conj(acc, read(rdr, True))
+            result = read_Ef(rdr, True)
+            acc = acc.conj(result)
 
 class UnmachedVectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -646,8 +651,8 @@ class LineCommentReader(ReaderHandler):
 
 handlers = {wrap_char(ord(u"(")): ListReader(),
             wrap_char(ord(u")")): UnmachedListReader(),
-            # u"[": VectorReader(),
-            # u"]": UnmachedVectorReader(),
+            wrap_char(ord(u"[")): VectorReader(),
+            wrap_char(ord(u"]")): UnmachedVectorReader(),
             # u"{": MapReader(),
             # u"}": UnmachedMapReader(),
             # u"'": QuoteReader(),
