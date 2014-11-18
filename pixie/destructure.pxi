@@ -60,13 +60,19 @@
       res)))
 
 (defn destructure-map [binding-map expr]
-  (loop [bindings (seq binding-map)
-         res []]
-    (if bindings
-      (let [binding (key (first bindings))
-            binding-key (val (first bindings))]
-        (recur (next bindings)
-               (reduce conj res (destructure binding `(get ~expr ~binding-key)))))
+  (let [res
+        (loop [bindings (seq binding-map)
+               res []]
+          (if bindings
+            (let [binding (key (first bindings))
+                  binding-key (val (first bindings))]
+              (if (= binding :as)
+                (recur (next bindings) res)
+                (recur (next bindings)
+                       (reduce conj res (destructure binding `(get ~expr ~binding-key))))))
+            res))]
+    (if (contains? binding-map :as)
+      (reduce conj res [(get binding-map :as) expr])
       res)))
 
 (defmacro let+ [bindings & body]
