@@ -690,7 +690,7 @@
 
 (defmacro require [ns kw as-nm]
   (assert (= kw :as) "Require expects :as as the second argument")
-  `(do (load-file (quote ~ns))
+  `(do (load-ns (quote ~ns))
        (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
 
 (defmacro ns [nm & body]
