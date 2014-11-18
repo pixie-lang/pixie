@@ -123,6 +123,14 @@
                             init
                             (recur (f init (nth coll i)) (+ i 1))))))))
 
+;; Make all Function types extend IFn
+(extend -invoke Code -invoke)
+(extend -invoke NativeFn -invoke)
+(extend -invoke VariadicCode -invoke)
+(extend -invoke Closure -invoke)
+(extend -invoke Var -invoke)
+(extend -invoke PolymorphicFn -invoke)
+(extend -invoke DoublePolymorphicFn -invoke)
 
 (extend -reduce Cons seq-reduce)
 (extend -reduce PersistentList seq-reduce)
@@ -509,6 +517,7 @@
 
 (defn list? [v] (instance? PersistentList v))
 (defn map? [v] (satisfies? IMap v))
+(defn fn? [v] (satisfies? IFn v))
 
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))

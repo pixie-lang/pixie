@@ -72,3 +72,13 @@
   (let [v [-1 0 1 2 3 4 5]]
     (t/assert= (vec (keep pos?) v) [true true true true true])
     (t/assert= (vec (keep pos? v)) (vec (keep pos?) v))))
+
+(t/deftest test-fn?
+  (t/assert= (fn? inc) true)
+  (t/assert= (fn? {}) true)
+  (t/assert= (fn? #(%)) true)
+  (t/assert= (fn? :foo) true)
+  (t/assert= (fn? 1) false)
+  (t/assert= (fn? and) false)
+  (t/assert= (fn? "foo") false)
+  (t/assert (fn? (let [x 8] (fn [y] (+ x y)))) true))
