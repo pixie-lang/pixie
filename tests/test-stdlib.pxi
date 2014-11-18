@@ -79,3 +79,14 @@
     (t/assert= (get-in m [:missing]) nil)
     (t/assert= (get-in m [:missing] :not-found) :not-found)
     (t/assert= (get-in m [:x :x 0] :not-found) 1)))
+
+(t/deftest test-fn?
+  (t/assert= (fn? inc) true)
+  (t/assert= (fn? {}) true)
+  (t/assert= (fn? #(%)) true)
+  (t/assert= (fn? :foo) true)
+  (t/assert= (fn? 1) false)
+  (t/assert= (fn? and) false)
+  (t/assert= (fn? "foo") false)
+  (t/assert (fn? (let [x 8] (fn [y] (+ x y)))) true))
+

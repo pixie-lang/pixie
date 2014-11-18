@@ -123,6 +123,14 @@
                             init
                             (recur (f init (nth coll i)) (+ i 1))))))))
 
+;; Make all Function types extend IFn
+(extend -invoke Code -invoke)
+(extend -invoke NativeFn -invoke)
+(extend -invoke VariadicCode -invoke)
+(extend -invoke Closure -invoke)
+(extend -invoke Var -invoke)
+(extend -invoke PolymorphicFn -invoke)
+(extend -invoke DoublePolymorphicFn -invoke)
 
 (extend -reduce Cons seq-reduce)
 (extend -reduce PersistentList seq-reduce)
@@ -453,7 +461,10 @@
        (f1 (apply f2 args))))
   ([f1 f2 f3]
      (fn [& args]
-       (f1 (f2 (apply f3 args))))))
+       (f1 (f2 (apply f3 args)))))
+  ([f1 f2 f3 & fs]
+     (fn [& args]
+       (apply (transduce comp (apply list f1 f2 f3 fs)) args))))
 
 (defmacro cond
   ([] nil)
@@ -509,6 +520,7 @@
 
 (defn list? [v] (instance? PersistentList v))
 (defn map? [v] (satisfies? IMap v))
+(defn fn? [v] (satisfies? IFn v))
 
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
@@ -681,7 +693,7 @@
 
 (defmacro require [ns kw as-nm]
   (assert (= kw :as) "Require expects :as as the second argument")
-  `(do (load-file (quote ~ns))
+  `(do (load-ns (quote ~ns))
        (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
 
 (defmacro ns [nm & body]

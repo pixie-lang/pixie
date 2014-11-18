@@ -7,7 +7,6 @@ from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
-import os.path as path
 import rpython.rlib.rstacklet as rstacklet
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.interpreter import ShallowContinuation
@@ -186,7 +185,7 @@ def __assoc(_, k, v):
     return rt.hashmap(k, v)
 
 @extend(_reduce, nil._type)
-def __reudce(self, f, init):
+def __reduce(self, f, init):
     return init
 
 @extend(_val_at, nil._type)
@@ -347,22 +346,19 @@ def eval(form):
     val = interpret(compile(form))
     return val
 
-@as_var("load-file")
-def load_file(filename):
-    import pixie.vm.reader as reader
-    import pixie.vm.compiler as compiler
+@as_var("load-ns")
+def load_ns(filename):
     import pixie.vm.string as string
     import pixie.vm.symbol as symbol
     import os.path as path
-    if isinstance(filename, symbol.Symbol):
 
+    if isinstance(filename, symbol.Symbol):
         affirm(rt.namespace(filename) is None, u"load-file takes a un-namespaced symbol")
         filename_str = rt.name(filename).replace(u".", u"/") + u".pxi"
 
         loaded_ns = code._ns_registry.get(rt.name(filename), None)
         if loaded_ns is not None:
             return loaded_ns
-
     else:
         affirm(isinstance(filename, string.String), u"Filename must be string")
         filename_str = rt.name(filename)
@@ -374,27 +370,48 @@ def load_file(filename):
         affirm(isinstance(path_x, string.String), u"Contents of load-paths must be strings")
         full_path = path.join(str(rt.name(path_x)), str(filename_str))
         if path.isfile(full_path):
-            f = open(str(full_path))
+            f = full_path
             break
 
     if f is None:
         affirm(False, u"File '" + rt.name(filename) + u"' does not exist in any directory found in load-paths")
     else:
-        data = f.read()
-        f.close()
+        rt.load_file(rt.wrap(f))
+    return nil
 
-        if data.startswith("#!"):
-            newline_pos = data.find("\n")
-            if newline_pos > 0:
-                data = data[newline_pos:]
-        rdr = reader.StringReader(unicode(data))
+@as_var("load-file")
+def load_file(filename):
+    from pixie.vm.string import String
+    import pixie.vm.reader as reader
+    import os.path as path
 
-        with compiler.with_ns(u"user"):
-            while True:
-                form = reader.read(rdr, False)
-                if form is reader.eof:
-                    return nil
-                result = compiler.compile(form).invoke([])
+    affirm(isinstance(filename, String), u"filename must be a string")
+    filename = str(rt.name(filename))
+    affirm(path.isfile(filename), unicode(filename) + u" does not exist")
+
+    f = open(filename)
+    data = f.read()
+    f.close()
+
+    if data.startswith("#!"):
+        newline_pos = data.find("\n")
+        if newline_pos > 0:
+            data = data[newline_pos:]
+
+    rt.load_reader(reader.StringReader(unicode(data)))
+    return nil
+
+@as_var("load-reader")
+def load_reader(rdr):
+    import pixie.vm.reader as reader
+    import pixie.vm.compiler as compiler
+
+    with compiler.with_ns(u"user"):
+        while True:
+            form = reader.read(rdr, False)
+            if form is reader.eof:
+                return nil
+            compiler.compile(form).invoke([])
     return nil
 
 @as_var("the-ns")
