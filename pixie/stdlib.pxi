@@ -645,13 +645,13 @@
      (reduce get m ks))
   ([m ks not-found]
      (loop [sentinel 'x
-            mi m
+            m m
             ks (seq ks)]
        (if ks
-         (let [mi (get m (first ks) sentinel)]
-           (if (identical? sentinel mi)
+         (let [m (get m (first ks) sentinel)]
+           (if (identical? sentinel m)
              not-found
-             (recur sentinel mi (next ks))))
+             (recur sentinel m (next ks))))
          m))))
 
 (defn assoc-in

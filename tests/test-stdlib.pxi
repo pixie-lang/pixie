@@ -73,6 +73,13 @@
     (t/assert= (vec (keep pos?) v) [true true true true true])
     (t/assert= (vec (keep pos? v)) (vec (keep pos?) v))))
 
+(t/deftest test-get-in
+  (let [m {:a 1 :b 2 :x {:a 2 :x [1 2 3]}}]
+    (t/assert= (get-in m [:a]) 1)
+    (t/assert= (get-in m [:missing]) nil)
+    (t/assert= (get-in m [:missing] :not-found) :not-found)
+    (t/assert= (get-in m [:x :x 0] :not-found) 1)))
+
 (t/deftest test-fn?
   (t/assert= (fn? inc) true)
   (t/assert= (fn? {}) true)
@@ -82,3 +89,4 @@
   (t/assert= (fn? and) false)
   (t/assert= (fn? "foo") false)
   (t/assert (fn? (let [x 8] (fn [y] (+ x y)))) true))
+
