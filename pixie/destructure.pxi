@@ -16,6 +16,9 @@
    (vector? binding) (let [name (gensym "vec__")]
                        (reduce conj [name expr]
                                (destructure-vector binding name)))
+   (map? binding) (let [name (gensym "map__")]
+                    (reduce conj [name expr]
+                            (destructure-map binding name)))
    :else (throw (str "unsupported binding form: " binding))))
 
 (defn destructure-vector [binding-vector expr]
@@ -32,4 +35,14 @@
          :else (recur (next bindings)
                       (inc i)
                       (reduce conj res (destructure (first bindings) `(nth ~expr ~i))))))
+      res)))
+
+(defn destructure-map [binding-map expr]
+  (loop [bindings (seq binding-map)
+         res []]
+    (if bindings
+      (let [binding (key (first bindings))
+            binding-key (val (first bindings))]
+        (recur (next bindings)
+               (reduce conj res (destructure binding `(get ~expr ~binding-key)))))
       res)))
