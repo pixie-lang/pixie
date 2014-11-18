@@ -1,5 +1,10 @@
 ;(ns pixie.destructure)
 
+(defmacro when-let [binding & body]
+  `(let ~binding
+     (when ~(first binding)
+       ~@body)))
+
 (defn nnext [coll]
   (next (next coll)))
 
@@ -9,6 +14,23 @@
     (if (and xs (pos? n))
       (recur (dec n) (next xs))
       xs)))
+
+(defn take [n coll]
+  (when (pos? n)
+    (when-let [s (seq coll)]
+      (cons (first s) (take (dec n) (next s))))))
+
+(defn drop [n coll]
+  (let [s (seq coll)]
+    (if (and (pos? n) s)
+      (recur (dec n) (next s))
+      s)))
+
+(defn partition
+  ([n coll] (partition n n coll))
+  ([n step coll]
+     (when-let [s (seq coll)]
+       (cons (take n s) (partition n step (drop step s))))))
 
 (defn destructure [binding expr]
   (cond
