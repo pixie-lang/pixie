@@ -34,7 +34,7 @@ def wrap_fn(nm):
     return wrapper
 
 
-_inited_fns = ["first", "count"]
+_inited_fns = ["first", "count", "list"]
 
 for x in _inited_fns:
     globals()[munge(x+"_Ef")] = wrap_fn(x)
@@ -82,6 +82,7 @@ def wrap(x):
         return nil
 
     assert False, "Bad Wrap"
+
 
 
 #

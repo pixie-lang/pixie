@@ -1,13 +1,11 @@
-import pixie.vm.object as object
-from pixie.vm.primitives import nil, true, false
-import pixie.vm.stdlib as proto
-from  pixie.vm.code import extend, as_var
-from pixie.vm.numbers import Integer
-from rpython.rlib.rarithmetic import r_uint, intmask
+from pixie.vm.effects.effects import Object, Type, Answer
+from pixie.vm.primitives import nil
+from pixie.vm.code import extend, as_global, wrap_fn
 import pixie.vm.rt as rt
+from rpython.rlib.rarithmetic import intmask, r_uint
 
-class PersistentList(object.Object):
-    _type = object.Type(u"pixie.stdlib.PersistentList")
+class PersistentList(Object):
+    _type = Type(u"pixie.stdlib.PersistentList")
 
     def type(self):
         return PersistentList._type
@@ -32,43 +30,31 @@ class PersistentList(object.Object):
     
 
 
-@extend(proto._first, PersistentList)
+@extend("pixie.stdlib.-first", PersistentList)
 def _first(self):
-    assert isinstance(self, PersistentList)
     return self._first
 
-@extend(proto._next, PersistentList)
+@extend("pixie.stdlib.-next", PersistentList)
 def _next(self):
-    assert isinstance(self, PersistentList)
     return self._next
 
-@extend(proto._seq, PersistentList)
+@extend("pixie.stdlib.-seq", PersistentList)
 def _seq(self):
-    assert isinstance(self, PersistentList)
     return self
 
-@extend(proto._count, PersistentList)
+@extend("pixie.stdlib.-count", PersistentList)
 def _count(self):
-    assert isinstance(self, PersistentList)
     return rt.wrap(intmask(self._cnt))
 
-@extend(proto._conj, PersistentList)
+@extend("pixie.stdlib.-conj", PersistentList)
 def _conj(self, itm):
-    assert isinstance(self, PersistentList)
     return PersistentList(itm, self, self._cnt + 1, nil)
 
-@extend(_conj, nil._type)
+@extend("pixie.stdlib.-conj", nil._type)
 def _conj(_, itm):
     return PersistentList(itm, nil, 1, nil)
 
-def count(self):
-        cnt = 0
-        while self is not nil:
-            self = self.next()
-            cnt += 1
-        return cnt
-
-@as_var("list")
+@as_global("pixie.stdlib", "list")
 def list__args(args):
     if len(args) == 0:
         return EmptyList()
@@ -80,12 +66,12 @@ def list__args(args):
         i -= 1
     return acc
 
-@extend(proto._meta, PersistentList)
+@extend("pixie.stdlib.-meta", PersistentList)
 def _meta(self):
     assert isinstance(self, PersistentList)
     return self.meta()
 
-@extend(proto._with_meta, PersistentList)
+@extend("pixie.stdlib.-with-meta", PersistentList)
 def _with_meta(self, meta):
     assert isinstance(self, PersistentList)
     return self.with_meta(meta)
@@ -93,8 +79,8 @@ def _with_meta(self, meta):
 
 
     
-class EmptyList(object.Object):
-    _type = object.Type(u"pixie.stdlib.EmptyList")
+class EmptyList(Object):
+    _type = Type(u"pixie.stdlib.EmptyList")
     def type(self):
         return EmptyList._type
     
@@ -111,50 +97,50 @@ class EmptyList(object.Object):
 
 
 
-@extend(proto._first, EmptyList)
+@extend("pixie.stdlib.-first", EmptyList)
 def _first(self):
     assert isinstance(self, EmptyList)
     return nil
 
-@extend(proto._next, EmptyList)
+@extend("pixie.stdlib.-next", EmptyList)
 def _next(self):
     assert isinstance(self, EmptyList)
     return nil
 
-@extend(proto._seq, EmptyList)
+@extend("pixie.stdlib.-seq", EmptyList)
 def _seq(self):
     assert isinstance(self, EmptyList)
     return nil
 
-@extend(proto._count, EmptyList)
+@extend("pixie.stdlib.-count", EmptyList)
 def _count(self):
     assert isinstance(self, EmptyList)
     return rt.wrap(0)
 
-@extend(proto._conj, EmptyList)
+@extend("pixie.stdlib.-conj", EmptyList)
 def _conj(self, itm):
     assert isinstance(self, EmptyList)
     return PersistentList(itm, nil, 1)
 
-@extend(proto._meta, EmptyList)
+@extend("pixie.stdlib.-meta", EmptyList)
 def _meta(self):
     assert isinstance(self, EmptyList)
     return self.meta()
 
-@extend(proto._with_meta, EmptyList)
+@extend("pixie.stdlib.-with-meta", EmptyList)
 def _with_meta(self, meta):
     assert isinstance(self, EmptyList)
     return self.with_meta(meta)
 
-@extend(proto._str, EmptyList)
+@extend("pixie.stdlib.-str", EmptyList)
 def _str(self):
     return rt.wrap(u"()")
 
-@extend(proto._repr, EmptyList)
+@extend("pixie.stdlib.-repr", EmptyList)
 def _str(self):
     return rt.wrap(u"()")
 
-@extend(proto._reduce, EmptyList)
+@extend("pixie.stdlib.-reduce", EmptyList)
 def _str(self, f, init):
     return init
 

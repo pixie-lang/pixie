@@ -12,7 +12,7 @@ from pixie.vm.keyword import keyword
 class TestWrapFn(unittest.TestCase):
     def test_arity_0(self):
 
-        @wrap_fn
+        @wrap_fn()
         def fn_Ef():
             return 42
 
@@ -22,7 +22,7 @@ class TestWrapFn(unittest.TestCase):
 
     def test_arity_1(self):
 
-        @wrap_fn
+        @wrap_fn()
         def fn_Ef(x):
             return x
 
@@ -32,7 +32,7 @@ class TestWrapFn(unittest.TestCase):
 
     def test_arity_2(self):
 
-        @wrap_fn
+        @wrap_fn()
         def fn_Ef(x, y):
             return y
 
@@ -42,7 +42,7 @@ class TestWrapFn(unittest.TestCase):
 
     def test_arity_3(self):
 
-        @wrap_fn
+        @wrap_fn()
         def fn_Ef(x, y, z):
             return z
 
@@ -52,7 +52,7 @@ class TestWrapFn(unittest.TestCase):
 
     def test_arity_4(self):
 
-        @wrap_fn
+        @wrap_fn()
         def fn_Ef(x, y, z, a):
             return a
 
@@ -62,7 +62,7 @@ class TestWrapFn(unittest.TestCase):
 
     def test_variadic(self):
 
-        @wrap_fn
+        @wrap_fn()
         def fn__args(args):
             return args
 
@@ -83,7 +83,7 @@ class TestPolymorphicFn(unittest.TestCase):
         self.assertIs(result._w_nm, pfn_name)
         self.assertIs(result._w_tp, Integer(0).type())
 
-        @wrap_fn
+        @wrap_fn()
         def fn_arg(x):
             return x
 

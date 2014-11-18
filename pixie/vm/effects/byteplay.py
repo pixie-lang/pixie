@@ -94,7 +94,7 @@ class _se:
     DUP_TOP   = 1,2
 
     UNARY_POSITIVE = UNARY_NEGATIVE = UNARY_NOT = UNARY_CONVERT = \
-        UNARY_INVERT = GET_ITER = LOAD_ATTR = 1,1
+        UNARY_INVERT = GET_ITER = LOAD_ATTR = LOOKUP_METHOD = 1,1
 
     IMPORT_FROM = 1,2
 
@@ -156,8 +156,14 @@ _se = dict((op, getattr(_se, opname[op]))
            for op in opcodes
            if hasattr(_se, opname[op]))
 
+if not "CALL_METHOD" in globals():
+    CALL_METHOD = "___CALL_METHOD___"
+
+if not "LOOKUP_METHOD" in globals():
+    LOOKUP_METHOD = "__LOOKUP_METHOD__"
+
 hasflow = opcodes - set(_se) - \
-          set([CALL_FUNCTION, CALL_FUNCTION_VAR, CALL_FUNCTION_KW,
+          set([CALL_FUNCTION, CALL_METHOD, CALL_FUNCTION_VAR, CALL_FUNCTION_KW,
                CALL_FUNCTION_VAR_KW, BUILD_TUPLE, BUILD_LIST,
                UNPACK_SEQUENCE, BUILD_SLICE, DUP_TOPX,
                RAISE_VARARGS, MAKE_FUNCTION, MAKE_CLOSURE])
@@ -187,6 +193,8 @@ def getse(op, arg=None):
                 1)
 
     if op == CALL_FUNCTION:
+        return get_func_tup(arg, 0)
+    elif op == CALL_METHOD:
         return get_func_tup(arg, 0)
     elif op == CALL_FUNCTION_VAR:
         return get_func_tup(arg, 1)

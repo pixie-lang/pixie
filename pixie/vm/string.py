@@ -42,6 +42,7 @@ def _eq(self, v):
         return false
     return true if self._str == v._str else false
 
+
 class Character(Object):
     _type = Type(u"pixie.stdlib.Character")
     _immutable_fields_ = ["_char_val"]
@@ -55,6 +56,18 @@ class Character(Object):
 
     def char_val(self):
         return self._char_val
+
+    def __repr__(self):
+        return "\\" + chr(self._char_val)
+
+prebuilts = [None] * 256
+for x in range(len(prebuilts)):
+    prebuilts[x] = Character(x)
+
+def wrap_char(x):
+    if x < 256:
+        return prebuilts[x]
+    return Character(x)
 
 
 

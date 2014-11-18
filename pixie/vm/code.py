@@ -14,82 +14,88 @@ class NativeFn(Object):
 
     def invoke_Ef(self, args):
         raise NotImplementedError()
-    
-    
+
+
+
 ## PYTHON FLAGS
 CO_VARARGS = 0x4
-def wrap_fn(fn):
-    fn = cps(fn)
+def wrap_fn(transform=True):
+    def with_fn(fn):
+        if transform:
 
-    """Converts a native Python function into a pixie function."""
-    def as_native_fn(f):
-        return type("W"+fn.__name__, (NativeFn,), {"invoke_Ef": f})()
+            fn = cps(fn)
 
-    def as_variadic_fn(f):
-        return type("W"+fn.__name__[:len("__args")], (NativeFn,), {"invoke_Ef": f})()
+        """Converts a native Python function into a pixie function."""
+        def as_native_fn(f):
+            return type("W"+fn.__name__, (NativeFn,), {"invoke_Ef": f})()
 
-    code = fn.func_code
-    if fn.__name__.endswith("__args"):
-        return as_variadic_fn(lambda self, args: fn(args))
+        def as_variadic_fn(f):
+            return type("W"+fn.__name__[:len("__args")], (NativeFn,), {"invoke_Ef": f})()
 
-    fn_name = unicode(getattr(fn, "__real_name__", fn.__name__))
+        code = fn.func_code
+        if fn.__name__.endswith("__args"):
+            return as_variadic_fn(lambda self, args: fn(args))
 
-    if code.co_flags & CO_VARARGS:
-        raise Exception("Variadic functions not supported by wrap")
-    else:
-        argc = code.co_argcount
-        if argc == 0:
-            def wrapped_fn(self, args):
-                #affirm(len(args) == 0, u"Expected 0 arguments to " + fn_name)
-                try:
-                    return fn()
-                except object.WrappedException as ex:
-                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
-                    raise
-            return as_native_fn(wrapped_fn)
+        fn_name = unicode(getattr(fn, "__real_name__", fn.__name__))
 
-        if argc == 1:
-            def wrapped_fn(self, args):
-                #affirm(len(args) == 1, u"Expected 1 arguments to " + fn_name)
-                try:
-                    return fn(args.get_arg(0))
-                except object.WrappedException as ex:
-                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
-                    raise
-            return as_native_fn(wrapped_fn)
+        if code.co_flags & CO_VARARGS:
+            raise Exception("Variadic functions not supported by wrap")
+        else:
+            argc = code.co_argcount
+            if argc == 0:
+                def wrapped_fn(self, args):
+                    #affirm(len(args) == 0, u"Expected 0 arguments to " + fn_name)
+                    try:
+                        return fn()
+                    except object.WrappedException as ex:
+                        ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                        raise
+                return as_native_fn(wrapped_fn)
 
-        if argc == 2:
-            def wrapped_fn(self, args):
-                #affirm(len(args) == 2, u"Expected 2 arguments to " + fn_name)
-                try:
-                    return fn(args.get_arg(0), args.get_arg(1))
-                except object.WrappedException as ex:
-                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
-                    raise
-            return as_native_fn(wrapped_fn)
-        if argc == 3:
-            def wrapped_fn(self, args):
-                #affirm(len(args) == 3, u"Expected 3 arguments to " + fn_name)
+            if argc == 1:
+                def wrapped_fn(self, args):
+                    #affirm(len(args) == 1, u"Expected 1 arguments to " + fn_name)
+                    try:
+                        return fn(args.get_arg(0))
+                    except object.WrappedException as ex:
+                        ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                        raise
+                return as_native_fn(wrapped_fn)
 
-                try:
-                    return fn(args.get_arg(0), args.get_arg(1), args.get_arg(2))
-                except object.WrappedException as ex:
-                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
-                    raise
-            return as_native_fn(wrapped_fn)
+            if argc == 2:
+                def wrapped_fn(self, args):
+                    #affirm(len(args) == 2, u"Expected 2 arguments to " + fn_name)
+                    try:
+                        return fn(args.get_arg(0), args.get_arg(1))
+                    except object.WrappedException as ex:
+                        ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                        raise
+                return as_native_fn(wrapped_fn)
+            if argc == 3:
+                def wrapped_fn(self, args):
+                    #affirm(len(args) == 3, u"Expected 3 arguments to " + fn_name)
 
-        if argc == 4:
-            def wrapped_fn(self, args):
-                #affirm(len(args) == 4, u"Expected 4 arguments to " + fn_name)
+                    try:
+                        return fn(args.get_arg(0), args.get_arg(1), args.get_arg(2))
+                    except object.WrappedException as ex:
+                        ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                        raise
+                return as_native_fn(wrapped_fn)
 
-                try:
-                    return fn(args.get_arg(0), args.get_arg(1), args.get_arg(2), args.get_arg(3))
-                except object.WrappedException as ex:
-                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
-                    raise
-            return as_native_fn(wrapped_fn)
+            if argc == 4:
+                def wrapped_fn(self, args):
+                    #affirm(len(args) == 4, u"Expected 4 arguments to " + fn_name)
 
-        assert False, "implement more"
+                    try:
+                        return fn(args.get_arg(0), args.get_arg(1), args.get_arg(2), args.get_arg(3))
+                    except object.WrappedException as ex:
+                        ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                        raise
+                return as_native_fn(wrapped_fn)
+
+            assert False, "implement more"
+
+    return with_fn
 
 
 
@@ -139,6 +145,12 @@ def extend(pfn, tp1, tp2=None):
 
     return extend_inner
 
+def as_global(ns, nm):
+    from pixie.vm.keyword import keyword
+    def with_f(val):
+        add_builtin(keyword(ns), keyword(nm), val)
+        return val
+    return with_f
 
 import inspect
 def defprotocol(ns, name, methods):

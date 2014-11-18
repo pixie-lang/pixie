@@ -12,7 +12,7 @@ class TestRTDispatch(unittest.TestCase):
         ns = keyword(u"pixie.stdlib")
         nm = keyword(u"first")
 
-        @wrap_fn
+        @wrap_fn()
         def testfn__args(args):
             return args
 

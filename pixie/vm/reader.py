@@ -1,23 +1,30 @@
 py_object = object
-import pixie.vm.object as object
-from pixie.vm.object import affirm
-import pixie.vm.code as code
+from pixie.vm.effects.effects import Object, ArgList, Type
+from pixie.vm.effects.effect_transform import cps, resource_effect
+from pixie.vm.string import wrap_char
+from pixie.vm.persistent_list import PersistentList, EmptyList
+from rpython.rlib.rarithmetic import r_uint
+from pixie.vm.code import wrap_fn
+from pixie.vm.keyword import keyword
+# import pixie.vm.object as object
+# from pixie.vm.object import affirm
+# import pixie.vm.code as code
 from pixie.vm.primitives import nil, true, false
-import pixie.vm.numbers as numbers
-from pixie.vm.cons import cons
+# import pixie.vm.numbers as numbers
+# from pixie.vm.cons import cons
 from pixie.vm.symbol import symbol, Symbol
-from pixie.vm.keyword import keyword, Keyword
+# from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
-from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
-from pixie.vm.libs.readline import _readline
-from pixie.vm.string import Character, String
-from pixie.vm.code import wrap_fn, extend
-from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
-from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
-from pixie.vm.persistent_list import EmptyList
-import pixie.vm.stdlib as proto
-import pixie.vm.compiler as compiler
-
+# from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
+# from pixie.vm.libs.readline import _readline
+# from pixie.vm.string import Character, String
+# from pixie.vm.code import wrap_fn, extend
+# from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
+# from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
+# from pixie.vm.persistent_list import EmptyList
+# import pixie.vm.stdlib as proto
+# import pixie.vm.compiler as compiler
+#
 from rpython.rlib.rbigint import rbigint
 from rpython.rlib.rsre import rsre_re as re
 
@@ -26,18 +33,51 @@ COLUMN_NUMBER_KW = keyword(u"column-number")
 LINE_KW = keyword(u"line")
 FILE_KW = keyword(u"file")
 
-GEN_SYM_ENV = code.intern_var(u"pixie.stdlib.reader", u"*gen-sym-env*")
-GEN_SYM_ENV.set_dynamic()
-GEN_SYM_ENV.set_value(EMPTY_MAP)
+#GEN_SYM_ENV = code.intern_var(u"pixie.stdlib.reader", u"*gen-sym-env*")
+#GEN_SYM_ENV.set_dynamic()
+#GEN_SYM_ENV.set_value(EMPTY_MAP)
 
-ARG_AMP = symbol(u"&")
-ARG_MAX = keyword(u"max-arg")
-ARG_ENV = code.intern_var(u"pixie.stdlib.reader", u"*arg-env*")
-ARG_ENV.set_dynamic()
-ARG_ENV.set_value(nil)
+#ARG_AMP = symbol(u"&")
+#ARG_MAX = keyword(u"max-arg")
+#ARG_ENV = code.intern_var(u"pixie.stdlib.reader", u"*arg-env*")
+#ARG_ENV.set_dynamic()
+#ARG_ENV.set_value(nil)
 
-class PlatformReader(object.Object):
-    _type = object.Type(u"PlatformReader")
+class ListResource(Object):
+    def __init__(self):
+        self._lst_w = []
+
+    @resource_effect
+    def append_Ef(self, x):
+        self._lst_w.append(x)
+
+    @resource_effect
+    def to_str_Ef(self):
+        return "".join(unichr(x._char_val) for x in self._lst_w)
+
+    @resource_effect
+    def size_Ef(self):
+        return rt.wrap(len(self._lst_w))
+
+    @resource_effect
+    def to_persistent_list_Ef(self):
+        if len(self._lst_w) == 0:
+            return EmptyList()
+
+        i = r_uint(len(self._lst_w))
+        acc = nil
+        while i > 0:
+            acc = PersistentList(self._lst_w[i - 1], acc, len(self._lst_w) - i + 1, nil)
+            i -= 1
+        return acc
+
+
+
+
+
+
+class PlatformReader(Object):
+    _type = Type(u"PlatformReader")
 
     def read(self):
         assert False
@@ -48,131 +88,141 @@ class PlatformReader(object.Object):
     def reset_line(self):
         return self
 
+
+@resource_effect
+def read_ch_Ef(rdr):
+    return rdr.read()
+
+
+@resource_effect
+def unread_Ef(rdr, ch):
+    return rdr.unread(ch)
+
 class StringReader(PlatformReader):
 
     def __init__(self, s):
-        affirm(isinstance(s, unicode), u"StringReader requires unicode")
+        #affirm(isinstance(s, unicode), u"StringReader requires unicode")
         self._str = s
         self._idx = 0
 
     def read(self):
         if self._idx >= len(self._str):
-            raise EOFError()
+            return eof
         ch = self._str[self._idx]
         self._idx += 1
-        return ch
+        return wrap_char(ord(ch))
 
     def unread(self, ch):
         self._idx -= 1
 
-class PromptReader(PlatformReader):
-    def __init__(self):
-        self._string_reader = None
-
-
-    def read(self):
-        if self._string_reader is None:
-            result = _readline(str(rt.name(compiler.NS_VAR.deref())) + " => ")
-            if result == u"":
-                raise EOFError()
-            self._string_reader = StringReader(result)
-
-        try:
-            return self._string_reader.read()
-        except EOFError:
-            self._string_reader = None
-            return self.read()
-
-    def reset_line(self):
-        self._string_reader = None
-
-    def unread(self, ch):
-        assert self._string_reader is not None
-        self._string_reader.unread(ch)
-
-class LinePromise(object.Object):
-    _type = object.Type(u"pixie.stdlib.LinePromise")
-    def type(self):
-        return LinePromise._type
-
-    def __init__(self):
-        self._chrs = []
-        self._str = None
-
-    def add_char(self, ch):
-        self._chrs.append(ch)
-
-    def finalize(self):
-        if self._chrs is not None:
-            self._str = u"".join(self._chrs)
-            self._chrs = None
-
-    def is_finalized(self):
-        return self._chrs is None
-
-    def __repr__(self):
-        if self.is_finalized():
-            return self._str
-        return u"".join(self._chrs)
-
-
-
-class MetaDataReader(PlatformReader):
-    """Creates metadata for use by the debug system"""
-    def __init__(self, parent_reader, filename=u"<unknown>"):
-        assert isinstance(parent_reader, PlatformReader)
-        self._parent_reader = parent_reader
-        self._line_number = 1
-        self._column_number = 0
-        self._line = LinePromise()
-        self._has_unread = False
-        self._prev_line_number = 1
-        self._prev_column_number = 0
-        self._prev_line = None
-        self._prev_chr = u"\0"
-        self._filename = filename
-        assert isinstance(self._prev_chr, unicode)
-
-    def read(self):
-        if self._has_unread:
-            self._has_unread = False
-            return self._prev_chr
-        else:
-            self._prev_column_number = self._column_number
-            self._prev_line_number = self._line_number
-            self._prev_line = self._line
-            ch = self._parent_reader.read()
-            if self._line.is_finalized():
-                self._line = LinePromise()
-            if ch == u'\n':
-                self._line.finalize()
-                self._line_number += 1
-                self._column_number = 0
-            else:
-                self._line.add_char(ch)
-                self._column_number += 1
-
-            self._cur_ch = ch
-            return ch
-
-    def reset_line(self):
-        self._line.finalize()
-        self._line_number += 1
-        self._column_number = 0
-        self._parent_reader.reset_line()
-        return self
-
-    def get_metadata(self):
-        return rt.hashmap(LINE_KW, rt.wrap(self._line),
-                          LINE_NUMBER_KW, rt.wrap(self._line_number),
-                          COLUMN_NUMBER_KW, rt.wrap(self._column_number),
-                          FILE_KW, rt.wrap(self._filename))
-
-
-    def unread(self, ch):
-        affirm(not self._has_unread, u"Can't unread twice")
-        self._has_unread = True
-        self._prev_chr = self._cur_ch
+# class PromptReader(PlatformReader):
+#     def __init__(self):
+#         self._string_reader = None
+#
+#
+#     def read(self):
+#         if self._string_reader is None:
+#             result = _readline(str(rt.name(compiler.NS_VAR.deref())) + " => ")
+#             if result == u"":
+#                 raise EOFError()
+#             self._string_reader = StringReader(result)
+#
+#         try:
+#             return self._string_reader.read()
+#         except EOFError:
+#             self._string_reader = None
+#             return self.read()
+#
+#     def reset_line(self):
+#         self._string_reader = None
+#
+#     def unread(self, ch):
+#         assert self._string_reader is not None
+#         self._string_reader.unread(ch)
+#
+# class LinePromise(object.Object):
+#     _type = object.Type(u"pixie.stdlib.LinePromise")
+#     def type(self):
+#         return LinePromise._type
+#
+#     def __init__(self):
+#         self._chrs = []
+#         self._str = None
+#
+#     def add_char(self, ch):
+#         self._chrs.append(ch)
+#
+#     def finalize(self):
+#         if self._chrs is not None:
+#             self._str = u"".join(self._chrs)
+#             self._chrs = None
+#
+#     def is_finalized(self):
+#         return self._chrs is None
+#
+#     def __repr__(self):
+#         if self.is_finalized():
+#             return self._str
+#         return u"".join(self._chrs)
+#
+#
+#
+# class MetaDataReader(PlatformReader):
+#     """Creates metadata for use by the debug system"""
+#     def __init__(self, parent_reader, filename=u"<unknown>"):
+#         assert isinstance(parent_reader, PlatformReader)
+#         self._parent_reader = parent_reader
+#         self._line_number = 1
+#         self._column_number = 0
+#         self._line = LinePromise()
+#         self._has_unread = False
+#         self._prev_line_number = 1
+#         self._prev_column_number = 0
+#         self._prev_line = None
+#         self._prev_chr = u"\0"
+#         self._filename = filename
+#         assert isinstance(self._prev_chr, unicode)
+#
+#     def read(self):
+#         if self._has_unread:
+#             self._has_unread = False
+#             return self._prev_chr
+#         else:
+#             self._prev_column_number = self._column_number
+#             self._prev_line_number = self._line_number
+#             self._prev_line = self._line
+#             ch = self._parent_reader.read()
+#             if self._line.is_finalized():
+#                 self._line = LinePromise()
+#             if ch == u'\n':
+#                 self._line.finalize()
+#                 self._line_number += 1
+#                 self._column_number = 0
+#             else:
+#                 self._line.add_char(ch)
+#                 self._column_number += 1
+#
+#             self._cur_ch = ch
+#             return ch
+#
+#     def reset_line(self):
+#         self._line.finalize()
+#         self._line_number += 1
+#         self._column_number = 0
+#         self._parent_reader.reset_line()
+#         return self
+#
+#     def get_metadata(self):
+#         return rt.hashmap(LINE_KW, rt.wrap(self._line),
+#                           LINE_NUMBER_KW, rt.wrap(self._line_number),
+#                           COLUMN_NUMBER_KW, rt.wrap(self._column_number),
+#                           FILE_KW, rt.wrap(self._filename))
+#
+#
+#     def unread(self, ch):
+#         affirm(not self._has_unread, u"Can't unread twice")
+#         self._has_unread = True
+#         self._prev_chr = self._cur_ch
 #
 #
 #     def reader_str_state(self):
@@ -185,44 +235,54 @@ class MetaDataReader(PlatformReader):
 #                + self._line.reader_string_state() + u"\n" + u"".join(spaces) + u"^"
 
 
+CR = wrap_char(ord(u"\r"))
+LF = wrap_char(ord(u"\n"))
+TAB = wrap_char(ord(u"\t"))
+SPACE = wrap_char(ord(u" "))
+COMMA = wrap_char(ord(u","))
+
+WHITESPACE = {CR, LF, TAB, SPACE, COMMA}
 
 def is_whitespace(ch):
-    return ch in u"\r\n\t ," or ch == u""
+    return ch in WHITESPACE or ch == u""
+
+DIGITS = set(wrap_char(ord(x)) for x in u"012345678")
 
 def is_digit(ch):
-    return ch in u"0123456789"
+    return ch in DIGITS
 
 def is_terminating_macro(ch):
     return ch != u"#" and ch != u"'" and ch != u"%" and ch in handlers
 
-def eat_whitespace(rdr):
+@cps
+def eat_whitespace_Ef(rdr):
     while True:
-        ch = rdr.read()
-        if is_whitespace(ch):
-            continue
-        rdr.unread(ch)
-        return
+        ch = read_ch_Ef(rdr)
+        if not is_whitespace(ch) or ch is eof:
+            unread_Ef(rdr, ch)
+            return
 
 class ReaderHandler(py_object):
     def invoke(self, rdr, ch):
         pass
 
-class ListReader(ReaderHandler):
-    def invoke(self, rdr, ch):
-        lst = []
-        while True:
-            eat_whitespace(rdr)
-            ch = rdr.read()
-            if ch == u")":
-                if len(lst) == 0:
-                    return EmptyList()
-                acc = nil
-                for x in range(len(lst) - 1, -1, -1):
-                    acc = cons(lst[x], acc)
-                return acc
+close_paren = wrap_char(ord(u")"))
 
-            rdr.unread(ch)
-            lst.append(read(rdr, True))
+class ListReader(ReaderHandler):
+    @cps
+    def invoke_Ef(self, rdr, ch):
+        lst = ListResource()
+        while True:
+            eat_whitespace_Ef(rdr)
+            ch = read_ch_Ef(rdr)
+            print ch, ch._char_val, close_paren._char_val
+            if ch is close_paren:
+                return lst.to_persistent_list_Ef()
+
+            unread_Ef(rdr, ch)
+
+            itm = read_Ef(rdr, True)
+            lst.append_Ef(itm)
 
 class UnmachedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -365,13 +425,13 @@ class DerefReader(ReaderHandler):
         return rt.cons(symbol(u"-deref"), rt.cons(read(rdr, True), nil))
 
 
-QUOTE = symbol(u"quote")
-UNQUOTE = symbol(u"unquote")
-UNQUOTE_SPLICING = symbol(u"unquote-splicing")
-APPLY = symbol(u"apply")
-CONCAT = symbol(u"concat")
-SEQ = symbol(u"seq")
-LIST = symbol(u"list")
+#QUOTE = symbol(u"quote")
+#UNQUOTE = symbol(u"unquote")
+#UNQUOTE_SPLICING = symbol(u"unquote-splicing")
+#APPLY = symbol(u"apply")
+#CONCAT = symbol(u"concat")
+#SEQ = symbol(u"seq")
+#LIST = symbol(u"list")
 
 def is_unquote(form):
     return True if rt.satisfies_QMARK_(rt.ISeq.deref(), form) \
@@ -561,22 +621,24 @@ class DispatchReader(ReaderHandler):
         return handler.invoke(rdr, ch)
 
 class LineCommentReader(ReaderHandler):
-    def invoke(self, rdr, ch):
-        self.skip_line(rdr)
-        return read(rdr, True)
+    @cps
+    def invoke_Ef(self, rdr, ch):
+        self.skip_line_Ef(rdr)
+        return read_Ef(rdr, True)
 
-    def skip_line(self, rdr):
+    @cps
+    def skip_line_Ef(self, rdr):
         while True:
-            ch = rdr.read()
-            if ch == u"\n":
+            ch = read_ch_Ef(rdr)
+            if ch is LF or ch is eof:
                 return
-            elif ch == u"\r":
-                ch2 = rdr.read()
-                if ch2 == u"\n":
+            elif ch is CR:
+                ch2 = read_ch_Ef(rdr)
+                if ch2 is LF or ch2 is eof:
                     return
 
-handlers = {u"(": ListReader(),
-            u")": UnmachedListReader(),
+handlers = {wrap_char(ord(u"(")): ListReader(),
+            wrap_char(ord(u")")): UnmachedListReader(),
             u"[": VectorReader(),
             u"]": UnmachedVectorReader(),
             u"{": MapReader(),
@@ -590,7 +652,7 @@ handlers = {u"(": ListReader(),
             u"~": UnquoteReader(),
             u"^": MetaReader(),
             u"#": DispatchReader(),
-            u";": LineCommentReader(),
+            wrap_char(ord(u";")): LineCommentReader(),
             u"%": ArgReader()
 }
 
@@ -651,37 +713,42 @@ def parse_number(s):
             else:
                 return None
 
-def read_number(rdr, ch):
-    acc = [ch]
-    try:
-        while True:
-            ch = rdr.read()
-            if is_whitespace(ch) or ch in handlers:
-                rdr.unread(ch)
-                break
-            acc.append(ch)
-    except EOFError:
-        pass
+@cps
+def read_number_Ef(rdr, ch):
+    acc = ListResource()
+    acc.append_Ef(ch)
+    end = False
+    while not end:
+        ch = read_ch_Ef(rdr)
+        print ch
+        if is_whitespace(ch) or ch in handlers or ch is eof:
+            unread_Ef(rdr, ch)
+            end = True
+        else:
+            acc.append_Ef(ch)
 
-    joined = u"".join(acc)
+    joined = acc.to_str_Ef()
+    print joined
     parsed = parse_number(joined)
     if parsed is not None:
         return parsed
     return Symbol(joined)
 
-def read_symbol(rdr, ch):
-    acc = [ch]
-    try:
-        while True:
-            ch = rdr.read()
-            if is_whitespace(ch) or is_terminating_macro(ch):
-                rdr.unread(ch)
-                break
-            acc.append(ch)
-    except EOFError:
-        pass
+@cps
+def read_symbol_Ef(rdr, ch):
+    acc = ListResource()
+    acc.append_Ef(ch)
+    end = False
 
-    sym_str = u"".join(acc)
+    while not end:
+        ch = read_ch_Ef(rdr)
+        if is_whitespace(ch) or is_terminating_macro(ch) or ch is eof:
+            unread_Ef(rdr, ch)
+            end = True
+        else:
+            acc.append_Ef(ch)
+
+    sym_str = acc.to_str_Ef()
     if sym_str == u"true":
         return true
     if sym_str == u"false":
@@ -690,8 +757,8 @@ def read_symbol(rdr, ch):
         return nil
     return symbol(sym_str)
 
-class EOF(object.Object):
-    _type = object.Type(u"EOF")
+class EOF(Object):
+    _type = Type(u"EOF")
 
 
 eof = EOF()
@@ -711,45 +778,44 @@ def throw_syntax_error_with_data(rdr, txt):
     err._trace.append(data)
     raise object.WrappedException(err)
 
-
-def read(rdr, error_on_eof):
-    try:
-        eat_whitespace(rdr)
-    except EOFError as ex:
-        if error_on_eof:
-            raise ex
-        return eof
+@cps
+def read_Ef(rdr, error_on_eof):
+    eat_whitespace_Ef(rdr)
 
 
 
-    ch = rdr.read()
-    if isinstance(rdr, MetaDataReader):
-        meta = rdr.get_metadata()
-    else:
-        meta = nil
+    ch = read_ch_Ef(rdr)
+    if ch is eof:
+        return None
+    #if isinstance(rdr, MetaDataReader):
+    #    meta = rdr.get_metadata()
+    #else:
+    #    meta = nil
 
+    itm = None
+    ch2 = None
     macro = handlers.get(ch, None)
     if macro is not None:
-        itm = macro.invoke(rdr, ch)
+        itm = macro.invoke_Ef(rdr, ch)
 
     elif is_digit(ch):
-        itm = read_number(rdr, ch)
+        itm = read_number_Ef(rdr, ch)
 
     elif ch == u"-":
         ch2 = rdr.read()
         if is_digit(ch2):
             rdr.unread(ch2)
-            itm = read_number(rdr, ch)
+            itm = read_number_Ef(rdr, ch)
 
         else:
             rdr.unread(ch2)
-            itm = read_symbol(rdr, ch)
+            itm = read_symbol_Ef(rdr, ch)
 
     else:
-        itm = read_symbol(rdr, ch)
+        itm = read_symbol_Ef(rdr, ch)
 
-    if rt.has_meta_QMARK_(itm):
-        itm = rt.with_meta(itm, rt.merge(meta, rt.meta(itm)))
+    #if rt.has_meta_QMARK_(itm):
+    #    itm = rt.with_meta(itm, rt.merge(meta, rt.meta(itm)))
 
     return itm
 

@@ -52,6 +52,7 @@ class BytecodeRewriter(object):
 
 
 def cps(f):
+    print ".",
     """
     Transforms a function or method into a function that returns an effect. In essence this transform performs
     continuation passing style edits to the bytecode, creating immutable state machines for each step. There
@@ -162,6 +163,7 @@ def cps(f):
 
         # Now we come to the good part
         if nm == CALL_METHOD or nm == CALL_FUNCTION:
+        #if nm == CALL_FUNCTION:
             next_op, _ = code[1]
 
 
