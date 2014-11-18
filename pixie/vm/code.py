@@ -136,9 +136,9 @@ def extend(pfn, tp1, tp2=None):
 
     def extend_inner(fn):
         if tp2 is None:
-            extend_builtin(pfn, tp1, wrap_fn(fn))
+            extend_builtin(pfn, tp1, wrap_fn()(fn))
         else:
-            extend_builtin2(pfn, tp1, tp2, wrap_fn(fn))
+            extend_builtin2(pfn, tp1, tp2, wrap_fn()(fn))
 
         return pfn
 

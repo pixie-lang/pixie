@@ -51,6 +51,9 @@ class PersistentVector(Object):
             return 0
         return ((self._cnt - 1) >> 5) << 5
 
+    def count(self):
+        return self._cnt
+
     def array_for(self, i):
         if 0 <= i < self._cnt:
             if i >= self.tailoff():

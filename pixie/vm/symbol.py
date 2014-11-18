@@ -41,6 +41,9 @@ class Symbol(Object):
     def meta(self):
         return self._meta
 
+    def str(self):
+        return self._str
+
 
 
 def symbol(s):

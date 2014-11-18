@@ -34,7 +34,7 @@ def wrap_fn(nm):
     return wrapper
 
 
-_inited_fns = ["first", "count", "list"]
+_inited_fns = ["first", "count", "list", "next"]
 
 for x in _inited_fns:
     globals()[munge(x+"_Ef")] = wrap_fn(x)

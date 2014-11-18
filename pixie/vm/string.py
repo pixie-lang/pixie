@@ -17,6 +17,9 @@ class String(Object):
         assert isinstance(s, unicode)
         self._str = s
 
+    def str(self):
+        return self._str
+
 @extend("pixie.stdlib.-count", String)
 def _count(self):
     return Integer(len(self._str))

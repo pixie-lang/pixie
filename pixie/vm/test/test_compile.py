@@ -3,9 +3,10 @@ from pixie.vm.code import wrap_fn
 from pixie.vm.reader import StringReader, read_Ef
 from pixie.vm.effects.effects import Answer
 from pixie.vm.numbers import Integer
+from pixie.vm.string import String
 from pixie.vm.effects.effect_transform import cps
 from pixie.vm.ast import SyntaxThunk
-from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state
+from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state, _builtin_defs
 
 import unittest
 
@@ -27,3 +28,11 @@ class TestCompilation(unittest.TestCase):
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 1)
 
+    def test_compile_call_global(self):
+
+        ast = run_with_state(read_and_compile, default_env, "(-str 1)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), None), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), String)
+        self.assertEqual(result.val().str(), "1")

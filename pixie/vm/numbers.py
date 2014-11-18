@@ -1,10 +1,11 @@
 from pixie.vm.effects.effects import Object, Type
 from pixie.vm.primitives import nil, true, false
+from pixie.vm.code import extend
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
 #from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
-#import pixie.vm.rt as rt
+import pixie.vm.rt as rt
 
 import math
 
@@ -342,3 +343,8 @@ class Ratio(Number):
 #     @extend(proto._str, Ratio._type)
 #     def _str(r):
 #         return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
+
+
+@extend("pixie.stdlib.-str", Integer)
+def _str(i):
+    return rt.wrap(unicode(str(i.int_val())))

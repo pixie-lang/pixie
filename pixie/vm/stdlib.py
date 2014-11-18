@@ -51,6 +51,8 @@ defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
 defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
 
 link_builtins("-count", "count")
+link_builtins("-first", "first")
+link_builtins("-next", "next")
 
 
 # @as_var("pixie.stdlib.internal", "-defprotocol")
