@@ -68,3 +68,8 @@
         (recur (next bindings)
                (reduce conj res (destructure binding `(get ~expr ~binding-key)))))
       res)))
+
+(defmacro let+ [bindings & body]
+  (let [destructured-bindings (transduce (map #(apply destructure %1)) concat [] (partition 2 bindings))]
+    `(let ~destructured-bindings
+       ~@body)))
