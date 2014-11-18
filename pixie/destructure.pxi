@@ -66,14 +66,18 @@
           (if bindings
             (let [binding (key (first bindings))
                   binding-key (val (first bindings))]
-              (if (= binding :as)
+              (if (or (= binding :as) (= binding :or))
                 (recur (next bindings) res)
                 (recur (next bindings)
                        (reduce conj res (destructure binding `(get ~expr ~binding-key))))))
-            res))]
-    (if (contains? binding-map :as)
-      (reduce conj res [(get binding-map :as) expr])
-      res)))
+            res))
+        res (if (contains? binding-map :or)
+              (transduce (map #(vector (key %) `(or ~(key %) ~(val %)))) concat res (get binding-map :or))
+              res)
+        res (if (contains? binding-map :as)
+              (reduce conj res [(get binding-map :as) expr])
+              res)]
+    res))
 
 (defmacro let+ [bindings & body]
   (let [destructured-bindings (transduce (map #(apply destructure %1)) concat [] (partition 2 bindings))]
