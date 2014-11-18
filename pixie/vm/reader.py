@@ -53,7 +53,11 @@ class ListResource(Object):
 
     @resource_effect
     def to_str_Ef(self):
-        return "".join(unichr(x._char_val) for x in self._lst_w)
+        acc = []
+        for x in self._lst_w:
+            acc.append(unichr(x.char_val()))
+
+        return rt.wrap(u"".join(acc))
 
     @resource_effect
     def size_Ef(self):
@@ -99,7 +103,7 @@ def unread_Ef(rdr, ch):
     return rdr.unread(ch)
 
 class StringReader(PlatformReader):
-
+    _immutable_fields_ = ["_str"]
     def __init__(self, s):
         #affirm(isinstance(s, unicode), u"StringReader requires unicode")
         self._str = s
@@ -241,18 +245,22 @@ TAB = wrap_char(ord(u"\t"))
 SPACE = wrap_char(ord(u" "))
 COMMA = wrap_char(ord(u","))
 
-WHITESPACE = {CR, LF, TAB, SPACE, COMMA}
+WHITESPACE = {value: value for value in (CR, LF, TAB, SPACE, COMMA)}
 
 def is_whitespace(ch):
-    return ch in WHITESPACE or ch == u""
+    return ch in WHITESPACE
 
-DIGITS = set(wrap_char(ord(x)) for x in u"012345678")
+DIGITS = {wrap_char(ord(x)): wrap_char(ord(x)) for x in u"012345678"}
 
 def is_digit(ch):
     return ch in DIGITS
 
+HASH = wrap_char(ord(u"#"))
+SINGLE_QUOTE = wrap_char(ord(u"'"))
+PERCENT = wrap_char(ord(u"%"))
+
 def is_terminating_macro(ch):
-    return ch != u"#" and ch != u"'" and ch != u"%" and ch in handlers
+    return ch is not HASH and ch is not SINGLE_QUOTE and ch is not PERCENT and ch in handlers
 
 @cps
 def eat_whitespace_Ef(rdr):
@@ -275,7 +283,6 @@ class ListReader(ReaderHandler):
         while True:
             eat_whitespace_Ef(rdr)
             ch = read_ch_Ef(rdr)
-            print ch, ch._char_val, close_paren._char_val
             if ch is close_paren:
                 return lst.to_persistent_list_Ef()
 
@@ -639,21 +646,21 @@ class LineCommentReader(ReaderHandler):
 
 handlers = {wrap_char(ord(u"(")): ListReader(),
             wrap_char(ord(u")")): UnmachedListReader(),
-            u"[": VectorReader(),
-            u"]": UnmachedVectorReader(),
-            u"{": MapReader(),
-            u"}": UnmachedMapReader(),
-            u"'": QuoteReader(),
-            u":": KeywordReader(),
-            u"\"": LiteralStringReader(),
-            u"\\": LiteralCharacterReader(),
-            u"@": DerefReader(),
-            u"`": SyntaxQuoteReader(),
-            u"~": UnquoteReader(),
-            u"^": MetaReader(),
-            u"#": DispatchReader(),
+            # u"[": VectorReader(),
+            # u"]": UnmachedVectorReader(),
+            # u"{": MapReader(),
+            # u"}": UnmachedMapReader(),
+            # u"'": QuoteReader(),
+            # u":": KeywordReader(),
+            # u"\"": LiteralStringReader(),
+            # u"\\": LiteralCharacterReader(),
+            # u"@": DerefReader(),
+            # u"`": SyntaxQuoteReader(),
+            # u"~": UnquoteReader(),
+            # u"^": MetaReader(),
+            # u"#": DispatchReader(),
             wrap_char(ord(u";")): LineCommentReader(),
-            u"%": ArgReader()
+            # u"%": ArgReader()
 }
 
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45
@@ -693,10 +700,10 @@ def parse_int(m):
 def parse_float(m):
     return rt.wrap(float(str(m.group(0))))
 
-def parse_ratio(m):
-    n = rt.wrap(int(str(m.group(1))))
-    d = rt.wrap(int(str(m.group(2))))
-    return rt._div(n, d)
+# def parse_ratio(m):
+#     n = rt.wrap(int(str(m.group(1))))
+#     d = rt.wrap(int(str(m.group(2))))
+#     return rt._div(n, d)
 
 def parse_number(s):
     m = int_matcher.match(s)
@@ -708,10 +715,10 @@ def parse_number(s):
             return parse_float(m)
         else:
             m = ratio_matcher.match(s)
-            if m:
-                return parse_ratio(m)
-            else:
-                return None
+            # if m:
+            #     return parse_ratio(m)
+            # else:
+            #     return None
 
 @cps
 def read_number_Ef(rdr, ch):
@@ -728,11 +735,10 @@ def read_number_Ef(rdr, ch):
             acc.append_Ef(ch)
 
     joined = acc.to_str_Ef()
-    print joined
-    parsed = parse_number(joined)
+    parsed = parse_number(joined._str)
     if parsed is not None:
         return parsed
-    return Symbol(joined)
+    return Symbol(joined._str)
 
 @cps
 def read_symbol_Ef(rdr, ch):
@@ -748,7 +754,8 @@ def read_symbol_Ef(rdr, ch):
         else:
             acc.append_Ef(ch)
 
-    sym_str = acc.to_str_Ef()
+    result = acc.to_str_Ef()
+    sym_str = result._str
     if sym_str == u"true":
         return true
     if sym_str == u"false":
@@ -778,6 +785,8 @@ def throw_syntax_error_with_data(rdr, txt):
     err._trace.append(data)
     raise object.WrappedException(err)
 
+MINUS = wrap_char(ord(u"-"))
+
 @cps
 def read_Ef(rdr, error_on_eof):
     eat_whitespace_Ef(rdr)
@@ -801,7 +810,7 @@ def read_Ef(rdr, error_on_eof):
     elif is_digit(ch):
         itm = read_number_Ef(rdr, ch)
 
-    elif ch == u"-":
+    elif ch is MINUS:
         ch2 = rdr.read()
         if is_digit(ch2):
             rdr.unread(ch2)

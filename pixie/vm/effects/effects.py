@@ -1,6 +1,7 @@
 import rpython.rlib.jit as jit
 
 class Object(object):
+    _immutable_fields_ = ["_str"]
     """
     Base class of all Pixie Object
     """
@@ -36,6 +37,7 @@ class ArgList(object):
 _type_registry = {}
 
 class Type(Object):
+    _immutable_fields_ = ["_name", "_parent"]
     def __init__(self, name, parent = None):
         assert isinstance(name, unicode), u"Type names must be unicode"
         self._name = name
@@ -105,6 +107,7 @@ class Continuation(object):
         raise NotImplementedError()
 
 class AnswerContinuation(Continuation):
+    _immutable_ = True
     def __index__(self):
         pass
 
@@ -137,17 +140,6 @@ class Thunk(EffectObject):
 
     def get_loc(self):
         return (None, None)
-
-class Continuation(object):
-    """
-    Defines a computation that should be continued after a given effect has executed.
-    """
-    _immutable_= True
-    def step(self, x):
-        """
-        Continue execution, x is the value returned by the effect.
-        """
-        raise NotImplementedError()
 
 def answer(x):
     """

@@ -15,8 +15,8 @@ class Number(Object):
         return Number._type
 
 class Integer(Number):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Integer", Number._type)
-    _immutable_fields_ = ["_int_val"]
 
     def __init__(self, i_val):
         self._int_val = i_val
@@ -35,50 +35,52 @@ class Integer(Number):
 
 zero_int = Integer(0)
 one_int = Integer(1)
-#
-# class BigInteger(Number):
-#     _type = object.Type(u"pixie.stdlib.BigInteger", Number._type)
-#     _immutable_fields_ = ["_bigint_val"]
-#
-#     def __init__(self, bi_val):
-#         self._bigint_val = bi_val
-#
-#     def bigint_val(self):
-#         return self._bigint_val
-#
-#     def type(self):
-#         return self._type
-#
-# class Float(Number):
-#     _type = object.Type(u"pixie.stdlib.Float", Number._type)
-#     _immutable_fields_ = ["_float_val"]
-#
-#     def __init__(self, f_val):
-#         self._float_val = f_val
-#
-#     def float_val(self):
-#         return self._float_val
-#
-#     def type(self):
-#         return Float._type
-#
-# class Ratio(Number):
-#     _type = object.Type(u"pixie.stdlib.Ratio", Number._type)
-#     _immutable_fields_ = ["_numerator", "_denominator"]
-#
-#     def __init__(self, numerator, denominator):
-#         self._numerator = numerator
-#         self._denominator = denominator
-#
-#     def numerator(self):
-#         return self._numerator
-#
-#     def denominator(self):
-#         return self._denominator
-#
-#     def type(self):
-#         return Ratio._type
-#
+
+class BigInteger(Number):
+    _immutable_fields_ = ["_bigint_val"]
+
+    _type = Type(u"pixie.stdlib.BigInteger", Number._type)
+
+    def __init__(self, bi_val):
+        self._bigint_val = bi_val
+
+    def bigint_val(self):
+        return self._bigint_val
+
+    def type(self):
+        return self._type
+
+class Float(Number):
+    _immutable_fields_ = ["_float_val"]
+
+    _type = Type(u"pixie.stdlib.Float", Number._type)
+
+    def __init__(self, f_val):
+        self._float_val = f_val
+
+    def float_val(self):
+        return self._float_val
+
+    def type(self):
+        return Float._type
+
+class Ratio(Number):
+    _immutable_fields_ = ["_numerator", "_denominator"]
+
+    _type = Type(u"pixie.stdlib.Ratio", Number._type)
+    def __init__(self, numerator, denominator):
+        self._numerator = numerator
+        self._denominator = denominator
+
+    def numerator(self):
+        return self._numerator
+
+    def denominator(self):
+        return self._denominator
+
+    def type(self):
+        return Ratio._type
+
 # IMath = as_var("IMath")(Protocol(u"IMath"))
 # _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
 # _sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))

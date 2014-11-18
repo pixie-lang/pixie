@@ -7,6 +7,7 @@ from rpython.rlib.rarithmetic import intmask
 from pixie.vm.util import hash_unencoded_chars
 
 class String(Object):
+    _immutable_fields_ = ["_str"]
     _type = Type(u"pixie.stdlib.String")
 
     def type(self):
@@ -44,8 +45,8 @@ def _eq(self, v):
 
 
 class Character(Object):
+    _immutable_fields_ = ["_str"]
     _type = Type(u"pixie.stdlib.Character")
-    _immutable_fields_ = ["_char_val"]
 
     def type(self):
         return Character._type

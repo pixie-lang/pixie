@@ -9,7 +9,6 @@ def munge(s):
      return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
 
 class NativeFn(Object):
-    _immutable_ = True
     _type = Type(u"pixie.stdlib.NativeFn")
 
     def invoke_Ef(self, args):

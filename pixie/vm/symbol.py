@@ -9,10 +9,10 @@ from rpython.rlib.rarithmetic import intmask
 
 class Symbol(Object):
     _type = Type(u"pixie.stdlib.Symbol")
-    __immutable_fields__ = ["_hash"]
+    _immutable_fields_ = ["_hash", "_str"]
 
     def __init__(self, s, meta=nil):
-        #assert isinstance(s, unicode)
+        assert isinstance(s, unicode)
         self._str = s
         self._w_name = None
         self._w_ns = None

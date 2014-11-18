@@ -1,8 +1,9 @@
-import pixie.vm.object as object
+from pixie.vm.effects.effects import Object, Type
 
 
-class Nil(object.Object):
-    _type = object.Type(u"pixie.stdlib.Nil")
+class Nil(Object):
+    _immutable_ = True
+    _type = Type(u"pixie.stdlib.Nil")
 
     def type(self):
         return Nil._type
@@ -11,8 +12,9 @@ class Nil(object.Object):
 nil = Nil()
 
 
-class Bool(object.Object):
-    _type = object.Type(u"pixie.stdlib.Bool")
+class Bool(Object):
+    _immutable_ = True
+    _type = Type(u"pixie.stdlib.Bool")
 
     def type(self):
         return Bool._type
