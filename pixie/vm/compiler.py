@@ -22,8 +22,44 @@ def compile_itm_Ef(form):
     if isinstance(form, Symbol):
         return Lookup(keyword(u"pixie.stdlib"), keyword(form.str()))
 
+    if form is true:
+        return Constant(true)
+
+    if form is false:
+        return Constant(false)
+
+    if form is nil:
+        return Constant(nil)
+
+@cps
+def compile_if_Ef(form):
+    form = rt.next_Ef(form)
+    test = rt.first_Ef(form)
+    form = rt.next_Ef(form)
+    then = rt.first_Ef(form)
+    form = rt.next_Ef(form)
+    els = rt.first_Ef(form)
+
+    test_comp = compile_Ef(test)
+    then_comp = compile_Ef(then)
+    else_comp = compile_Ef(els)
+
+    return If(test_comp, then_comp, else_comp)
+
+_builtins = {u"if": compile_if_Ef}
+
 @cps
 def compile_cons_Ef(form):
+
+    fst = rt.first_Ef(form)
+    builtin_Ef = ns = name = None
+    if isinstance(fst, Symbol):
+        ns = fst.namespace()
+        if ns == u"pixie.stdlib" or ns is None:
+            name = fst.name()
+            builtin_Ef = _builtins.get(name)
+            if builtin_Ef is not None:
+                return builtin_Ef(form)
 
     acc = EMPTY_VECTOR
     while form is not nil:

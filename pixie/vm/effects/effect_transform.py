@@ -169,7 +169,7 @@ def cps(f):
 
             # is the function we're calling an effect?
             op, arg = code[- (arg + 1)]
-            if (op == LOAD_ATTR or op == LOAD_GLOBAL) and arg.endswith("_Ef"):
+            if (op == LOAD_ATTR or op == LOAD_GLOBAL or op == LOAD_FAST) and arg.endswith("_Ef"):
                 final_fn = raise_Ef if arg == "raise_Ef" else handle
 
                 # If the next opcode is a return, we can tailcall by simply returning the result directly, except

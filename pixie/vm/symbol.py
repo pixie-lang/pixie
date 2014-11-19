@@ -14,8 +14,8 @@ class Symbol(Object):
     def __init__(self, s, meta=nil):
         assert isinstance(s, unicode)
         self._str = s
-        self._w_name = None
-        self._w_ns = None
+        self._name = None
+        self._ns = None
         self._hash = 0
         self._meta = meta
 
@@ -23,17 +23,17 @@ class Symbol(Object):
         return Symbol._type
 
     def init_names(self):
-        if self._w_name is None:
+        if self._name is None:
             s = self._str.split(u"/")
             if len(s) == 2:
-                self._w_ns = rt.wrap(s[0])
-                self._w_name = rt.wrap(s[1])
+                self._ns = s[0]
+                self._name = s[1]
             elif len(s) == 1:
-                self._w_name = rt.wrap(s[0])
-                self._w_ns = nil
+                self._name = s[0]
+                self._ns = None
             else:
-                self._w_ns = rt.wrap(s[0])
-                self._w_name = rt.wrap(u"/".join(s[1:]))
+                self._ns = s[0]
+                self._name = u"/".join(s[1:])
 
     def with_meta(self, meta):
         return Symbol(self._str, meta)
@@ -43,6 +43,14 @@ class Symbol(Object):
 
     def str(self):
         return self._str
+
+    def name(self):
+        self.init_names()
+        return self._name
+
+    def namespace(self):
+        self.init_names()
+        return self._ns
 
 
 

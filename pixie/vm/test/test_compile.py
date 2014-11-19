@@ -36,3 +36,20 @@ class TestCompilation(unittest.TestCase):
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), String)
         self.assertEqual(result.val().str(), "1")
+
+
+    def test_compile_if(self):
+
+        ast = run_with_state(read_and_compile, default_env, "(if true 1 2)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), None), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 1)
+
+        ast = run_with_state(read_and_compile, default_env, "(if false 1 2)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), None), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 2)
