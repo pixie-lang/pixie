@@ -224,7 +224,6 @@
 
 
 (extend -seq PersistentVector sequence)
-(extend -seq Array sequence)
 
 
 
