@@ -124,6 +124,7 @@ class Lookup(Syntax):
                 return local
 
         eff = Resolve(self._w_ns, self._w_nm)
+        result = None
         result = raise_Ef(eff)
         return result
 

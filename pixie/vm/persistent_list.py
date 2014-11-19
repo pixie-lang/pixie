@@ -55,14 +55,15 @@ def _conj(_, itm):
     return PersistentList(itm, nil, 1, nil)
 
 @as_global("pixie.stdlib", "list")
+@wrap_fn()
 def list__args(args):
-    if len(args) == 0:
+    if args.arg_count() == 0:
         return EmptyList()
 
-    i = r_uint(len(args))
+    i = r_uint(args.arg_count())
     acc = nil
     while i > 0:
-        acc = PersistentList(args[i - 1], acc, len(args) - i + 1, nil)
+        acc = PersistentList(args.get_arg(i - 1), acc, args.arg_count() - i + 1, nil)
         i -= 1
     return acc
 

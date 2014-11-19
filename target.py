@@ -1,6 +1,8 @@
-from pixie.vm.effects.environment import run_with_state, default_env
+from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state
+from pixie.vm.effects.effect_transform import cps
 
-# from pixie.vm.compiler import compile, with_ns, NS_VAR
+from pixie.vm.compiler import compile_Ef
+from pixie.vm.ast import SyntaxThunk, Locals
 from pixie.vm.reader import StringReader, read_Ef #read, eof, PromptReader, MetaDataReader
 # from pixie.vm.interpreter import interpret
 
@@ -189,14 +191,25 @@ class ReadFn(NativeFn):
     _immutable_fields_ = ["_rdr"]
     def __init__(self, rdr):
         self._rdr = rdr
+    @cps
     def invoke_Ef(self, args):
-        return read_Ef(self._rdr, True)
+        rdr = self._rdr
+        read = read_Ef(rdr, True)
+        return compile_Ef(read)
 
-def entry_point(args):
 
+def entry_point(args=None):
+
+    if args is None:
+        args =["", """((fn* self [x]
+                                                                  (if (-num-eq x 10)
+                                                                    x
+                                                                    (self (-add 1 x))))
+                                                                0)"""]
     rdr = StringReader(unicode(args[1]))
-    result = run_with_state(ReadFn(rdr), default_env)
-    print result.val().type()._name
+    ast = run_with_state(ReadFn(rdr), default_env)
+    result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+    print result
 
     # interactive = True
     # script_args = []
@@ -330,4 +343,5 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    entry_point(sys.argv)
+    #entry_point(sys.argv)
+    run_debug(sys.argv)
