@@ -65,7 +65,7 @@ class Do(Syntax):
                 ast.interpret_Ef(env)
                 idx += 1
             else:
-                return ast.interpret_Ef(env)
+                return syntax_thunk_Ef(ast, env)
 
 class PixieFunction(Object):
     _type = Type(u"pixie.stdlib.PixieFunction")
@@ -143,9 +143,15 @@ class If(Syntax):
     def interpret_Ef(self, env):
         result = self._w_test.interpret_Ef(env)
         if not (result is false or result is nil):
-            return self._w_then.interpret_Ef(env)
+            ast = self._w_then
+
         else:
-            return self._w_else.interpret_Ef(env)
+            ast = self._w_else
+
+        return syntax_thunk_Ef(ast, env)
+
+def syntax_thunk_Ef(ast, env):
+    return SyntaxThunk(ast, env)
 
 class SyntaxThunk(Thunk):
     def __init__(self, ast, locals):
