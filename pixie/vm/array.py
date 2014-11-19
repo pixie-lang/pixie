@@ -61,11 +61,11 @@ def reduce(self, f, init):
 @extend(proto._seq, Array)
 def _seq(self):
     assert isinstance(self, Array)
-    return ArraySeq(0, self._list)
+    return ArraySeq(0, self._list[:])
 
 class ArraySeq(object.Object):
     _type = object.Type(u"pixie.stdlib.ArraySeq")
-    __immutable_fields__ = ["_idx"]
+    __immutable_fields__ = ["_idx", "_array[*]"]
 
     def __init__(self, idx, array):
         self._idx = idx
