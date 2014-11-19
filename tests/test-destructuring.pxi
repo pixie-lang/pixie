@@ -46,4 +46,7 @@
 
 (t/deftest test-let-map-defaults
   (t/assert= (let [{a :a :or {a 42}} {:a 1}] a) 1)
-  (t/assert= (let [{a :a :or {a 42}} {}] a) 42))
+  (t/assert= (let [{a :a :or {a 42}} {}] a) 42)
+
+  (t/assert= (let [{a :a :or {a 42}} {:a nil}] a) nil)
+  (t/assert= (let [{a :a :or {a 42}} {:a false}] a) false))

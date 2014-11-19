@@ -968,7 +968,8 @@
       res)))
 
 (defn destructure-map [binding-map expr]
-  (let [res
+  (let [defaults (or (:or binding-map) {})
+        res
         (loop [bindings (seq binding-map)
                res []]
           (if bindings
@@ -977,13 +978,10 @@
               (if (contains? #{:or :as :keys} binding)
                 (recur (next bindings) res)
                 (recur (next bindings)
-                       (reduce conj res (destructure binding `(get ~expr ~binding-key))))))
+                       (reduce conj res (destructure binding `(get ~expr ~binding-key ~(get defaults binding)))))))
             res))
         expand-with (fn [convert] #(vector % `(get ~expr ~(convert %))))
         res (if (contains? binding-map :keys) (transduce (map (expand-with (comp keyword name))) concat res (get binding-map :keys)) res)
-        res (if (contains? binding-map :or)
-              (transduce (map #(vector (key %) `(or ~(key %) ~(val %)))) concat res (get binding-map :or))
-              res)
         res (if (contains? binding-map :as)
               (reduce conj res [(get binding-map :as) expr])
               res)]
