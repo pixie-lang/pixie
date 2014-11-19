@@ -997,6 +997,11 @@
         `(let* ~destructured-bindings
                ~@body)))
 
+(extend -nth ISeq (fn [s n]
+                    (if (and (pos? n) s)
+                      (recur (next s) (dec n))
+                      (first s))))
+
 (defn abs [x]
   (if (< x 0)
     (* -1 x)

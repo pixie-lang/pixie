@@ -29,3 +29,8 @@
   (t/assert= (let [[[x [y]] z & rest] [[1 [2 3]] 4 5]]
                [x y z rest])
              [1 2 4 '(5)]))
+
+(t/deftest test-let-vector-rest
+  (t/assert= (let [[x y & [z & rest]] [1 2 3 4 5]]
+               [x y z rest])
+             [1 2 3 '(4 5)]))
