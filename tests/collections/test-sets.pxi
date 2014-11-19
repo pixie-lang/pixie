@@ -4,6 +4,21 @@
 (t/deftest test-count
   (t/assert= (count (set [])) 0)
   (t/assert= (count (set [1 2 3])) 3)
+  (t/assert= (count (set [:foo :foo
+                          :bar :bar
+                          'foo 'foo
+                          'bar 'bar
+                          "foo" "foo"
+                          "bar" "bar"
+                          true true
+                          false false
+                          [:vec] [:vec]
+                          ['another :vec] ['another :vec]
+                          #{'set} #{'set}
+                          #{:another 'set} #{:another 'set}
+                          {:hash :map :number 1} {:hash :map :number 1}
+                          {:hash :map :number 2} {:hash :map :number 2}]))
+                          14)
   (t/assert= (count (set [1 1 2 1])) 2))
     
 (t/deftest test-contains

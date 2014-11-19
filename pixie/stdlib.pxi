@@ -191,6 +191,19 @@
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
 
+(extend -hash PersistentHashSet
+  (fn [v]
+    (transduce ordered-hash-reducing-fn v)))
+
+(extend -hash PersistentHash
+  (fn [v]
+    (transduce ordered-hash-reducing-fn v)))
+
+(extend -hash Bool
+  (fn [v]
+    (if v
+      1111111
+      3333333)))
 
 (def stacklet->lazy-seq
   (fn [k]
