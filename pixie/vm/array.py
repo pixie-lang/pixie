@@ -58,6 +58,49 @@ def reduce(self, f, init):
         return self.reduce_large(f, init)
     return self.reduce_small(f, init)
 
+@extend(proto._seq, Array)
+def _seq(self):
+    assert isinstance(self, Array)
+    return ArraySeq(0, self._list)
+
+class ArraySeq(object.Object):
+    _type = object.Type(u"pixie.stdlib.ArraySeq")
+    __immutable_fields__ = ["_idx"]
+
+    def __init__(self, idx, array):
+        self._idx = idx
+        self._array = array
+
+    def first(self):
+        if self._idx < len(self._array):
+            return self._array[self._idx]
+        else:
+            return nil
+
+    def next(self):
+        if self._idx < len(self._array):
+            return ArraySeq(self._idx + 1, self._array)
+        else:
+            return nil
+
+    def type(self):
+        return self._type
+
+@extend(proto._first, ArraySeq)
+def _first(self):
+    assert isinstance(self, ArraySeq)
+    return self.first()
+
+@extend(proto._next, ArraySeq)
+def _next(self):
+    assert isinstance(self, ArraySeq)
+    return self.next()
+
+@extend(proto._seq, ArraySeq)
+def _seq(self):
+    assert isinstance(self, ArraySeq)
+    return self
+
 def array(lst):
     assert isinstance(lst, list)
     return Array(lst)

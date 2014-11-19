@@ -13,7 +13,13 @@
 
 (def program-arguments [])
 
+(def fn (fn* [& args]
+             (cons 'fn* args)))
+(set-macro! fn)
 
+(def let (fn* [& args]
+              (cons 'let* args)))
+(set-macro! let)
 
 (def conj (fn conj
            ([] [])

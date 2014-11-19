@@ -748,14 +748,14 @@ def compile_yield(form, ctx):
     ctx.bytecode.append(code.YIELD)
 
 
-builtins = {u"fn": compile_fn,
+builtins = {u"fn*": compile_fn,
             u"if": compile_if,
             u"platform=": compile_platform_eq,
             u"def": compile_def,
             u"do": compile_do,
             u"quote": compile_quote,
             u"recur": compile_recur,
-            u"let": compile_let,
+            u"let*": compile_let,
             u"loop": compile_loop,
             u"comment": compile_comment,
             u"var": compile_var,
