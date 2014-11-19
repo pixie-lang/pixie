@@ -5,7 +5,7 @@ from pixie.vm.primitives import nil, true, false
 import pixie.vm.stdlib as proto
 import pixie.vm.numbers as numbers
 import pixie.vm.util as util
-from rpython.rlib.rarithmetic import intmask
+from rpython.rlib.rarithmetic import intmask, r_uint
 
 class String(Object):
     _type = Type(u"pixie.stdlib.String")
@@ -84,6 +84,11 @@ def _eq(self, obj):
     if not isinstance(obj, Character):
         return false
     return true if self.char_val() == obj.char_val() else false
+
+@extend(proto._hash, Character)
+def _hash(self):
+    return rt.wrap(intmask(util.hash_int(r_uint(self.char_val()))))
+
 
 @extend(proto._name, String)
 def _name(self):
