@@ -78,10 +78,17 @@ class ArraySeq(object.Object):
             return nil
 
     def next(self):
-        if self._idx < len(self._array):
+        if self._idx < len(self._array) - 1:
             return ArraySeq(self._idx + 1, self._array)
         else:
             return nil
+
+    def reduce(self, f, init):
+        for x in range(self._idx, len(self._array)):
+            if rt.reduced_QMARK_(init):
+                return rt.deref(init)
+            init = f.invoke([init, self._array[x]])
+        return init
 
     def type(self):
         return self._type
@@ -100,6 +107,11 @@ def _next(self):
 def _seq(self):
     assert isinstance(self, ArraySeq)
     return self
+
+@extend(proto._reduce, ArraySeq)
+def _reduce(self, f, init):
+    assert isinstance(self, ArraySeq)
+    return self.reduce(f, init)
 
 def array(lst):
     assert isinstance(lst, list)
