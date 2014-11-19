@@ -34,3 +34,16 @@
   (t/assert= (let [[x y & [z & rest]] [1 2 3 4 5]]
                [x y z rest])
              [1 2 3 '(4 5)]))
+
+(t/deftest test-let-map
+  (t/assert= (let [{a :a, b :b, {c :c :as s} :d :as m} {:a 1, :b 2, :d {:c 3}}]
+               [a b c s m])
+             [1 2 3 {:c 3} {:a 1, :b 2, :d {:c 3}}])
+
+  (t/assert= (let [{:keys [a b c] :as m} {:a 1, :b 2, :c 3, :d 4}]
+               [a b c (:d m)])
+             [1 2 3 4]))
+
+(t/deftest test-let-map-defaults
+  (t/assert= (let [{a :a :or {a 42}} {:a 1}] a) 1)
+  (t/assert= (let [{a :a :or {a 42}} {}] a) 42))
