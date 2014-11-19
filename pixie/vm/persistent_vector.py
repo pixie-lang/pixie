@@ -174,6 +174,7 @@ def copy_array(arr):
     idx = 0
     while idx < len(arr):
         new_arr[idx] = arr[idx]
+        idx += 1
 
     return new_arr
 
@@ -183,6 +184,7 @@ def clone_append(arr, val):
     idx = 0
     while idx < len(arr):
         new_arr[idx] = arr[idx]
+        idx += 1
 
     new_arr[len(arr)] = val
 
