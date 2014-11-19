@@ -46,7 +46,44 @@ def compile_if_Ef(form):
 
     return If(test_comp, then_comp, else_comp)
 
-_builtins = {u"if": compile_if_Ef}
+@cps
+def compile_fn_Ef(form):
+    form = rt.next_Ef(form)
+    name = rt.first_Ef(form)
+    form = rt.next_Ef(form)
+    args = rt.first_Ef(form)
+    body = rt.next_Ef(form)
+
+    name_kw = keyword(name.name())
+    acc = EMPTY_VECTOR
+    idx = 0
+    while idx < args.count():
+        arg = args.nth(idx)
+        acc = acc.conj(keyword(arg.name()))
+        idx += 1
+
+    body_comp = compile_implicit_do_Ef(body)
+
+    return FnLiteral(PixieFunction(name_kw, acc, body_comp))
+
+@cps
+def compile_implicit_do_Ef(body):
+    acc = EMPTY_VECTOR
+    while body is not nil:
+        arg = rt.first_Ef(body)
+        result = compile_itm_Ef(arg)
+        acc = acc.conj(result)
+        body = rt.next_Ef(body)
+
+    if acc.count() == 1:
+        return acc.nth(0)
+    else:
+        return Do(acc)
+
+_builtins = {u"if": compile_if_Ef,
+             u"fn*": compile_fn_Ef}
+
+
 
 @cps
 def compile_cons_Ef(form):

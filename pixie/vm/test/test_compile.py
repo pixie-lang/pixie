@@ -5,7 +5,7 @@ from pixie.vm.effects.effects import Answer
 from pixie.vm.numbers import Integer
 from pixie.vm.string import String
 from pixie.vm.effects.effect_transform import cps
-from pixie.vm.ast import SyntaxThunk
+from pixie.vm.ast import SyntaxThunk, Locals
 from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state, _builtin_defs
 
 import unittest
@@ -22,7 +22,7 @@ class TestCompilation(unittest.TestCase):
     def test_compile_integer(self):
 
         ast = run_with_state(read_and_compile, default_env, "1")
-        result = run_thunk_with_state(SyntaxThunk(ast.val(), None), default_env)
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
 
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), Integer)
@@ -31,7 +31,7 @@ class TestCompilation(unittest.TestCase):
     def test_compile_call_global(self):
 
         ast = run_with_state(read_and_compile, default_env, "(-str 1)")
-        result = run_thunk_with_state(SyntaxThunk(ast.val(), None), default_env)
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
 
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), String)
@@ -41,14 +41,31 @@ class TestCompilation(unittest.TestCase):
     def test_compile_if(self):
 
         ast = run_with_state(read_and_compile, default_env, "(if true 1 2)")
-        result = run_thunk_with_state(SyntaxThunk(ast.val(), None), default_env)
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
 
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 1)
 
         ast = run_with_state(read_and_compile, default_env, "(if false 1 2)")
-        result = run_thunk_with_state(SyntaxThunk(ast.val(), None), default_env)
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 2)
+
+    def test_function(self):
+
+        ast = run_with_state(read_and_compile, default_env, "((fn* foo [x] (if x 1 2)) true)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 1)
+
+
+        ast = run_with_state(read_and_compile, default_env, "((fn* foo [x] (if x 1 2)) false)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
 
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), Integer)
