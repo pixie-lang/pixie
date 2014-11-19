@@ -32,6 +32,14 @@ exceptions, re-running a step in the interpreter, even saving the interpreter's 
 8) Deep generators. It's possible to call `yield` with this approach deep inside collection code. In addition `yield` can be used
 as inversion of control for Transducers.
 
+### What is a immutable interpreter?
+Most bytecode interpreters are implemented via mutable state. They often mirror a virtual CPU that has a stack, a stack pointer, an instruction pointer, and perhaps a hashmap of locals. As the program is interpreted, these values are mutated. Each execution of a bytecode advances the instruction pointer, pushing an item to the stack increments the stack pointer, etc. But imagine if all this was immutable, if executing a bytecode created a new instance of the interpreter. What if local maps were implemented via persistent hash maps?
+
+If this could be accomplished, then it would be possible to run an instruction with the state of the interpreter, and then if desired, run it again producing the same results. That is to say, calling `interpret(state)` with the same state over and over would always produce the same value. 
+
+It turns out that this approach is not quite optimal, as having an immutable stack may require splicing stack, copying large sections of the stack, etc. Instead we take the approach of an AST interpreter. The code is represented as immutable trees of structs, each representing an operation. To each of these AST nodes we pass an immutable map of locals. Thus, a let binding becomes as simple as `interpret(self._child, locals.assoc(name, interpret(self._binding, locals)`. Locals are immutable thus we maintain proper scoping.
+
+
 ### Approach
 
 In this approach (inspired by eclj https://github.com/brandonbloom/eclj/blob/master/src/eclj/interpret/cps.clj) we (ab)use
