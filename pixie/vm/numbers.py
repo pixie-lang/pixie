@@ -1,6 +1,7 @@
 from pixie.vm.effects.effects import Object, Type
 from pixie.vm.primitives import nil, true, false
-from pixie.vm.code import extend
+from pixie.vm.keyword import keyword
+from pixie.vm.code import extend, extend_builtin, add_builtin, DoublePolymorphicFn, as_global
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
@@ -82,54 +83,55 @@ class Ratio(Number):
     def type(self):
         return Ratio._type
 
-# IMath = as_var("IMath")(Protocol(u"IMath"))
-# _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))
-# _sub = as_var("-sub")(DoublePolymorphicFn(u"-sub", IMath))
-# _mul = as_var("-mul")(DoublePolymorphicFn(u"-mul", IMath))
-# _div = as_var("-div")(DoublePolymorphicFn(u"-div", IMath))
-# _quot = as_var("-quot")(DoublePolymorphicFn(u"-quot", IMath))
-# _rem = as_var("-rem")(DoublePolymorphicFn(u"-rem", IMath))
-# _lt = as_var("-lt")(DoublePolymorphicFn(u"-lt", IMath))
-# _gt = as_var("-gt")(DoublePolymorphicFn(u"-gt", IMath))
-# _lte = as_var("-lte")(DoublePolymorphicFn(u"-lte", IMath))
-# _gte = as_var("-gte")(DoublePolymorphicFn(u"-gte", IMath))
-# _num_eq = as_var("-num-eq")(DoublePolymorphicFn(u"-num-eq", IMath))
-# _num_eq.set_default_fn(wrap_fn(lambda a, b: false))
-#
-# as_var("MAX-NUMBER")(Integer(100000)) # TODO: set this to a real max number
-#
-#
-# num_op_template = """@extend({pfn}, {ty1}._type, {ty2}._type)
-# def {pfn}_{ty1}_{ty2}(a, b):
-#     assert isinstance(a, {ty1}) and isinstance(b, {ty2})
-#     return {wrap_start}a.{conv1}() {op} b.{conv2}(){wrap_end}
-# """
-#
-# def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap_end = ")"):
-#     tp = num_op_template.format(pfn=pfn, ty1=ty1.__name__, ty2=ty2.__name__,
-#                                 conv1=conv1, op=op, conv2=conv2,
-#                                 wrap_start=wrap_start, wrap_end=wrap_end)
-#     exec tp
-#
-# extend_num_op("_quot", Integer, Integer, "int_val", "/", "int_val")
-# extend_num_op("_rem", Integer, Integer, "int_val", "%", "int_val")
-#
-# def define_num_ops():
-#     # maybe define get_val() instead of using tuples?
-#     num_classes = [(Integer, "int_val"), (Float, "float_val")]
-#     for (c1, conv1) in num_classes:
-#         for (c2, conv2) in num_classes:
-#             for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
-#                 if op == "_div" and c1 == Integer and c2 == Integer:
-#                     continue
-#                 extend_num_op(op, c1, c2, conv1, sym, conv2)
-#             extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
-#             extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
-#             for (op, sym) in [("_num_eq", "=="), ("_lt", "<"), ("_gt", ">"), ("_lte", "<="), ("_gte", ">=")]:
-#                 extend_num_op(op, c1, c2, conv1, sym, conv2,
-#                               wrap_start = "true if ", wrap_end = " else false")
-#
-# define_num_ops()
+as_global("pixie.stdlib", "-add")(DoublePolymorphicFn(keyword("pixie.stdlib.-add")))
+as_global("pixie.stdlib", "-sub")(DoublePolymorphicFn(keyword("pixie.stdlib.-sub")))
+as_global("pixie.stdlib", "-mul")(DoublePolymorphicFn(keyword("pixie.stdlib.-mul")))
+as_global("pixie.stdlib", "-div")(DoublePolymorphicFn(keyword("pixie.stdlib.-div")))
+as_global("pixie.stdlib", "-quot")(DoublePolymorphicFn(keyword("pixie.stdlib.-quot")))
+as_global("pixie.stdlib", "-rem")(DoublePolymorphicFn(keyword("pixie.stdlib.-rem")))
+as_global("pixie.stdlib", "-lt")(DoublePolymorphicFn(keyword("pixie.stdlib.-lt")))
+as_global("pixie.stdlib", "-gt")(DoublePolymorphicFn(keyword("pixie.stdlib.-gt")))
+as_global("pixie.stdlib", "-lte")(DoublePolymorphicFn(keyword("pixie.stdlib.-lte")))
+as_global("pixie.stdlib", "-gte")(DoublePolymorphicFn(keyword("pixie.stdlib.-gte")))
+as_global("pixie.stdlib", "-num-eq")(DoublePolymorphicFn(keyword("pixie.stdlib.-num-eq")))
+
+
+#_num_eq.set_default_fn(wrap_fn(lambda a, b: false))
+
+#as_var("MAX-NUMBER")(Integer(100000)) TODO: set this to a real max number
+
+
+num_op_template = """@extend(\"pixie.stdlib.{pfn}\", {ty1}._type, {ty2}._type)
+def _(a, b):
+    return {wrap_start}a.{conv1}() {op} b.{conv2}(){wrap_end}
+"""
+
+def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap_end = ")"):
+    tp = num_op_template.format(pfn=pfn, ty1=ty1.__name__, ty2=ty2.__name__,
+                                conv1=conv1, op=op, conv2=conv2,
+                                wrap_start=wrap_start, wrap_end=wrap_end)
+    exec tp
+
+extend_num_op("-quot", Integer, Integer, "int_val", "/", "int_val")
+extend_num_op("-rem", Integer, Integer, "int_val", "%", "int_val")
+
+
+def define_num_ops():
+    #maybe define get_val() instead of using tuples?
+    num_classes = [(Integer, "int_val"), (Float, "float_val")]
+    for (c1, conv1) in num_classes:
+        for (c2, conv2) in num_classes:
+            for (op, sym) in [("-add", "+"), ("-sub", "-"), ("-mul", "*"), ("-div", "/")]:
+                if op == "_div" and c1 == Integer and c2 == Integer:
+                    continue
+                extend_num_op(op, c1, c2, conv1, sym, conv2)
+            extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
+            extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
+            for (op, sym) in [("-num-eq", "=="), ("-lt", "<"), ("-gt", ">"), ("-lte", "<="), ("-gte", ">=")]:
+                extend_num_op(op, c1, c2, conv1, sym, conv2,
+                              wrap_start = "true if ", wrap_end = " else false")
+
+define_num_ops()
 #
 # bigint_ops_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
 # def _{pfn}_{ty1}_{ty2}(a, b):

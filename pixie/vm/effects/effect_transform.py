@@ -4,6 +4,9 @@ import dis as dis
 import types
 from effects import *
 
+import sys
+is_pypy = '__pypy__' in sys.builtin_module_names
+
 
 iname = 0
 SELF_NAME = "__SELF__"
@@ -135,15 +138,15 @@ def cps(f):
             locals.add(arg)
 
         # PyPy creates this bytecode, convert it so we can translate easier
-        if nm == LOOKUP_METHOD:
+        if is_pypy and nm == LOOKUP_METHOD:
             code[0] = (LOAD_ATTR, arg)
 
         # PyPy creates this bytecode, convert it so we can translate easier
-        if nm == JUMP_IF_NOT_DEBUG:
+        if is_pypy and nm == JUMP_IF_NOT_DEBUG:
             code[0] = (NOP, arg)
 
         # Convert this as well
-        if nm == CALL_METHOD:
+        if is_pypy and nm == CALL_METHOD:
             code[0] = (CALL_FUNCTION, arg)
 
         # Not needed if we don't allow continue or break
@@ -162,7 +165,7 @@ def cps(f):
             raise AssertionError("Can't use continue inside a CPS function")
 
         # Now we come to the good part
-        if nm == CALL_METHOD or nm == CALL_FUNCTION:
+        if (is_pypy and nm == CALL_METHOD) or nm == CALL_FUNCTION:
         #if nm == CALL_FUNCTION:
             next_op, _ = code[1]
 

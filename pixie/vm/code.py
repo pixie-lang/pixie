@@ -3,7 +3,8 @@ import pixie.vm.object as object
 from pixie.vm.effects.effect_transform import cps
 
 from pixie.vm.effects.effects import Object, Type, raise_Ef, ExceptionEffect
-from pixie.vm.effects.environment import FindPolymorphicOverride, extend_builtin, extend_builtin2, add_builtin
+from pixie.vm.effects.environment import FindPolymorphicOverride, extend_builtin, extend_builtin2, add_builtin, \
+                                         FindDoublePolymorphicOverride
 
 def munge(s):
      return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
@@ -112,6 +113,31 @@ class PolymorphicFn(Object):
 
         tp = args.get_arg(0).type()
         eff = FindPolymorphicOverride(self._w_name, tp)
+        result = raise_Ef(eff)
+
+        if result is None:
+            from pixie.vm.keyword import keyword
+
+            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"))
+            raise_Ef(eff)
+
+        return result.invoke_Ef(args)
+
+class DoublePolymorphicFn(Object):
+    _type = Type(u"pixie.stdlib.DoublePolymorphicFn")
+
+    def __init__(self, name):
+        self._w_name = name
+
+    @cps
+    def invoke_Ef(self, args):
+        if args.arg_count() <= 1:
+            pass
+            # TODO throw exception effect
+
+        tp1 = args.get_arg(0).type()
+        tp2 = args.get_arg(1).type()
+        eff = FindDoublePolymorphicOverride(self._w_name, tp1, tp2)
         result = raise_Ef(eff)
 
         if result is None:

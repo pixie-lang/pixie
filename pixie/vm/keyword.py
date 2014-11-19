@@ -1,5 +1,6 @@
 from pixie.vm.effects.effects import Object, Type
 from pixie.vm.primitives import nil
+from rpython.rlib.objectmodel import specialize
 
 
 class Keyword(Object):
@@ -49,8 +50,9 @@ class KeywordCache(object):
 
 _kw_cache = KeywordCache()
 
+@specialize.argtype(0)
 def keyword(nm):
-    return _kw_cache.intern(nm)
+    return _kw_cache.intern(nm if isinstance(nm, unicode) else unicode(nm))
 
 #
 # @extend(proto._name, Keyword)

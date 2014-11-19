@@ -1,7 +1,8 @@
 script:
   - ./checkout-externals
-  - ./make-with-jit
-  - make run_built_tests
+#  - ./make-with-jit
+#  - make run_built_tests
+  - make run_python_tests
 
 before_install:
   - sudo apt-add-repository ppa:linuxjedi/ppa -y
