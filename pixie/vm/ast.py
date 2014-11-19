@@ -1,6 +1,6 @@
 from pixie.vm.effects.effects import Object, Type, Answer, Thunk, ArgList, raise_Ef
 from pixie.vm.effects.effect_transform import cps
-from pixie.vm.effects.environment import Resolve
+from pixie.vm.effects.environment import Resolve, resolve_Ef
 from pixie.vm.primitives import true, false, nil
 import rpython.rlib.jit as jit
 
@@ -123,10 +123,10 @@ class Lookup(Syntax):
             if local is not None:
                 return local
 
-        eff = Resolve(self._w_ns, self._w_nm)
-        result = None
-        result = raise_Ef(eff)
-        return result
+        ns = self._w_ns
+        nm = self._w_nm
+        return resolve_Ef(ns, nm)
+
 
 class If(Syntax):
     _type = Type(u"pixie.ast.Lookup")
@@ -155,12 +155,16 @@ def syntax_thunk_Ef(ast, env):
     return SyntaxThunk(ast, env)
 
 class SyntaxThunk(Thunk):
+    _immutable_ = True
     def __init__(self, ast, locals):
         self._w_ast = ast
         self._w_locals = locals
 
     def execute_thunk(self):
         return self._w_ast.interpret_Ef(self._w_locals)
+
+    def get_loc(self):
+        return (self._w_ast, self._w_locals)
 
 
 NOT_FOUND = -1
@@ -189,22 +193,6 @@ class Locals(Object):
         if idx == NOT_FOUND:
             return None
         return self._vals[idx]
-
-    @cps
-    def lookup_Ef(self, nm):
-        result = self.lookup_local(nm)
-        if result is not None:
-            return result
-
-
-        op = Resolve(nm)
-        resolved = raise_Ef(op)
-
-        if resolved:
-            return resolved
-
-
-        raise NotImplementedError()
 
     @jit.unroll_safe
     def with_local(self, name, val):

@@ -171,13 +171,14 @@ def cps(f):
 
 
             # is the function we're calling an effect?
+            oarg = arg
             op, arg = code[- (arg + 1)]
             if (op == LOAD_ATTR or op == LOAD_GLOBAL or op == LOAD_FAST) and arg.endswith("_Ef"):
                 final_fn = raise_Ef if arg == "raise_Ef" else handle
 
                 # If the next opcode is a return, we can tailcall by simply returning the result directly, except
                 # for calls to raise, those take a continuation, so we can't tailcall those
-                if next_op == RETURN_VALUE and next_op != "raise_Ef":
+                if next_op == RETURN_VALUE:
 
                     code.next().next()
                     continue
@@ -186,6 +187,7 @@ def cps(f):
                 # are we calling raise_?
                 if arg == "raise_Ef":
                     code[0] = (NOP, None)
+                    code[- (oarg + 1)] = (NOP, None)
 
                 code.next()
 
@@ -220,13 +222,14 @@ def cps(f):
 
                 # Load the retvalue
                 code.insert(lbl, None)
-                code.insert(LOAD_FAST, RET_NAME)
 
                 # Load locals
                 for x in locals:
                     code.insert(LOAD_FAST, BUILDING_NAME)
                     code.insert(LOAD_ATTR, "_K_" + str(iname) + "_" + x)
                     code.insert(STORE_FAST, x)
+
+                code.insert(LOAD_FAST, RET_NAME)
 
                 # We've just inserted a state transition in the middle of this function
 

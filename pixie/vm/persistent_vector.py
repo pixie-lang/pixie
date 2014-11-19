@@ -13,6 +13,7 @@ import pixie.vm.rt as rt
 
 class Node(Object):
     _type = Type(u"pixie.stdlib.PersistentVectorNode")
+    _immutable_fields_ = ["_edit", "_array[*]"]
     def type(self):
         return Node._type
 
@@ -29,6 +30,7 @@ EMPTY_NODE = Node(None)
 
 class PersistentVector(Object):
     _type = Type(u"pixie.stdlib.PersistentVector")
+    _immutable_fields_ = ["_tail[*]", "_cnt", "_meta", "_shift", "_root"]
 
     def type(self):
         return PersistentVector._type
@@ -81,8 +83,7 @@ class PersistentVector(Object):
         i = self._cnt
 
         if self._cnt - self.tailoff() < 32:
-            new_tail = self._tail[:]
-            new_tail.append(val)
+            new_tail = clone_append(self._tail, val)
             return PersistentVector(self._meta, self._cnt + 1, self._shift, self._root, new_tail)
 
         tail_node = Node(self._root._edit, self._tail)
@@ -101,7 +102,7 @@ class PersistentVector(Object):
 
     def push_tail(self, level, parent, tail_node):
         subidx = ((self._cnt - 1) >> level) & 0x01f
-        ret = Node(parent._edit, parent.array()[:])
+        ret = Node(parent._edit, copy_array(parent.array()))
         if (level == 5):
             node_to_insert = tail_node
         else:
@@ -148,7 +149,7 @@ class PersistentVector(Object):
             if new_child is None or sub_idx == 0:
                 return None
             else:
-                ret = Node(self._root._edit, node.array()[:])
+                ret = Node(self._root._edit, copy_array(node.array()))
                 ret.array()[sub_idx] = new_child
                 return ret
 
@@ -156,7 +157,7 @@ class PersistentVector(Object):
             return None
 
         else:
-            ret = Node(self._root._edit, node.array()[:])
+            ret = Node(self._root._edit, copy_array(node.array()))
             ret.array()[sub_idx] = None
             return ret
 
@@ -166,6 +167,27 @@ def new_path(edit, level, node):
     ret = Node(edit)
     ret.array()[0] = new_path(edit, level - 5, node)
     return ret
+
+def copy_array(arr):
+    new_arr = [None] * len(arr)
+
+    idx = 0
+    while idx < len(arr):
+        new_arr[idx] = arr[idx]
+
+    return new_arr
+
+def clone_append(arr, val):
+    new_arr = [None] * (len(arr) + 1)
+
+    idx = 0
+    while idx < len(arr):
+        new_arr[idx] = arr[idx]
+
+    new_arr[len(arr)] = val
+
+    return new_arr
+
 #
 # edited = u"edited"
 #
@@ -371,7 +393,7 @@ def list_copy(from_lst, from_loc, to_list, to_loc, count):
 @extend("pixie.stdlib.-count", PersistentVector)
 def _count(self):
     assert isinstance(self, PersistentVector)
-    return rt.wrap(intmask(self._cnt))
+    return rt.wrap(intmask(self.count()))
 
 @extend("pixie.stdlib.-nth", PersistentVector)
 def _nth(self, idx):

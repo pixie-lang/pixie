@@ -345,7 +345,7 @@ class KeywordReader(ReaderHandler):
         itm = read(rdr, True)
         affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
 
-        return keyword(itm._str)
+        return keyword(itm.str())
 
 class LiteralStringReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -740,10 +740,10 @@ def read_number_Ef(rdr, ch):
             acc.append_Ef(ch)
 
     joined = acc.to_str_Ef()
-    parsed = parse_number(joined._str)
+    parsed = parse_number(joined.str())
     if parsed is not None:
         return parsed
-    return Symbol(joined._str)
+    return Symbol(joined.str())
 
 @cps
 def read_symbol_Ef(rdr, ch):
@@ -760,7 +760,7 @@ def read_symbol_Ef(rdr, ch):
             acc.append_Ef(ch)
 
     result = acc.to_str_Ef()
-    sym_str = result._str
+    sym_str = result.str()
     if sym_str == u"true":
         return true
     if sym_str == u"false":

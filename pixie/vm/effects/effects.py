@@ -299,6 +299,7 @@ class ConstantValueContinuation(Continuation):
 
 
 class ExceptionEffect(Effect):
+    _immutable_ = True
     def __init__(self, kw, msg=None):
         self._w_kw = kw
         self._msg = msg

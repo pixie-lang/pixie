@@ -22,7 +22,7 @@ class String(Object):
 
 @extend("pixie.stdlib.-count", String)
 def _count(self):
-    return Integer(len(self._str))
+    return Integer(len(self.str()))
 
 
 @extend("pixie.stdlib.-str", String)
@@ -31,20 +31,20 @@ def _str(x):
 
 @extend("pixie.stdlib.-repr", String)
 def _repr(self):
-    return String(u"\"" + self._str + u"\"")
+    return String(u"\"" + self.str() + u"\"")
 
 @extend("pixie.stdlib.-nth", String)
 def _nth(self, idx):
     i = idx.int_val()
-    if 0 <= i < len(self._str):
-        return Character(ord(self._str[i]))
+    if 0 <= i < len(self.str()):
+        return Character(ord(self.str()[i]))
     raise IndexError()
 
 @extend("pixie.stdlib.-eq", String)
 def _eq(self, v):
     if not isinstance(v, String):
         return false
-    return true if self._str == v._str else false
+    return true if self.str() == v.str() else false
 
 
 class Character(Object):
@@ -110,4 +110,4 @@ def _namespace(_):
 
 @extend("pixie.stdlib.-hash", String)
 def _hash(self):
-    return rt.wrap(intmask(hash_unencoded_chars(self._str)))
+    return rt.wrap(intmask(hash_unencoded_chars(self.str())))

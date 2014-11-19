@@ -57,6 +57,7 @@ def compile_fn_Ef(form):
     name_kw = keyword(name.name())
     acc = EMPTY_VECTOR
     idx = 0
+    arg = None
     while idx < args.count():
         arg = args.nth(idx)
         acc = acc.conj(keyword(arg.name()))
@@ -94,7 +95,7 @@ def compile_cons_Ef(form):
         ns = fst.namespace()
         if ns == u"pixie.stdlib" or ns is None:
             name = fst.name()
-            builtin_Ef = _builtins.get(name)
+            builtin_Ef = _builtins.get(name, None)
             if builtin_Ef is not None:
                 return builtin_Ef(form)
 

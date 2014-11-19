@@ -1,4 +1,4 @@
-from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state
+from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state, make_default_env
 from pixie.vm.effects.effect_transform import cps
 
 from pixie.vm.compiler import compile_Ef
@@ -198,17 +198,19 @@ class ReadFn(NativeFn):
         return compile_Ef(read)
 
 
-def entry_point(args=None):
-
-    if args is None:
-        args =["", """((fn* self [x]
-                                                                  (if (-num-eq x 10)
-                                                                    x
-                                                                    (self (-add 1 x))))
-                                                                0)"""]
+def entry_point(args):
+    # args = None
+    # if args is None:
+    #     args =["", """((fn* self [x]
+    #                                                               (if (-num-eq x 10000)
+    #                                                                 x
+    #                                                                 (self (-add 1 x))))
+    #                                                             0)"""]
     rdr = StringReader(unicode(args[1]))
-    ast = run_with_state(ReadFn(rdr), default_env)
-    result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+    print "reading"
+    ast = run_with_state(ReadFn(rdr), make_default_env())
+    print "executing"
+    result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), make_default_env())
     print result
 
     # interactive = True

@@ -1,14 +1,22 @@
-from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, ExceptionEffect, OpaqueResource
+from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, ExceptionEffect, OpaqueResource, answer_k
 from pixie.vm.primitives import nil
-from rpython.rlib.jit import promote
+from rpython.rlib.jit import promote, JitDriver
+
+
+
+jitdriver = JitDriver(greens=["ast"], reds=["locals", "thunk", "globals"])
+
+
 
 class EnvironmentEffect(Effect):
+    _immutable_ = True
     """
     defines an effect that needs to interact with the global env
     """
     pass
 
 class Resolve(EnvironmentEffect):
+    _immutable_ = True
     def __init__(self, ns, nm):
         self._w_ns = ns
         self._w_nm = nm
@@ -25,7 +33,13 @@ class Resolve(EnvironmentEffect):
 
         return ContinuationThunk(self._k, promote(val))
 
+def resolve_Ef(ns, nm):
+    eff =  Resolve(ns, nm)
+    eff._k = answer_k
+    return eff
+
 class Declare(EnvironmentEffect):
+    _immutable_ = True
     def __init__(self, ns, nm, val):
         self._w_ns = ns
         self._w_nm = nm
@@ -45,6 +59,7 @@ class Declare(EnvironmentEffect):
         return ContinuationThunk(self._k, nil)
 
 class FindPolymorphicOverride(EnvironmentEffect):
+    _immutable_ = True
     def __init__(self, nm, tp):
         self._w_nm = nm
         self._w_tp = tp
@@ -60,6 +75,7 @@ class FindPolymorphicOverride(EnvironmentEffect):
         return ContinuationThunk(self._k, pfn.get(self._w_tp, None))
 
 class FindDoublePolymorphicOverride(EnvironmentEffect):
+    _immutable_ = True
     def __init__(self, nm, tp1, tp2):
         self._w_nm = nm
         self._w_tp1 = tp1
@@ -73,7 +89,7 @@ class FindDoublePolymorphicOverride(EnvironmentEffect):
         if pfn is None:
             return ContinuationThunk(self._k, promote(None))
 
-        tp1s = pfn.get(self._w_tp1)
+        tp1s = pfn.get(self._w_tp1, None)
 
         if tp1s is None:
             return ContinuationThunk(self._k, promote(None))
@@ -103,6 +119,9 @@ def run_with_state(fn, env, arg=None):
 def run_thunk_with_state(t, env):
     while True:
         if isinstance(t, Thunk):
+            (ast, locals) = t.get_loc()
+            if ast is not None:
+                jitdriver.jit_merge_point(ast=ast, globals=env, locals=locals, thunk=t)
             t = t.execute_thunk()
 
         elif isinstance(t, Answer):
@@ -129,6 +148,9 @@ _builtin_double_protos = {}
 
 
 default_env = Environment(_builtin_defs, _builtin_protos, _builtin_double_protos)
+
+def make_default_env():
+    return Environment(_builtin_defs, _builtin_protos, _builtin_double_protos)
 
 def add_builtin(ns, nm, val):
     """NOT_RPYTHON"""

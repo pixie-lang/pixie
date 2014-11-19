@@ -25,6 +25,9 @@ class PersistentList(Object):
     def meta(self):
         return self._meta
 
+    def count(self):
+        return self._cnt
+
     def with_meta(self, meta):
         return PersistentList(self._first, self._next, self._cnt, meta)
     
@@ -32,11 +35,11 @@ class PersistentList(Object):
 
 @extend("pixie.stdlib.-first", PersistentList)
 def _first(self):
-    return self._first
+    return self.first()
 
 @extend("pixie.stdlib.-next", PersistentList)
 def _next(self):
-    return self._next
+    return self.next()
 
 @extend("pixie.stdlib.-seq", PersistentList)
 def _seq(self):
@@ -44,11 +47,11 @@ def _seq(self):
 
 @extend("pixie.stdlib.-count", PersistentList)
 def _count(self):
-    return rt.wrap(intmask(self._cnt))
+    return rt.wrap(intmask(self.count()))
 
 @extend("pixie.stdlib.-conj", PersistentList)
 def _conj(self, itm):
-    return PersistentList(itm, self, self._cnt + 1, nil)
+    return PersistentList(itm, self, self.count() + 1, nil)
 
 @extend("pixie.stdlib.-conj", nil._type)
 def _conj(_, itm):

@@ -19,6 +19,7 @@ def wrap_fn(nm):
     kw_ns = keyword(unicode("pixie.stdlib"))
 
     class ResolveResult(Continuation):
+        _immutable_ = True
         def __init__(self, w_args):
             self._w_args = w_args
 
