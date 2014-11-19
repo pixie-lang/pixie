@@ -72,7 +72,7 @@ class FindPolymorphicOverride(EnvironmentEffect):
         if pfn is None:
             return ContinuationThunk(self._k, promote(None))
 
-        return ContinuationThunk(self._k, pfn.get(self._w_tp, None))
+        return ContinuationThunk(self._k, promote(pfn.get(self._w_tp, None)))
 
 class FindDoublePolymorphicOverride(EnvironmentEffect):
     _immutable_ = True
@@ -94,7 +94,7 @@ class FindDoublePolymorphicOverride(EnvironmentEffect):
         if tp1s is None:
             return ContinuationThunk(self._k, promote(None))
 
-        return ContinuationThunk(self._k, tp1s.get(self._w_tp2, None))
+        return ContinuationThunk(self._k, promote(tp1s.get(self._w_tp2, None)))
 
 class Environment(object):
     """

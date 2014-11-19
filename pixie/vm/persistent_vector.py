@@ -56,6 +56,7 @@ class PersistentVector(Object):
     def count(self):
         return self._cnt
 
+    @jit.unroll_safe
     def array_for(self, i):
         if 0 <= i < self._cnt:
             if i >= self.tailoff():
