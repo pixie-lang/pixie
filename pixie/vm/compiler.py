@@ -65,7 +65,7 @@ def compile_fn_Ef(form):
 
     body_comp = compile_implicit_do_Ef(body)
 
-    return FnLiteral(PixieFunction(name_kw, acc, body_comp))
+    return FnLiteral(PixieFunction(name_kw, acc.to_list(), body_comp))
 
 @cps
 def compile_implicit_do_Ef(body):
@@ -79,7 +79,7 @@ def compile_implicit_do_Ef(body):
     if acc.count() == 1:
         return acc.nth(0)
     else:
-        return Do(acc)
+        return Do(acc.to_list())
 
 _builtins = {u"if": compile_if_Ef,
              u"fn*": compile_fn_Ef}

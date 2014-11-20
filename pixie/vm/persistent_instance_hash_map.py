@@ -21,6 +21,7 @@ class Box(object):
 
 
 class PersistentInstanceHashMap(Object):
+    _immutable_fields_ = ["_cnt", "_root", "_meta"]
     _type = Type(u"pixie.stdlib.PersistentHashMap")
 
     def type(self):
@@ -111,6 +112,7 @@ def bitpos(hash, shift):
 
 
 class BitmapIndexedNode(INode):
+    _immutable_fields_ = ["_edit", "_bitmap", "_array[*]"]
 
     def __init__(self, edit,  bitmap, array):
         self._edit = edit
@@ -231,6 +233,7 @@ BitmapIndexedNode_EMPTY = BitmapIndexedNode(None, r_uint(0), [])
 
 
 class ArrayNode(INode):
+    _immutable_fields_ = ["_cnt", "_edit", "_array[*]"]
     def __init__(self, edit, cnt, array):
         self._cnt = cnt
         self._edit = edit
@@ -307,6 +310,7 @@ class ArrayNode(INode):
         return init
 
 class HashCollisionNode(INode):
+    _immutable_fields_ = ["_hash", "_edit", "_array"]
     def __init__(self, edit, hash, array):
         self._hash = hash
         self._edit = edit

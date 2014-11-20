@@ -3,6 +3,7 @@ from pixie.vm.effects.effect_transform import cps
 from pixie.vm.effects.environment import Resolve, resolve_Ef
 from pixie.vm.primitives import true, false, nil
 import rpython.rlib.jit as jit
+from rpython.rlib.rarithmetic import r_uint
 
 class Syntax(Object):
     def interpret_Ef(self, env):
@@ -10,7 +11,7 @@ class Syntax(Object):
 
 
 class Constant(Syntax):
-    _immutable_fields_ = ["_val"]
+    _immutable_fields_ = ["_w_val"]
     _type = Type(u"pixie.ast.Constant")
     def __init__(self, val):
         self._w_val = val
@@ -35,22 +36,22 @@ class Invoke(Syntax):
         arg_list = ArgList()
 
         fn = self._fn_and_args_w[0]
-        fn_resolved = fn.interpret_Ef(env)
+        fn_resolved = syntax_thunk_Ef(fn, env)
 
         idx = 1
         while idx < len(self._fn_and_args_w):
             arg = self._fn_and_args_w[idx]
-            arg_resolved = arg.interpret_Ef(env)
+            arg_resolved = syntax_thunk_Ef(arg, env)
             arg_list = arg_list.append(arg_resolved)
             idx += 1
 
         return fn_resolved.invoke_Ef(arg_list)
 
 class Do(Syntax):
-    _immutable_fields_ = ["_w_body"]
+    _immutable_fields_ = ["_body_w[*]"]
     _type = Type(u"pixie.ast.Do")
     def __init__(self, w_body):
-        self._w_body = w_body
+        self._body_w = w_body
 
     def type(self):
         return Do._type
@@ -60,8 +61,8 @@ class Do(Syntax):
         idx = 0
 
         while True:
-            ast = self._w_body.nth(idx)
-            if idx + 1 < self._w_body.count():
+            ast = self._body_w[idx]
+            if idx + 1 < len(self._body_w):
                 ast.interpret_Ef(env)
                 idx += 1
             else:
@@ -69,29 +70,30 @@ class Do(Syntax):
 
 class PixieFunction(Object):
     _type = Type(u"pixie.stdlib.PixieFunction")
+    _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env"]
 
     def __init__(self, name, args, body, env=None):
         self._w_name = name
-        self._w_args = args
+        self._args_w = args
         self._w_body = body
         self._env = env
 
     def with_env(self, env):
-        return PixieFunction(self._w_name, self._w_args, self._w_body, env)
+        return PixieFunction(self._w_name, self._args_w, self._w_body, env)
 
     @jit.unroll_safe
     def invoke_Ef(self, args):
         env = self._env
-        env = env.with_local(self._w_name, self)
+        env = env.with_local(jit.promote(self._w_name), self)
         for x in range(args.arg_count()):
-            env = env.with_local(self._w_args.nth(x), args.get_arg(x))
+            env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
 
         return SyntaxThunk(self._w_body, env)
 
 
 class FnLiteral(Object):
     _type = Type(u"pixie.stdlib.PixieFunction")
-
+    _immutable_fields_ = ["_w_fn"]
     def __init__(self, fn):
         self._w_fn = fn
 
@@ -142,7 +144,8 @@ class If(Syntax):
 
     @cps
     def interpret_Ef(self, env):
-        result = self._w_test.interpret_Ef(env)
+        ast = self._w_test
+        result = syntax_thunk_Ef(ast, env)
         if not (result is false or result is nil):
             ast = self._w_then
 
@@ -167,7 +170,7 @@ class SyntaxThunk(Thunk):
         return (self._w_ast, self._w_locals)
 
 
-NOT_FOUND = -1
+NOT_FOUND = r_uint(1024 * 1024)
 
 class Locals(Object):
     _immutable_fields_ = ["_names[*]", "_vals[*]"]
@@ -180,8 +183,8 @@ class Locals(Object):
 
     @jit.unroll_safe
     def name_idx(self, nm):
-        x = 0
-        while x < len(self._names):
+        x = r_uint(0)
+        while x < r_uint(len(self._names)):
             val = self._names[x]
             if nm is val:
                 return x

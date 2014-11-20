@@ -1,12 +1,17 @@
 from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, ExceptionEffect, OpaqueResource, answer_k
 from pixie.vm.primitives import nil, true
 from rpython.rlib.jit import promote, JitDriver
+import rpython.rlib.jit as jit
 from pixie.vm.keyword import keyword
 from pixie.vm.persistent_instance_hash_map import EMPTY as EMPTY_MAP
 
 
+def get_printable_location(ast):
+    return str(ast)
 
-jitdriver = JitDriver(greens=["ast"], reds=["locals", "thunk", "globals"])
+jitdriver = JitDriver(greens=["ast"], reds=["locals", "thunk", "globals"],
+                      #virtualizables=["locals"],
+                      get_printable_location=get_printable_location)
 
 
 
@@ -16,6 +21,10 @@ class EnvironmentEffect(Effect):
     defines an effect that needs to interact with the global env
     """
     pass
+
+@jit.elidable_promote()
+def resolve_in_env(env, ns, nm):
+    return env.get_in([DEF, ns, nm])
 
 class Resolve(EnvironmentEffect):
     _immutable_ = True
@@ -27,8 +36,8 @@ class Resolve(EnvironmentEffect):
         return Resolve(self._w_ns, self._w_nm)
 
     def execute_effect(self, env):
-        val = env.get_in([DEF, self._w_ns, self._w_nm])
-        return ContinuationThunk(self._k, promote(val)), env
+        val = resolve_in_env(env, self._w_ns, self._w_nm)
+        return ContinuationThunk(self._k, val), env
 
 def resolve_Ef(ns, nm):
     eff =  Resolve(ns, nm)
@@ -61,7 +70,7 @@ class FindPolymorphicOverride(EnvironmentEffect):
 
     def execute_effect(self, env):
         val = env.get_in([PROTOS, self._w_nm, self._w_tp], None)
-        return ContinuationThunk(self._k, promote(val)), env
+        return ContinuationThunk(self._k, val), env
 
 class FindDoublePolymorphicOverride(EnvironmentEffect):
     _immutable_ = True
