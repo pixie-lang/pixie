@@ -106,7 +106,7 @@ def compile_cons_Ef(form):
         acc = acc.conj(ast)
         form = rt.next_Ef(form)
 
-    return Invoke(acc)
+    return Invoke(acc.to_list())
 
 
 

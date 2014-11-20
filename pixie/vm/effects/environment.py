@@ -1,5 +1,5 @@
 from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, ExceptionEffect, OpaqueResource, answer_k
-from pixie.vm.primitives import nil
+from pixie.vm.primitives import nil, true
 from rpython.rlib.jit import promote, JitDriver
 from pixie.vm.keyword import keyword
 from pixie.vm.persistent_instance_hash_map import EMPTY as EMPTY_MAP
@@ -124,12 +124,12 @@ def run_thunk_with_state(t, env):
 DEF = keyword(u"def")
 PROTOS = keyword(u"protos")
 DOUBLE_PROTOS = keyword(u"double-protos")
-
+RUNNING = keyword(u"running?")
 
 default_env = EMPTY_MAP
 
 def make_default_env():
-    return default_env
+    return default_env.assoc(RUNNING, true)
 
 def add_builtin(ns, nm, val):
     """NOT_RPYTHON"""

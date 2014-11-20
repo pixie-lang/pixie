@@ -162,6 +162,16 @@ class PersistentVector(Object):
             ret.array()[sub_idx] = None
             return ret
 
+    def to_list(self):
+        lst = [None] * self._cnt
+
+        x = 0
+        while x < len(lst):
+            lst[x] = self.nth(x)
+            x += 1
+
+        return lst
+
 def new_path(edit, level, node):
     if level == 0:
         return node

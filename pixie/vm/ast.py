@@ -22,10 +22,10 @@ class Constant(Syntax):
         return Answer(self._w_val)
 
 class Invoke(Syntax):
-    _immutable_fields_ = ["_w_fn_and_args"]
+    _immutable_fields_ = ["_fn_and_args_w[*]"]
     _type = Type(u"pixie.ast.Invoke")
     def __init__(self, fn_and_args):
-        self._w_fn_and_args = fn_and_args
+        self._fn_and_args_w = fn_and_args
 
     def type(self):
         return Invoke._type
@@ -34,12 +34,12 @@ class Invoke(Syntax):
     def interpret_Ef(self, env):
         arg_list = ArgList()
 
-        fn = self._w_fn_and_args.nth(0)
+        fn = self._fn_and_args_w[0]
         fn_resolved = fn.interpret_Ef(env)
 
         idx = 1
-        while idx < self._w_fn_and_args.count():
-            arg = self._w_fn_and_args.nth(idx)
+        while idx < len(self._fn_and_args_w):
+            arg = self._fn_and_args_w[idx]
             arg_resolved = arg.interpret_Ef(env)
             arg_list = arg_list.append(arg_resolved)
             idx += 1
