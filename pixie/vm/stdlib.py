@@ -509,6 +509,11 @@ def set_macro(f):
     f.set_macro()
     return f
 
+@returns(bool)
+@as_var("macro?")
+def macro_QMARK_(f):
+    return true if isinstance(f, BaseCode) and f.is_macro() else false
+
 @returns(unicode)
 @as_var("name")
 def name(s):
