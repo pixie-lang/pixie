@@ -195,9 +195,11 @@
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
 
-(extend -hash PersistentHash
+(extend -hash PersistentHashMap
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+(extend -hash EmptyList (fn [v] 5555555))
 
 (extend -hash Bool
   (fn [v]
