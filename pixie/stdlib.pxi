@@ -1156,6 +1156,7 @@
                            (when s
                              (yield (first s))
                              (recur (next s))))))
+(extend -at-end? EmptyList (fn [_] true))
 
 (defn every? [pred coll]
   (cond
