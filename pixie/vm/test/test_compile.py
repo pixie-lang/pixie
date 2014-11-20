@@ -6,7 +6,7 @@ from pixie.vm.numbers import Integer
 from pixie.vm.string import String
 from pixie.vm.effects.effect_transform import cps
 from pixie.vm.ast import SyntaxThunk, Locals
-from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state, _builtin_defs
+from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state
 
 import unittest
 

@@ -105,7 +105,7 @@ class FnLiteral(Object):
 
 class Lookup(Syntax):
     _type = Type(u"pixie.ast.Lookup")
-    _immutable_fields_ = ["_w_ns", "_w_nm"]
+    _immutable_fields_ = ["_w_ns", "_w_nm", "_explicit_namespace"]
 
     def __init__(self, ns, nm, explicit_namespace = False):
         self._w_ns = ns

@@ -1,6 +1,8 @@
 from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, ExceptionEffect, OpaqueResource, answer_k
 from pixie.vm.primitives import nil
 from rpython.rlib.jit import promote, JitDriver
+from pixie.vm.keyword import keyword
+from pixie.vm.persistent_instance_hash_map import EMPTY as EMPTY_MAP
 
 
 
@@ -25,13 +27,8 @@ class Resolve(EnvironmentEffect):
         return Resolve(self._w_ns, self._w_nm)
 
     def execute_effect(self, env):
-        ns = env._namespaces.get(self._w_ns, None)
-        if ns is None:
-            return ContinuationThunk(self._k, promote(None))
-
-        val = ns.get(self._w_nm, None)
-
-        return ContinuationThunk(self._k, promote(val))
+        val = env.get_in([DEF, self._w_ns, self._w_nm])
+        return ContinuationThunk(self._k, promote(val)), env
 
 def resolve_Ef(ns, nm):
     eff =  Resolve(ns, nm)
@@ -49,14 +46,9 @@ class Declare(EnvironmentEffect):
         return Declare(self._w_ns, self._w_nm, self._w_val)
 
     def execute_effect(self, env):
-        ns = env._namespaces.get(self._w_ns, None)
-        if ns is None:
-            ns = {}
-            env._namespaces[self._w_ns] = ns
+        env = env.assoc_in([DEF, self._w_ns, self._w_nm], self._w_val)
 
-        ns[self._w_nm] = self._w_val
-
-        return ContinuationThunk(self._k, nil)
+        return ContinuationThunk(self._k, nil), env
 
 class FindPolymorphicOverride(EnvironmentEffect):
     _immutable_ = True
@@ -68,11 +60,8 @@ class FindPolymorphicOverride(EnvironmentEffect):
         return FindPolymorphicOverride(self._w_nm, self._w_tp)
 
     def execute_effect(self, env):
-        pfn = env._protos.get(self._w_nm, None)
-        if pfn is None:
-            return ContinuationThunk(self._k, promote(None))
-
-        return ContinuationThunk(self._k, promote(pfn.get(self._w_tp, None)))
+        val = env.get_in([PROTOS, self._w_nm, self._w_tp], None)
+        return ContinuationThunk(self._k, promote(val)), env
 
 class FindDoublePolymorphicOverride(EnvironmentEffect):
     _immutable_ = True
@@ -85,16 +74,8 @@ class FindDoublePolymorphicOverride(EnvironmentEffect):
         return FindDoublePolymorphicOverride(self._w_nm, self._w_tp1, self._w_tp2)
 
     def execute_effect(self, env):
-        pfn = env._double_protos.get(self._w_nm, None)
-        if pfn is None:
-            return ContinuationThunk(self._k, promote(None))
-
-        tp1s = pfn.get(self._w_tp1, None)
-
-        if tp1s is None:
-            return ContinuationThunk(self._k, promote(None))
-
-        return ContinuationThunk(self._k, promote(tp1s.get(self._w_tp2, None)))
+        val = env.get_in([DOUBLE_PROTOS, self._w_nm, self._w_tp1, self._w_tp2], env)
+        return ContinuationThunk(self._k, val), env
 
 class Environment(object):
     """
@@ -128,7 +109,7 @@ def run_thunk_with_state(t, env):
             return t
 
         elif isinstance(t, EnvironmentEffect):
-            t = t.execute_effect(env)
+            t, env = t.execute_effect(env)
 
         #elif isinstance(t, ExceptionEffect):
         #    assert False
@@ -140,52 +121,33 @@ def run_thunk_with_state(t, env):
         else:
             assert False, t
 
+DEF = keyword(u"def")
+PROTOS = keyword(u"protos")
+DOUBLE_PROTOS = keyword(u"double-protos")
 
 
-_builtin_defs = {}
-_builtin_protos = {}
-_builtin_double_protos = {}
-
-
-default_env = Environment(_builtin_defs, _builtin_protos, _builtin_double_protos)
+default_env = EMPTY_MAP
 
 def make_default_env():
-    return Environment(_builtin_defs, _builtin_protos, _builtin_double_protos)
+    return default_env
 
 def add_builtin(ns, nm, val):
     """NOT_RPYTHON"""
-    ns_d = _builtin_defs.get(ns, None)
-    if ns_d is None:
-        ns_d = {}
-        _builtin_defs[ns] = ns_d
-
-    ns_d[nm] = val
+    global default_env
+    default_env = default_env.assoc_in([DEF, ns, nm], val)
+    return val
 
 def extend_builtin(nm, tp, fn):
     """NOT_RPYTHON"""
-    extends = _builtin_protos.get(nm, None)
-    if extends is None:
-        extends = {}
-        _builtin_protos[nm] = extends
-
-    extends[tp] = fn
+    global default_env
+    default_env = default_env.assoc_in([PROTOS, nm, tp], fn)
 
     return fn
 
-def extend_builtin2(nm, tp, tp2, fn):
+def extend_builtin2(nm, tp1, tp2, fn):
     """NOT_RPYTHON"""
-    extends = _builtin_double_protos.get(nm, None)
-    if extends is None:
-        extends = {}
-        _builtin_double_protos[nm] = extends
-
-    extends2 = extends.get(tp, None)
-    if extends2 is None:
-        extends2 = {}
-        extends[tp] = extends2
-
-    extends2[tp2] = fn
-
+    global default_env
+    default_env = default_env.assoc_in([DOUBLE_PROTOS, nm, tp1, tp2], fn)
     return fn
 
 def as_var(ns, name=None):
@@ -212,6 +174,8 @@ def as_var(ns, name=None):
     return with_fn
 
 def link_builtins(frm, to):
+    global default_env
     from pixie.vm.keyword import keyword
     stdlib = keyword(u"pixie.stdlib")
-    _builtin_defs[stdlib][keyword(unicode(to))] = _builtin_defs[stdlib][keyword(unicode(frm))]
+    val = default_env.get_in([DEF, stdlib, keyword(frm)])
+    default_env = default_env.assoc_in([DEF, stdlib, keyword(to)], val)

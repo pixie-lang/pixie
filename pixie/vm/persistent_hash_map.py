@@ -1,10 +1,5 @@
 py_object = object
-import pixie.vm.object as object
-from pixie.vm.object import affirm
-from pixie.vm.primitives import nil, true, false
-from pixie.vm.numbers import Integer
-import pixie.vm.stdlib as proto
-from  pixie.vm.code import extend, as_var
+from pixie.vm.effects.effects import Object, Type
 from rpython.rlib.rarithmetic import r_uint, intmask
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
@@ -17,8 +12,8 @@ class Box(py_object):
     def __init__(self):
         self._val = None
 
-class PersistentHashMap(object.Object):
-    _type = object.Type(u"pixie.stdlib.PersistentHashMap")
+class PersistentHashMap(Object):
+    _type = Type(u"pixie.stdlib.PersistentHashMap")
 
     def type(self):
         return PersistentHashMap._type
@@ -62,8 +57,8 @@ class PersistentHashMap(object.Object):
 
 
 
-class INode(object.Object):
-    _type = object.Type(u"pixie.stdlib.INode")
+class INode(Object):
+    _type = Type(u"pixie.stdlib.INode")
 
     def type(self):
         return INode._type
