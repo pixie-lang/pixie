@@ -1150,3 +1150,42 @@
                 (refer-symbol *ns* (or (rename sym) sym) v))))
           (recur (next syms)))))
     nil))
+
+(extend -iterator ISeq (fn [s]
+                         (loop [s s]
+                           (when s
+                             (yield (first s))
+                             (recur (next s))))))
+
+(defn every? [pred coll]
+  (cond
+   (nil? (seq coll)) true
+   (pred (first coll)) (recur pred (next coll))
+   :else false))
+
+(defmacro fn [& decls]
+  (let [name (if (symbol? (first decls)) (first decls) nil)
+        decls (if name (next decls) decls)
+        name (or name '-fn)
+        decls (cond
+               (vector? (first decls)) (list decls)
+               ;(satisfies? ISeqable (first decls)) decls
+               ;:else (throw (str "expected a vector or a seq, got a " (type decls)))
+               :else decls)
+        decls (seq (map (fn* [decl]
+                          (let [argv (first decl)
+                                names (vec (map #(gensym "arg__") argv))
+                                bindings (loop [i 0 bindings []]
+                                           (if (< i (count argv))
+                                             (recur (inc i) (reduce conj bindings [(nth argv i) (nth names i)]))
+                                             bindings))
+                                body (next decl)]
+                            (if (every? symbol? argv)
+                              `(~argv ~@body)
+                              `(~names
+                                (let ~bindings
+                                  ~@body)))))
+                        decls))]
+    (if (= (count decls) 1)
+      `(fn* ~name ~(first (first decls)) ~@(next (first decls)))
+      `(fn* ~name ~@decls))))
