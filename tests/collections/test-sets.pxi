@@ -1,19 +1,34 @@
 (ns collections.test-sets
-  (require pixie.test :as t))
+  (require pixie.test :as t)
+  (require tests.utils :as u))
+
+(def worst-hashers (vec (map u/->WorstHasher) 
+                        (range 100)))
 
 (t/deftest test-count
   (t/assert= (count (set [])) 0)
   (t/assert= (count (set [1 2 3])) 3)
-  (t/assert= (count (set [1 1 2 1])) 2))
+  (t/assert= (count (set [1 1 2 1])) 2)
+  (t/assert= (count (set worst-hashers)) 100))
     
 (t/deftest test-contains
   (let [s #{1 2 3}
         c [1 2 3]
-        n [-1 0 4]]
+        n [-1 0 4]
+        g (set worst-hashers)]
     (foreach [c c]
              (t/assert= (contains? s c) true))
     (foreach [n n]
-             (t/assert= (contains? s n) false))))
+             (t/assert= (contains? s n) false))
+    (foreach [n worst-hashers]
+             (t/assert= (contains? g n) true))))
+
+(t/deftest test-conj
+  (t/assert= (conj #{}) #{})
+  (t/assert= (conj #{1 2} 3) #{1 2 3})
+  (t/assert= (reduce conj #{} (range 10)) (set (vec (range 10))))
+  (t/assert= (reduce conj #{} worst-hashers) (set worst-hashers)))
+
 
 (t/deftest test-eq
   (let [s  #{1 2 3}]
