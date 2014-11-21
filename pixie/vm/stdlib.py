@@ -19,7 +19,7 @@ defprotocol("pixie.stdlib", "ICounted", ["-count"])
 
 defprotocol("pixie.stdlib", "IIndexed", ["-nth"])
 
-defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
+defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj", "-disj"])
 
 defprotocol("pixie.stdlib", "IEmpty", ["-empty"])
 
@@ -508,6 +508,11 @@ def set_macro(f):
     affirm(isinstance(f, BaseCode), u"Only code objects can be macros")
     f.set_macro()
     return f
+
+@returns(bool)
+@as_var("macro?")
+def macro_QMARK_(f):
+    return true if isinstance(f, BaseCode) and f.is_macro() else false
 
 @returns(unicode)
 @as_var("name")

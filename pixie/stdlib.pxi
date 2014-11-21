@@ -31,6 +31,16 @@
              ([result] (-persistent! result))
              ([result item] (-conj! result item))))
 
+(def disj (fn disj
+           ([] [])
+           ([result] result)
+           ([result item] (-disj result item))))
+
+(def disj! (fn conj!
+             ([] (-transient []))
+             ([result] (-persistent! result))
+             ([result item] (-disj! result item))))
+
 (def transient (fn [coll] (-transient coll)))
 
 (def persistent! (fn [coll] (-persistent! coll)))
@@ -197,6 +207,21 @@
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
 
+(extend -hash PersistentHashSet
+  (fn [v]
+    (transduce ordered-hash-reducing-fn v)))
+
+(extend -hash PersistentHashMap
+  (fn [v]
+    (transduce ordered-hash-reducing-fn v)))
+
+(extend -hash EmptyList (fn [v] 5555555))
+
+(extend -hash Bool
+  (fn [v]
+    (if v
+      1111111
+      3333333)))
 
 (def stacklet->lazy-seq
   (fn [k]
@@ -400,6 +425,20 @@
    :added "0.1"}
   [x]
   (- x 1))
+
+(defn empty?
+  {:doc "returns true if the collection has no items, otherwise false"
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (not (seq coll)))
+
+(defn not-empty?
+  {:doc "returns true if the collection has items, otherwise false"
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (seq coll) true false))
 
 (defn first
   {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
@@ -659,13 +698,13 @@
      (reduce get m ks))
   ([m ks not-found]
      (loop [sentinel 'x
-            mi m
+            m m
             ks (seq ks)]
        (if ks
-         (let [mi (get m (first ks) sentinel)]
-           (if (identical? sentinel mi)
+         (let [m (get m (first ks) sentinel)]
+           (if (identical? sentinel m)
              not-found
-             (recur sentinel mi (next ks))))
+             (recur sentinel m (next ks))))
          m))))
 
 (defn assoc-in

@@ -28,7 +28,19 @@ Some planned and implemented features:
     ./checkout-externals
     ./make-with-jit
     ./pixie-vm
-    
+
+
+## Running the tests
+
+    ./pixie-vm run-tests.pxi
+
+
+## Examples
+
+There are example in the /examples directory.
+Try out "Hello World" with:
+
+    ./examples/hello-world.pxi
 
 ## FAQ
 

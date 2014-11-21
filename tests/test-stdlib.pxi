@@ -39,6 +39,37 @@
     (t/assert= (butlast l) res)
     (t/assert= (butlast r) res)))
 
+(t/deftest test-empty?
+  (t/assert= (empty? []) true)
+  (t/assert= (empty? '()) true)
+  (t/assert= (empty? (make-array 0)) true)
+  (t/assert= (empty? {}) true)
+  (t/assert= (empty? #{}) true)
+  (t/assert= (empty? (range 1 5)) false)
+
+  (t/assert= (empty? [1 2 3]) false)
+  (t/assert= (empty? '(1 2 3)) false)
+  (let [a (make-array 1)]
+    (aset a 0 1)
+    (t/assert= (empty? a) false))
+  (t/assert= (empty? {:a 1}) false)
+  (t/assert= (empty? #{:a :b}) false))
+
+(t/deftest test-not-empty?
+  (t/assert= (not-empty? []) false)
+  (t/assert= (not-empty? '()) false)
+  (t/assert= (not-empty? (make-array 0)) false)
+  (t/assert= (not-empty? {}) false)
+  (t/assert= (not-empty? #{}) false)
+  (t/assert= (not-empty? (range 1 5)) true)
+
+  (t/assert= (not-empty? [1 2 3]) true)
+  (t/assert= (not-empty? '(1 2 3)) true)
+  (let [a (make-array 1)]
+    (aset a 0 1)
+    (t/assert= (not-empty? a) true))
+  (t/assert= (not-empty? {:a 1}) true)
+  (t/assert= (not-empty? #{:a :b}) true))
 
 (t/deftest test-keys
   (let [v {:a 1 :b 2 :c 3}]
@@ -73,6 +104,13 @@
     (t/assert= (vec (keep pos?) v) [true true true true true])
     (t/assert= (vec (keep pos? v)) (vec (keep pos?) v))))
 
+(t/deftest test-get-in
+  (let [m {:a 1 :b 2 :x {:a 2 :x [1 2 3]}}]
+    (t/assert= (get-in m [:a]) 1)
+    (t/assert= (get-in m [:missing]) nil)
+    (t/assert= (get-in m [:missing] :not-found) :not-found)
+    (t/assert= (get-in m [:x :x 0] :not-found) 1)))
+
 (t/deftest test-fn?
   (t/assert= (fn? inc) true)
   (t/assert= (fn? {}) true)
@@ -81,4 +119,13 @@
   (t/assert= (fn? 1) false)
   (t/assert= (fn? and) false)
   (t/assert= (fn? "foo") false)
-  (t/assert (fn? (let [x 8] (fn [y] (+ x y)))) true))
+  (t/assert= (fn? (let [x 8] (fn [y] (+ x y)))) true))
+
+(t/deftest test-macro?
+  (t/assert= (macro? and) true)
+  (t/assert= (macro? or) true)
+  (t/assert= (macro? defn) true)
+  (t/assert= (macro? inc) false)
+  (t/assert= (macro? 1) false)
+  (t/assert= (macro? :foo) false)
+  (t/assert= (macro? "foo") false))
