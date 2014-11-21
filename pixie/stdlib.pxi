@@ -25,6 +25,16 @@
              ([result] (-persistent! result))
              ([result item] (-conj! result item))))
 
+(def disj (fn disj
+           ([] [])
+           ([result] result)
+           ([result item] (-disj result item))))
+
+(def disj! (fn conj!
+             ([] (-transient []))
+             ([result] (-persistent! result))
+             ([result item] (-disj! result item))))
+
 (def transient (fn [coll] (-transient coll)))
 
 (def persistent! (fn [coll] (-persistent! coll)))

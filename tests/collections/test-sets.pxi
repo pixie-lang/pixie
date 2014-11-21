@@ -29,6 +29,12 @@
   (t/assert= (reduce conj #{} (range 10)) (set (vec (range 10))))
   (t/assert= (reduce conj #{} worst-hashers) (set worst-hashers)))
 
+(t/deftest test-disj
+  (t/assert= (disj #{}) #{})
+  (t/assert= (disj #{1 2} 3) #{1 2})
+  (t/assert= (disj #{1 2} 2) #{1})
+  (t/assert= (reduce disj (set (vec (range 10))) (range 10)) #{})
+  (t/assert= (reduce disj (set worst-hashers) worst-hashers) #{}))
 
 (t/deftest test-eq
   (let [s  #{1 2 3}]
