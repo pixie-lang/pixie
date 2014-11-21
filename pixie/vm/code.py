@@ -165,6 +165,8 @@ def extend(pfn, tp1, tp2=None):
         else:
             extend_builtin2(pfn, tp1, tp2, wrap_fn()(fn))
 
+    return extend_inner
+
 
 def as_global(ns, nm):
     from pixie.vm.keyword import keyword

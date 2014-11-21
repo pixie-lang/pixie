@@ -38,11 +38,7 @@ run_built_tests: pixie-vm
 	./pixie-vm run-tests.pxi
 
 run_interpreted_tests: target.py
-<<<<<<< HEAD
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.lisp
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.pxi
 
 run_python_tests:
 	PYTHONPATH=$(PYTHONPATH) nosetests
-=======
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.pxi
->>>>>>> master

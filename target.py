@@ -4,6 +4,7 @@ from pixie.vm.primitives import nil
 from pixie.vm.compiler import compile_Ef
 from pixie.vm.ast import SyntaxThunk, Locals, syntax_thunk_Ef
 from pixie.vm.reader import StringReader, read_Ef, PromptReader #, MetaDataReader
+from pixie.vm.keyword import keyword
 # from pixie.vm.interpreter import interpret
 
 from pixie.vm.code import wrap_fn, NativeFn
@@ -94,14 +95,12 @@ class ReplFn(NativeFn):
         while True:
             val = read_Ef(rdr, True)
             if val is KW_EXIT_REPL:
-                break
+                return nil
             ast = compile_Ef(val)
             locals = Locals()
             val = syntax_thunk_Ef(ast, locals)
             sval = rt._str_Ef(val)
             rt._print_Ef(sval)
-
-        return nil
 
     def set_recent_vars(self, val):
         if rt.eq(val, STAR_1.deref()):

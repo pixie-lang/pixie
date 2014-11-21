@@ -110,6 +110,7 @@ def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap
     tp = num_op_template.format(pfn=pfn, ty1=ty1.__name__, ty2=ty2.__name__,
                                 conv1=conv1, op=op, conv2=conv2,
                                 wrap_start=wrap_start, wrap_end=wrap_end)
+    print tp
     exec tp
 
 extend_num_op("-quot", Integer, Integer, "int_val", "/", "int_val")
