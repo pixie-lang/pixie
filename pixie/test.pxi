@@ -60,8 +60,8 @@
 
 
 (defmacro assert= [x y]
-  `(let [xr# ~x
-         yr# ~y]
+  `(let* [xr# ~x
+          yr# ~y]
      (assert (= xr# yr#) (str (show '~x xr#) " != " (show '~y yr#)))))
 
 (defmacro assert [x]

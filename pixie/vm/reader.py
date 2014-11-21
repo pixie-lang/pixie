@@ -531,7 +531,7 @@ class FnReader(ReaderHandler):
                 args = rt.conj(args, ARG_AMP)
                 args = rt.conj(args, rest_arg)
 
-            return rt.cons(symbol(u"fn"), rt.cons(args, rt.cons(form, nil)))
+            return rt.cons(symbol(u"fn*"), rt.cons(args, rt.cons(form, nil)))
         finally:
             ARG_ENV.set_value(nil)
 

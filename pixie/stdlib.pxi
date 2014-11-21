@@ -13,7 +13,13 @@
 
 (def program-arguments [])
 
+(def fn (fn* [& args]
+             (cons 'fn* args)))
+(set-macro! fn)
 
+(def let (fn* [& args]
+              (cons 'let* args)))
+(set-macro! let)
 
 (def conj (fn conj
            ([] [])
@@ -243,7 +249,6 @@
 
 
 (extend -seq PersistentVector sequence)
-(extend -seq Array sequence)
 
 
 
@@ -489,6 +494,15 @@
 
 (defn contains? [coll key]
   (-contains-key coll key))
+
+(defn vec
+  {:doc "Converts a reducable collection into a vector using the (optional) transducer."
+   :signatures [[coll] [xform coll]]
+   :added "0.1"}
+  ([coll]
+     (transduce conj! coll))
+  ([xform coll]
+     (transduce xform conj! coll)))
 
 (defn get-val [inst]
   (get-field inst :val))
@@ -933,6 +947,98 @@
 (defmacro when-not [test & body]
   `(if (not ~test) (do ~@body)))
 
+(defmacro when-let [binding & body]
+  `(let ~binding
+     (when ~(first binding)
+       ~@body)))
+
+(defn nnext [coll]
+  (next (next coll)))
+
+(defn nthnext [coll n]
+  (loop [n n
+         xs (seq coll)]
+    (if (and xs (pos? n))
+      (recur (dec n) (next xs))
+      xs)))
+
+(defn take [n coll]
+  (when (pos? n)
+    (when-let [s (seq coll)]
+      (cons (first s) (take (dec n) (next s))))))
+
+(defn drop [n coll]
+  (let [s (seq coll)]
+    (if (and (pos? n) s)
+      (recur (dec n) (next s))
+      s)))
+
+(defn partition
+  ([n coll] (partition n n coll))
+  ([n step coll]
+     (when-let [s (seq coll)]
+       (cons (take n s) (partition n step (drop step s))))))
+
+(defn destructure [binding expr]
+  (cond
+   (symbol? binding) [binding expr]
+   (vector? binding) (let [name (gensym "vec__")]
+                       (reduce conj [name expr]
+                               (destructure-vector binding name)))
+   (map? binding) (let [name (gensym "map__")]
+                    (reduce conj [name expr]
+                            (destructure-map binding name)))
+   :else (throw (str "unsupported binding form: " binding))))
+
+(defn destructure-vector [binding-vector expr]
+  (loop [bindings (seq binding-vector)
+         i 0
+         res []]
+    (if bindings
+      (let [binding (first bindings)]
+        (cond
+         (= binding '&) (recur (nnext bindings)
+                               (inc (inc i))
+                               (reduce conj res (destructure (second bindings) `(nthnext ~expr ~i))))
+         (= binding :as) (reduce conj res (destructure (second bindings) expr))
+         :else (recur (next bindings)
+                      (inc i)
+                      (reduce conj res (destructure (first bindings) `(nth ~expr ~i))))))
+      res)))
+
+(defn destructure-map [binding-map expr]
+  (let [defaults (or (:or binding-map) {})
+        res
+        (loop [bindings (seq binding-map)
+               res []]
+          (if bindings
+            (let [binding (key (first bindings))
+                  binding-key (val (first bindings))]
+              (if (contains? #{:or :as :keys} binding)
+                (recur (next bindings) res)
+                (recur (next bindings)
+                       (reduce conj res (destructure binding `(get ~expr ~binding-key ~(get defaults binding)))))))
+            res))
+        expand-with (fn [convert] #(vector % `(get ~expr ~(convert %))))
+        res (if (contains? binding-map :keys) (transduce (map (expand-with (comp keyword name))) concat res (get binding-map :keys)) res)
+        res (if (contains? binding-map :as)
+              (reduce conj res [(get binding-map :as) expr])
+              res)]
+    res))
+
+(defmacro let [bindings & body]
+  (let* [destructured-bindings (transduce (map #(apply destructure %1))
+                                          concat
+                                          []
+                                          (partition 2 bindings))]
+        `(let* ~destructured-bindings
+               ~@body)))
+
+(extend -nth ISeq (fn [s n]
+                    (if (and (pos? n) s)
+                      (recur (next s) (dec n))
+                      (first s))))
+
 (defn abs [x]
   (if (< x 0)
     (* -1 x)
@@ -1084,12 +1190,42 @@
           (recur (next syms)))))
     nil))
 
+(extend -iterator ISeq (fn [s]
+                         (loop [s s]
+                           (when s
+                             (yield (first s))
+                             (recur (next s))))))
+(extend -at-end? EmptyList (fn [_] true))
 
-(defn vec
-  {:doc "Converts a reducable collection into a vector using the (optional) transducer."
-   :signatures [[coll] [xform coll]]
-   :added "0.1"}
-  ([coll]
-     (transduce conj! coll))
-  ([xform coll]
-     (transduce xform conj! coll)))
+(defn every? [pred coll]
+  (cond
+   (nil? (seq coll)) true
+   (pred (first coll)) (recur pred (next coll))
+   :else false))
+
+(defmacro fn [& decls]
+  (let [name (if (symbol? (first decls)) (first decls) nil)
+        decls (if name (next decls) decls)
+        name (or name '-fn)
+        decls (cond
+               (vector? (first decls)) (list decls)
+               ;(satisfies? ISeqable (first decls)) decls
+               ;:else (throw (str "expected a vector or a seq, got a " (type decls)))
+               :else decls)
+        decls (seq (map (fn* [decl]
+                          (let [argv (first decl)
+                                names (vec (map #(gensym "arg__") argv))
+                                bindings (loop [i 0 bindings []]
+                                           (if (< i (count argv))
+                                             (recur (inc i) (reduce conj bindings [(nth argv i) (nth names i)]))
+                                             bindings))
+                                body (next decl)]
+                            (if (every? symbol? argv)
+                              `(~argv ~@body)
+                              `(~names
+                                (let ~bindings
+                                  ~@body)))))
+                        decls))]
+    (if (= (count decls) 1)
+      `(fn* ~name ~(first (first decls)) ~@(next (first decls)))
+      `(fn* ~name ~@decls))))

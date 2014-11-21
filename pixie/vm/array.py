@@ -58,6 +58,61 @@ def reduce(self, f, init):
         return self.reduce_large(f, init)
     return self.reduce_small(f, init)
 
+@extend(proto._seq, Array)
+def _seq(self):
+    assert isinstance(self, Array)
+    if rt.count(self) > 0:
+        return ArraySeq(0, self)
+    else:
+        return nil
+
+class ArraySeq(object.Object):
+    _type = object.Type(u"pixie.stdlib.ArraySeq")
+    __immutable_fields__ = ["_idx", "_w_array"]
+
+    def __init__(self, idx, array):
+        self._idx = idx
+        self._w_array = array
+
+    def first(self):
+        return rt.nth(self._w_array, rt.wrap(self._idx))
+
+    def next(self):
+        if self._idx < rt.count(self._w_array) - 1:
+            return ArraySeq(self._idx + 1, self._w_array)
+        else:
+            return nil
+
+    def reduce(self, f, init):
+        for x in range(self._idx, rt.count(self._w_array)):
+            if rt.reduced_QMARK_(init):
+                return rt.deref(init)
+            init = f.invoke([init, rt.nth(self._w_array, rt.wrap(x))])
+        return init
+
+    def type(self):
+        return self._type
+
+@extend(proto._first, ArraySeq)
+def _first(self):
+    assert isinstance(self, ArraySeq)
+    return self.first()
+
+@extend(proto._next, ArraySeq)
+def _next(self):
+    assert isinstance(self, ArraySeq)
+    return self.next()
+
+@extend(proto._seq, ArraySeq)
+def _seq(self):
+    assert isinstance(self, ArraySeq)
+    return self
+
+@extend(proto._reduce, ArraySeq)
+def _reduce(self, f, init):
+    assert isinstance(self, ArraySeq)
+    return self.reduce(f, init)
+
 def array(lst):
     assert isinstance(lst, list)
     return Array(lst)
