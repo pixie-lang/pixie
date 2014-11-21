@@ -1,6 +1,6 @@
 import unittest
 
-from pixie.vm.effects.environment import Resolve, run_with_state, Environment
+from pixie.vm.effects.environment import Resolve, run_with_state, KW_NAMESPACE, KW_NAME, KW_K
 from pixie.vm.effects.effects import Answer, ArgList
 from pixie.vm.code import wrap_fn
 from pixie.vm.keyword import Keyword, keyword
@@ -18,10 +18,10 @@ class TestRTDispatch(unittest.TestCase):
 
         result = rt.first_Ef(1)
         self.assertIsInstance(result, Resolve)
-        self.assertIs(result._w_ns, ns)
-        self.assertIs(result._w_nm, nm)
+        self.assertIs(result.get(KW_NAMESPACE), ns)
+        self.assertIs(result.get(KW_NAME), nm)
 
-        result = result._k.step(testfn__args)
+        result = result.get(KW_K).step(testfn__args)
 
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), ArgList)
@@ -33,10 +33,10 @@ class TestRTDispatch(unittest.TestCase):
 
         result = rt.load_paths_Ef()
         self.assertIsInstance(result, Resolve)
-        self.assertIs(result._w_ns, ns)
-        self.assertIs(result._w_nm, nm)
+        self.assertIs(result.get(KW_NAMESPACE), ns)
+        self.assertIs(result.get(KW_NAME), nm)
 
-        result = result._k.step(42)
+        result = result.get(KW_K).step(42)
 
         self.assertIsInstance(result, Answer)
         self.assertEqual(result.val(), 42)

@@ -172,6 +172,27 @@ class PersistentVector(Object):
 
         return lst
 
+    def to_str(self):
+
+        acc = []
+        for x in range(self._cnt):
+            itm = self.nth(x)
+            acc.append(unichr(itm.char_val()))
+
+        return rt.wrap(u"".join(acc))
+
+    def to_persistent_list(self):
+        from pixie.vm.persistent_list import EmptyList, PersistentList
+        if self._cnt == 0:
+            return EmptyList()
+
+        i = r_uint(self._cnt)
+        acc = nil
+        while i > 0:
+            acc = PersistentList(self.nth(i - 1), acc, self._cnt - i + 1, nil)
+            i -= 1
+        return acc
+
 def new_path(edit, level, node):
     if level == 0:
         return node
@@ -411,13 +432,13 @@ def _count(self):
 @extend("pixie.stdlib.-nth", PersistentVector)
 def _nth(self, idx):
     assert isinstance(self, PersistentVector)
-    return self.nth(idx.int_val())
+    return self.nth(r_uint(idx.int_val()))
 
 @extend("pixie.stdlib.-val-at", PersistentVector)
 def _val_at(self, key, not_found):
     assert isinstance(self, PersistentVector)
     if isinstance(key, Integer):
-        return self.nth(key.int_val())
+        return self.nth(r_uint(key.int_val()))
     else:
         return not_found
 #

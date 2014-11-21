@@ -2,13 +2,22 @@ import unittest
 from pixie.vm.effects.effects import *
 from pixie.vm.effects.environment import *
 from pixie.vm.effects.effect_transform import resource_effect
+from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.code import wrap_fn
 from pixie.vm.keyword import keyword
 
-@resource_effect
-def foo_Ef(x, y):
-    return x + y
+defeffect("pixie.stdlib.test.TestResource", "TestResource", ["a", "b"])
 
+class ResourceHandler(Handler):
+    def handle(self, effect, k):
+        if isinstance(effect, Answer):
+            return effect
+        if isinstance(effect, Effect) and effect.type() is TestResource._type:
+            val = effect.get(KW_A) + effect.get(KW_B)
+            return handle_with(self, ContinuationThunk(effect.get(KW_K), val), answer_k)
+
+def foo_Ef(a, b):
+    return TestResource(a, b)
 
 class TestEnvironment(unittest.TestCase):
 
@@ -44,5 +53,5 @@ class TestEnvironment(unittest.TestCase):
 
             return result
 
-        result = run_with_state(doit, default_env)
+        result = run_thunk_with_state(handle_with(ResourceHandler(), doit.invoke_Ef(ArgList()), answer_k), default_env)
         pass

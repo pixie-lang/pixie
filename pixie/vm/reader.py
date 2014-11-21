@@ -1,6 +1,7 @@
 py_object = object
-from pixie.vm.effects.effects import Object, ArgList, Type
+from pixie.vm.effects.effects import Object, ArgList, Type, OpaqueIOFn
 from pixie.vm.effects.effect_transform import cps, resource_effect
+from pixie.vm.effects.environment import OpaqueIO
 from pixie.vm.string import wrap_char
 from pixie.vm.persistent_list import PersistentList, EmptyList
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
@@ -44,42 +45,6 @@ FILE_KW = keyword(u"file")
 #ARG_ENV.set_dynamic()
 #ARG_ENV.set_value(nil)
 
-class ListResource(Object):
-    def __init__(self):
-        self._lst_w = []
-
-    @resource_effect
-    def append_Ef(self, x):
-        self._lst_w.append(x)
-
-    @resource_effect
-    def to_str_Ef(self):
-        acc = []
-        for x in self._lst_w:
-            acc.append(unichr(x.char_val()))
-
-        return rt.wrap(u"".join(acc))
-
-    @resource_effect
-    def size_Ef(self):
-        return rt.wrap(len(self._lst_w))
-
-    @resource_effect
-    def to_persistent_list_Ef(self):
-        if len(self._lst_w) == 0:
-            return EmptyList()
-
-        i = r_uint(len(self._lst_w))
-        acc = nil
-        while i > 0:
-            acc = PersistentList(self._lst_w[i - 1], acc, len(self._lst_w) - i + 1, nil)
-            i -= 1
-        return acc
-
-
-
-
-
 
 class PlatformReader(Object):
     _type = Type(u"PlatformReader")
@@ -93,15 +58,28 @@ class PlatformReader(Object):
     def reset_line(self):
         return self
 
+class ReadCh(OpaqueIOFn):
+    def __init__(self, rdr):
+        self._rdr = rdr
 
-@resource_effect
+    def execute_opaque_io(self):
+        return self._rdr.read()
+
 def read_ch_Ef(rdr):
-    return rdr.read()
+    return OpaqueIO(ReadCh(rdr))
 
+class UnreadCh(OpaqueIOFn):
+    def __init__(self, rdr, ch):
+        self._rdr = rdr
+        self._w_ch = ch
 
-@resource_effect
+    def execute_opaque_io(self):
+        return self._rdr.unread(self._w_ch)
+
 def unread_Ef(rdr, ch):
-    return rdr.unread(ch)
+    return OpaqueIO(UnreadCh(rdr, ch))
+
+
 
 class StringReader(PlatformReader):
     _immutable_fields_ = ["_str"]
@@ -280,17 +258,17 @@ close_paren = wrap_char(ord(u")"))
 class ListReader(ReaderHandler):
     @cps
     def invoke_Ef(self, rdr, ch):
-        lst = ListResource()
+        lst = EMPTY_VECTOR
         while True:
             eat_whitespace_Ef(rdr)
             ch = read_ch_Ef(rdr)
             if ch is close_paren:
-                return lst.to_persistent_list_Ef()
+                return lst.to_persistent_list()
 
             unread_Ef(rdr, ch)
 
             itm = read_Ef(rdr, True)
-            lst.append_Ef(itm)
+            lst = lst.conj(itm)
 
 class UnmachedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -727,8 +705,8 @@ def parse_number(s):
 
 @cps
 def read_number_Ef(rdr, ch):
-    acc = ListResource()
-    acc.append_Ef(ch)
+    acc = EMPTY_VECTOR
+    acc = acc.conj(ch)
     end = False
     while not end:
         ch = read_ch_Ef(rdr)
@@ -737,9 +715,9 @@ def read_number_Ef(rdr, ch):
             unread_Ef(rdr, ch)
             end = True
         else:
-            acc.append_Ef(ch)
+            acc = acc.conj(ch)
 
-    joined = acc.to_str_Ef()
+    joined = acc.to_str()
     parsed = parse_number(joined.str())
     if parsed is not None:
         return parsed
@@ -747,8 +725,8 @@ def read_number_Ef(rdr, ch):
 
 @cps
 def read_symbol_Ef(rdr, ch):
-    acc = ListResource()
-    acc.append_Ef(ch)
+    acc = EMPTY_VECTOR
+    acc = acc.conj(ch)
     end = False
 
     while not end:
@@ -757,9 +735,9 @@ def read_symbol_Ef(rdr, ch):
             unread_Ef(rdr, ch)
             end = True
         else:
-            acc.append_Ef(ch)
+            acc = acc.conj(ch)
 
-    result = acc.to_str_Ef()
+    result = acc.to_str()
     sym_str = result.str()
     if sym_str == u"true":
         return true

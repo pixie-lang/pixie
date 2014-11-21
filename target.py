@@ -198,14 +198,14 @@ class ReadFn(NativeFn):
         return compile_Ef(read)
 
 
-def entry_point(args):
-    # args = None
-    # if args is None:
-    #     args =["", """((fn* self [x]
-    #                                                               (if (-num-eq x 10000)
-    #                                                                 x
-    #                                                                 (self (-add 1 x))))
-    #                                                             0)"""]
+def entry_point():
+    args = None
+    if args is None:
+        args =["", """((fn* self [x]
+                                                                  (if (-num-eq x 10000)
+                                                                    x
+                                                                    (self (-add 1 x))))
+                                                                0)"""]
     rdr = StringReader(unicode(args[1]))
     print "reading"
     ast = run_with_state(ReadFn(rdr), make_default_env())

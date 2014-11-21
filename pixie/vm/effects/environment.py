@@ -1,4 +1,5 @@
-from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, ExceptionEffect, OpaqueResource, answer_k
+from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, answer_k, Handler, handle_with
+from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.primitives import nil, true
 from rpython.rlib.jit import promote, JitDriver
 import rpython.rlib.jit as jit
@@ -24,78 +25,58 @@ class EnvironmentEffect(Effect):
 
 @jit.elidable_promote()
 def resolve_in_env(env, ns, nm):
-    return env.get_in([DEF, ns, nm])
+    return env.get_in([KW_DEF, ns, nm])
 
-class Resolve(EnvironmentEffect):
-    _immutable_ = True
-    def __init__(self, ns, nm):
-        self._w_ns = ns
-        self._w_nm = nm
+# class Resolve(EnvironmentEffect):
+#     _immutable_ = True
+#     def __init__(self, ns, nm):
+#         self._w_ns = ns
+#         self._w_nm = nm
+#
+#     def without_k(self):
+#         return Resolve(self._w_ns, self._w_nm)
+#
+#     def execute_effect(self, env):
+#         val = resolve_in_env(env, self._w_ns, self._w_nm)
+#         return ContinuationThunk(self._k, val), env
 
-    def without_k(self):
-        return Resolve(self._w_ns, self._w_nm)
+defeffect("pixie.stdlib.Resolve", "Resolve", ["namespace", "name"])
+defeffect("pixie.stdlib.Declare", "Declare", ["namespace", "name", "val"])
+defeffect("pixie.stdlib.FindPolymorphicOverride", "FindPolymorphicOverride", ["name", "tp"])
+defeffect("pixie.stdlib.FindDoublePolymorphicOverride", "FindDoublePolymorphicOverride", ["name", "tp1", "tp2"])
+defeffect("pixie.stdlib.Exception", "ExceptionEffect", ["kw", "msg"])
+defeffect("pixie.stdlib.OpaqueIO", "OpaqueIO", ["effect"])
 
-    def execute_effect(self, env):
-        val = resolve_in_env(env, self._w_ns, self._w_nm)
-        return ContinuationThunk(self._k, val), env
+ExceptionEffect.__repr__ = lambda self: str(self._w_kw.__repr__()) + " : " + str(self._w_msg.str())
 
 def resolve_Ef(ns, nm):
-    eff =  Resolve(ns, nm)
-    eff._k = answer_k
+    eff = Resolve(ns, nm, answer_k)
     return eff
 
-class Declare(EnvironmentEffect):
+class EnvironmentHandler(Handler):
     _immutable_ = True
-    def __init__(self, ns, nm, val):
-        self._w_ns = ns
-        self._w_nm = nm
-        self._w_val = val
+    def __init__(self, env):
+        self._w_env = env
 
-    def without_k(self):
-        return Declare(self._w_ns, self._w_nm, self._w_val)
-
-    def execute_effect(self, env):
-        env = env.assoc_in([DEF, self._w_ns, self._w_nm], self._w_val)
-
-        return ContinuationThunk(self._k, nil), env
-
-class FindPolymorphicOverride(EnvironmentEffect):
-    _immutable_ = True
-    def __init__(self, nm, tp):
-        self._w_nm = nm
-        self._w_tp = tp
-
-    def without_k(self):
-        return FindPolymorphicOverride(self._w_nm, self._w_tp)
-
-    def execute_effect(self, env):
-        val = env.get_in([PROTOS, self._w_nm, self._w_tp], None)
-        return ContinuationThunk(self._k, val), env
-
-class FindDoublePolymorphicOverride(EnvironmentEffect):
-    _immutable_ = True
-    def __init__(self, nm, tp1, tp2):
-        self._w_nm = nm
-        self._w_tp1 = tp1
-        self._w_tp2 = tp2
-
-    def without_k(self):
-        return FindDoublePolymorphicOverride(self._w_nm, self._w_tp1, self._w_tp2)
-
-    def execute_effect(self, env):
-        val = env.get_in([DOUBLE_PROTOS, self._w_nm, self._w_tp1, self._w_tp2], env)
-        return ContinuationThunk(self._k, val), env
-
-class Environment(object):
-    """
-    Defines a mutable global environment. Can only be accessed via effects
-    """
-    def __init__(self, ns, protos, double_protos):
-        self._namespaces = ns
-        self._protos = protos
-        self._double_protos = double_protos
-
-
+    def handle(self, effect, k):
+        if isinstance(effect, Answer):
+            return effect
+        if isinstance(effect, Effect):
+            tp = effect.type()
+            if tp is Resolve._type:
+                val = resolve_in_env(self._w_env, effect.get(KW_NAMESPACE), effect.get(KW_NAME))
+                return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
+            elif tp is Declare._type:
+                val = effect.get(KW_VAL)
+                env = self._w_env.assoc_in([KW_DEF, effect.get(KW_NAMESPACE), effect.get(KW_NAME)], val)
+                return handle_with(EnvironmentHandler(env), ContinuationThunk(effect.get(KW_K), val), answer_k)
+            elif tp is FindPolymorphicOverride._type:
+                val = self._w_env.get_in([KW_PROTOS, effect.get(KW_NAME), effect.get(KW_TP)])
+                return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
+            elif tp is FindDoublePolymorphicOverride._type:
+                val = self._w_env.get_in([KW_DOUBLE_PROTOS, effect.get(KW_NAME), effect.get(KW_TP1), effect.get(KW_TP2)])
+                return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
+        return None
 
 
 def run_with_state(fn, env, arg=None):
@@ -107,6 +88,7 @@ def run_with_state(fn, env, arg=None):
     return run_thunk_with_state(t, env)
 
 def run_thunk_with_state(t, env):
+    t = handle_with(EnvironmentHandler(env), t, answer_k)
     while True:
         if isinstance(t, Thunk):
             (ast, locals) = t.get_loc()
@@ -117,46 +99,47 @@ def run_thunk_with_state(t, env):
         elif isinstance(t, Answer):
             return t
 
-        elif isinstance(t, EnvironmentEffect):
-            t, env = t.execute_effect(env)
+        #elif isinstance(t, EnvironmentEffect):
+        #    t, env = t.execute_effect(env)
 
         #elif isinstance(t, ExceptionEffect):
         #    assert False
 
-        elif isinstance(t, OpaqueResource):
-            result = t.execute_resource()
-            t = t._k.step(result)
+        elif isinstance(t, OpaqueIO):
+            effect = t.get(KW_EFFECT)
+            result = effect.execute_opaque_io()
+            t = t.get(KW_K).step(result)
 
         else:
             assert False, t
 
-DEF = keyword(u"def")
-PROTOS = keyword(u"protos")
-DOUBLE_PROTOS = keyword(u"double-protos")
-RUNNING = keyword(u"running?")
+KW_DEF = keyword(u"def")
+KW_PROTOS = keyword(u"protos")
+KW_DOUBLE_PROTOS = keyword(u"double-protos")
+KW_RUNNING = keyword(u"running?")
 
 default_env = EMPTY_MAP
 
 def make_default_env():
-    return default_env.assoc(RUNNING, true)
+    return default_env.assoc(KW_RUNNING, true)
 
 def add_builtin(ns, nm, val):
     """NOT_RPYTHON"""
     global default_env
-    default_env = default_env.assoc_in([DEF, ns, nm], val)
+    default_env = default_env.assoc_in([KW_DEF, ns, nm], val)
     return val
 
 def extend_builtin(nm, tp, fn):
     """NOT_RPYTHON"""
     global default_env
-    default_env = default_env.assoc_in([PROTOS, nm, tp], fn)
+    default_env = default_env.assoc_in([KW_PROTOS, nm, tp], fn)
 
     return fn
 
 def extend_builtin2(nm, tp1, tp2, fn):
     """NOT_RPYTHON"""
     global default_env
-    default_env = default_env.assoc_in([DOUBLE_PROTOS, nm, tp1, tp2], fn)
+    default_env = default_env.assoc_in([KW_DOUBLE_PROTOS, nm, tp1, tp2], fn)
     return fn
 
 def as_var(ns, name=None):
@@ -186,5 +169,5 @@ def link_builtins(frm, to):
     global default_env
     from pixie.vm.keyword import keyword
     stdlib = keyword(u"pixie.stdlib")
-    val = default_env.get_in([DEF, stdlib, keyword(frm)])
-    default_env = default_env.assoc_in([DEF, stdlib, keyword(to)], val)
+    val = default_env.get_in([KW_DEF, stdlib, keyword(frm)])
+    default_env = default_env.assoc_in([KW_DEF, stdlib, keyword(to)], val)

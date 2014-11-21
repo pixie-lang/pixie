@@ -75,13 +75,16 @@ class Effect(EffectObject):
         """
         raise NotImplementedError()
 
-class OpaqueResource(Effect):
+class OpaqueIOFn(Object):
     """
     Base class for an effect that mutates some resource.
     """
-    _immutable_ = True
+    _type = Type(u"pixie.stdlib.OpaqueIOFn")
 
-    def execute_resource(self):
+    def type(self):
+        return OpaqueIOFn._type
+
+    def execute_opaque_io(self):
         raise NotImplementedError()
 
 class Answer(EffectObject):
@@ -95,11 +98,16 @@ class Answer(EffectObject):
     def val(self):
         return self._w_val
 
-class Continuation(object):
+class Continuation(Object):
     """
     Defines a computation that should be continued after a given effect has executed.
     """
     _immutable_= True
+    _type = Type(u"pixie.stdlib.Continuation")
+
+    def type(self):
+        return Continuation._type
+
     def step(self, x):
         """
         Continue execution, x is the value returned by the effect.
@@ -164,8 +172,8 @@ def raise_Ef(x, k):
       return result
 
     """
-    x._k = k
-    return x
+
+    return x.assoc(KW_K, k)
 
 def handle_with(handler, effect, k=answer_k):
     """
@@ -177,10 +185,7 @@ def handle_with(handler, effect, k=answer_k):
     else:
         ret = handler.handle(effect, k)
         if ret is None:
-            without = effect.without_k()
-            without._k = HandledEffectExecutingContinuation(handler, effect, k)
-
-            return without
+            return effect.assoc(KW_K, HandledEffectExecutingContinuation(handler, effect, k))
         else:
             return ret
 
@@ -205,7 +210,7 @@ class HandledEffectExecutingContinuation(Continuation):
     _immutable_ = True
     def __init__(self, handler, effect, k):
         self._k = k
-        self._effect_k = effect._k
+        self._effect_k = effect.get(KW_K)
         self._handler = handler
 
     def step(self, val):
@@ -296,13 +301,6 @@ class ConstantValueContinuation(Continuation):
 
     def step(self, _):
         return Answer(self._w_val)
-
-
-class ExceptionEffect(Effect):
-    _immutable_ = True
-    def __init__(self, kw, msg=None):
-        self._w_kw = kw
-        self._msg = msg
 
 
 

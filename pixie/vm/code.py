@@ -2,9 +2,9 @@ py_object = object
 import pixie.vm.object as object
 from pixie.vm.effects.effect_transform import cps
 
-from pixie.vm.effects.effects import Object, Type, raise_Ef, ExceptionEffect
+from pixie.vm.effects.effects import Object, Type, raise_Ef
 from pixie.vm.effects.environment import FindPolymorphicOverride, extend_builtin, extend_builtin2, add_builtin, \
-                                         FindDoublePolymorphicOverride
+                                         FindDoublePolymorphicOverride, ExceptionEffect
 
 def munge(s):
      return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
@@ -117,8 +117,8 @@ class PolymorphicFn(Object):
 
         if result is None:
             from pixie.vm.keyword import keyword
-
-            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"))
+            from pixie.vm.string import String
+            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(u""))
             raise_Ef(eff)
 
         return result.invoke_Ef(args)
@@ -142,8 +142,8 @@ class DoublePolymorphicFn(Object):
 
         if result is None:
             from pixie.vm.keyword import keyword
-
-            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"))
+            from pixie.vm.string import String
+            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(u""))
             raise_Ef(eff)
 
         return result.invoke_Ef(args)

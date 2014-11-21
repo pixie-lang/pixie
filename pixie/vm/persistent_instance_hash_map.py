@@ -18,6 +18,15 @@ class Box(object):
     def __init__(self):
         self._val = None
 
+@jit.unroll_safe
+def create(*args):
+    acc = EMPTY
+    idx = 0
+    while idx + 1 < len(args):
+        acc = acc.assoc(args[idx], args[idx + 1])
+        idx += 2
+
+    return acc
 
 
 class PersistentInstanceHashMap(Object):

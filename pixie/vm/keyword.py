@@ -1,4 +1,5 @@
 from pixie.vm.effects.effects import Object, Type
+import pixie.vm.effects.effects as effects
 from pixie.vm.primitives import nil
 from rpython.rlib.objectmodel import specialize
 
@@ -28,6 +29,7 @@ class Keyword(Object):
                 self._w_ns = rt.wrap(s[0])
                 self._w_name = rt.wrap(u"/".join(s[1:]))
 
+
     def __repr__(self):
         return ":" + str(self._str)
 
@@ -53,6 +55,8 @@ _kw_cache = KeywordCache()
 @specialize.argtype(0)
 def keyword(nm):
     return _kw_cache.intern(nm if isinstance(nm, unicode) else unicode(nm))
+
+effects.KW_K = keyword("k")
 
 #
 # @extend(proto._name, Keyword)

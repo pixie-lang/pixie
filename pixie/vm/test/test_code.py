@@ -1,7 +1,7 @@
 import unittest
 
 from pixie.vm.effects.effects import *
-from pixie.vm.effects.environment import FindPolymorphicOverride
+from pixie.vm.effects.environment import FindPolymorphicOverride, KW_NAME, KW_TP, KW_TP1, KW_TP2, KW_K
 from pixie.vm.code import wrap_fn, PolymorphicFn
 from pixie.vm.numbers import Integer
 from pixie.vm.keyword import keyword
@@ -80,14 +80,14 @@ class TestPolymorphicFn(unittest.TestCase):
         result = pfn.invoke_Ef(ArgList([Integer(42)]))
 
         self.assertIsInstance(result, FindPolymorphicOverride)
-        self.assertIs(result._w_nm, pfn_name)
-        self.assertIs(result._w_tp, Integer(0).type())
+        self.assertIs(result.get(KW_NAME), pfn_name)
+        self.assertIs(result.get(KW_TP), Integer(0).type())
 
         @wrap_fn()
         def fn_arg(x):
             return x
 
-        result = result._k.step(fn_arg)
+        result = result.get(KW_K).step(fn_arg)
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 42)
