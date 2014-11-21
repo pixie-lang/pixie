@@ -54,19 +54,65 @@ def compile_fn_Ef(form):
     name = rt.first_Ef(form)
     form = rt.next_Ef(form)
     args = rt.first_Ef(form)
-    body = rt.next_Ef(form)
-
     name_kw = keyword(name.name())
+
+
+    body = body_fn = None
+    if isinstance(args, PersistentVector):
+        body = rt.next_Ef(form)
+        acc = args_to_kws_Ef(args)
+        body_fn = compile_fn_body_Ef(name_kw, acc, body)
+    else:
+        acc = EMPTY_VECTOR
+        while form is not nil:
+            arity = rt.first_Ef(form)
+            args = rt.first_Ef(arity)
+            if not isinstance(args, PersistentVector):
+                throw_Ef(VALUE_ERROR, u"Argument lists must be vectors")
+            body = rt.next_Ef(arity)
+
+            args_kws = args_to_kws_Ef(args)
+            body_fn = compile_fn_body_Ef(None, args_kws, body)
+            acc = acc.conj(body_fn)
+            form = rt.next_Ef(form)
+
+        body_fn = multi_fn_from_acc(name_kw, acc)
+
+
+
+
+    return FnLiteral(body_fn)
+
+def multi_fn_from_acc(name, acc):
+    rest_fn = None
+    d = {}
+    for x in range(acc.count()):
+        arity = acc.nth(x)
+        if arity.required_args() < 0:
+            rest_fn = arity
+        else:
+            d[r_uint(arity.required_args())] = arity
+
+    return MultiArityFn(name, d, rest_fn)
+
+
+
+
+@cps
+def args_to_kws_Ef(args):
     acc = EMPTY_VECTOR
     idx = 0
     arg = None
     while idx < args.count():
         arg = args.nth(idx)
+        if not isinstance(arg, Symbol):
+            throw_Ef(VALUE_ERROR, "Argument names must be symbols")
+
         acc = acc.conj(keyword(arg.name()))
         idx += 1
 
-    body_fn = compile_fn_body_Ef(name_kw, acc, body)
-    return FnLiteral(body_fn)
+    return acc
+
 
 @cps
 def compile_fn_body_Ef(name, args, body):

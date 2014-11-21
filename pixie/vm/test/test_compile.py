@@ -89,6 +89,24 @@ class TestCompilation(unittest.TestCase):
         self.assertEqual(result.val().int_val(), 2)
 
 
+    def test_mult_arity_function(self):
+
+        ast = run_with_state(read_and_compile, default_env, "((fn* foo ([x] 1) ([x y] 2)) true)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 1)
+
+
+        ast = run_with_state(read_and_compile, default_env, "((fn* foo ([x] 1) ([x y] 2)) 1 true)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 2)
+
+
     def test_recursive_fn(self):
         ast = run_with_state(read_and_compile, default_env, """((fn* self [x]
                                                                   (if (-num-eq x 10)

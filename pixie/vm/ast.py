@@ -81,18 +81,25 @@ class PixieFunction(Object):
         self._w_body = body
         self._env = env
 
+    def required_args(self):
+        return len(self._args_w)
+
     def with_env(self, env):
         return PixieFunction(self._w_name, self._args_w, self._w_body, env)
+
+    def invoke_with_env_Ef(self, args, env):
+        for x in range(args.arg_count()):
+            env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
+
+        return SyntaxThunk(self._w_body, env)
+
 
     @jit.unroll_safe
     def invoke_Ef(self, args):
         env = self._env
         if self._w_name is not None:
             env = env.with_local(jit.promote(self._w_name), self)
-        for x in range(args.arg_count()):
-            env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
-
-        return SyntaxThunk(self._w_body, env)
+        return self.invoke_with_env_Ef(args, env)
 
 class VariadicFunction(Object):
     _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env", "_required_args"]
@@ -106,14 +113,13 @@ class VariadicFunction(Object):
         self._required_args = required_args
         self._env = env
 
+    def required_args(self):
+        return -1
+
     def with_env(self, env):
         return VariadicFunction(self._w_name, self._args_w, self._required_args, self._w_body, env)
 
-    @jit.unroll_safe
-    def invoke_Ef(self, args):
-        env = self._env
-        if self._w_name is not None:
-            env = env.with_local(jit.promote(self._w_name), self)
+    def invoke_with_env_Ef(self, args, env):
         if self._required_args == 0:
             args = ArgList([array(args.list())])
         if args.arg_count() == self._required_args:
@@ -130,6 +136,44 @@ class VariadicFunction(Object):
             env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
 
         return SyntaxThunk(self._w_body, env)
+
+    @jit.unroll_safe
+    def invoke_Ef(self, args):
+        env = self._env
+        if self._w_name is not None:
+            env = env.with_local(jit.promote(self._w_name), self)
+        return self.invoke_with_env_Ef(args, env)
+    
+    
+class MultiArityFn(Object):
+    _immutable_fields_ = ["_w_name", "_arities[*]", "_rest_fn", "_meta", "_env"]
+    def type(self):
+        return PixieFunction._type
+
+    def __init__(self, w_name, arities, rest_fn=None, env=None, meta=nil):
+        self._w_name = w_name
+        self._arities = arities
+        self._rest_fn = rest_fn
+        self._meta = meta
+        self._env = env
+
+
+    def with_env(self, env):
+        return MultiArityFn(self._w_name, self._arities, self._rest_fn, env, self._meta)
+
+
+    @jit.elidable_promote()
+    def get_fn(self, arity):
+        f = self._arities.get(arity, None)
+        if f is not None:
+            return f
+        return self._rest_fn
+
+    def invoke_Ef(self, args):
+        env = self._env
+        if self._w_name is not None:
+            env = env.with_local(jit.promote(self._w_name), self)
+        return self.get_fn(args.arg_count()).invoke_with_env_Ef(args, env)
 
 
 class FnLiteral(Object):
