@@ -71,6 +71,23 @@ class TestCompilation(unittest.TestCase):
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 2)
 
+    def test_variadic_function(self):
+
+        ast = run_with_state(read_and_compile, default_env, "((fn* foo [& r] (-count r)) true)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 1)
+
+
+        ast = run_with_state(read_and_compile, default_env, "((fn* foo [x & r] (-count r)) 1 2 3)")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 2)
+
 
     def test_recursive_fn(self):
         ast = run_with_state(read_and_compile, default_env, """((fn* self [x]

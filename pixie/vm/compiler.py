@@ -8,6 +8,7 @@ from pixie.vm.symbol import Symbol
 from pixie.vm.keyword import keyword
 from pixie.vm.effects.effect_transform import cps
 from pixie.vm.effects.environment import throw_Ef
+from rpython.rlib.rarithmetic import intmask
 from pixie.vm.numbers import Integer
 from pixie.vm.ast import *
 
@@ -64,9 +65,38 @@ def compile_fn_Ef(form):
         acc = acc.conj(keyword(arg.name()))
         idx += 1
 
-    body_comp = compile_implicit_do_Ef(body)
+    body_fn = compile_fn_body_Ef(name_kw, acc, body)
+    return FnLiteral(body_fn)
 
-    return FnLiteral(PixieFunction(name_kw, acc.to_list(), body_comp))
+@cps
+def compile_fn_body_Ef(name, args, body):
+
+    required_args, args_vec = add_args(name, args)
+
+    body_comp = compile_implicit_do_Ef(body)
+    args_lst = args_vec.to_list()
+
+    if required_args == -1:
+        return PixieFunction(name, args_lst, body_comp)
+    else:
+        rargs = r_uint(required_args)
+        return VariadicFunction(name, args_lst, rargs, body_comp)
+
+def add_args(name, args):
+    required_args = -1
+    acc = EMPTY_VECTOR
+
+    for x in range(args.count()):
+        arg = args.nth(x)
+
+        if arg.str() == u"&":
+            required_args = intmask(x)
+            continue
+
+        acc = acc.conj(arg)
+
+    return required_args, acc
+
 
 @cps
 def compile_implicit_do_Ef(body):
@@ -117,6 +147,9 @@ def compile_let_binding_Ef(bindings, idx, body):
     inner_comp = compile_let_binding_Ef(bindings, next_idx, body)
 
     return Binding(nm, expr_comp, inner_comp)
+
+
+
 
 
 @cps

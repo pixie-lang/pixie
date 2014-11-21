@@ -34,6 +34,9 @@ class ArgList(object):
     def arg_count(self):
         return len(self._args_w)
 
+    def list(self):
+        return self._args_w
+
 _type_registry = {}
 
 class Type(Object):

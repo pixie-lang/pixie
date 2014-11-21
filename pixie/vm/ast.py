@@ -1,6 +1,7 @@
 from pixie.vm.effects.effects import Object, Type, Answer, Thunk, ArgList, raise_Ef
 from pixie.vm.effects.effect_transform import cps
 from pixie.vm.effects.environment import Resolve, resolve_Ef, declare_Ef, throw_Ef
+from pixie.vm.array import array
 from pixie.vm.primitives import true, false, nil
 from pixie.vm.keyword import keyword
 
@@ -86,7 +87,45 @@ class PixieFunction(Object):
     @jit.unroll_safe
     def invoke_Ef(self, args):
         env = self._env
-        env = env.with_local(jit.promote(self._w_name), self)
+        if self._w_name is not None:
+            env = env.with_local(jit.promote(self._w_name), self)
+        for x in range(args.arg_count()):
+            env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
+
+        return SyntaxThunk(self._w_body, env)
+
+class VariadicFunction(Object):
+    _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env", "_required_args"]
+    def type(self):
+        return PixieFunction._type
+
+    def __init__(self, name, args, required_args, body, env=None):
+        self._w_name = name
+        self._args_w = args
+        self._w_body = body
+        self._required_args = required_args
+        self._env = env
+
+    def with_env(self, env):
+        return VariadicFunction(self._w_name, self._args_w, self._required_args, self._w_body, env)
+
+    @jit.unroll_safe
+    def invoke_Ef(self, args):
+        env = self._env
+        if self._w_name is not None:
+            env = env.with_local(jit.promote(self._w_name), self)
+        if self._required_args == 0:
+            args = ArgList([array(args.list())])
+        if args.arg_count() == self._required_args:
+            new_args = resize_list(args.list(), len(args) + 1)
+            new_args[args.arg_count()] = array([])
+            args = ArgList(new_args)
+        elif args.arg_count() > self._required_args:
+            start = slice_from_start(args.list(), self._required_args, 1)
+            rest = slice_to_end(args.list(), self._required_args)
+            start[self._required_args] = array(rest)
+            args = ArgList(start)
+
         for x in range(args.arg_count()):
             env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
 
@@ -274,3 +313,43 @@ class Locals(Object):
         new_vals[idx] = val
 
         return Locals(new_names, new_vals)
+
+
+### Helpers
+
+@jit.unroll_safe
+def resize_list(lst, new_size):
+    """'Resizes' a list, via reallocation and copy"""
+    affirm(len(lst) < new_size, u"New list must be larger than old list")
+    new_list = [None] * new_size
+    i = r_uint(0)
+    while i < len(lst):
+        new_list[i] = lst[i]
+        i += 1
+    return new_list
+
+@jit.unroll_safe
+def list_copy(from_lst, from_loc, to_list, to_loc, count):
+    from_loc = r_uint(from_loc)
+    to_loc = r_uint(to_loc)
+    count = r_uint(count)
+
+    i = r_uint(0)
+    while i < count:
+        to_list[to_loc + i] = from_lst[from_loc+i]
+        i += 1
+    return to_list
+
+@jit.unroll_safe
+def slice_to_end(from_list, start_pos):
+    start_pos = r_uint(start_pos)
+    items_to_copy = len(from_list) - start_pos
+    new_lst = [None] * items_to_copy
+    list_copy(from_list, start_pos, new_lst, 0, items_to_copy)
+    return new_lst
+
+@jit.unroll_safe
+def slice_from_start(from_list, count, extra=r_uint(0)):
+    new_lst = [None] * (count + extra)
+    list_copy(from_list, 0, new_lst, 0, count)
+    return new_lst
