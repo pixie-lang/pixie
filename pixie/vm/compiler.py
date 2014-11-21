@@ -103,10 +103,46 @@ def compile_do(form):
     form = rt.next_Ef(form)
     return compile_implicit_do_Ef(form)
 
+@cps
+def compile_let_binding_Ef(bindings, idx, body):
+    if idx == bindings.count():
+        return body
+
+    nm = keyword(bindings.nth(idx).str())
+    expr = bindings.nth(idx + 1)
+
+    expr_comp = compile_itm_Ef(expr)
+
+    next_idx = idx + 2
+    inner_comp = compile_let_binding_Ef(bindings, next_idx, body)
+
+    return Binding(nm, expr_comp, inner_comp)
+
+
+@cps
+def compile_let(form):
+    form = rt.next_Ef(form)
+    bindings = rt.first_Ef(form)
+
+    if not isinstance(bindings, PersistentVector):
+        throw_Ef(VALUE_ERROR, u"Bindings must be a vector")
+
+    if not bindings.count() % 2 == 0:
+        throw_Ef(VALUE_ERROR, u"Must have an even number of bindings in let")
+
+    form = rt.next_Ef(form)
+
+    body_comp = compile_implicit_do_Ef(form)
+
+    return compile_let_binding_Ef(bindings, 0, body_comp)
+
+
+
 _builtins = {u"if": compile_if_Ef,
              u"fn*": compile_fn_Ef,
              u"def": compile_def,
-             u"do": compile_do}
+             u"do": compile_do,
+             u"let*": compile_let}
 
 
 

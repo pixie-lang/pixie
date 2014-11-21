@@ -123,6 +123,28 @@ class Def(Object):
         nm = self._w_nm
         return declare_Ef(ns, nm, val)
 
+class Binding(Object):
+    _type = Type(u"pixie.ast.Binding")
+    _immutable_fields_ = ["_w_nm", "_w_binding_expr", "_w_body_expr"]
+
+    def type(self):
+        return Binding._type
+
+    def __init__(self, w_nm, w_binding_expr, w_body_expr):
+        self._w_nm = w_nm
+        self._w_binding_expr = w_binding_expr
+        self._w_body_expr = w_body_expr
+
+    @cps
+    def interpret_Ef(self, locals):
+        ast = self._w_binding_expr
+        result = syntax_thunk_Ef(ast, locals)
+        locals = locals.with_local(self._w_nm, result)
+        ast = self._w_body_expr
+        return syntax_thunk_Ef(ast, locals)
+
+
+
 
 
 
