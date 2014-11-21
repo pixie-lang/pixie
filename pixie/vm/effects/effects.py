@@ -78,6 +78,8 @@ class Effect(EffectObject):
         """
         raise NotImplementedError()
 
+
+
 class OpaqueIOFn(Object):
     """
     Base class for an effect that mutates some resource.
@@ -151,6 +153,15 @@ class Thunk(EffectObject):
 
     def get_loc(self):
         return (None, None)
+
+
+class InvokeThunk(Thunk):
+    def __init__(self, w_fn, w_val):
+        self._w_fn = w_fn
+        self._w_val = w_val
+
+    def execute_thunk(self):
+        return self._w_fn.invoke_Ef(ArgList([self._w_val]))
 
 def answer(x):
     """

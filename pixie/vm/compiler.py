@@ -52,9 +52,12 @@ def compile_if_Ef(form):
 def compile_fn_Ef(form):
     form = rt.next_Ef(form)
     name = rt.first_Ef(form)
-    form = rt.next_Ef(form)
+    if isinstance(name, Symbol):
+        form = rt.next_Ef(form)
+        name_kw = keyword(name.name())
+    else:
+        name_kw = None
     args = rt.first_Ef(form)
-    name_kw = keyword(name.name())
 
 
     body = body_fn = None

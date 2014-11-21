@@ -135,4 +135,19 @@ class TestCompilation(unittest.TestCase):
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 42)
 
+
+    def test_recursive_ref_fn(self):
+        ast = run_with_state(read_and_compile, default_env, """(-with-ref 0
+                                                                 (fn* countup [id]
+                                                                   (let* [x (get-ref id)]
+                                                                     (if (-num-eq x 10)
+                                                                       x
+                                                                       (do (swap-ref id (-add x 1))
+                                                                           (countup id))))))""")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 10)
+
 "((fn* self [x] (if (-num-eq x 10000) x (self (-add 1 x)))) 0)"

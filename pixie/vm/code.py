@@ -21,7 +21,6 @@ CO_VARARGS = 0x4
 def wrap_fn(transform=True):
     def with_fn(fn):
         if transform:
-
             fn = cps(fn)
 
         """Converts a native Python function into a pixie function."""
