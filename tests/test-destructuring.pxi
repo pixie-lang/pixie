@@ -49,4 +49,7 @@
   (t/assert= (let [{a :a :or {a 42}} {}] a) 42)
 
   (t/assert= (let [{a :a :or {a 42}} {:a nil}] a) nil)
-  (t/assert= (let [{a :a :or {a 42}} {:a false}] a) false))
+  (t/assert= (let [{a :a :or {a 42}} {:a false}] a) false)
+
+  (t/assert= (let [{:keys [a], :or {a 42}} {:a 1}] a) 1)
+  (t/assert= (let [{:keys [a], :or {a 42}} {}] a) 42))

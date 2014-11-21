@@ -1019,7 +1019,7 @@
                 (recur (next bindings)
                        (reduce conj res (destructure binding `(get ~expr ~binding-key ~(get defaults binding)))))))
             res))
-        expand-with (fn [convert] #(vector % `(get ~expr ~(convert %))))
+        expand-with (fn [convert] #(vector % `(get ~expr ~(convert %) ~(get defaults %))))
         res (if (contains? binding-map :keys) (transduce (map (expand-with (comp keyword name))) concat res (get binding-map :keys)) res)
         res (if (contains? binding-map :as)
               (reduce conj res [(get binding-map :as) expr])
