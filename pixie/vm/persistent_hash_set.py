@@ -23,6 +23,9 @@ class PersistentHashSet(object.Object):
     def conj(self, v):
         return PersistentHashSet(self._meta, self._map.assoc(v, v))
 
+    def disj(self, k):
+        return PersistentHashSet(self._meta, self._map.without(k))
+
     def meta(self):
         return self._meta
 
@@ -76,6 +79,11 @@ def _eq(self, obj):
 def _conj(self, v):
     assert isinstance(self, PersistentHashSet)
     return self.conj(v)
+
+@extend(proto._disj, PersistentHashSet)
+def _disj(self, v):
+    assert isinstance(self, PersistentHashSet)
+    return self.disj(v)
 
 @extend(proto._reduce, PersistentHashSet)
 def _reduce(self, f, init):

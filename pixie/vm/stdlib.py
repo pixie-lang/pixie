@@ -19,7 +19,7 @@ defprotocol("pixie.stdlib", "ICounted", ["-count"])
 
 defprotocol("pixie.stdlib", "IIndexed", ["-nth"])
 
-defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj"])
+defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj", "-disj"])
 
 defprotocol("pixie.stdlib", "IEmpty", ["-empty"])
 
