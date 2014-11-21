@@ -1,6 +1,6 @@
 from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state, make_default_env
 from pixie.vm.effects.effect_transform import cps
-
+from pixie.vm.primitives import nil
 from pixie.vm.compiler import compile_Ef
 from pixie.vm.ast import SyntaxThunk, Locals, syntax_thunk_Ef
 from pixie.vm.reader import StringReader, read_Ef, PromptReader #, MetaDataReader
@@ -57,6 +57,8 @@ def jitpolicy(driver):
 # STAR_E.set_root(nil)
 #
 
+KW_EXIT_REPL = keyword(u"exit-repl")
+
 class ReplFn(NativeFn):
     def __init__(self, args):
         self._argv = args
@@ -90,28 +92,15 @@ class ReplFn(NativeFn):
         #with with_ns(u"user"):
         while True:
             val = read_Ef(rdr, True)
+            if val is KW_EXIT_REPL:
+                break
             ast = compile_Ef(val)
             locals = Locals()
             val = syntax_thunk_Ef(ast, locals)
             sval = rt._str_Ef(val)
             rt._print_Ef(sval)
-            #
-            # try:
-            #     val = read(rdr, False)
-            #     if val is eof:
-            #         break
-            #     val = interpret(compile(val))
-            #     self.set_recent_vars(val)
-            # except WrappedException as ex:
-            #     print "Error: ", ex._ex.__repr__()
-            #     rdr.reset_line()
-            #     self.set_error_var(ex._ex)
-            #     continue
-            # if val is keyword(u"exit-repl"):
-            #     break
-            # val = rt.str(val)
-            # assert isinstance(val, String), "str should always return a string"
-            # print val._str
+
+        return nil
 
     def set_recent_vars(self, val):
         if rt.eq(val, STAR_1.deref()):
