@@ -28,13 +28,25 @@ Some planned and implemented features:
     ./checkout-externals
     ./make-with-jit
     ./pixie-vm
-    
+
+
+## Running the tests
+
+    ./pixie-vm run-tests.pxi
+
+
+## Examples
+
+There are example in the /examples directory.
+Try out "Hello World" with:
+
+    ./examples/hello-world.pxi
 
 ## FAQ
 
 ### So this is written in Python?
 
-It's actually written in the RPython, the same language PyPy is written in. The script `./make-with-jit` will compile Pixie using the PyPy toolchain. After some time, it will produce an executable called `pixie-vm` this executable is a flow blown native interpreter with a JIT, GC, etc. So yes, the guts are written in RPython, just like the guts of most lisp interpreters are written in C. At runtime the only thing that is interpreted is the Pixie bytecode, that is until the JIT kicks in...
+It's actually written in the RPython, the same language PyPy is written in. The script `./make-with-jit` will compile Pixie using the PyPy toolchain. After some time, it will produce an executable called `pixie-vm` this executable is a full blown native interpreter with a JIT, GC, etc. So yes, the guts are written in RPython, just like the guts of most lisp interpreters are written in C. At runtime the only thing that is interpreted is the Pixie bytecode, that is until the JIT kicks in...
 
 ### What's this bit about "magical powers"?
 

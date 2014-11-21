@@ -17,6 +17,7 @@ from rpython.translator.platform import platform
 
 import sys
 import os
+import os.path as path
 import rpython.rlib.rpath as rpath
 import rpython.rlib.rpath as rposix
 from rpython.rlib.objectmodel import we_are_translated
@@ -111,6 +112,11 @@ class ReplFn(NativeFn):
 
     def set_error_var(self, ex):
         STAR_E.set_root(ex)
+
+def entry_point():
+    final = run_with_state(ReplFn([]), make_default_env())
+
+
 #
 # class BatchModeFn(NativeFn):
 #     def __init__(self, args):
@@ -132,12 +138,23 @@ class ReplFn(NativeFn):
 #
 #         with with_ns(u"user"):
 #             try:
+#                 f = None
 #                 if self._file == '-':
-#                     stdin, _, _ = create_stdio()
-#                     code = stdin.read()
-#                     interpret(compile(read(StringReader(unicode(code)), True)))
+#                     f, _, _ = create_stdio()
 #                 else:
-#                     rt.load_file(rt.wrap(self._file))
+#                     if not path.isfile(self._file):
+#                         print "Error: Cannot open '" + self._file + "'"
+#                         os._exit(1)
+#                     f = open(self._file)
+#                 data = f.read()
+#                 f.close()
+#
+#                 if data.startswith("#!"):
+#                     newline_pos = data.find("\n")
+#                     if newline_pos > 0:
+#                         data = data[newline_pos:]
+#
+#                 rt.load_reader(StringReader(unicode(data)))
 #             except WrappedException as ex:
 #                 print "Error: ", ex._ex.__repr__()
 #                 os._exit(1)
@@ -158,7 +175,7 @@ class ReplFn(NativeFn):
 # def run_load_stdlib():
 #     import pixie.vm.compiler as compiler
 #     import pixie.vm.reader as reader
-#     f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.lisp"))
+#     f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.pxi"))
 #     data = f.read()
 #     f.close()
 #     rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
@@ -189,93 +206,91 @@ class ReplFn(NativeFn):
 #
 #
 #     stacklet.with_stacklets(run_load_stdlib)
-
-
-class ReadFn(NativeFn):
-    _immutable_fields_ = ["_rdr"]
-    def __init__(self, rdr):
-        self._rdr = rdr
-    @cps
-    def invoke_Ef(self, args):
-        rdr = self._rdr
-        read = read_Ef(rdr, True)
-        return compile_Ef(read)
-
-
-def entry_point():
-
-    final = run_with_state(ReplFn([]), make_default_env())
-    print "executing"
-    result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), make_default_env())
-    print result
-
-    # interactive = True
-    # script_args = []
-    #
-    # init_load_path(args[0])
-    # load_stdlib()
-    #
-    # i = 1
-    # while i < len(args):
-    #     arg = args[i]
-    #
-    #     if arg.startswith('-') and arg != '-':
-    #         if arg == '-v' or arg == '--version':
-    #             print "Pixie 0.1"
-    #             return 0
-    #         elif arg == '-h' or arg == '--help':
-    #             print args[0] + " [<options>] [<file>]"
-    #             print "  -h, --help             print this help"
-    #             print "  -v, --version          print the version number"
-    #             print "  -e, --eval=<expr>      evaluate the given expression"
-    #             print "  -l, --load-path=<path> add <path> to pixie.stdlib/load-paths"
-    #             return 0
-    #         elif arg == '-e' or arg == '--eval':
-    #             i += 1
-    #             if i < len(args):
-    #                 expr = args[i]
-    #                 with_stacklets(EvalFn(expr))
-    #                 return 0
-    #             else:
-    #                 print "Expected argument for " + arg
-    #                 return 1
-    #         elif arg == '-l' or arg == '--load-path':
-    #             i += 1
-    #             if i < len(args):
-    #                 path = args[i]
-    #                 add_to_load_paths(path)
-    #             else:
-    #                 print "Expected argument for " + arg
-    #                 return 1
-    #         else:
-    #             print "Unknown option " + arg
-    #             return 1
-    #     else:
-    #         interactive = False
-    #         script_args = args[i:]
-    #         break
-    #
-    #     i += 1
-    #
-    # if interactive:
-    #     with_stacklets(ReplFn(args))
-    # else:
-    #     with_stacklets(BatchModeFn(script_args))
-
-    return 0
-
-def add_to_load_paths(path):
-    rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
-
-def init_load_path(self_path):
-    base_path = dirname(rpath.rabspath(self_path))
-    # runtime is not loaded yet, so we have to do it manually
-    LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(base_path))))
-    # just for run_load_stdlib (global variables can't be assigned to)
-    load_path.set_root(rt.wrap(base_path))
-
-def dirname(path):
-    return rpath.sep.join(path.split(rpath.sep)[0:-1])
+#
+# def entry_point(args):
+#     interactive = True
+#     script_args = []
+#
+#     init_load_path(args[0])
+#     load_stdlib()
+#     add_to_load_paths(".")
+#
+#     i = 1
+#     while i < len(args):
+#         arg = args[i]
+#
+#         if arg.startswith('-') and arg != '-':
+#             if arg == '-v' or arg == '--version':
+#                 print "Pixie 0.1"
+#                 return 0
+#             elif arg == '-h' or arg == '--help':
+#                 print args[0] + " [<options>] [<file>]"
+#                 print "  -h, --help             print this help"
+#                 print "  -v, --version          print the version number"
+#                 print "  -e, --eval=<expr>      evaluate the given expression"
+#                 print "  -l, --load-path=<path> add <path> to pixie.stdlib/load-paths"
+#                 return 0
+#             elif arg == '-e' or arg == '--eval':
+#                 i += 1
+#                 if i < len(args):
+#                     expr = args[i]
+#                     with_stacklets(EvalFn(expr))
+#                     return 0
+#                 else:
+#                     print "Expected argument for " + arg
+#                     return 1
+#             elif arg == '-l' or arg == '--load-path':
+#                 i += 1
+#                 if i < len(args):
+#                     path = args[i]
+#                     add_to_load_paths(path)
+#                 else:
+#                     print "Expected argument for " + arg
+#                     return 1
+#             else:
+#                 print "Unknown option " + arg
+#                 return 1
+#         else:
+#             interactive = False
+#             script_args = args[i:]
+#             break
+#
+#         i += 1
+#
+#     if interactive:
+#         with_stacklets(ReplFn(args))
+#     else:
+#         with_stacklets(BatchModeFn(script_args))
+#
+#     return 0
+#
+# def add_to_load_paths(path):
+#     rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
+#
+# def init_load_path(self_path):
+#     if not path.isfile(self_path):
+#         self_path = find_in_path(self_path)
+#         assert self_path is not None
+#     if path.islink(self_path):
+#         self_path = os.readlink(self_path)
+#     self_path = dirname(rpath.rabspath(self_path))
+#
+#     # runtime is not loaded yet, so we have to do it manually
+#     LOAD_PATHS.set_root(Atom(EMPTY_VECTOR.conj(rt.wrap(self_path))))
+#     # just for run_load_stdlib (global variables can't be assigned to)
+#     load_path.set_root(rt.wrap(self_path))
+#
+# def dirname(path):
+#     return rpath.sep.join(path.split(rpath.sep)[0:-1])
+#
+# def find_in_path(exe_name):
+#     paths = os.environ.get('PATH')
+#     paths = paths.split(path.pathsep)
+#     for p in paths:
+#         exe_path = path.join(p, exe_name)
+#         if path.isfile(exe_path):
+#             return exe_path
+#     return None
 
 from rpython.rtyper.lltypesystem import lltype
 from rpython.jit.metainterp import warmspot

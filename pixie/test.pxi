@@ -53,15 +53,15 @@
                     (if (= (nth desc 1) :file)
                       (let [filename (nth desc 2)]
                         (if (pixie.string/starts-with filename "test-")
-                          (if (pixie.string/ends-with filename ".lisp")
+                          (if (pixie.string/ends-with filename ".pxi")
                             (let [fullpath (str (nth desc 0) "/" filename)]
                               (print "Loading " fullpath)
                               (load-file fullpath)))))))))
 
 
 (defmacro assert= [x y]
-  `(let [xr# ~x
-         yr# ~y]
+  `(let* [xr# ~x
+          yr# ~y]
      (assert (= xr# yr#) (str (show '~x xr#) " != " (show '~y yr#)))))
 
 (defmacro assert [x]

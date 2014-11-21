@@ -1,6 +1,13 @@
 py_object = object
 from pixie.vm.effects.effects import Object, Type
 from rpython.rlib.rarithmetic import r_uint, intmask
+import pixie.vm.object as object
+from pixie.vm.object import affirm
+from pixie.vm.primitives import nil, true, false
+from pixie.vm.numbers import Integer
+import pixie.vm.stdlib as proto
+from  pixie.vm.code import extend, as_var
+from rpython.rlib.rarithmetic import r_int, r_uint, intmask
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 
@@ -105,7 +112,7 @@ class BitmapIndexedNode(INode):
 
             if key_or_null is None:
                 assert isinstance(val_or_node, INode)
-                n = val_or_node.assoc_inode(shift + 5, hash_val, key, val, added_leaf)
+                n = val_or_node.assoc_inode(shift + 5, hash_val & MASK_32, key, val, added_leaf)
                 if n is val_or_node:
                     return self
                 return BitmapIndexedNode(None, self._bitmap, clone_and_set(self._array, 2 * idx + 1, n))
@@ -224,17 +231,17 @@ class ArrayNode(INode):
             return self
         return ArrayNode(None, self._cnt, clone_and_set(self._array, idx, n))
 
-    def without_inode(self, shift, hash, key):
-        idx = mask(hash, shift)
+    def without_inode(self, shift, hash_val, key):
+        idx = r_uint(mask(hash_val, shift))
         node = self._array[idx]
         if node is None:
             return self
-        n = node.without_inode(shift + 5, hash, key)
+        n = node.without_inode(shift + 5, hash_val, key)
         if n is node:
             return self
         if n is None:
             if self._cnt <= 8:  # shrink
-                return self.pack(None, idx)
+                return self.pack(idx)
             return ArrayNode(None, self._cnt - 1, clone_and_set(self._array, idx, n))
         else:
             return ArrayNode(None, self._cnt, clone_and_set(self._array, idx, n))
@@ -248,7 +255,7 @@ class ArrayNode(INode):
         while i < idx:
             if self._array[i] is not None:
                 new_array[j] = self._array[i]
-                bitmap |= 1 << i
+                bitmap |= r_uint(1) << i
                 j += 2
 
             i += 1
@@ -257,7 +264,7 @@ class ArrayNode(INode):
         while i < len(self._array):
             if self._array[i] is not None:
                 new_array[j] = self._array[i]
-                bitmap |= 1 << i
+                bitmap |= r_uint(1) << i
                 j += 2
 
             i += 1
@@ -290,7 +297,22 @@ class HashCollisionNode(INode):
         self._array = array
 
     def assoc_inode(self, shift, hash_val, key, val, added_leaf):
-        assert False
+        if hash_val == self._hash:
+            count = len(self._array)
+            idx = self.find_index(key)
+            if idx != -1:
+                if self._array[idx + 1] == val:
+                    return self;
+                return HashCollisionNode(None, hash_val, clone_and_set(self._array, r_uint(idx + 1), val))
+            
+            new_array = [None] * (count + 2)
+            list_copy(self._array, 0, new_array, 0, count)
+            new_array[count] = key
+            added_leaf._val = added_leaf
+            new_array[count + 1] = val
+            return HashCollisionNode(self._edit, self._hash, new_array)
+        return BitmapIndexedNode(None, bitpos(self._hash, shift), [None, self]) \
+                                .assoc_inode(shift, hash_val, key, val, added_leaf) 
 
     def find(self, shift, hash_val, key, not_found):
         for x in range(0, len(self._array), 2):
@@ -313,16 +335,16 @@ class HashCollisionNode(INode):
         return init
 
     def find_index(self, key):
-        i = 0
+        i = r_int(0)
         while i < len(self._array):
             if rt.eq(key, self._array[i]):
                 return i
 
             i += 2
 
-        return -1
+        return r_int(-1)
 
-    def without(self, shift, hash, key):
+    def without_inode(self, shift, hash, key):
         idx = self.find_index(key)
         if idx == -1:
             return self
@@ -330,12 +352,12 @@ class HashCollisionNode(INode):
         if len(self._array) == 1:
             return None
 
-        return HashCollisionNode(None, self._hash, remove_pair(self._array, idx / 2))
+        return HashCollisionNode(None, self._hash, remove_pair(self._array, r_uint(idx) / 2))
 
 
 
 def create_node(shift, key1, val1, key2hash, key2, val2):
-    key1hash = rt.hash(key1)
+    key1hash = rt.hash(key1) & MASK_32
     if key1hash == key2hash:
         return HashCollisionNode(None, key1hash, [key1, val1, key2, val2])
     added_leaf = Box()

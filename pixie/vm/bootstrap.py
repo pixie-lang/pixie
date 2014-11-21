@@ -7,7 +7,7 @@ def bootstrap():
     import pixie.vm.rt as rt
     from pixie.vm.string import String
     assert False
-    rt.load_file(rt.wrap(u"pixie/stdlib.lisp"))
+    rt.load_ns(rt.wrap(u"pixie/stdlib.pxi"))
 
 
 # run bootstrap

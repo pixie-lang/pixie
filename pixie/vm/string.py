@@ -3,8 +3,9 @@ from pixie.vm.numbers import Integer
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.code import extend
 import pixie.vm.rt as rt
-from rpython.rlib.rarithmetic import intmask
-from pixie.vm.util import hash_unencoded_chars
+from rpython.rlib.rarithmetic import intmask, r_uint
+from pixie.vm.util import hash_unencoded_chars, hash_int
+
 
 class String(Object):
     _immutable_fields_ = ["_str"]
@@ -45,6 +46,18 @@ def _eq(self, v):
     if not isinstance(v, String):
         return false
     return true if self.str() == v.str() else false
+
+@extend("pixie.stdlib.-name", String)
+def _name(self):
+    return self
+
+@extend("pixie.stdlib.-namespace", String)
+def _namespace(_):
+    return nil
+
+@extend("pixie.stdlib.-hash", String)
+def _hash(self):
+    return rt.wrap(intmask(hash_unencoded_chars(self.str())))
 
 
 class Character(Object):
@@ -100,14 +113,7 @@ def _eq(self, obj):
         return false
     return true if self.char_val() == obj.char_val() else false
 
-@extend("pixie.stdlib.-name", String)
-def _name(self):
-    return self
-
-@extend("pixie.stdlib.-namespace", String)
-def _namespace(_):
-    return nil
-
-@extend("pixie.stdlib.-hash", String)
+@extend("pixie.stdlib.-hash", Character)
 def _hash(self):
-    return rt.wrap(intmask(hash_unencoded_chars(self.str())))
+    return rt.wrap(intmask(hash_int(r_uint(self.char_val()))))
+
