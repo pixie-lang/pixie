@@ -84,4 +84,12 @@ class TestCompilation(unittest.TestCase):
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 10)
 
+    def test_def(self):
+        ast = run_with_state(read_and_compile, default_env, """(do (def x 42) x)""")
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Integer)
+        self.assertEqual(result.val().int_val(), 42)
+
 "((fn* self [x] (if (-num-eq x 10000) x (self (-add 1 x)))) 0)"

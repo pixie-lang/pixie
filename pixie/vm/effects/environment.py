@@ -49,9 +49,17 @@ defeffect("pixie.stdlib.OpaqueIO", "OpaqueIO", ["effect"])
 
 ExceptionEffect.__repr__ = lambda self: str(self._w_kw.__repr__()) + " : " + str(self._w_msg.str())
 
+def throw_Ef(kw, msg):
+    from pixie.vm.string import String
+    return ExceptionEffect(kw, String(msg))
+
+
 def resolve_Ef(ns, nm):
     eff = Resolve(ns, nm, answer_k)
     return eff
+
+def declare_Ef(ns, nm, val):
+    return Declare(ns, nm, val)
 
 class EnvironmentHandler(Handler):
     _immutable_ = True

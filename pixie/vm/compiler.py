@@ -7,6 +7,7 @@ from pixie.vm.persistent_list import PersistentList
 from pixie.vm.symbol import Symbol
 from pixie.vm.keyword import keyword
 from pixie.vm.effects.effect_transform import cps
+from pixie.vm.effects.environment import throw_Ef
 from pixie.vm.numbers import Integer
 from pixie.vm.ast import *
 
@@ -81,8 +82,31 @@ def compile_implicit_do_Ef(body):
     else:
         return Do(acc.to_list())
 
+VALUE_ERROR = keyword(u"VALUE-ERROR")
+
+@cps
+def compile_def(form):
+    form = rt.next_Ef(form)
+    name = rt.first_Ef(form)
+    form = rt.next_Ef(form)
+    expr = rt.first_Ef(form)
+
+    expr_comp = compile_itm_Ef(expr)
+
+    if not isinstance(name, Symbol):
+        throw_Ef(VALUE_ERROR, u"Def name must be a symbol")
+
+    return Def(keyword(u"pixie.stdlib"), keyword(name.str()), expr_comp)
+
+@cps
+def compile_do(form):
+    form = rt.next_Ef(form)
+    return compile_implicit_do_Ef(form)
+
 _builtins = {u"if": compile_if_Ef,
-             u"fn*": compile_fn_Ef}
+             u"fn*": compile_fn_Ef,
+             u"def": compile_def,
+             u"do": compile_do}
 
 
 

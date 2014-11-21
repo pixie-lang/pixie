@@ -36,6 +36,9 @@ class Keyword(Object):
     def __str__(self):
         return self.__repr__()
 
+    def str(self):
+        return self._str
+
 
 class KeywordCache(object):
     def __init__(self):

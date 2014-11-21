@@ -1,7 +1,9 @@
 from pixie.vm.effects.effects import Object, Type, Answer, Thunk, ArgList, raise_Ef
 from pixie.vm.effects.effect_transform import cps
-from pixie.vm.effects.environment import Resolve, resolve_Ef
+from pixie.vm.effects.environment import Resolve, resolve_Ef, declare_Ef, throw_Ef
 from pixie.vm.primitives import true, false, nil
+from pixie.vm.keyword import keyword
+
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
 
@@ -101,9 +103,30 @@ class FnLiteral(Object):
         return Answer(self._w_fn.with_env(env))
 
 
+class Def(Object):
+    _type = Type(u"pixie.ast.Def")
+    _immutable_fields_ = ["_w_nm", "_w_nm", "_w_expr"]
+
+    def type(self):
+        return Def._type
+
+    def __init__(self, w_ns, w_nm, w_expr):
+        self._w_ns = w_ns
+        self._w_nm = w_nm
+        self._w_expr = w_expr
+
+    @cps
+    def interpret_Ef(self, locals):
+        ast = self._w_expr
+        val = syntax_thunk_Ef(ast, locals)
+        ns = self._w_ns
+        nm = self._w_nm
+        return declare_Ef(ns, nm, val)
 
 
 
+
+KW_UNRESOVLED_SYMBOL = keyword(u"UNRESOLVED-SYMBOL")
 
 class Lookup(Syntax):
     _type = Type(u"pixie.ast.Lookup")
@@ -127,7 +150,13 @@ class Lookup(Syntax):
 
         ns = self._w_ns
         nm = self._w_nm
-        return resolve_Ef(ns, nm)
+        val = resolve_Ef(ns, nm)
+
+        if val is None:
+            msg = nm.str() + u" is unresolved in " + ns.str()
+            val = throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
+
+        return val
 
 
 class If(Syntax):
