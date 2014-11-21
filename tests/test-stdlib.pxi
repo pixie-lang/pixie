@@ -39,6 +39,37 @@
     (t/assert= (butlast l) res)
     (t/assert= (butlast r) res)))
 
+(t/deftest test-empty?
+  (t/assert= (empty? []) true)
+  (t/assert= (empty? '()) true)
+  (t/assert= (empty? (make-array 0)) true)
+  (t/assert= (empty? {}) true)
+  (t/assert= (empty? #{}) true)
+  (t/assert= (empty? (range 1 5)) false)
+
+  (t/assert= (empty? [1 2 3]) false)
+  (t/assert= (empty? '(1 2 3)) false)
+  (let [a (make-array 1)]
+    (aset a 0 1)
+    (t/assert= (empty? a) false))
+  (t/assert= (empty? {:a 1}) false)
+  (t/assert= (empty? #{:a :b}) false))
+
+(t/deftest test-not-empty?
+  (t/assert= (not-empty? []) false)
+  (t/assert= (not-empty? '()) false)
+  (t/assert= (not-empty? (make-array 0)) false)
+  (t/assert= (not-empty? {}) false)
+  (t/assert= (not-empty? #{}) false)
+  (t/assert= (not-empty? (range 1 5)) true)
+
+  (t/assert= (not-empty? [1 2 3]) true)
+  (t/assert= (not-empty? '(1 2 3)) true)
+  (let [a (make-array 1)]
+    (aset a 0 1)
+    (t/assert= (not-empty? a) true))
+  (t/assert= (not-empty? {:a 1}) true)
+  (t/assert= (not-empty? #{:a :b}) true))
 
 (t/deftest test-keys
   (let [v {:a 1 :b 2 :c 3}]

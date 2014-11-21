@@ -396,6 +396,20 @@
   [x]
   (- x 1))
 
+(defn empty?
+  {:doc "returns true if the collection has no items, otherwise false"
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (not (seq coll)))
+
+(defn not-empty?
+  {:doc "returns true if the collection has items, otherwise false"
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (seq coll) true false))
+
 (defn first
   {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
          the item from the collection."
