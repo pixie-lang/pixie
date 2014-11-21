@@ -2,15 +2,15 @@ from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_
 from pixie.vm.effects.effect_transform import cps
 
 from pixie.vm.compiler import compile_Ef
-from pixie.vm.ast import SyntaxThunk, Locals
-from pixie.vm.reader import StringReader, read_Ef #read, eof, PromptReader, MetaDataReader
+from pixie.vm.ast import SyntaxThunk, Locals, syntax_thunk_Ef
+from pixie.vm.reader import StringReader, read_Ef, PromptReader #, MetaDataReader
 # from pixie.vm.interpreter import interpret
 
 from pixie.vm.code import wrap_fn, NativeFn
 # from pixie.vm.stacklet import with_stacklets
 # import pixie.vm.stacklet as stacklet
 # from pixie.vm.object import RuntimeException, WrappedException
-# from rpython.translator.platform import platform
+from rpython.translator.platform import platform
 # from pixie.vm.primitives import nil
 # from pixie.vm.atom import Atom
 # from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
@@ -24,6 +24,7 @@ from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
 from rpython.rlib.rfile import create_stdio
 from rpython.annotator.policy import AnnotatorPolicy
+import pixie.vm.stdlib as stdlib
 
 class DebugIFace(JitHookInterface):
     def on_abort(self, reason, jitdriver, greenkey, greenkey_repr, logops, operations):
@@ -55,58 +56,72 @@ def jitpolicy(driver):
 # STAR_E = intern_var(u"pixie.stdlib", u"*e")
 # STAR_E.set_root(nil)
 #
-# class ReplFn(NativeFn):
-#     def __init__(self, args):
-#         self._argv = args
-#
-#     def inner_invoke(self, args):
-#         from pixie.vm.keyword import keyword
-#         import pixie.vm.rt as rt
-#         from pixie.vm.string import String
-#         import pixie.vm.persistent_vector as vector
-#
-#         print "Pixie 0.1 - Interactive REPL"
-#         print "(" + platform.name + ", " + platform.cc + ")"
-#         print "----------------------------"
-#
-#         with with_ns(u"user"):
-#             NS_VAR.deref().include_stdlib()
-#
-#         acc = vector.EMPTY
-#         for x in self._argv:
-#             acc = rt.conj(acc, rt.wrap(x))
-#
-#         PROGRAM_ARGUMENTS.set_root(acc)
-#
-#         rdr = MetaDataReader(PromptReader())
-#         with with_ns(u"user"):
-#             while True:
-#                 try:
-#                     val = read(rdr, False)
-#                     if val is eof:
-#                         break
-#                     val = interpret(compile(val))
-#                     self.set_recent_vars(val)
-#                 except WrappedException as ex:
-#                     print "Error: ", ex._ex.__repr__()
-#                     rdr.reset_line()
-#                     self.set_error_var(ex._ex)
-#                     continue
-#                 if val is keyword(u"exit-repl"):
-#                     break
-#                 val = rt.str(val)
-#                 assert isinstance(val, String), "str should always return a string"
-#                 print val._str
-#
-#     def set_recent_vars(self, val):
-#         if rt.eq(val, STAR_1.deref()):
-#             return
-#         STAR_3.set_root(STAR_2.deref())
-#         STAR_2.set_root(STAR_1.deref())
-#         STAR_1.set_root(val)
-#
-#     def set_error_var(self, ex):
-#         STAR_E.set_root(ex)
+
+class ReplFn(NativeFn):
+    def __init__(self, args):
+        self._argv = args
+
+    @cps
+    def invoke_Ef(self, args):
+        from pixie.vm.keyword import keyword
+        import pixie.vm.rt as rt
+        from pixie.vm.string import String
+        import pixie.vm.persistent_vector as vector
+
+        s = rt.wrap("Pixie 0.1 - Interactive REPL")
+        rt._print_Ef(s)
+        s = rt.wrap("(" + platform.name + ", " + platform.cc + ")")
+        rt._print_Ef(s)
+        s = rt.wrap("----------------------------")
+        rt._print_Ef(s)
+
+        #with with_ns(u"user"):
+        #    NS_VAR.deref().include_stdlib()
+
+        #acc = vector.EMPTY
+        #for x in self._argv:
+        #    acc = rt.conj(acc, rt.wrap(x))
+        #
+        #PROGRAM_ARGUMENTS.set_root(acc)
+
+        #rdr = MetaDataReader(PromptReader())
+        rdr = PromptReader()
+
+        #with with_ns(u"user"):
+        while True:
+            val = read_Ef(rdr, True)
+            ast = compile_Ef(val)
+            locals = Locals()
+            val = syntax_thunk_Ef(ast, locals)
+            sval = rt._str_Ef(val)
+            rt._print_Ef(sval)
+            #
+            # try:
+            #     val = read(rdr, False)
+            #     if val is eof:
+            #         break
+            #     val = interpret(compile(val))
+            #     self.set_recent_vars(val)
+            # except WrappedException as ex:
+            #     print "Error: ", ex._ex.__repr__()
+            #     rdr.reset_line()
+            #     self.set_error_var(ex._ex)
+            #     continue
+            # if val is keyword(u"exit-repl"):
+            #     break
+            # val = rt.str(val)
+            # assert isinstance(val, String), "str should always return a string"
+            # print val._str
+
+    def set_recent_vars(self, val):
+        if rt.eq(val, STAR_1.deref()):
+            return
+        STAR_3.set_root(STAR_2.deref())
+        STAR_2.set_root(STAR_1.deref())
+        STAR_1.set_root(val)
+
+    def set_error_var(self, ex):
+        STAR_E.set_root(ex)
 #
 # class BatchModeFn(NativeFn):
 #     def __init__(self, args):
@@ -199,16 +214,8 @@ class ReadFn(NativeFn):
 
 
 def entry_point():
-    args = None
-    if args is None:
-        args =["", """((fn* self [x]
-                                                                  (if (-num-eq x 10000)
-                                                                    x
-                                                                    (self (-add 1 x))))
-                                                                0)"""]
-    rdr = StringReader(unicode(args[1]))
-    print "reading"
-    ast = run_with_state(ReadFn(rdr), make_default_env())
+
+    final = run_with_state(ReplFn([]), make_default_env())
     print "executing"
     result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), make_default_env())
     print result
@@ -345,5 +352,5 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    #entry_point(sys.argv)
-    run_debug(sys.argv)
+    entry_point()
+    #run_debug(sys.argv)

@@ -18,7 +18,7 @@ from pixie.vm.symbol import symbol, Symbol
 # from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 # from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
-# from pixie.vm.libs.readline import _readline
+from pixie.vm.libs.readline import _readline
 # from pixie.vm.string import Character, String
 # from pixie.vm.code import wrap_fn, extend
 # from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
@@ -98,30 +98,31 @@ class StringReader(PlatformReader):
     def unread(self, ch):
         self._idx -= 1
 
-# class PromptReader(PlatformReader):
-#     def __init__(self):
-#         self._string_reader = None
-#
-#
-#     def read(self):
-#         if self._string_reader is None:
-#             result = _readline(str(rt.name(compiler.NS_VAR.deref())) + " => ")
-#             if result == u"":
-#                 raise EOFError()
-#             self._string_reader = StringReader(result)
-#
-#         try:
-#             return self._string_reader.read()
-#         except EOFError:
-#             self._string_reader = None
-#             return self.read()
-#
-#     def reset_line(self):
-#         self._string_reader = None
-#
-#     def unread(self, ch):
-#         assert self._string_reader is not None
-#         self._string_reader.unread(ch)
+class PromptReader(PlatformReader):
+    def __init__(self):
+        self._string_reader = None
+
+
+    def read(self):
+        if self._string_reader is None:
+            #result = _readline(str(rt.name(compiler.NS_VAR.deref())) + " => ")
+            result = _readline(" => ")
+            if result == u"":
+                return eof
+            self._string_reader = StringReader(result)
+
+        val = self._string_reader.read()
+        if val is eof:
+            self._string_reader = None
+            return self.read()
+        return val
+
+    def reset_line(self):
+        self._string_reader = None
+
+    def unread(self, ch):
+        assert self._string_reader is not None
+        self._string_reader.unread(ch)
 #
 # class LinePromise(object.Object):
 #     _type = object.Type(u"pixie.stdlib.LinePromise")
@@ -710,7 +711,6 @@ def read_number_Ef(rdr, ch):
     end = False
     while not end:
         ch = read_ch_Ef(rdr)
-        print ch
         if is_whitespace(ch) or ch in handlers or ch is eof:
             unread_Ef(rdr, ch)
             end = True
@@ -794,13 +794,13 @@ def read_Ef(rdr, error_on_eof):
         itm = read_number_Ef(rdr, ch)
 
     elif ch is MINUS:
-        ch2 = rdr.read()
+        ch2 = read_ch_Ef(rdr)
         if is_digit(ch2):
-            rdr.unread(ch2)
+            unread_Ef(rdr, ch2)
             itm = read_number_Ef(rdr, ch)
 
         else:
-            rdr.unread(ch2)
+            unread_Ef(rdr, ch2)
             itm = read_symbol_Ef(rdr, ch)
 
     else:

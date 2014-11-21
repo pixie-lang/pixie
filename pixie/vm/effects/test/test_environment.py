@@ -55,3 +55,4 @@ class TestEnvironment(unittest.TestCase):
 
         result = run_thunk_with_state(handle_with(ResourceHandler(), doit.invoke_Ef(ArgList()), answer_k), default_env)
         pass
+

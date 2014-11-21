@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.primitives import true, false, nil
-from pixie.vm.code import defprotocol
-from pixie.vm.effects.environment import link_builtins
+from pixie.vm.code import defprotocol, as_global, wrap_fn
+from pixie.vm.effects.effects import OpaqueIOFn, raise_Ef, answer_k
+from pixie.vm.effects.environment import link_builtins, throw_Ef, OpaqueIO
+from pixie.vm.keyword import keyword
+from pixie.vm.string import String
 
 
 defprotocol("pixie.stdlib", "ISeq", ["-first", "-next"])
@@ -53,6 +56,23 @@ defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"]
 link_builtins("-count", "count")
 link_builtins("-first", "first")
 link_builtins("-next", "next")
+
+
+class PrintFn(OpaqueIOFn):
+    def __init__(self, str):
+        self._str = str
+
+    def execute_opaque_io(self):
+        print self._str
+        return nil
+
+VALUE_ERROR = keyword(u"VALUE-ERROR")
+@as_global("pixie.stdlib", "-print")
+@wrap_fn(transform=False)
+def print_Ef(s):
+    if not isinstance(s, String):
+        return throw_Ef(VALUE_ERROR, u"Internal print only accepts strings")
+    return OpaqueIO(PrintFn(s.str()))
 
 
 # @as_var("pixie.stdlib.internal", "-defprotocol")

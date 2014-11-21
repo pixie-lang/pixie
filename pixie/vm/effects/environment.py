@@ -121,6 +121,29 @@ def run_thunk_with_state(t, env):
         else:
             assert False, t
 
+class WithDynamicVars(Handler):
+    def __init__(self, state):
+        self._w_state = state
+
+    def handle(self, effect, k):
+        if isinstance(effect, Answer):
+            return effect
+        if isinstance(effect, Effect):
+            tp = effect.type()
+            if tp is Resolve._type:
+                val = self._w_state.get_in([effect.get(KW_NAMESPACE), effect.get(KW_NAME)])
+                if val is not None:
+                    return handle_with(WithDynamicVars(self._w_state),
+                                       ContinuationThunk(effect.get(KW_K), val))
+            if tp is Declare._type:
+                val = self._w_state.get_in([effect.get(KW_NAMESPACE), effect.get(KW_NAME)])
+                if val is not None:
+                    state = self._w_state.assoc_in([effect.get(KW_NAMESPACE), effect.get(KW_NAME)], effect.get(KW_VAL))
+                    return handle_with(WithDynamicVars(state),
+                                       ContinuationThunk(effect.get(KW_K), effect.get(KW_VAL)))
+
+
+
 KW_DEF = keyword(u"def")
 KW_PROTOS = keyword(u"protos")
 KW_DOUBLE_PROTOS = keyword(u"double-protos")

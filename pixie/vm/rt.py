@@ -10,7 +10,7 @@ from rpython.rlib.rbigint import rbigint
 
 from pixie.vm.effects.effect_transform import cps
 from pixie.vm.code import munge
-import pixie.vm.stdlib
+#import pixie.vm.stdlib
 
 
 
@@ -35,7 +35,7 @@ def wrap_fn(nm):
     return wrapper
 
 
-_inited_fns = ["first", "count", "list", "next", "-str"]
+_inited_fns = ["first", "count", "list", "next", "-str", "-print"]
 
 for x in _inited_fns:
     globals()[munge(x+"_Ef")] = wrap_fn(x)
