@@ -109,7 +109,7 @@ def args_to_kws_Ef(args):
     while idx < args.count():
         arg = args.nth(idx)
         if not isinstance(arg, Symbol):
-            throw_Ef(VALUE_ERROR, "Argument names must be symbols")
+            throw_Ef(VALUE_ERROR, u"Argument names must be symbols")
 
         acc = acc.conj(keyword(arg.name()))
         idx += 1

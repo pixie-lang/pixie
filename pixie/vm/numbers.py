@@ -1,12 +1,14 @@
 from pixie.vm.effects.effects import Object, Type
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.keyword import keyword
-from pixie.vm.code import extend, extend_builtin, add_builtin, DoublePolymorphicFn, as_global
+from pixie.vm.code import extend
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
-#from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
+from pixie.vm.code import defprotocol
 import pixie.vm.rt as rt
+
+import pixie.vm.interfaces
 
 import math
 
@@ -83,17 +85,18 @@ class Ratio(Number):
     def type(self):
         return Ratio._type
 
-as_global("pixie.stdlib", "-add")(DoublePolymorphicFn(keyword("pixie.stdlib.-add")))
-as_global("pixie.stdlib", "-sub")(DoublePolymorphicFn(keyword("pixie.stdlib.-sub")))
-as_global("pixie.stdlib", "-mul")(DoublePolymorphicFn(keyword("pixie.stdlib.-mul")))
-as_global("pixie.stdlib", "-div")(DoublePolymorphicFn(keyword("pixie.stdlib.-div")))
-as_global("pixie.stdlib", "-quot")(DoublePolymorphicFn(keyword("pixie.stdlib.-quot")))
-as_global("pixie.stdlib", "-rem")(DoublePolymorphicFn(keyword("pixie.stdlib.-rem")))
-as_global("pixie.stdlib", "-lt")(DoublePolymorphicFn(keyword("pixie.stdlib.-lt")))
-as_global("pixie.stdlib", "-gt")(DoublePolymorphicFn(keyword("pixie.stdlib.-gt")))
-as_global("pixie.stdlib", "-lte")(DoublePolymorphicFn(keyword("pixie.stdlib.-lte")))
-as_global("pixie.stdlib", "-gte")(DoublePolymorphicFn(keyword("pixie.stdlib.-gte")))
-as_global("pixie.stdlib", "-num-eq")(DoublePolymorphicFn(keyword("pixie.stdlib.-num-eq")))
+
+defprotocol("pixie.stdlib", "INumber", ["-add__2tp",
+                                      "-sub__2tp",
+                                      "-mul__2tp",
+                                      "-div__2tp",
+                                      "-quot__2tp",
+                                      "-rem__2tp",
+                                      "-lt__2tp",
+                                      "-gt__2tp",
+                                      "-lte__2tp",
+                                      "-gte__2tp",
+                                      "-num-eq__2tp"])
 
 
 #_num_eq.set_default_fn(wrap_fn(lambda a, b: false))
@@ -126,8 +129,8 @@ def define_num_ops():
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)
-            extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
-            extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
+            extend_num_op("-quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
+            extend_num_op("-rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
             for (op, sym) in [("-num-eq", "=="), ("-lt", "<"), ("-gt", ">"), ("-lte", "<="), ("-gte", ">=")]:
                 extend_num_op(op, c1, c2, conv1, sym, conv2,
                               wrap_start = "true if ", wrap_end = " else false")

@@ -4,7 +4,7 @@ from pixie.vm.effects.effect_transform import cps
 
 from pixie.vm.effects.effects import Object, Type, raise_Ef
 from pixie.vm.effects.environment import FindPolymorphicOverride, extend_builtin, extend_builtin2, add_builtin, \
-                                         FindDoublePolymorphicOverride, ExceptionEffect
+                                         FindDoublePolymorphicOverride, ExceptionEffect, EnvOps, mod_builtins
 
 def munge(s):
      return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
@@ -97,57 +97,9 @@ def wrap_fn(transform=True):
 
 
 
-class PolymorphicFn(Object):
-    _type = Type(u"pixie.stdlib.PolymorphicFn")
-
-    def __init__(self, name):
-        self._w_name = name
-
-    @cps
-    def invoke_Ef(self, args):
-        if args.arg_count() == 0:
-            pass
-            # TODO throw exception effect
-
-        tp = args.get_arg(0).type()
-        eff = FindPolymorphicOverride(self._w_name, tp)
-        result = raise_Ef(eff)
-
-        if result is None:
-            from pixie.vm.keyword import keyword
-            from pixie.vm.string import String
-            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(u""))
-            raise_Ef(eff)
-
-        return result.invoke_Ef(args)
-
-class DoublePolymorphicFn(Object):
-    _type = Type(u"pixie.stdlib.DoublePolymorphicFn")
-
-    def __init__(self, name):
-        self._w_name = name
-
-    @cps
-    def invoke_Ef(self, args):
-        if args.arg_count() <= 1:
-            pass
-            # TODO throw exception effect
-
-        tp1 = args.get_arg(0).type()
-        tp2 = args.get_arg(1).type()
-        eff = FindDoublePolymorphicOverride(self._w_name, tp1, tp2)
-        result = raise_Ef(eff)
-
-        if result is None:
-            from pixie.vm.keyword import keyword
-            from pixie.vm.string import String
-            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(u""))
-            raise_Ef(eff)
-
-        return result.invoke_Ef(args)
 
 
-def extend(pfn, tp1, tp2=None):
+def extend(pfn, tp1, tp2=None, transform=True):
     """Extends a protocol to the given Type (not python type), with the decorated function
        wraps the decorated function"""
 
@@ -160,9 +112,9 @@ def extend(pfn, tp1, tp2=None):
 
     def extend_inner(fn):
         if tp2 is None:
-            extend_builtin(pfn, tp1, wrap_fn()(fn))
+            mod_builtins(EnvOps.extend, pfn, tp1, wrap_fn(transform=transform)(fn))
         else:
-            extend_builtin2(pfn, tp1, tp2, wrap_fn()(fn))
+            mod_builtins(EnvOps.extend2, pfn, tp1, tp2, wrap_fn(transform=transform)(fn))
 
     return extend_inner
 
@@ -170,29 +122,30 @@ def extend(pfn, tp1, tp2=None):
 def as_global(ns, nm):
     from pixie.vm.keyword import keyword
     def with_f(val):
-        add_builtin(keyword(ns), keyword(nm), val)
+        mod_builtins(EnvOps.declare, keyword(ns), keyword(nm), val)
         return val
     return with_f
+
 
 import inspect
 def defprotocol(ns, name, methods):
     """Define a protocol in the given namespace with the given name and methods, vars will
-       be created in the namespace for the protocol and methods. This function will dump
-       variables for the created protocols/methods in the globals() where this function is called."""
+       be created in the namespace for the protocol and methods. Methods that end with __2tp will
+       be interpreted as double polymorphic functions."""
 
     from pixie.vm.keyword import keyword
-    from pixie.vm.rt import munge
 
-    ns = unicode(ns)
-    name = unicode(name)
+    ns = keyword(unicode(ns))
+    name = keyword(unicode(name))
     methods = map(unicode, methods)
-    gbls = inspect.currentframe().f_back.f_globals
-    #proto =  Protocol(name)
-    #intern_var(ns, name).set_root(proto)
-    #gbls[munge(name)] = proto
-
     for method in methods:
-        pkw = keyword(ns+"."+method)
-        poly = PolymorphicFn(pkw)
-        add_builtin(keyword(ns), keyword(method), poly)
-        gbls[munge(method)] = poly
+        if method.endswith("__2tp"):
+            method = method[:-len("__2tp")]
+            print method
+            mod_builtins(EnvOps.make_double_proto_fn, ns, name, keyword(method))
+        else:
+            mod_builtins(EnvOps.make_proto_fn, ns, name, keyword(method))
+
+def link_builtins(frm, to):
+    from pixie.vm.keyword import keyword
+    mod_builtins(EnvOps.copy_val, keyword("pixie.stdlib"), keyword(frm), keyword(to))

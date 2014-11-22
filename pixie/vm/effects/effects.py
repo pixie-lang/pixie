@@ -156,6 +156,7 @@ class Thunk(EffectObject):
 
 
 class InvokeThunk(Thunk):
+    _immutable_ = True
     def __init__(self, w_fn, w_val):
         self._w_fn = w_fn
         self._w_val = w_val

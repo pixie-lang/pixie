@@ -1,20 +1,179 @@
-from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, answer_k, Handler, handle_with
+from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, answer_k, Handler, handle_with, \
+                                    Object, Type
 from pixie.vm.effects.effect_generator import defeffect
+from pixie.vm.effects.effect_transform import cps
 from pixie.vm.primitives import nil, true
 from rpython.rlib.jit import promote, JitDriver
 import rpython.rlib.jit as jit
 from pixie.vm.keyword import keyword
 from pixie.vm.persistent_instance_hash_map import EMPTY as EMPTY_MAP
 
+"""
+Environments are immutable, and have the following format:
+
+{:defs {:pixie.stdlib {:-count ProtocolFn(protocol=:pixie.stdlib.ICounted, fn-name=:pixie.stdlib.-count)
+                       :-nth ProtocolFn(protocol=:pixie.stdlib.IIndexed, fn_name=:pixie.stdlib.-nth)}}
+ :proto-fns {:pixie.stdlib.-count {<type pixie.stdlib.PersistentVector> fn
+                                   :default fn
+                                   :protocol :pixie.stdlib.ICounted}}
+ :protocols {:pixie.stdlib.ICounted {:types {<type pixie.stdlib.PersistentVector> <type pixie.stdlib.PersistentVector>
+                                     :fns {:pixie.stdlib.-nth :pixie.stdlib.-nth}}}}
+
+"""
+KW_DEFS = keyword(u"defs")
+KW_PROTO_FNS = keyword(u"proto-fns")
+KW_DOUBLE_PROTO_FNS = keyword(u"double-proto-fns")
+KW_DEFAULT = keyword(u"default")
+KW_FNS = keyword(u"fns")
+
+KW_TYPES = keyword(u"types")
+
+KW_DOUBLE_PROTOS = keyword(u"double-protos")
+KW_RUNNING = keyword(u"running?")
+KW_PROTOCOLS = keyword(u"protocols")
+KW_TYPES = keyword(u"types")
+KW_MEMBERS = keyword(u"members")
+KW_PROTOCOL = keyword(u"protocol")
+
+class EnvOps(object):
+
+    @staticmethod
+    def declare(env, w_ns, w_nm, val):
+        return env.assoc_in([KW_DEFS, w_ns, w_nm], val)
+
+    @staticmethod
+    def resolve(env, w_ns, w_nm):
+        return env.get_in([KW_DEFS, w_ns, w_nm])
+
+    @staticmethod
+    def make_proto_fn(env, w_ns, w_protocol, w_method_name):
+        protocol_kw = keyword(w_ns.str() + u"." + w_protocol.str())
+        ns_method_kw = keyword(w_ns.str() + u"." + w_method_name.str())
+
+        pfn = PolymorphicFn(protocol_kw, ns_method_kw)
+
+        env = EnvOps.declare(env, w_ns, w_method_name, pfn)
+        env = env.assoc_in([KW_PROTO_FNS, ns_method_kw, KW_PROTOCOL], protocol_kw)
+        env = env.assoc_in([KW_PROTOCOLS, protocol_kw, KW_FNS, ns_method_kw], ns_method_kw)
+        return env
+
+    @staticmethod
+    def make_double_proto_fn(env, w_ns, w_protocol, w_method_name):
+        protocol_kw = keyword(w_ns.str() + u"." + w_protocol.str())
+        ns_method_kw = keyword(w_ns.str() + u"." + w_method_name.str())
+
+        pfn = DoublePolymorphicFn(protocol_kw, ns_method_kw)
+
+        env = EnvOps.declare(env, w_ns, w_method_name, pfn)
+        env = env.assoc_in([KW_DOUBLE_PROTO_FNS, ns_method_kw, KW_PROTOCOL], protocol_kw)
+        env = env.assoc_in([KW_PROTOCOLS, protocol_kw, KW_FNS, ns_method_kw], ns_method_kw)
+        return env
+
+    @staticmethod
+    def extend(env, w_pfn_name, tp, fn):
+        protocol = env.get_in([KW_PROTO_FNS, w_pfn_name, KW_PROTOCOL])
+        assert protocol is not None, w_pfn_name
+        env = env.assoc_in([KW_PROTOCOLS, protocol, KW_TYPES, tp], tp)
+        return env.assoc_in([KW_PROTO_FNS, w_pfn_name, tp], fn)
+
+    @staticmethod
+    def extend2(env, w_pfn_name, tp1, tp2, fn):
+        protocol = env.get_in([KW_DOUBLE_PROTO_FNS, w_pfn_name, KW_PROTOCOL])
+        assert protocol is not None, w_pfn_name
+        env = env.assoc_in([KW_PROTOCOLS, protocol, KW_TYPES, tp1], tp2)
+        return env.assoc_in([KW_DOUBLE_PROTO_FNS, w_pfn_name, tp1, tp2], fn)
+
+    @staticmethod
+    def set_default_method(env, w_pfn_name, fn):
+        return EnvOps.extend(env, w_pfn_name, KW_DEFAULT, fn)
+
+    @staticmethod
+    def set_default_method2(env, w_pfn_name, fn):
+        return env.assoc_in([KW_DOUBLE_PROTO_FNS, w_pfn_name, KW_DEFAULT], fn)
+
+    @staticmethod
+    def lookup_pfn_method(env, w_pfn_kw, tp):
+        fns = env.get_in([KW_PROTO_FNS, w_pfn_kw])
+        fn = fns.val_at(tp, None)
+        if fn is None:
+            fn = env.val_at(fns, KW_DEFAULT, None)
+        return fn
+
+    @staticmethod
+    def is_satisfied(env, w_protocol, tp):
+        return env.get_in([KW_PROTOCOLS, w_protocol, KW_TYPES, tp]) is not None
+
+    @staticmethod
+    def copy_val(env, w_protocol, frm, to):
+        resolved = EnvOps.resolve(env, w_protocol, frm)
+        return EnvOps.declare(env, w_protocol, to, resolved)
+
+
+def mod_builtins(fn, *args):
+    global default_env
+    default_env = fn(default_env, *args)
+
+
 
 def get_printable_location(ast):
     return str(ast)
 
 jitdriver = JitDriver(greens=["ast"], reds=["locals", "thunk", "globals"],
-                      #virtualizables=["locals"],
+                      virtualizables=["locals"],
                       get_printable_location=get_printable_location)
 
 
+class PolymorphicFn(Object):
+    _type = Type(u"pixie.stdlib.PolymorphicFn")
+
+    def __init__(self, protocol, name):
+        self._w_protocol = protocol
+        self._w_name = name
+
+    @cps
+    def invoke_Ef(self, args):
+        if args.arg_count() == 0:
+            pass
+            # TODO throw exception effect
+
+        tp = args.get_arg(0).type()
+        eff = FindPolymorphicOverride(self._w_name, tp)
+        result = raise_Ef(eff)
+
+        if result is None:
+            from pixie.vm.keyword import keyword
+            from pixie.vm.string import String
+            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(self._w_name.str()))
+            raise_Ef(eff)
+
+        return result.invoke_Ef(args)
+
+
+class DoublePolymorphicFn(Object):
+    _type = Type(u"pixie.stdlib.DoublePolymorphicFn")
+
+    def __init__(self, protocol, name):
+        self._w_protocol = protocol
+        self._w_name = name
+
+    @cps
+    def invoke_Ef(self, args):
+        if args.arg_count() <= 1:
+            pass
+            # TODO throw exception effect
+
+        tp1 = args.get_arg(0).type()
+        tp2 = args.get_arg(1).type()
+        eff = FindDoublePolymorphicOverride(self._w_name, tp1, tp2)
+        result = raise_Ef(eff)
+
+        if result is None:
+            from pixie.vm.keyword import keyword
+            from pixie.vm.string import String
+            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(self._w_name.str()))
+            raise_Ef(eff)
+
+        return result.invoke_Ef(args)
 
 class EnvironmentEffect(Effect):
     _immutable_ = True
@@ -22,10 +181,6 @@ class EnvironmentEffect(Effect):
     defines an effect that needs to interact with the global env
     """
     pass
-
-@jit.elidable_promote()
-def resolve_in_env(env, ns, nm):
-    return env.get_in([KW_DEF, ns, nm])
 
 # class Resolve(EnvironmentEffect):
 #     _immutable_ = True
@@ -70,19 +225,19 @@ class EnvironmentHandler(Handler):
         if isinstance(effect, Answer):
             return effect
         if isinstance(effect, Effect):
+            env = self._w_env
             tp = effect.type()
             if tp is Resolve._type:
-                val = resolve_in_env(self._w_env, effect.get(KW_NAMESPACE), effect.get(KW_NAME))
+                val = EnvOps.resolve(self._w_env, effect.get(KW_NAMESPACE), effect.get(KW_NAME))
                 return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
             elif tp is Declare._type:
-                val = effect.get(KW_VAL)
-                env = self._w_env.assoc_in([KW_DEF, effect.get(KW_NAMESPACE), effect.get(KW_NAME)], val)
-                return handle_with(EnvironmentHandler(env), ContinuationThunk(effect.get(KW_K), val), answer_k)
+                env = EnvOps.declare(env, effect.get(KW_NAMESPACE), effect.get(KW_NAME), effect.get(KW_VAL))
+                return handle_with(EnvironmentHandler(env), ContinuationThunk(effect.get(KW_K), nil), answer_k)
             elif tp is FindPolymorphicOverride._type:
-                val = self._w_env.get_in([KW_PROTOS, effect.get(KW_NAME), effect.get(KW_TP)])
+                val = EnvOps.lookup_pfn_method(env, effect.get(KW_NAME), effect.get(KW_TP))
                 return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
             elif tp is FindDoublePolymorphicOverride._type:
-                val = self._w_env.get_in([KW_DOUBLE_PROTOS, effect.get(KW_NAME), effect.get(KW_TP1), effect.get(KW_TP2)])
+                val = self._w_env.get_in([KW_DOUBLE_PROTO_FNS, effect.get(KW_NAME), effect.get(KW_TP1), effect.get(KW_TP2)])
                 return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
         return None
 
@@ -144,10 +299,7 @@ class WithDynamicVars(Handler):
 
 
 
-KW_DEF = keyword(u"def")
-KW_PROTOS = keyword(u"protos")
-KW_DOUBLE_PROTOS = keyword(u"double-protos")
-KW_RUNNING = keyword(u"running?")
+
 
 default_env = EMPTY_MAP
 
@@ -172,6 +324,15 @@ def extend_builtin2(nm, tp1, tp2, fn):
     global default_env
     default_env = default_env.assoc_in([KW_DOUBLE_PROTOS, nm, tp1, tp2], fn)
     return fn
+
+def add_protocol_fn(env, protocol, protofn):
+    return env.assoc_in([KW_PROTOS, protofn, KW_PROTOCOL], protocol)
+
+def extend_protocol_fn(env, protofn, tp):
+    protocol = env.get_in([KW_PROTOS, protofn, KW_PROTOCOL])
+    env = env.assoc_in([KW_PROTOCOLS, protocol, KW_TYPES, tp], tp)
+    return env
+
 
 def as_var(ns, name=None):
     """NOT_RPYTHON

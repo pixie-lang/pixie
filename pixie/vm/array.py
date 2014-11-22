@@ -51,13 +51,5 @@ def _nth(self, idx):
         return nil
 
 
-@extend(proto._seq, Array)
-def _seq(self):
-    assert isinstance(self, Array)
-    if rt.count(self) > 0:
-        return ArraySeq(0, self)
-    else:
-        return nil
-
 def array(lst):
     return Array(lst)

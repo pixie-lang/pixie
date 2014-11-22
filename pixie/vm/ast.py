@@ -123,7 +123,7 @@ class VariadicFunction(Object):
         if self._required_args == 0:
             args = ArgList([array(args.list())])
         if args.arg_count() == self._required_args:
-            new_args = resize_list(args.list(), len(args) + 1)
+            new_args = resize_list(args.list(), args.arg_count() + 1)
             new_args[args.arg_count()] = array([])
             args = ArgList(new_args)
         elif args.arg_count() > self._required_args:
@@ -255,13 +255,13 @@ class Lookup(Syntax):
 
         ns = self._w_ns
         nm = self._w_nm
-        val = resolve_Ef(ns, nm)
+        #val =
 
-        if val is None:
-            msg = nm.str() + u" is unresolved in " + ns.str()
-            val = throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
+        #if val is None:
+        #    msg = nm.str() + u" is unresolved in " + ns.str()
+        #    throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
 
-        return val
+        return resolve_Ef(ns, nm)
 
 
 class If(Syntax):
@@ -308,7 +308,7 @@ NOT_FOUND = r_uint(1024 * 1024)
 
 class Locals(Object):
     _immutable_fields_ = ["_names[*]", "_vals[*]"]
-    #_virtualizable_ = ["_names[*]", "_vals[*]"]
+    _virtualizable_ = ["_names[*]", "_vals[*]"]
 
     def __init__(self, names=[], vals=[]):
         self = jit.hint(self, access_directly=True, fresh_virtualizable=True)
@@ -326,7 +326,7 @@ class Locals(Object):
         return NOT_FOUND
 
     def lookup_local(self, nm):
-        idx = self.name_idx(nm)
+        idx = jit.promote(self.name_idx(nm))
         if idx == NOT_FOUND:
             return None
         return self._vals[idx]
@@ -364,7 +364,6 @@ class Locals(Object):
 @jit.unroll_safe
 def resize_list(lst, new_size):
     """'Resizes' a list, via reallocation and copy"""
-    affirm(len(lst) < new_size, u"New list must be larger than old list")
     new_list = [None] * new_size
     i = r_uint(0)
     while i < len(lst):

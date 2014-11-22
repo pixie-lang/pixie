@@ -48,6 +48,7 @@ class PersistentInstanceHashMap(Object):
         return PersistentInstanceHashMap(self._cnt, self._root, meta)
 
     def assoc(self, key, val):
+        assert key is not None
         added_leaf = Box()
 
         new_root = (BitmapIndexedNode_EMPTY if self._root is None else self._root) \

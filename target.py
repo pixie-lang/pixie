@@ -61,16 +61,16 @@ def jitpolicy(driver):
 
 KW_EXIT_REPL = keyword(u"exit-repl")
 
+def init():
+    import pixie.vm.rt as rt
+    globals()["rt"] = rt
+
 class ReplFn(NativeFn):
     def __init__(self, args):
         self._argv = args
 
     @cps
     def invoke_Ef(self, args):
-        from pixie.vm.keyword import keyword
-        import pixie.vm.rt as rt
-        from pixie.vm.string import String
-        import pixie.vm.persistent_vector as vector
 
         s = rt.wrap("Pixie 0.1 - Interactive REPL")
         rt._print_Ef(s)
@@ -112,8 +112,9 @@ class ReplFn(NativeFn):
     def set_error_var(self, ex):
         STAR_E.set_root(ex)
 
-def entry_point():
+def entry_point(_):
     final = run_with_state(ReplFn([]), make_default_env())
+    return 0
 
 
 #
@@ -341,7 +342,7 @@ import pixie.vm.rt as rt
 #stacklet.global_state = stacklet.GlobalState()
 
 def target(*args):
-    import pixie.vm.rt as rt
+    init()
     driver = args[0]
     driver.exe_name = "pixie-vm"
     rt.__config__ = args[0].config
@@ -355,5 +356,5 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    entry_point()
-    #run_debug(sys.argv)
+    #entry_point()
+    run_debug(sys.argv)

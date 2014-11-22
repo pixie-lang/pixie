@@ -1,8 +1,8 @@
 import unittest
 
 from pixie.vm.effects.effects import *
-from pixie.vm.effects.environment import FindPolymorphicOverride, KW_NAME, KW_TP, KW_TP1, KW_TP2, KW_K
-from pixie.vm.code import wrap_fn, PolymorphicFn
+from pixie.vm.effects.environment import FindPolymorphicOverride, KW_NAME, KW_TP, KW_TP1, KW_TP2, KW_K, PolymorphicFn
+from pixie.vm.code import wrap_fn
 from pixie.vm.numbers import Integer
 from pixie.vm.keyword import keyword
 
@@ -74,8 +74,8 @@ class TestWrapFn(unittest.TestCase):
 
 class TestPolymorphicFn(unittest.TestCase):
     def test_calling_polymorphic_fn(self):
-        pfn_name = keyword(u"pixie.stdlib.Foo")
-        pfn = PolymorphicFn(pfn_name)
+        pfn_name = keyword(u"pixie.stdlib.-foo")
+        pfn = PolymorphicFn(u"pixie.stdlib.IFoo", pfn_name)
 
         result = pfn.invoke_Ef(ArgList([Integer(42)]))
 
