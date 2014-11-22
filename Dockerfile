@@ -10,7 +10,7 @@ ADD . /usr/src/pixie
 
 # build the thing
 RUN cd /usr/src/pixie \
-    && make PYTHON=python2.7 build_with_jit
+    && make PYTHON=python2.7 build_with_jit \
     && ln -s /usr/src/pixie/pixie-vm /usr/bin/pxi
 
 ENTRYPOINT ["/usr/bin/pxi"]
