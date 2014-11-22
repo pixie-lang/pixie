@@ -441,29 +441,27 @@ def _val_at(self, key, not_found):
         return self.nth(r_uint(key.int_val()))
     else:
         return not_found
-#
-# @extend(proto._eq, PersistentVector)
-# def _eq(self, obj):
-#     if self is obj:
-#         return true
-#     elif isinstance(obj, PersistentVector):
-#         if self._cnt != obj._cnt:
-#             return false
-#         for i in range(0, intmask(self._cnt)):
-#             if not rt.eq(self.nth(i), obj.nth(i)):
-#                 return false
-#         return true
-#     else:
-#         if not rt.satisfies_QMARK_(proto.ISeqable, obj):
-#             return false
-#         seq = rt.seq(obj)
-#         for i in range(0, intmask(self._cnt)):
-#             if seq is nil or not rt.eq(self.nth(i), rt.first(seq)):
-#                 return false
-#             seq = rt.next(seq)
-#         if seq is not nil:
-#             return false
-#         return true
+
+@extend("pixie.stdlib.-eq", PersistentVector)
+def _eq(self, obj):
+    if isinstance(obj, PersistentVector):
+        if self.count() != obj.count():
+            return false
+        for i in range(0, intmask(self._cnt)):
+            if not rt.eq(self.nth(i), obj.nth(i)):
+                return false
+        return true
+    else:
+        if not rt.satisfies_QMARK_(proto.ISeqable, obj):
+            return false
+        seq = rt.seq(obj)
+        for i in range(0, intmask(self._cnt)):
+            if seq is nil or not rt.eq(self.nth(i), rt.first(seq)):
+                return false
+            seq = rt.next(seq)
+        if seq is not nil:
+            return false
+        return true
 #
 # @extend(proto._contains_key, PersistentVector)
 # def _contains_key(self, key):

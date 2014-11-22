@@ -8,6 +8,7 @@ from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.effects.environment import link_builtins, throw_Ef, OpaqueIO
 from pixie.vm.keyword import keyword
 from pixie.vm.string import String
+import pixie.vm.rt as rt
 
 import pixie.vm.interfaces
 
@@ -75,3 +76,10 @@ def _swap_ref(ref, val):
 @wrap_fn(transform=False)
 def _swap_ref(ref):
     return RefGet(ref)
+
+@as_global("pixie.stdlib", "eq")
+@wrap_fn()
+def eq(a, b):
+    if a is b:
+        return true
+    return rt._eq_Ef(a, b)

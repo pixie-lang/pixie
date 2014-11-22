@@ -29,13 +29,14 @@ def wrap_fn(nm):
     def wrapper(*args):
         return raise_Ef(Resolve(kw_ns, kw_nm), ResolveResult(ArgList(py_list(args))))
 
+    wrapper._is_effect = True
 
 
 
     return wrapper
 
 
-_inited_fns = ["first", "count", "list", "next", "-str", "-print"]
+_inited_fns = ["first", "count", "list", "next", "-str", "-print", "eq", "-eq"]
 
 for x in _inited_fns:
     globals()[munge(x+"_Ef")] = wrap_fn(x)
