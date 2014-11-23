@@ -53,3 +53,13 @@
 
   (t/assert= (let [{:keys [a], :or {a 42}} {:a 1}] a) 1)
   (t/assert= (let [{:keys [a], :or {a 42}} {}] a) 42))
+
+(t/deftest test-fn-simple
+  (t/assert= ((fn [[x y & rest]] [x y rest]) [1 2 3 4 5]) [1 2 '(3 4 5)])
+  (t/assert= ((fn [{a :a, b :b :as m}] [a b m]) {:a 1, :b 2, :answer 42}) [1 2 {:a 1, :b 2, :answer 42}])
+
+  (t/assert= ((fn [[[x y] z & rest]] [x y z rest]) [[1 2] 3 4 5]) [1 2 3 '(4 5)]))
+
+(t/deftest test-fn-multiple-args
+  (t/assert= ((fn [[x y z] {:keys [a b c]}] [x y z a b c]) [1 2 3] {:a 4, :b 5, :c 6})
+             [1 2 3 4 5 6]))
