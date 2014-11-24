@@ -1124,6 +1124,12 @@ and implements IAssociative, ILookup and IObject."
   [& args]
   (puts (apply pr-str args)))
 
+(defn repeat
+  ([x]
+     (cons x (lazy-seq* (fn [] (repeat x)))))
+  ([n x]
+     (take n (repeat x))))
+
 (defn doc
   {:doc "Returns the documentation of the given value."
    :added "0.1"}
