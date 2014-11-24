@@ -1134,7 +1134,31 @@ and implements IAssociative, ILookup and IObject."
   {:doc "Returns the documentation of the given value."
    :added "0.1"}
   [x]
-  (get (meta x) :doc))
+  (let [doc (get (meta x) :doc)]
+    (cond
+     doc doc
+     (or (instance? Namespace x) (the-ns x)) (doc-ns x))))
+
+(defn doc-ns
+  {:doc "Prints a summarizing documentation of the symbols in a namespace."
+   :added "0.1"}
+  [ns]
+  (let [ns (the-ns ns)
+        short-doc (fn [x]
+                    (let [doc (get (meta x) :doc)]
+                      (if doc
+                        (let [newline (pixie.string/index-of doc "\n")]
+                          (pixie.string/substring doc 0 (if (< newline 0) (count doc) newline))))))]
+    (println (str (name ns) ":"))
+    (vec (map (fn [sym]
+                (print (str "  " (name sym)))
+                (let [doc (short-doc @(resolve-in ns sym))]
+                  (if doc
+                    (print (str (apply str (repeat (- 30 (count (name sym))) " "))
+                                doc))))
+                (println))
+              (keys (ns-map ns))))
+    nil))
 
 (defn swap!
   {:doc "Swaps the value in the atom, by applying f to the current value.
