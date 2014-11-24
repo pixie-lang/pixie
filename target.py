@@ -61,6 +61,7 @@ class ReplFn(NativeFn):
         import pixie.vm.persistent_vector as vector
 
         print "Pixie 0.1 - Interactive REPL"
+        print ":exit-repl to quit"
         print "(" + platform.name + ", " + platform.cc + ")"
         print "----------------------------"
 
