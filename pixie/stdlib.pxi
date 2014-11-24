@@ -1284,3 +1284,33 @@
     (if (= (count decls) 1)
       `(fn* ~name ~(first (first decls)) ~@(next (first decls)))
       `(fn* ~name ~@decls))))
+
+(deftype MultiMethod [dispatch-fn default-val methods]
+  IFn
+  (-invoke [self dispatch-arg & args]
+    (let [dispatch-val (dispatch-fn dispatch-arg)
+          method (if (contains? @methods dispatch-val)
+                   (get @methods dispatch-val)
+                   (get @methods default-val))
+          _ (assert method (str "no method defined for " dispatch-val))]
+      (apply method dispatch-arg args))))
+
+(defmacro defmulti [name & args]
+  (let [[meta args] (if (string? (first args))
+                      [{:doc (first args)} (next args)]
+                      [{} args])
+        [meta args] (if (map? (first args))
+                      [(merge meta (first args)) (next args)]
+                      [meta args])
+        dispatch-fn (first args)
+        options (apply hashmap (next args))]
+    `(def ~name (->MultiMethod ~dispatch-fn ~(get options :default :default) (atom {})))))
+
+(defmacro defmethod [name dispatch-val params & body]
+  `(do
+     (let [methods (.methods ~name)]
+       (swap! methods
+              assoc
+              ~dispatch-val (fn ~params
+                              ~@body))
+       ~name)))
