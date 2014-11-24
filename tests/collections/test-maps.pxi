@@ -45,9 +45,10 @@
     ;; Should conj vector of length 2
     (t/assert= (conj m [:c 3]) {:a 1 :b 2 :c 3})
     (t/assert= (conj m [:b 4]) {:a 1 :b 4})
-    
+    (t/assert= (conj m [:b 4] [:c 5]) {:a 1 :b 4 :c 5})
+
     ;; Should conj sequences of pairs
     (t/assert= (conj {} '([:a 1] [:b 2] [:c 3])) {:a 1 :b 2 :c 3})
-    
+
     ;; Should conj sequences of MapEntries
     (t/assert= (conj {} (seq {:a 1 :b 2 :c 3})) {:a 1 :b 2 :c 3})))

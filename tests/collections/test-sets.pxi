@@ -40,3 +40,7 @@
         s (with-meta #{} m)]
     (t/assert= (meta #{}) nil)
     (t/assert= (meta s) m)))
+
+(t/deftest test-conj
+  (t/assert= #{1 2} (conj #{1} 2))
+  (t/assert= #{1 2 3 4} (conj #{1} 2 3 4)))

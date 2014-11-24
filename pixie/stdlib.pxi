@@ -15,15 +15,25 @@
 
 
 
-(def conj (fn conj
-           ([] [])
-           ([result] result)
-           ([result item] (-conj result item))))
+(def conj
+  (fn conj ^{:doc "Adds elements to the collection. Elements are added to the end except in the case of Cons lists"
+            :signatures [[] [coll] [coll item] [coll item & args]]
+            :added "0.1"}
+    ([] [])
+    ([coll] coll)
+    ([coll item] (-conj coll item))
+    ([coll item & args]
+       (reduce -conj (-conj coll item) args))))
 
-(def conj! (fn conj!
-             ([] (-transient []))
-             ([result] (-persistent! result))
-             ([result item] (-conj! result item))))
+(def conj!
+  (fn conj! ^{:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
+             :signatures [[] [coll] [coll item] [coll item & args]]
+             :added "0.1"}
+    ([] (-transient []))
+    ([coll] (-persistent! coll))
+    ([coll item] (-conj! coll item))
+    ([coll item & args]
+       (reduce -conj! (-conj! coll item) args))))
 
 (def transient (fn [coll] (-transient coll)))
 
@@ -615,7 +625,7 @@
 
 (extend -conj PersistentHashMap
         (fn [coll x]
-            (cond 
+            (cond
              (instance? MapEntry x)
              (assoc coll (key x) (val x))
 
@@ -623,13 +633,17 @@
              (if (= (count x) 2)
                  (assoc coll (nth x 0) (nth x 1))
                  (throw "Vector arg to map conj must be a pair"))
-             
+
              (satisfies? ISeqable x)
              (reduce conj coll (-seq x))
 
              :else
              (throw (str (type x) " cannot be conjed to a map")))))
- 
+
+(extend -conj Cons
+        (fn [coll x]
+          (cons x coll)))
+
 (defn empty
   {:doc "Returns an empty collection of the same type, or nil."
    :added "0.1"}

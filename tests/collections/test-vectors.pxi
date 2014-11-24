@@ -32,3 +32,11 @@
     (t/assert= (= v [1 2 3 4]) false)
     (t/assert= (= v '(1 2)) false)
     (t/assert= (= v '(1 2 3 4)) false)))
+
+(t/deftest vector-conj
+  (t/assert= [1 2] (conj [1] 2))
+  (t/assert= [1 2 3 4] (conj [1] 2 3 4)))
+
+(t/deftest vector-conj!
+  (t/assert= [1 2] (persistent! (conj! (transient [1]) 2)))
+  (t/assert= [1 2 3] (persistent! (conj! (transient [1]) 2 3))))

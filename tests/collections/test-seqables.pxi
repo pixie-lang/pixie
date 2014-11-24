@@ -37,3 +37,7 @@
 
     (t/assert= (= l '(1 2 3 4)) false)
     (t/assert= (= l [1 2 3 4]) false)))
+
+(t/deftest test-conj
+  (t/assert= '(3 1 2) (conj '(1 2) 3))
+  (t/assert= '(5 4 3 1 2) (conj '(1 2) 3 4 5)))
