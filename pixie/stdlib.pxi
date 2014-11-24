@@ -1130,14 +1130,22 @@ and implements IAssociative, ILookup and IObject."
   ([n x]
      (take n (repeat x))))
 
-(defn doc
+(defmacro doc
   {:doc "Returns the documentation of the given value."
    :added "0.1"}
-  [x]
-  (let [doc (get (meta x) :doc)]
+  [v]
+  (let [vr (resolve v)
+        x (if vr @vr)
+        doc (get (meta x) :doc)]
     (cond
-     doc doc
-     (or (instance? Namespace x) (the-ns x)) (doc-ns x))))
+     doc (let [sigs (get (meta x) :signatures)]
+           (println (str (namespace vr) "/" (name vr)))
+           (if sigs
+             (prn (seq sigs)))
+           (println)
+           (println doc)
+           nil)
+     (the-ns v) (doc-ns v))))
 
 (defn doc-ns
   {:doc "Prints a summarizing documentation of the symbols in a namespace."
