@@ -53,15 +53,15 @@
             ([coll item & items]
                (reduce -disj (-disj coll item) items))))
 
-(def disj! (fn ^{:doc "Removes elements from the transient collection."
-                 :signatures [[] [coll] [coll item] [coll item & items]]
-                 :added "0.1"}
-             disj!
-             ([] (-transient []))
-             ([result] (-persistent! result))
-             ([result item] (-disj! result item))
-             ([coll item & items]
-                (reduce -disj! (-disj! coll item) items))))
+(comment (def disj! (fn ^{:doc "Removes elements from the transient collection."
+                          :signatures [[] [coll] [coll item] [coll item & items]]
+                          :added "0.1"}
+                      disj!
+                      ([] (-transient []))
+                      ([result] (-persistent! result))
+                      ([result item] (-disj! result item))
+                      ([coll item & items]
+                         (reduce -disj! (-disj! coll item) items)))))
 
 (def transient (fn [coll] (-transient coll)))
 
