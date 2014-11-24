@@ -1,5 +1,5 @@
 from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, answer_k, Handler, handle_with, \
-                                    Object, Type
+                                    Object, Type, raise_Ef
 from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.effects.effect_transform import cps
 from pixie.vm.primitives import nil, true
@@ -34,6 +34,16 @@ KW_PROTOCOLS = keyword(u"protocols")
 KW_TYPES = keyword(u"types")
 KW_MEMBERS = keyword(u"members")
 KW_PROTOCOL = keyword(u"protocol")
+
+
+defeffect("pixie.stdlib.Resolve", "Resolve", ["namespace", "name"])
+defeffect("pixie.stdlib.Declare", "Declare", ["namespace", "name", "val"])
+defeffect("pixie.stdlib.FindPolymorphicOverride", "FindPolymorphicOverride", ["name", "tp"])
+defeffect("pixie.stdlib.FindDoublePolymorphicOverride", "FindDoublePolymorphicOverride", ["name", "tp1", "tp2"])
+defeffect("pixie.stdlib.Exception", "ExceptionEffect", ["kw", "msg"])
+defeffect("pixie.stdlib.OpaqueIO", "OpaqueIO", ["effect"])
+
+ExceptionEffect.__repr__ = lambda self: str(self._w_kw.__repr__()) + " : " + str(self._w_msg.str())
 
 class EnvOps(object):
 
@@ -140,14 +150,19 @@ class PolymorphicFn(Object):
         eff = FindPolymorphicOverride(self._w_name, tp)
         result = raise_Ef(eff)
 
-        if result is None:
-            from pixie.vm.keyword import keyword
-            from pixie.vm.string import String
-            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(self._w_name.str()))
-            raise_Ef(eff)
+        #if result is None:
+        #    from pixie.vm.keyword import keyword
+        #    from pixie.vm.string import String
+        #    eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(self._w_name.str()))
+        #    raise_Ef(eff)
 
         return result.invoke_Ef(args)
 
+def raise_override_error_Ef(name, tp):
+    from pixie.vm.keyword import keyword
+    from pixie.vm.string import String
+    eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(name.str()))
+    raise_Ef(eff)
 
 class DoublePolymorphicFn(Object):
     _type = Type(u"pixie.stdlib.DoublePolymorphicFn")
@@ -168,10 +183,8 @@ class DoublePolymorphicFn(Object):
         result = raise_Ef(eff)
 
         if result is None:
-            from pixie.vm.keyword import keyword
-            from pixie.vm.string import String
-            eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(self._w_name.str()))
-            raise_Ef(eff)
+            raise_override_error_Ef(self._w_name, self._type)
+
 
         return result.invoke_Ef(args)
 
@@ -195,14 +208,6 @@ class EnvironmentEffect(Effect):
 #         val = resolve_in_env(env, self._w_ns, self._w_nm)
 #         return ContinuationThunk(self._k, val), env
 
-defeffect("pixie.stdlib.Resolve", "Resolve", ["namespace", "name"])
-defeffect("pixie.stdlib.Declare", "Declare", ["namespace", "name", "val"])
-defeffect("pixie.stdlib.FindPolymorphicOverride", "FindPolymorphicOverride", ["name", "tp"])
-defeffect("pixie.stdlib.FindDoublePolymorphicOverride", "FindDoublePolymorphicOverride", ["name", "tp1", "tp2"])
-defeffect("pixie.stdlib.Exception", "ExceptionEffect", ["kw", "msg"])
-defeffect("pixie.stdlib.OpaqueIO", "OpaqueIO", ["effect"])
-
-ExceptionEffect.__repr__ = lambda self: str(self._w_kw.__repr__()) + " : " + str(self._w_msg.str())
 
 def throw_Ef(kw, msg):
     from pixie.vm.string import String

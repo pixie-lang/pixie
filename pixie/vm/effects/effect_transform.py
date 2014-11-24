@@ -1,405 +1,310 @@
 from byteplay import *
+from pixie.vm.effects.effects import Continuation, handle, answer_k
+from rpython.translator.translator import TranslationContext
+from rpython.translator.unsimplify import insert_empty_startblock, split_block
+from rpython.flowspace.model import Variable, Constant
+from rpython.flowspace.operation import GetAttr
 from pprint import pprint
-import dis as dis
 import types
-from effects import *
+from pixie.vm.effects.effects import Object
 
-import sys
-is_pypy = '__pypy__' in sys.builtin_module_names
+"""
+Why write our own bytcode transformer when we can leverage PyPy's. This code would replace the existing transformer, and
+would work the following way: a) we'd parse a function using RPython's translator. b) we walk the graph splitting blocks
+on effect functions, and tracking the new links. c) we stitch the function back together, this time with state machine
+saving, after each effect call.
+"""
 
 
-iname = 0
-SELF_NAME = "__SELF__"
-RET_NAME = "__RET__"
-BUILDING_NAME = "__BUILDING__"
-STATE_NAME = "_K_state"
+effect_links = set()
 
-class BytecodeRewriter(object):
-    """
-    Bytecode rewriter for assisting in performing inserts into the middle of a bytecode list.
-    """
-    def __init__(self, code):
-        assert isinstance(code, list)
-        self._code = code
-        self._i = 0
+__BUILDER_NAME__ = "__BUILDING__"
+__RET__ = "__RET__"
 
-    def set_position(self, i):
-        self._i = i
+class CPSTransformer(object):
+    def __init__(self):
+        self._block_labels = {}
+        self._processed_blocks = set()
+        self._remaining_blocks = []
 
-    def reset(self):
-        self.set_position(0)
 
-    def insert(self, op, arg=None):
-        self._code.insert(self._i, (op, arg))
-        self._i += 1
+    def scan_fn(self, fn):
+        self._fn = fn
+        self._effect_links = {}
+        ctx = TranslationContext()
+        graph = ctx.buildflowgraph(fn)
+        self._graph = graph
 
-    def next(self):
-        self._i += 1
-        return self
+        for block in list(graph.iterblocks()):
+            for index in range(len(block.operations)-1, -1, -1):
+                hlop = block.operations[index]
+                if hlop.opname == "simple_call":
+                    is_xform = False
+                    if isinstance(hlop.args[0], Variable):
+                        resolved = None
+                        for j in block.operations:
+                            if j.result == hlop.args[0]:
+                                resolved = j
+                                break
+                        assert resolved, "Function crossed block bounaries"
+                        if isinstance(resolved, GetAttr):
+                            if resolved.args[1].value.endswith("_Ef"):
+                                is_xform = True
+                            pass
 
-    def __getitem__(self, item):
-        return self._code[self._i + item]
+                    elif isinstance(hlop.args[0], Constant):
+                        fn = hlop.args[0].value
+                        if getattr(fn, "_is_effect", None):
+                            is_xform = True
+                        elif fn.__name__.endswith("_Ef"):
+                            is_xform = True
 
-    def __setitem__(self, key, value):
-        assert isinstance(value, tuple)
-        self._code[self._i + key] = value
+                    if is_xform:
+                        if index + 1 == len(block.operations):
+                            assert len(block.exits) == 1
+                            self._effect_links[block.exits[0]] = len(self._effect_links)
+                        else:
+                            newlink = split_block(None, block, index + 1)
+                            self._effect_links[newlink] = len(self._effect_links)
 
-    def get_code(self):
-        return self._code
+                    pass
 
-    def __len__(self):
-        return len(self._code)
+    def get_link_klass_name(self, link):
+        return "State_" + str(self._effect_links[link]) + "_step"
 
-    def inbounds(self):
-        return 0 <= self._i < len(self)
+    def emit_from(self, block, link=None):
+        self._remaining_blocks = []
+        self._processed_blocks = set()
+        self._block_labels = {}
+
+
+        preamble = True
+        while True:
+            for op in self.emit_block(block, link=link, with_preamble=preamble):
+                yield op
+
+            preamble=False
+            if not self._remaining_blocks:
+                break
+
+            block = self._remaining_blocks.pop()
+            self._processed_blocks.add(block)
+            yield self._block_labels[block], None
+
+
+
+
+    def emit_block(self, block, link=None, with_preamble=False):
+        from pixie.vm.effects.effects import Answer, Continuation, handle
+
+        if block is self._graph.returnblock:
+            assert len(block.inputargs) == 1
+            assert len(block.operations) == 0
+            yield LOAD_CONST, Answer
+            yield LOAD_FAST, block.inputargs[0].name
+            yield CALL_FUNCTION, 1
+            yield RETURN_VALUE, None
+            return
+
+        if with_preamble:
+
+            if block is self._graph.startblock:
+                for x in range(len(block.inputargs)):
+                    yield LOAD_FAST, self._fn.func_code.co_varnames[x]
+                    yield STORE_FAST, block.inputargs[x].name
+            else:
+                for arg in block.inputargs:
+                    if link is not None and arg is link.prevblock.operations[-1].result:
+                        yield LOAD_FAST, __RET__
+                    else:
+                        yield LOAD_FAST, __BUILDER_NAME__
+                        yield LOAD_ATTR, arg.name
+                    yield STORE_FAST, arg.name
+
+                if link is not None and link.prevblock.operations[-1].result in link.args:
+                    yield LOAD_FAST, __RET__
+                    yield STORE_FAST, block.inputargs[-1].name
+
+        for hlop in block.operations:
+            mthd = getattr(OpEmitter, hlop.opname)
+            for arg in range(len(hlop.args) - getattr(mthd, "_skip_last", 0)):
+                for op in OpEmitter.emit_arg(hlop.args[arg]):
+                    yield op
+            for op in mthd(hlop):
+                yield op
+            yield STORE_FAST, hlop.result.name
+
+        for link in block.exits:
+            if link not in self._effect_links:
+                if link.target not in self._block_labels:
+                    self._block_labels[link.target] = Label()
+                if link.target not in self._processed_blocks:
+                    self._remaining_blocks.append(link.target)
+
+        if len(block.exits) == 1:
+            link = block.exits[0]
+            for x in self.emit_link(link):
+                yield x
+
+        else:
+            assert len(block.exits) == 2
+            other_block = Label()
+            yield LOAD_FAST, block.exitswitch.name
+            yield POP_JUMP_IF_TRUE, other_block
+
+            for op in self.emit_link(block.exits[0]):
+                yield op
+
+            yield other_block, None
+
+            for op in self.emit_link(block.exits[1]):
+                yield op
+
+
+    def emit_link(self, link):
+        for op in self.emit_effect_link(link)  if link in self._effect_links else self.emit_jump_link(link):
+            yield op
+
+    def emit_effect_link(self, link):
+        from pixie.vm.effects.effects import handle
+        if link.target is self._graph.returnblock:
+            assert len(link.args) == 1
+            for op in OpEmitter.emit_arg(link.args[0]):
+                yield op
+            yield RETURN_VALUE, None
+            return
+
+        yield LOAD_CONST, handle
+        yield LOAD_FAST, link.prevblock.operations[-1].result.name
+
+        yield LOAD_GLOBAL, self.get_link_klass_name(link)
+        yield CALL_FUNCTION, 0
+        yield STORE_FAST, __BUILDER_NAME__
+        for x in range(len(link.args)):
+            if link.prevblock.operations[-1].result is not link.args[x]:
+                for o in OpEmitter.emit_arg(link.args[x]):
+                    yield o
+                yield LOAD_FAST, __BUILDER_NAME__
+                yield STORE_ATTR, link.target.inputargs[x].name
+        yield LOAD_FAST, __BUILDER_NAME__
+        yield CALL_FUNCTION, 2
+        yield RETURN_VALUE, None
+
+    def emit_jump_link(self, link):
+        for x in range(len(link.args)):
+            for o in OpEmitter.emit_arg(link.args[x]):
+                yield o
+            yield STORE_FAST, link.target.inputargs[x].name
+        yield JUMP_ABSOLUTE, self._block_labels[link.target]
+
+
+    def emit_all(self):
+        start = list(self.emit_from(self._graph.startblock))
+
+        # Construct a code object and a class
+        f = self._fn
+        c = Code(code=start, freevars=[], args=f.func_code.co_varnames[:f.func_code.co_argcount],
+                 varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
+                 filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
+                 docstring=f.func_code.__doc__)
+
+        try:
+            new_func = types.FunctionType(c.to_code(), f.func_globals, f.__name__)
+        except:
+            print f.func_code.co_name
+            pprint(start)
+            raise
+
+        for eff_link in self._effect_links:
+            if eff_link.target is self._graph.returnblock:
+                continue
+            code = list(self.emit_from(eff_link.target, eff_link))
+
+            f = self._fn
+            c = Code(code=code, freevars=[], args=[__BUILDER_NAME__, __RET__],
+                     varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
+                     filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
+                     docstring=f.func_code.__doc__)
+
+            try:
+                method = types.FunctionType(c.to_code(), f.func_globals, f.__name__)
+            except:
+                print f.func_code.co_name
+                pprint(code)
+                raise
+
+            klass_name = self.get_link_klass_name(eff_link)
+            f.func_globals[klass_name] = type(klass_name, (Continuation,), {"step": method, "_immutable_": True})
+
+        return new_func
+
+
+
+def skip_last(x):
+    def with_f(f):
+        f._skip_last = x
+        return f
+    return with_f
+
+
+class OpEmitter(object):
+
+    @staticmethod
+    def simple_call(hlop):
+        yield CALL_FUNCTION, len(hlop.args) - 1
+
+    @staticmethod
+    def switch(hlop):
+        assert False
+
+
+
+    @staticmethod
+    def add(hlop):
+        yield BINARY_ADD, len(hlop.args) - 1
+
+    @staticmethod
+    def lt(hlop):
+        yield COMPARE_OP, "<"
+
+    @staticmethod
+    def le(hlop):
+        yield COMPARE_OP, "<="
+
+    @staticmethod
+    def is_(hlop):
+        yield COMPARE_OP, "is"
+
+    @staticmethod
+    def bool(hlop):
+        yield NOP, None
+
+    @staticmethod
+    def emit_arg(arg):
+        if isinstance(arg, Variable):
+            return [(LOAD_FAST, arg.name)]
+        if isinstance(arg, Constant):
+            return [(LOAD_CONST, arg.value)]
+
+        assert False
+
+    @staticmethod
+    @skip_last(1)
+    def getattr(hlop):
+        yield LOAD_ATTR, hlop.args[1].key[1]
+
+    @staticmethod
+    def eq(hlop):
+        yield COMPARE_OP, "=="
+
+    @staticmethod
+    def inplace_add(hlop):
+        return OpEmitter.add(hlop)
 
 
 def cps(f):
-    print ".",
-    """
-    Transforms a function or method into a function that returns an effect. In essence this transform performs
-    continuation passing style edits to the bytecode, creating immutable state machines for each step. There
-    are many caveats to this approach, but if the principles are followed the approach works well, and results in
-    RPYthon compliant code.
-
-    The rules are stated as follows:
-
-
-    * Calls to functions or methods that end with a single `_` are considered to be effect functions (functions that
-    will either return Answer or an Effect). Thus at every call to such a function the transformer will create a
-    continuation.
-    * Generators/Iterators should be avoided. A single step of the function may be run many times, thus it is important
-     to clone any mutable state.
-    * The call stack is not persisted across continuations, so be sure that the stack position is 0 at every effect
-    function call.
-
-    For example:
-
-
-        @cps
-        def foo(x):
-          r = invoke_(x)
-          z = invoke_(r)
-          return z
-
-
-    Is fine, while the following is not:
-
-
-        @cps
-        def foo(x):
-          return invoke_(invoke_(x))
-
-
-    Since the outer `invoke_` will be loaded before the `inner_`.
-
-    * Calls to effect functions that immediately return will be turned into tail calls, so prefer this style when
-    possible:
-
-
-        @cps
-        def foo(x):
-          return invoke_(x)
-
-    * Currently (until this restriction is removed) effect calls that take anything but locals as arguments are not
-    supported.
-
-
-        @cps
-        def foo(x):
-          # works
-          x = invoke_(something)
-          # doesn't work
-          x = invoke_(something._zing)
-
-    * `break` and `continue` require the stack to operate, and as such are not supported
-    * Since functions are RPython and internally function locals are converted class fields, locals can only have one
-    type. Unlike RPython that supports locals with conflicting types as long as they are redefined between usages.
-
-
-
-    """
-    global iname
-    c = Code.from_code(f.func_code)
-
-    iname += 1
-    cls_name = "_K_" + str(iname) + "_class"
-
-    code = BytecodeRewriter(c.code)
-    ret_points = []
-    locals = set(f.func_code.co_varnames[:f.func_code.co_argcount])
-
-    while code.inbounds():
-        nm, arg = code[0]
-
-
-        # Track locals we discover, this is why locals that escape loops must be declared before the loop starts
-        if nm == STORE_FAST:
-            locals.add(arg)
-
-        # PyPy creates this bytecode, convert it so we can translate easier
-        if is_pypy and nm == LOOKUP_METHOD:
-            code[0] = (LOAD_ATTR, arg)
-
-        # PyPy creates this bytecode, convert it so we can translate easier
-        if is_pypy and nm == JUMP_IF_NOT_DEBUG:
-            code[0] = (NOP, arg)
-
-        # Convert this as well
-        if is_pypy and nm == CALL_METHOD:
-            code[0] = (CALL_FUNCTION, arg)
-
-        # Not needed if we don't allow continue or break
-        if nm == SETUP_LOOP:
-            code[0] = (NOP, None)
-
-        # ditto
-        if nm == POP_BLOCK:
-            code[0] = (NOP, None)
-
-        # These require blocks, which require the stack, which we don't support
-        if nm == BREAK_LOOP:
-            raise AssertionError("Can't use break inside a CPS function")
-
-        if nm == CONTINUE_LOOP:
-            raise AssertionError("Can't use continue inside a CPS function")
-
-        # Now we come to the good part
-        if (is_pypy and nm == CALL_METHOD) or nm == CALL_FUNCTION:
-        #if nm == CALL_FUNCTION:
-            next_op, _ = code[1]
-
-
-            # is the function we're calling an effect?
-            oarg = arg
-            op, arg = code[- (arg + 1)]
-            if (op == LOAD_ATTR or op == LOAD_GLOBAL or op == LOAD_FAST) and arg.endswith("_Ef"):
-                final_fn = raise_Ef if arg == "raise_Ef" else handle
-
-                # If the next opcode is a return, we can tailcall by simply returning the result directly, except
-                # for calls to raise, those take a continuation, so we can't tailcall those
-                if next_op == RETURN_VALUE:
-
-                    code.next().next()
-                    continue
-
-
-                # are we calling raise_?
-                if arg == "raise_Ef":
-                    code[0] = (NOP, None)
-                    code[- (oarg + 1)] = (NOP, None)
-
-                code.next()
-
-                # Construct a new state object
-                code.insert(STORE_FAST, RET_NAME)
-                code.insert(LOAD_GLOBAL, cls_name)
-                code.insert(CALL_FUNCTION, 0)
-                code.insert(STORE_FAST, BUILDING_NAME)
-                code.insert(LOAD_FAST, BUILDING_NAME)
-                code.insert(LOAD_CONST, len(ret_points) + 1)  # The id of this state
-                code.insert(LOAD_FAST, BUILDING_NAME)
-                code.insert(STORE_ATTR, STATE_NAME)
-                # Save the locals to the state machien
-                for x in locals:
-                    code.insert(LOAD_FAST, x)
-                    code.insert(LOAD_FAST, BUILDING_NAME)
-                    code.insert(STORE_ATTR, "_K_" + str(iname) + "_" + x)
-
-                # Save the ret value and call handle or raise_
-                code.insert(LOAD_FAST, BUILDING_NAME)
-                code.insert(LOAD_CONST, final_fn)
-                code.insert(LOAD_FAST, RET_NAME)
-                code.insert(LOAD_FAST, BUILDING_NAME)
-                code.insert(CALL_FUNCTION, 2)
-
-                # Return
-                code.insert(RETURN_VALUE, None)
-
-                # Insert a label so we can jump to this state
-                lbl = Label()
-                ret_points.append(lbl)
-
-                # Load the retvalue
-                code.insert(lbl, None)
-
-                # Load locals
-                for x in locals:
-                    code.insert(LOAD_FAST, BUILDING_NAME)
-                    code.insert(LOAD_ATTR, "_K_" + str(iname) + "_" + x)
-                    code.insert(STORE_FAST, x)
-
-                code.insert(LOAD_FAST, RET_NAME)
-
-                # We've just inserted a state transition in the middle of this function
-
-                continue
-
-        # Just a bare return, so wrap the result in an answer.
-        if nm == RETURN_VALUE:
-            code.insert(STORE_FAST, RET_NAME)
-            code.insert(LOAD_CONST, answer)
-            code.insert(LOAD_FAST, RET_NAME)
-            code.insert(CALL_FUNCTION, 1)
-
-        code.next()
-
-
-    # Now construct a header to the function that sets up all the state we need
-    # Load the locals for the first state (state 0)
-    code.reset()
-    for x in f.func_code.co_varnames[:f.func_code.co_argcount]:
-        code.insert(LOAD_FAST, BUILDING_NAME)
-        code.insert(LOAD_ATTR, "_K_" + str(iname) + "_" +  x)
-        code.insert(STORE_FAST, x)
-
-    # Build a jump table for the states
-    state_idx = 1
-    for lbl in ret_points:
-        code.reset()
-        code.insert(LOAD_FAST, BUILDING_NAME)
-        code.insert(LOAD_ATTR, STATE_NAME)
-        code.insert(LOAD_CONST, state_idx)
-        code.insert(COMPARE_OP, "==")
-        exit_lbl = Label()
-        code.insert(POP_JUMP_IF_FALSE, exit_lbl)
-        code.insert(JUMP_ABSOLUTE, lbl)
-        code.insert(exit_lbl, None)
-
-        state_idx += 1
-
-
-    # Construct a code object and a class
-    c = Code(code=code.get_code(), freevars=[], args=[BUILDING_NAME, RET_NAME],
-             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
-             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
-             docstring=f.func_code.__doc__)
-
-    try:
-        new_func = types.FunctionType(c.to_code(), f.func_globals, "step")
-    except:
-        print f.func_code.co_name
-        pprint(code.get_code())
-        raise
-
-    f.func_globals[cls_name] = type(cls_name, (Continuation,), {"step": new_func, "_immutable_": True})
-
-
-    # Now we need a constructor function for the first state of the state machine
-    code = [(LOAD_GLOBAL, cls_name),
-            (CALL_FUNCTION, 0),
-            (STORE_FAST, BUILDING_NAME),
-        (LOAD_CONST, 0),
-        (LOAD_FAST, BUILDING_NAME),
-        (STORE_ATTR, STATE_NAME)]
-
-    # Save args to the state machine
-    for x in range(f.func_code.co_argcount):
-        code.append((LOAD_FAST, f.func_code.co_varnames[x]))
-        code.append((LOAD_FAST, BUILDING_NAME))
-        code.append((STORE_ATTR, "_K_" + str(iname) + "_" +  f.func_code.co_varnames[x]))
-
-    # Call the constructed state machine
-    code.append((LOAD_FAST, BUILDING_NAME))
-    code.append((LOAD_ATTR, "step"))
-    code.append((LOAD_CONST, None))
-    code.append((CALL_FUNCTION, 1))
-
-    code.append((RETURN_VALUE, None))
-
-    # Build and return the function
-    c = Code(code=code, freevars=[], args=f.func_code.co_varnames[:f.func_code.co_argcount],
-             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
-             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
-             docstring=f.func_code.__doc__)
-    f.func_code = c.to_code()
-
-    return f
-
-
-def resource_effect(f):
-    global iname
-
-    locals = f.func_code.co_varnames[:f.func_code.co_argcount]
-    c = []
-
-    iname += 1
-    cls_name = "_opaque_effect_" + str(f.func_code.co_name) + "_class"
-
-    c = BytecodeRewriter([])
-    c.insert(LOAD_GLOBAL, cls_name)
-    c.insert(CALL_FUNCTION, 0)
-    c.insert(STORE_FAST, BUILDING_NAME)
-
-    for local in locals:
-        c.insert(LOAD_FAST, local)
-        c.insert(LOAD_FAST, BUILDING_NAME)
-        c.insert(STORE_ATTR, "_K_" + str(iname) + "_" + local)
-
-    c.insert(LOAD_CONST, answer_k)
-    c.insert(LOAD_FAST, BUILDING_NAME)
-    c.insert(STORE_ATTR, "_k")
-
-    c.insert(LOAD_FAST, BUILDING_NAME)
-    c.insert(RETURN_VALUE)
-
-    ctor_cd = Code(code=c.get_code(), freevars=[], args=f.func_code.co_varnames[:f.func_code.co_argcount],
-             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
-             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
-             docstring=f.func_code.__doc__)
-
-    ctor_method = types.FunctionType(ctor_cd.to_code(), f.func_globals, f.func_code.co_name)
-
-    code = Code.from_code(f.func_code)
-    c = BytecodeRewriter(code.code)
-
-    # Load locals
-    for x in locals:
-        c.insert(LOAD_FAST, BUILDING_NAME)
-        c.insert(LOAD_ATTR, "_K_" + str(iname) + "_" + x)
-        c.insert(STORE_FAST, x)
-
-
-    mthd_cd = Code(code=c.get_code(), freevars=[], args=[BUILDING_NAME],
-             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name,
-             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
-             docstring=f.func_code.__doc__)
-
-    try:
-        mthd = types.FunctionType(mthd_cd.to_code(), f.func_globals, "execute_resource")
-    except:
-        print f.func_code.co_name
-        pprint(c.get_code())
-        raise
-
-    c = BytecodeRewriter([])
-    c.insert(LOAD_GLOBAL, cls_name)
-    c.insert(CALL_FUNCTION, 0)
-    c.insert(STORE_FAST, BUILDING_NAME)
-
-    for local in locals:
-        c.insert(LOAD_FAST, SELF_NAME)
-        c.insert(LOAD_ATTR, "_K_" + str(iname) + "_" + local)
-        c.insert(LOAD_FAST, BUILDING_NAME)
-        c.insert(STORE_ATTR, "_K_" + str(iname) + "_" + local)
-
-    c.insert(LOAD_FAST, BUILDING_NAME)
-    c.insert(RETURN_VALUE)
-
-    without_cd =  Code(code=c.get_code(), freevars=[], args=[SELF_NAME],
-             varargs=False, varkwargs=False, newlocals=True, name=f.func_code.co_name + "_without_k",
-             filename=f.func_code.co_filename, firstlineno=f.func_code.co_firstlineno,
-             docstring=f.func_code.__doc__)
-
-    try:
-        without = types.FunctionType(without_cd.to_code(), f.func_globals, "without_k")
-    except:
-        print f.func_code.co_name
-        pprint(c.get_code())
-        raise
-
-    f.func_globals[cls_name] = type(cls_name, (OpaqueResource,), {"execute_resource": mthd, "_immutable_": True,
-                                                                  "without_k": without})
-
-
-    return ctor_method
+    xform = CPSTransformer()
+    xform.scan_fn(f)
+    a = xform.emit_all()
+
+    return a

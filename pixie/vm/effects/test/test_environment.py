@@ -1,7 +1,6 @@
 import unittest
 from pixie.vm.effects.effects import *
 from pixie.vm.effects.environment import *
-from pixie.vm.effects.effect_transform import resource_effect
 from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.code import wrap_fn
 from pixie.vm.keyword import keyword
@@ -29,11 +28,9 @@ class TestEnvironment(unittest.TestCase):
             ns = keyword(u"foo-ns")
             nm = keyword(u"foo-name")
 
-            eff = Declare(ns, nm, 42)
-            raise_Ef(eff)
+            Declare(ns, nm, 42).raise_Ef()
 
-            eff = Resolve(ns, nm)
-            result = raise_Ef(eff)
+            result = Resolve(ns, nm).raise_Ef()
 
             return result
 
@@ -55,4 +52,3 @@ class TestEnvironment(unittest.TestCase):
 
         result = run_thunk_with_state(handle_with(ResourceHandler(), doit.invoke_Ef(ArgList()), answer_k), default_env)
         pass
-

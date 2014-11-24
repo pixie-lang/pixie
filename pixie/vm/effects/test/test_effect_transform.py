@@ -1,7 +1,7 @@
 import unittest
 
 from pixie.vm.effects.effect_transform import *
-from pixie.vm.effects.effects import Answer, Effect
+from pixie.vm.effects.effects import Answer, Effect, raise_Ef, handle, Thunk, Handler, handle_with, DefaultHandlerFn
 from pixie.vm.effects.effect_generator import defeffect
 
 defeffect("pixie.stdlib.YieldingEffect", "YieldEffect", ["val"])
@@ -11,8 +11,7 @@ defeffect("pixie.stdlib.YieldingEffect", "YieldEffect", ["val"])
 def generator_Ef(max):
     x = 0
     while x < max:
-        eff = YieldEffect(x)
-        raise_Ef(eff)
+        YieldEffect(x).raise_Ef()
         x += 1
 
     return False
@@ -34,19 +33,19 @@ class TestFunctionTransform(unittest.TestCase):
         Test a simple CPS transformation
         """
 
-        x = generator_Ef(3)
+        x = ground_thunk(generator_Ef(3))
         self.assertIsInstance(x, YieldEffect)
         self.assertEqual(x.get(KW_VAL), 0)
-        x = x.get(KW_K).step(None)
+        x = ground_thunk(x.get(KW_K).step(None))
 
         self.assertIsInstance(x, YieldEffect)
         self.assertEqual(x.get(KW_VAL), 1)
-        x = x.get(KW_K).step(None)
+        x = ground_thunk(x.get(KW_K).step(None))
 
 
         self.assertIsInstance(x, YieldEffect)
         self.assertEqual(x.get(KW_VAL), 2)
-        x = x.get(KW_K).step(None)
+        x = ground_thunk(x.get(KW_K).step(None))
 
         self.assertIsInstance(x, Answer)
         self.assertEqual(x.val(), False)

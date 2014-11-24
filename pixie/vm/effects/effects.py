@@ -78,6 +78,9 @@ class Effect(EffectObject):
         """
         raise NotImplementedError()
 
+    def raise_Ef(self):
+        return self
+
 
 
 class OpaqueIOFn(Object):

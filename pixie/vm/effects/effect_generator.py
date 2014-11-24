@@ -1,4 +1,5 @@
 import pixie.vm.effects.effects as effect
+from pixie.vm.effects.effects import answer_k
 import inspect
 
 
@@ -53,6 +54,7 @@ def defeffect(name, klass_name, members):
     gbls = inspect.currentframe().f_back.f_globals
     gbls["Effect"] = effect.Effect
     gbls["Type"] = effect.Type
+    gbls["answer_k"] = answer_k
 
     for x in members:
         gbls["KW_" + munge(x).upper()] = keyword(x)
@@ -82,6 +84,6 @@ def defeffect(name, klass_name, members):
 
     s = "".join(data)
 
-    print s
+    #print s
 
     exec s in gbls
