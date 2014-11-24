@@ -15,6 +15,7 @@
   (t/assert= (str #{1}) "#{1}")
   (t/assert= (str {}) "{}")
   (t/assert= (str {:a 1}) "{:a 1}")
+  (t/assert= (str (type 3)) "<type pixie.stdlib.Integer>")
 
   (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]"))
 
@@ -32,6 +33,7 @@
   (t/assert= (-repr #{1}) "#{1}")
   (t/assert= (-repr {}) "{}")
   (t/assert= (-repr {:a 1}) "{:a 1}")
+  (t/assert= (-repr (type 3)) "pixie.stdlib.Integer")
 
   (t/assert= (-repr [1 {:a 1} "hey"]) "[1 {:a 1} \"hey\"]"))
 
