@@ -163,6 +163,10 @@ def _str(tp):
     import pixie.vm.string as string
     return string.rt.wrap(u"<type " + tp._name + u">")
 
+@extend(_repr, Type)
+def _repr(tp):
+    import pixie.vm.string as string
+    return string.rt.wrap(tp._name)
 
 @extend(_first, nil._type)
 def _first(_):

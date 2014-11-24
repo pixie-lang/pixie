@@ -173,8 +173,10 @@
     (if (identical? x true)
       "true"
       "false")))
+(extend -repr Bool -str)
 
 (extend -str Nil (fn [x] "nil"))
+(extend -repr Nil -str)
 (extend -reduce Nil (fn [self f init] init))
 (extend -hash Nil (fn [self] 100000))
 
@@ -200,10 +202,16 @@
 (extend -str PersistentVector
   (fn [v]
     (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
+(extend -repr PersistentVector
+  (fn [v]
+    (apply str "[" (conj (transduce (comp (map -repr) (interpose " ")) conj v) "]"))))
 
 (extend -str Cons
   (fn [v]
     (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
+(extend -repr Cons
+  (fn [v]
+    (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
 
 (extend -hash Cons
         (fn [v]
@@ -212,10 +220,16 @@
 (extend -str PersistentList
   (fn [v]
     (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
+(extend -repr PersistentList
+  (fn [v]
+    (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
 
 (extend -str LazySeq
   (fn [v]
     (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
+(extend -repr LazySeq
+  (fn [v]
+    (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
 
 (extend -hash PersistentVector
   (fn [v]
@@ -637,8 +651,11 @@
 (extend -reduce MapEntry indexed-reduce)
 
 (extend -str MapEntry
-        (fn [v]
-            (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
+  (fn [v]
+    (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
+(extend -repr MapEntry
+  (fn [v]
+    (apply str "[" (conj (transduce (comp (map -repr) (interpose " ")) conj v) "]"))))
 
 (extend -hash MapEntry
   (fn [v]
@@ -670,6 +687,10 @@
         (fn [v]
           (let [entry->str (map (fn [e] (vector (key e) " " (val e))))]
             (apply str "{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
+(extend -repr PersistentHashMap
+        (fn [v]
+          (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
+            (apply str "{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
 
 (extend -hash PersistentHashMap
         (fn [v]
@@ -680,6 +701,9 @@
 (extend -str PersistentHashSet
         (fn [s]
           (apply str "#{" (conj (transduce (interpose " ") conj s) "}"))))
+(extend -repr PersistentHashSet
+        (fn [s]
+          (apply str "#{" (conj (transduce (comp (map -repr) (interpose " ")) conj s) "}"))))
 
 (extend -empty Cons (fn [_] '()))
 (extend -empty LazySeq (fn [_] '()))
@@ -724,6 +748,9 @@
     (if (namespace k)
       (str ":" (namespace k) "/" (name k))
       (str ":" (name k)))))
+(extend -repr Keyword -str)
+
+(extend -repr Symbol -str)
 
 (extend -invoke Keyword (fn [k m] (-val-at m k nil)))
 (extend -invoke PersistentHashMap (fn [m k] (-val-at m k nil)))
@@ -908,8 +935,19 @@
  (def getenv (ffi-fn libc "getenv" [String] String))
 
 (defn print [& args]
-  (puts (apply str args)))
+  (printf (transduce (interpose " ") str args)))
 
+(defn println [& args]
+  (puts (transduce (interpose " ") str args)))
+
+(defn pr-str [& args]
+  (transduce (comp (map -repr) (interpose " ")) str args))
+
+(defn pr [& args]
+  (printf (apply pr-str args)))
+
+(defn prn [& args]
+  (puts (apply pr-str args)))
 
 (defn doc [x]
   (get (meta x) :doc))

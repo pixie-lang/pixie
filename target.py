@@ -90,7 +90,7 @@ class ReplFn(NativeFn):
                     continue
                 if val is keyword(u"exit-repl"):
                     break
-                val = rt.str(val)
+                val = rt._repr(val)
                 assert isinstance(val, String), "str should always return a string"
                 print val._str
 

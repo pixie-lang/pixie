@@ -11,15 +11,15 @@
 
 (defmacro deftest [nm & body]
   `(do (defn ~nm []
-         (print "Running: " (str (namespace (var ~nm)) "/" (name (var ~nm))))
+         (println "Running:" (str (namespace (var ~nm)) "/" (name (var ~nm))))
          (try
            ~@body
            (swap! *stats* update-in [:pass] (fnil inc 0))
            (catch ex
-               (print "while running " ~(name nm) " " (quote (do ~@body)))
+               (println "while running" ~(name nm) " " (quote (do ~@body)))
 
                (swap! *stats* update-in [:fail] (fnil inc 0))
-               (print (str ex))
+               (println (str ex))
                (swap! *stats* update-in [:errors] (fnil conj []) ex))))
        (swap! tests assoc (symbol (str (namespace (var ~nm)) "/" (name (var ~nm)))) ~nm)))
 
@@ -34,28 +34,28 @@
                                (map val))
                          conj
                          @tests)]
-    (print "Running: " (count tests) " tests")
+    (println "Running:" (count tests) "tests")
 
     (foreach [test tests]
              (test)))
 
   (let [stats @*stats*]
-    (print stats)
+    (println stats)
     (pop-binding-frame!)
     stats))
 
 
 (defn load-all-tests []
-  (print "Looking for tests...")
+  (println "Looking for tests...")
   (foreach [path @load-paths]
-           (print "Looking for tests in: " path)
+           (println "Looking for tests in:" path)
            (foreach [desc (pixie.path/file-list path)]
                     (if (= (nth desc 1) :file)
                       (let [filename (nth desc 2)]
                         (if (pixie.string/starts-with filename "test-")
                           (if (pixie.string/ends-with filename ".pxi")
                             (let [fullpath (str (nth desc 0) "/" filename)]
-                              (print "Loading " fullpath)
+                              (println "Loading" fullpath)
                               (load-file fullpath)))))))))
 
 
@@ -69,8 +69,7 @@
      (assert x# (str '~x " is " x#))))
 
 (defn show
-  ([val] (if (instance? String val) (-repr val) val))
   ([orig res]
      (if (= orig res)
-       (show orig)
-       (str (show orig) " = " (show res)))))
+       (pr-str orig)
+       (str (pr-str orig) " = " (pr-str res)))))
