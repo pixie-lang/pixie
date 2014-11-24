@@ -933,8 +933,19 @@
  (def getenv (ffi-fn libc "getenv" [String] String))
 
 (defn print [& args]
-  (puts (apply str args)))
+  (printf (transduce (interpose " ") str args)))
 
+(defn println [& args]
+  (puts (transduce (interpose " ") str args)))
+
+(defn pr-str [& args]
+  (transduce (comp (map -repr) (interpose " ")) str args))
+
+(defn pr [& args]
+  (printf (apply pr-str args)))
+
+(defn prn [& args]
+  (puts (apply pr-str args)))
 
 (defn doc [x]
   (get (meta x) :doc))
