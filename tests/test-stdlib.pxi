@@ -129,3 +129,23 @@
   (t/assert= (macro? 1) false)
   (t/assert= (macro? :foo) false)
   (t/assert= (macro? "foo") false))
+
+(t/deftest test-every?
+  (t/assert= (every? even? [2 4 6 8]) true)
+  (t/assert= (every? odd?  [2 4 6 8]) false)
+  (t/assert= (every? even? [2 3 6 8]) false)
+  (t/assert= (every? even? []) true)
+  (t/assert= (every? odd? []) true))
+
+(t/deftest test-some
+  (t/assert= (some even? [2 4 6 8]) true)
+  (t/assert= (some odd?  [2 4 6 8]) false)
+  (t/assert= (some even? [2 3 6 8]) true)
+  (t/assert= (some even? [1 3 5 8]) true)
+  (t/assert= (some even? []) false)
+  (t/assert= (some odd? [2]) false))
+
+(t/deftest test-distinct
+  (t/assert= (sequence (distinct) [1 2 3 2 1]) '(1 2 3))
+  (t/assert= (vec (distinct) [1 1 2 2 3 3]) [1 2 3])
+  (t/assert= (vec (distinct) [nil nil nil]) [nil]))

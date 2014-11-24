@@ -149,6 +149,10 @@
                             init
                             (recur (f init (nth coll i)) (+ i 1))))))))
 
+(def rest (fn [coll] 
+            (let [next (next coll)]
+              (if next next '()))))
+
 ;; Make all Function types extend IFn
 (extend -invoke Code -invoke)
 (extend -invoke NativeFn -invoke)
@@ -450,6 +454,12 @@
   [coll]
   (if (seq coll) true false))
 
+(defn even? [n]
+  (zero? (rem n 2)))
+
+(defn odd? [n]
+  (= (rem n 2) 1))
+
 (defn first
   {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
          the item from the collection."
@@ -599,6 +609,24 @@
     (if (next coll)
       (recur (conj res (first coll)) (next coll))
       (seq res))))
+
+(defn complement
+  {:doc "Given a function, return a new function which takes the same arguments
+         but returns the opposite truth value"}
+  [f] 
+  (if (not (fn? f))
+    (throw "Complement must be passed a function")
+    (fn
+      ([] (not (f)))
+      ([x] (not (f x)))
+      ([x y] (not (f x y)))
+      ([x y & more] (not (apply f x y more))))))
+
+(defn some [pred coll]
+  (cond
+   (nil? (seq coll)) false
+   (pred (first coll)) true
+   :else (recur pred (next coll))))
 
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn [self idx not-found]
@@ -1163,6 +1191,19 @@
       ([acc i] (if (f i)
                  (xf acc i)
                  acc)))))
+
+(defn distinct []
+  (fn [xf]
+    (let [seen (atom #{})]
+      (fn
+        ([] (xf))
+        ([acc] (xf acc))
+        ([acc i]
+           (if (contains? @seen i)
+             acc
+             (do
+               (swap! seen conj i)
+               (xf acc i))))))))
 
 (defn keep
   ([f]
