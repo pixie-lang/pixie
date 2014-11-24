@@ -1,6 +1,40 @@
 (ns pixie.tests.test-stdlib
   (require pixie.test :as t))
 
+(t/deftest test-str
+  (t/assert= (str nil) "nil")
+  (t/assert= (str true) "true")
+  (t/assert= (str false) "false")
+  (t/assert= (str "hey") "hey")
+  (t/assert= (str :hey) ":hey")
+  (t/assert= (str 'hey) "hey")
+
+  (t/assert= (str '()) "()")
+  (t/assert= (str '(1 2 3)) "(1 2 3)")
+  (t/assert= (str [1 2 3]) "[1 2 3]")
+  (t/assert= (str #{1}) "#{1}")
+  (t/assert= (str {}) "{}")
+  (t/assert= (str {:a 1}) "{:a 1}")
+
+  (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]"))
+
+(t/deftest test-repr
+  (t/assert= (-repr nil) "nil")
+  (t/assert= (-repr true) "true")
+  (t/assert= (-repr false) "false")
+  (t/assert= (-repr "hey") "\"hey\"")
+  (t/assert= (-repr :hey) ":hey")
+  (t/assert= (-repr 'hey) "hey")
+
+  (t/assert= (-repr '()) "()")
+  (t/assert= (-repr '(1 2 3)) "(1 2 3)")
+  (t/assert= (-repr [1 2 3]) "[1 2 3]")
+  (t/assert= (-repr #{1}) "#{1}")
+  (t/assert= (-repr {}) "{}")
+  (t/assert= (-repr {:a 1}) "{:a 1}")
+
+  (t/assert= (-repr [1 {:a 1} "hey"]) "[1 {:a 1} \"hey\"]"))
+
 (t/deftest test-first
   (t/assert= (first []) nil)
   (t/assert= (first '()) nil)

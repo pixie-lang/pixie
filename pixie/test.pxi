@@ -71,5 +71,5 @@
 (defn show
   ([orig res]
      (if (= orig res)
-       (show orig)
+       (pr-str orig)
        (str (pr-str orig) " = " (pr-str res)))))
