@@ -1,6 +1,6 @@
 (require pixie.test :as t)
 
-(print @load-paths)
+(println @load-paths)
 
 (t/load-all-tests)
 

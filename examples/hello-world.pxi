@@ -1,6 +1,6 @@
 #!./pixie-vm
 
 (defn greet [name]
-  (print (str "Hello, " (or name "World") "!")))
+  (println (str "Hello, " (or name "World") "!")))
 
 (greet (first program-arguments))
