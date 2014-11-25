@@ -132,6 +132,16 @@ jitdriver = JitDriver(greens=["ast"], reds=["locals", "thunk", "globals"],
                       virtualizables=["locals"],
                       get_printable_location=get_printable_location)
 
+def raise_polymorphic_arity_exception_Ef():
+    from pixie.vm.keyword import keyword
+    from pixie.vm.string import String
+    return ExceptionEffect(keyword(u"ARITY-ERROR"), String(u"Expected at least 1 arg to polymorphic function"))
+
+
+def raise_override_error_Ef(name, tp):
+    from pixie.vm.keyword import keyword
+    from pixie.vm.string import String
+    return ExceptionEffect(keyword(u"NO-OVERRIDE"), String(name.str()))
 
 class PolymorphicFn(Object):
     _type = Type(u"pixie.stdlib.PolymorphicFn")
@@ -143,26 +153,16 @@ class PolymorphicFn(Object):
     @cps
     def invoke_Ef(self, args):
         if args.arg_count() == 0:
-            pass
-            # TODO throw exception effect
+            raise_polymorphic_arity_exception_Ef()
 
         tp = args.get_arg(0).type()
-        eff = FindPolymorphicOverride(self._w_name, tp)
-        result = raise_Ef(eff)
+        result = FindPolymorphicOverride(self._w_name, tp).raise_Ef()
 
-        #if result is None:
-        #    from pixie.vm.keyword import keyword
-        #    from pixie.vm.string import String
-        #    eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(self._w_name.str()))
-        #    raise_Ef(eff)
+        if result is None:
+            raise_override_error_Ef(self._w_name, tp)
 
         return result.invoke_Ef(args)
 
-def raise_override_error_Ef(name, tp):
-    from pixie.vm.keyword import keyword
-    from pixie.vm.string import String
-    eff = ExceptionEffect(keyword(u"NO-OVERRIDE"), String(name.str()))
-    raise_Ef(eff)
 
 class DoublePolymorphicFn(Object):
     _type = Type(u"pixie.stdlib.DoublePolymorphicFn")
@@ -174,16 +174,14 @@ class DoublePolymorphicFn(Object):
     @cps
     def invoke_Ef(self, args):
         if args.arg_count() <= 1:
-            pass
-            # TODO throw exception effect
+            return raise_polymorphic_arity_exception_Ef()
 
         tp1 = args.get_arg(0).type()
         tp2 = args.get_arg(1).type()
-        eff = FindDoublePolymorphicOverride(self._w_name, tp1, tp2)
-        result = raise_Ef(eff)
+        result = FindDoublePolymorphicOverride(self._w_name, tp1, tp2).raise_Ef()
 
         if result is None:
-            raise_override_error_Ef(self._w_name, self._type)
+            return raise_override_error_Ef(self._w_name, self._type)
 
 
         return result.invoke_Ef(args)

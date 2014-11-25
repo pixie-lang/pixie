@@ -13,6 +13,10 @@ class Syntax(Object):
         pass
 
 
+def syntax_thunk_Ef(ast, env):
+    return SyntaxThunk(ast, env)
+
+
 class Constant(Syntax):
     _immutable_fields_ = ["_w_val"]
     _type = Type(u"pixie.ast.Constant")
@@ -287,9 +291,6 @@ class If(Syntax):
             ast = self._w_else
 
         return syntax_thunk_Ef(ast, env)
-
-def syntax_thunk_Ef(ast, env):
-    return SyntaxThunk(ast, env)
 
 class SyntaxThunk(Thunk):
     _immutable_ = True

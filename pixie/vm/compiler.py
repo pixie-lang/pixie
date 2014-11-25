@@ -12,26 +12,14 @@ from rpython.rlib.rarithmetic import intmask
 from pixie.vm.numbers import Integer
 from pixie.vm.ast import *
 
-@cps
-def compile_itm_Ef(form):
-    if isinstance(form, Integer):
-        return Constant(form)
 
-    if isinstance(form, PersistentList):
-        # TODO, switch this to a statisfies? call
-        return compile_cons_Ef(form)
+VALUE_ERROR = keyword(u"VALUE-ERROR")
 
-    if isinstance(form, Symbol):
-        return Lookup(keyword(u"pixie.stdlib"), keyword(form.str()))
 
-    if form is true:
-        return Constant(true)
-
-    if form is false:
-        return Constant(false)
-
-    if form is nil:
-        return Constant(nil)
+# Forward decl
+compile_itm_Ef = lambda x: x
+compile_cons_Ef = lambda x: x
+compile_Ef = lambda x: x
 
 @cps
 def compile_if_Ef(form):
@@ -47,6 +35,81 @@ def compile_if_Ef(form):
     else_comp = compile_Ef(els)
 
     return If(test_comp, then_comp, else_comp)
+
+def multi_fn_from_acc(name, acc):
+    rest_fn = None
+    d = {}
+    for x in range(acc.count()):
+        arity = acc.nth(x)
+        if arity.required_args() < 0:
+            rest_fn = arity
+        else:
+            d[r_uint(arity.required_args())] = arity
+
+    return MultiArityFn(name, d, rest_fn)
+
+
+
+
+@cps
+def args_to_kws_Ef(args):
+    acc = EMPTY_VECTOR
+    idx = 0
+    arg = None
+    while idx < args.count():
+        arg = args.nth(idx)
+        if not isinstance(arg, Symbol):
+            throw_Ef(VALUE_ERROR, u"Argument names must be symbols")
+
+        acc = acc.conj(keyword(arg.name()))
+        idx += 1
+
+    return acc
+
+def add_args(name, args):
+    required_args = -1
+    acc = EMPTY_VECTOR
+
+    for x in range(args.count()):
+        arg = args.nth(x)
+
+        if arg.str() == u"&":
+            required_args = intmask(x)
+            continue
+
+        acc = acc.conj(arg)
+
+    return required_args, acc
+
+
+@cps
+def compile_implicit_do_Ef(body):
+    acc = EMPTY_VECTOR
+    while body is not nil:
+        arg = rt.first_Ef(body)
+        result = compile_itm_Ef(arg)
+        acc = acc.conj(result)
+        body = rt.next_Ef(body)
+
+    if acc.count() == 1:
+        return acc.nth(0)
+    else:
+        return Do(acc.to_list())
+
+@cps
+def compile_fn_body_Ef(name, args, body):
+
+    required_args, args_vec = add_args(name, args)
+
+    body_comp = compile_implicit_do_Ef(body)
+    args_lst = args_vec.to_list()
+
+    if required_args == -1:
+        return PixieFunction(name, args_lst, body_comp)
+    else:
+        rargs = r_uint(required_args)
+        return VariadicFunction(name, args_lst, rargs, body_comp)
+
 
 @cps
 def compile_fn_Ef(form):
@@ -86,82 +149,10 @@ def compile_fn_Ef(form):
 
     return FnLiteral(body_fn)
 
-def multi_fn_from_acc(name, acc):
-    rest_fn = None
-    d = {}
-    for x in range(acc.count()):
-        arity = acc.nth(x)
-        if arity.required_args() < 0:
-            rest_fn = arity
-        else:
-            d[r_uint(arity.required_args())] = arity
-
-    return MultiArityFn(name, d, rest_fn)
 
 
 
 
-@cps
-def args_to_kws_Ef(args):
-    acc = EMPTY_VECTOR
-    idx = 0
-    arg = None
-    while idx < args.count():
-        arg = args.nth(idx)
-        if not isinstance(arg, Symbol):
-            throw_Ef(VALUE_ERROR, u"Argument names must be symbols")
-
-        acc = acc.conj(keyword(arg.name()))
-        idx += 1
-
-    return acc
-
-
-@cps
-def compile_fn_body_Ef(name, args, body):
-
-    required_args, args_vec = add_args(name, args)
-
-    body_comp = compile_implicit_do_Ef(body)
-    args_lst = args_vec.to_list()
-
-    if required_args == -1:
-        return PixieFunction(name, args_lst, body_comp)
-    else:
-        rargs = r_uint(required_args)
-        return VariadicFunction(name, args_lst, rargs, body_comp)
-
-def add_args(name, args):
-    required_args = -1
-    acc = EMPTY_VECTOR
-
-    for x in range(args.count()):
-        arg = args.nth(x)
-
-        if arg.str() == u"&":
-            required_args = intmask(x)
-            continue
-
-        acc = acc.conj(arg)
-
-    return required_args, acc
-
-
-@cps
-def compile_implicit_do_Ef(body):
-    acc = EMPTY_VECTOR
-    while body is not nil:
-        arg = rt.first_Ef(body)
-        result = compile_itm_Ef(arg)
-        acc = acc.conj(result)
-        body = rt.next_Ef(body)
-
-    if acc.count() == 1:
-        return acc.nth(0)
-    else:
-        return Do(acc.to_list())
-
-VALUE_ERROR = keyword(u"VALUE-ERROR")
 
 @cps
 def compile_def(form):
@@ -251,6 +242,26 @@ def compile_cons_Ef(form):
     return Invoke(acc.to_list())
 
 
+@cps
+def compile_itm_Ef(form):
+    if isinstance(form, Integer):
+        return Constant(form)
+
+    if isinstance(form, PersistentList):
+        # TODO, switch this to a statisfies? call
+        return compile_cons_Ef(form)
+
+    if isinstance(form, Symbol):
+        return Lookup(keyword(u"pixie.stdlib"), keyword(form.str()))
+
+    if form is true:
+        return Constant(true)
+
+    if form is false:
+        return Constant(false)
+
+    if form is nil:
+        return Constant(nil)
 
 @cps
 def compile_Ef(form):

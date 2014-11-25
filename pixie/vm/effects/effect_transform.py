@@ -4,8 +4,10 @@ from rpython.translator.translator import TranslationContext
 from rpython.translator.unsimplify import insert_empty_startblock, split_block
 from rpython.flowspace.model import Variable, Constant
 from rpython.flowspace.operation import GetAttr
+from rpython.flowspace.flowcontext import FlowContext, const
 from pprint import pprint
 import types
+import dis
 from pixie.vm.effects.effects import Object
 
 """
@@ -21,15 +23,102 @@ effect_links = set()
 __BUILDER_NAME__ = "__BUILDING__"
 __RET__ = "__RET__"
 
+global_idx = 0
+
+class UserK(Continuation):
+    def step(self, x):
+        try:
+            return self._inner_step(x)
+        except:
+            dis.dis(self._inner_step)
+            raise
+
+def sort_blocks(code):
+    block_line_no = -2
+    block_contents = []
+    blocks = []
+    for op, arg in code:
+        if op == SetLineno:
+            if block_line_no == -1:
+                block_line_no = arg
+
+            block_contents.append((op, arg))
+        elif op == "SPLIT":
+            blocks.append((block_line_no, block_contents))
+            block_contents = []
+            block_line_no = -1
+        else:
+            block_contents.append((op, arg))
+
+    blocks.append((block_line_no, block_contents))
+
+
+    blocks = sorted(blocks, key=lambda x: x[0])
+
+    last_idx = -1
+    for _, block in blocks:
+        for op, arg in block:
+            if op is SetLineno:
+                if arg <= last_idx:
+                    continue
+                else:
+                    last_idx = arg
+            yield op, arg
+
 class CPSTransformer(object):
     def __init__(self):
+        global global_idx
+        global_idx += 1
+        self._global_idx = global_idx
         self._block_labels = {}
         self._processed_blocks = set()
         self._remaining_blocks = []
 
+    def find_setters(self, var):
+        for block in self._graph.iterblocks():
+            for op in block.operations:
+                if op.result is var:
+                    yield op
+                    return
+
+        for block in self._graph.iterblocks():
+            if var in block.inputargs:
+                idx = block.inputargs.index(var)
+                for link in self._graph.iterlinks():
+                    if link.target is block:
+                        yield link.args[idx]
+
+    def is_effect(self, var):
+        for arg in self.find_setters(var):
+            name = None
+            if isinstance(arg, GetAttr):
+                name = arg.args[1].value
+            elif isinstance(arg, Constant) and isinstance(arg.value, Global):
+                name = arg.value.name
+            elif isinstance(arg, Constant):
+                name = getattr(arg.value, "__name__", None)
+            if name is not None:
+                if name.endswith("_Ef"):
+                    return True
+        return False
+
+    def init_lineno(self, linenotab):
+        self._byte_offsets = map(ord, linenotab[0::2])
+        self._line_offsets = map(ord, linenotab[1::2])
+
+    def get_line_no(self, offset):
+        line = self._fn.func_code.co_firstlineno
+        byte = 0
+        idx = 0
+        while idx < len(self._byte_offsets) and byte + self._byte_offsets[idx] <= offset:
+            byte += self._byte_offsets[idx]
+            line += self._line_offsets[idx]
+            idx += 1
+        return line
 
     def scan_fn(self, fn):
         self._fn = fn
+        self.init_lineno(fn.func_code.co_lnotab)
         self._effect_links = {}
         ctx = TranslationContext()
         graph = ctx.buildflowgraph(fn)
@@ -41,21 +130,15 @@ class CPSTransformer(object):
                 if hlop.opname == "simple_call":
                     is_xform = False
                     if isinstance(hlop.args[0], Variable):
-                        resolved = None
-                        for j in block.operations:
-                            if j.result == hlop.args[0]:
-                                resolved = j
-                                break
-                        assert resolved, "Function crossed block bounaries"
-                        if isinstance(resolved, GetAttr):
-                            if resolved.args[1].value.endswith("_Ef"):
-                                is_xform = True
-                            pass
+                        is_xform = self.is_effect(hlop.args[0])
 
                     elif isinstance(hlop.args[0], Constant):
                         fn = hlop.args[0].value
                         if getattr(fn, "_is_effect", None):
                             is_xform = True
+                        elif isinstance(fn, Global):
+                            if fn.name.endswith("_Ef"):
+                                is_xform = True
                         elif fn.__name__.endswith("_Ef"):
                             is_xform = True
 
@@ -70,13 +153,17 @@ class CPSTransformer(object):
                     pass
 
     def get_link_klass_name(self, link):
-        return "State_" + str(self._effect_links[link]) + "_step"
+        return self._fn.__name__ + "_State_" + str(self._effect_links[link]) + "_step_" + str(global_idx)
 
     def emit_from(self, block, link=None):
         self._remaining_blocks = []
         self._processed_blocks = set()
         self._block_labels = {}
 
+        start_label = Label()
+        yield JUMP_ABSOLUTE, start_label
+        yield "SPLIT", None
+        yield start_label, None
 
         preamble = True
         while True:
@@ -89,7 +176,11 @@ class CPSTransformer(object):
 
             block = self._remaining_blocks.pop()
             self._processed_blocks.add(block)
+
+            yield "SPLIT", None
+
             yield self._block_labels[block], None
+
 
 
 
@@ -113,23 +204,25 @@ class CPSTransformer(object):
                     yield LOAD_FAST, self._fn.func_code.co_varnames[x]
                     yield STORE_FAST, block.inputargs[x].name
             else:
-                for arg in block.inputargs:
-                    if link is not None and arg is link.prevblock.operations[-1].result:
+                for x in range(len(block.inputargs)):
+                    if link is not None and link.args[x] is link.prevblock.operations[-1].result:
                         yield LOAD_FAST, __RET__
                     else:
                         yield LOAD_FAST, __BUILDER_NAME__
-                        yield LOAD_ATTR, arg.name
-                    yield STORE_FAST, arg.name
+                        yield LOAD_ATTR, block.inputargs[x].name
+                    yield STORE_FAST, block.inputargs[x].name
 
-                if link is not None and link.prevblock.operations[-1].result in link.args:
-                    yield LOAD_FAST, __RET__
-                    yield STORE_FAST, block.inputargs[-1].name
+                #if link is not None and link.prevblock.operations[-1].result in link.args:
+                #    yield LOAD_FAST, __RET__
+                #    yield STORE_FAST, block.inputargs[-1].name
 
         for hlop in block.operations:
             mthd = getattr(OpEmitter, hlop.opname)
-            for arg in range(len(hlop.args) - getattr(mthd, "_skip_last", 0)):
-                for op in OpEmitter.emit_arg(hlop.args[arg]):
-                    yield op
+            yield SetLineno, self.get_line_no(hlop.offset)
+            if not getattr(mthd, "_skip_all", None):
+                for arg in range(len(hlop.args) - getattr(mthd, "_skip_last", 0)):
+                    for op in OpEmitter.emit_arg(hlop.args[arg]):
+                        yield op
             for op in mthd(hlop):
                 yield op
             yield STORE_FAST, hlop.result.name
@@ -145,6 +238,10 @@ class CPSTransformer(object):
             link = block.exits[0]
             for x in self.emit_link(link):
                 yield x
+        elif block is self._graph.exceptblock:
+            yield LOAD_FAST, block.inputargs[1].name
+            yield LOAD_FAST, block.inputargs[0].name
+            yield RAISE_VARARGS, 2
 
         else:
             assert len(block.exits) == 2
@@ -161,8 +258,9 @@ class CPSTransformer(object):
                 yield op
 
 
+
     def emit_link(self, link):
-        for op in self.emit_effect_link(link)  if link in self._effect_links else self.emit_jump_link(link):
+        for op in self.emit_effect_link(link) if link in self._effect_links else self.emit_jump_link(link):
             yield op
 
     def emit_effect_link(self, link):
@@ -197,9 +295,8 @@ class CPSTransformer(object):
             yield STORE_FAST, link.target.inputargs[x].name
         yield JUMP_ABSOLUTE, self._block_labels[link.target]
 
-
     def emit_all(self):
-        start = list(self.emit_from(self._graph.startblock))
+        start = list(sort_blocks(self.emit_from(self._graph.startblock)))
 
         # Construct a code object and a class
         f = self._fn
@@ -210,6 +307,7 @@ class CPSTransformer(object):
 
         try:
             new_func = types.FunctionType(c.to_code(), f.func_globals, f.__name__)
+            dis.dis(new_func)
         except:
             print f.func_code.co_name
             pprint(start)
@@ -218,7 +316,7 @@ class CPSTransformer(object):
         for eff_link in self._effect_links:
             if eff_link.target is self._graph.returnblock:
                 continue
-            code = list(self.emit_from(eff_link.target, eff_link))
+            code = list(sort_blocks(self.emit_from(eff_link.target, eff_link)))
 
             f = self._fn
             c = Code(code=code, freevars=[], args=[__BUILDER_NAME__, __RET__],
@@ -228,13 +326,14 @@ class CPSTransformer(object):
 
             try:
                 method = types.FunctionType(c.to_code(), f.func_globals, f.__name__)
-            except:
+                dis.dis(method)
+            except Exception as ex:
                 print f.func_code.co_name
                 pprint(code)
                 raise
 
             klass_name = self.get_link_klass_name(eff_link)
-            f.func_globals[klass_name] = type(klass_name, (Continuation,), {"step": method, "_immutable_": True})
+            f.func_globals[klass_name] = type(klass_name, (UserK,), {"_inner_step": method, "_immutable_": True})
 
         return new_func
 
@@ -245,6 +344,10 @@ def skip_last(x):
         f._skip_last = x
         return f
     return with_f
+
+def skip_all(f):
+    f._skip_all = True
+    return f
 
 
 class OpEmitter(object):
@@ -263,13 +366,47 @@ class OpEmitter(object):
     def add(hlop):
         yield BINARY_ADD, len(hlop.args) - 1
 
+
+    @staticmethod
+    def sub(hlop):
+        yield BINARY_SUBTRACT, len(hlop.args) - 1
+
+    @staticmethod
+    def mul(hlop):
+        yield BINARY_MULTIPLY, len(hlop.args) - 1
+
+    @staticmethod
+    def div(hlop):
+        yield BINARY_DIVIDE, len(hlop.args) - 1
+
+    @staticmethod
+    def mod(hlop):
+        yield BINARY_MODULO, len(hlop.args) - 1
+
     @staticmethod
     def lt(hlop):
         yield COMPARE_OP, "<"
 
     @staticmethod
+    def gt(hlop):
+        yield COMPARE_OP, ">"
+
+    @staticmethod
     def le(hlop):
         yield COMPARE_OP, "<="
+
+    @staticmethod
+    def ge(hlop):
+        yield COMPARE_OP, ">="
+
+    @staticmethod
+    @skip_all
+    def contains(hlop):
+        for x in OpEmitter.emit_arg(hlop.args[1]):
+            yield x
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        yield COMPARE_OP, "in"
 
     @staticmethod
     def is_(hlop):
@@ -280,14 +417,39 @@ class OpEmitter(object):
         yield NOP, None
 
     @staticmethod
+    @skip_last(1)
+    def str(hlop):
+        yield LOAD_CONST, str
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        yield CALL_FUNCTION, 1
+
+    @staticmethod
+    @skip_last(1)
+    def len(hlop):
+        yield LOAD_CONST, len
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        yield CALL_FUNCTION, 1
+
+    @staticmethod
+    @skip_last(1)
+    def type(hlop):
+        yield LOAD_CONST, type
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        yield CALL_FUNCTION, 1
+
+    @staticmethod
     def emit_arg(arg):
+        if isinstance(arg, Constant) and isinstance(arg.value, Global):
+            return [(LOAD_GLOBAL, arg.value.name)]
         if isinstance(arg, Variable):
             return [(LOAD_FAST, arg.name)]
         if isinstance(arg, Constant):
             return [(LOAD_CONST, arg.value)]
 
         assert False
-
     @staticmethod
     @skip_last(1)
     def getattr(hlop):
@@ -301,10 +463,32 @@ class OpEmitter(object):
     def inplace_add(hlop):
         return OpEmitter.add(hlop)
 
+    @staticmethod
+    def inplace_sub(hlop):
+        return OpEmitter.sub(hlop)
+
+    @staticmethod
+    def getitem(hlop):
+        yield BINARY_SUBSCR, None
+
+class Global(object):
+    def __init__(self, name):
+        self.name = name
 
 def cps(f):
-    xform = CPSTransformer()
-    xform.scan_fn(f)
-    a = xform.emit_all()
+    # ugly hack to avoid forward declarations
+    old_find_global = FlowContext.find_global
 
-    return a
+    try:
+        FlowContext.find_global = lambda slf, gbls, nm: const(Global(nm))
+
+        xform = CPSTransformer()
+        xform.scan_fn(f)
+        a = xform.emit_all()
+
+        return a
+    except:
+        dis.dis(f)
+        raise
+    finally:
+        FlowContext.find_global = old_find_global

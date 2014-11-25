@@ -21,45 +21,6 @@ class String(Object):
     def str(self):
         return self._str
 
-@extend("pixie.stdlib.-count", String)
-def _count(self):
-    return Integer(len(self.str()))
-
-
-@extend("pixie.stdlib.-str", String)
-def _str(x):
-    return x
-
-@extend("pixie.stdlib.-repr", String)
-def _repr(self):
-    return String(u"\"" + self.str() + u"\"")
-
-@extend("pixie.stdlib.-nth", String)
-def _nth(self, idx):
-    i = idx.int_val()
-    if 0 <= i < len(self.str()):
-        return Character(ord(self.str()[i]))
-    raise IndexError()
-
-@extend("pixie.stdlib.-eq", String)
-def _eq(self, v):
-    if not isinstance(v, String):
-        return false
-    return true if self.str() == v.str() else false
-
-@extend("pixie.stdlib.-name", String)
-def _name(self):
-    return self
-
-@extend("pixie.stdlib.-namespace", String)
-def _namespace(_):
-    return nil
-
-@extend("pixie.stdlib.-hash", String)
-def _hash(self):
-    return rt.wrap(intmask(hash_unencoded_chars(self.str())))
-
-
 class Character(Object):
     _immutable_fields_ = ["_str"]
     _type = Type(u"pixie.stdlib.Character")
@@ -88,9 +49,49 @@ def wrap_char(x):
 
 
 
+@extend("pixie.stdlib.-count", String)
+def _count(self):
+    return Integer(len(self.str()))
+
+
+@extend("pixie.stdlib.-str", String)
+def _str(x):
+    return x
+
+@extend("pixie.stdlib.-repr", String)
+def _repr(self):
+    return String(u"\"" + self.str() + u"\"")
+
+@extend("pixie.stdlib.-nth", String, transform=False)
+def _nth(self, idx):
+    i = idx.int_val()
+    if 0 <= i < len(self.str()):
+        return Character(ord(self.str()[i]))
+    raise IndexError()
+
+@extend("pixie.stdlib.-eq", String)
+def _eq(self, v):
+    if not isinstance(v, String):
+        return false
+    return true if self.str() == v.str() else false
+
+@extend("pixie.stdlib.-name", String)
+def _name(self):
+    return self
+
+@extend("pixie.stdlib.-namespace", String)
+def _namespace(_):
+    return nil
+
+@extend("pixie.stdlib.-hash", String)
+def _hash(self):
+    return rt.wrap(intmask(hash_unencoded_chars(self.str())))
+
+
+
+
 @extend("pixie.stdlib.-str", Character)
 def _str(self):
-    assert isinstance(self, Character)
     cv = self.char_val()
     if cv < 128:
         return rt.wrap(u"\\"+unicode(chr(cv)))
@@ -98,7 +99,6 @@ def _str(self):
 
 @extend("pixie.stdlib.-repr", Character)
 def _repr(self):
-    assert isinstance(self, Character)
     cv = self.char_val()
     if cv < 128:
         return rt.wrap(u"\\"+unicode(chr(cv)))
@@ -106,7 +106,6 @@ def _repr(self):
 
 @extend("pixie.stdlib.-eq", Character)
 def _eq(self, obj):
-    assert isinstance(self, Character)
     if self is obj:
         return true
     if not isinstance(obj, Character):

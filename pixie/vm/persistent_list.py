@@ -4,6 +4,7 @@ from pixie.vm.code import extend, as_global, wrap_fn
 import pixie.vm.rt as rt
 from rpython.rlib.rarithmetic import intmask, r_uint
 
+
 class PersistentList(Object):
     _type = Type(u"pixie.stdlib.PersistentList")
 
@@ -30,6 +31,25 @@ class PersistentList(Object):
 
     def with_meta(self, meta):
         return PersistentList(self._first, self._next, self._cnt, meta)
+
+
+
+
+
+
+class EmptyList(Object):
+    _type = Type(u"pixie.stdlib.EmptyList")
+    def type(self):
+        return EmptyList._type
+
+    def __init__(self, meta=nil):
+        self._meta = meta
+
+    def meta(self):
+        return self._meta
+
+    def with_meta(self, meta):
+        return EmptyList(meta)
     
 
 
@@ -72,30 +92,12 @@ def list__args(args):
 
 @extend("pixie.stdlib.-meta", PersistentList)
 def _meta(self):
-    assert isinstance(self, PersistentList)
     return self.meta()
 
 @extend("pixie.stdlib.-with-meta", PersistentList)
 def _with_meta(self, meta):
-    assert isinstance(self, PersistentList)
     return self.with_meta(meta)
 
-
-
-    
-class EmptyList(Object):
-    _type = Type(u"pixie.stdlib.EmptyList")
-    def type(self):
-        return EmptyList._type
-    
-    def __init__(self, meta=nil):
-        self._meta = meta
-        
-    def meta(self):
-        return self._meta
-    
-    def with_meta(self, meta):
-        return EmptyList(meta)
     
 
 
@@ -103,37 +105,30 @@ class EmptyList(Object):
 
 @extend("pixie.stdlib.-first", EmptyList)
 def _first(self):
-    assert isinstance(self, EmptyList)
     return nil
 
 @extend("pixie.stdlib.-next", EmptyList)
 def _next(self):
-    assert isinstance(self, EmptyList)
     return nil
 
 @extend("pixie.stdlib.-seq", EmptyList)
 def _seq(self):
-    assert isinstance(self, EmptyList)
     return nil
 
 @extend("pixie.stdlib.-count", EmptyList)
 def _count(self):
-    assert isinstance(self, EmptyList)
     return rt.wrap(0)
 
 @extend("pixie.stdlib.-conj", EmptyList)
 def _conj(self, itm):
-    assert isinstance(self, EmptyList)
     return PersistentList(itm, nil, 1)
 
 @extend("pixie.stdlib.-meta", EmptyList)
 def _meta(self):
-    assert isinstance(self, EmptyList)
     return self.meta()
 
 @extend("pixie.stdlib.-with-meta", EmptyList)
 def _with_meta(self, meta):
-    assert isinstance(self, EmptyList)
     return self.with_meta(meta)
 
 @extend("pixie.stdlib.-str", EmptyList)

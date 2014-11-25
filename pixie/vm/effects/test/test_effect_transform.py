@@ -6,7 +6,6 @@ from pixie.vm.effects.effect_generator import defeffect
 
 defeffect("pixie.stdlib.YieldingEffect", "YieldEffect", ["val"])
 
-
 @cps
 def generator_Ef(max):
     x = 0
@@ -26,6 +25,10 @@ def ground_thunk(x):
     while isinstance(x, Thunk):
         x = x.execute_thunk()
     return x
+
+@cps
+def null_Ef(x):
+    pass
 
 class TestFunctionTransform(unittest.TestCase):
     def run_simple_fn_test(self):
@@ -93,3 +96,10 @@ class TestFunctionTransform(unittest.TestCase):
 
         self.assertIsInstance(x, Answer)
         self.assertEqual(x.val(), 3)
+
+    def test_null_return(self):
+
+        x = ground_thunk(null_Ef(1))
+
+        self.assertIsInstance(x, Answer)
+        self.assertIsNone(x.val())

@@ -426,42 +426,39 @@ def list_copy(from_lst, from_loc, to_list, to_loc, count):
 
 @extend("pixie.stdlib.-count", PersistentVector)
 def _count(self):
-    assert isinstance(self, PersistentVector)
     return rt.wrap(intmask(self.count()))
 
 @extend("pixie.stdlib.-nth", PersistentVector)
 def _nth(self, idx):
-    assert isinstance(self, PersistentVector)
     return self.nth(r_uint(idx.int_val()))
 
 @extend("pixie.stdlib.-val-at", PersistentVector)
 def _val_at(self, key, not_found):
-    assert isinstance(self, PersistentVector)
     if isinstance(key, Integer):
         return self.nth(r_uint(key.int_val()))
     else:
         return not_found
 
-@extend("pixie.stdlib.-eq", PersistentVector)
-def _eq(self, obj):
-    if isinstance(obj, PersistentVector):
-        if self.count() != obj.count():
-            return false
-        for i in range(0, intmask(self._cnt)):
-            if not rt.eq(self.nth(i), obj.nth(i)):
-                return false
-        return true
-    else:
-        if not rt.satisfies_QMARK_(proto.ISeqable, obj):
-            return false
-        seq = rt.seq(obj)
-        for i in range(0, intmask(self._cnt)):
-            if seq is nil or not rt.eq(self.nth(i), rt.first(seq)):
-                return false
-            seq = rt.next(seq)
-        if seq is not nil:
-            return false
-        return true
+# @extend("pixie.stdlib.-eq", PersistentVector)
+# def _eq(self, obj):
+#     if isinstance(obj, PersistentVector):
+#         if self.count() != obj.count():
+#             return false
+#         for i in range(0, intmask(self._cnt)):
+#             if not rt.eq(self.nth(i), obj.nth(i)):
+#                 return false
+#         return true
+#     else:
+#         if not rt.satisfies_QMARK_(proto.ISeqable, obj):
+#             return false
+#         seq = rt.seq(obj)
+#         for i in range(0, intmask(self._cnt)):
+#             if seq is nil or not rt.eq(self.nth(i), rt.first(seq)):
+#                 return false
+#             seq = rt.next(seq)
+#         if seq is not nil:
+#             return false
+#         return true
 #
 # @extend(proto._contains_key, PersistentVector)
 # def _contains_key(self, key):

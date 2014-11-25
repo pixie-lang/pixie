@@ -7,7 +7,10 @@ from pixie.vm.numbers import Integer
 from pixie.vm.keyword import keyword
 
 
-
+def ground_thunk(x):
+    while isinstance(x, Thunk):
+        x = x.execute_thunk()
+    return x
 
 class TestWrapFn(unittest.TestCase):
     def test_arity_0(self):
@@ -72,6 +75,7 @@ class TestWrapFn(unittest.TestCase):
         self.assertIs(result.val(), args)
 
 
+
 class TestPolymorphicFn(unittest.TestCase):
     def test_calling_polymorphic_fn(self):
         pfn_name = keyword(u"pixie.stdlib.-foo")
@@ -87,7 +91,7 @@ class TestPolymorphicFn(unittest.TestCase):
         def fn_arg(x):
             return x
 
-        result = result.get(KW_K).step(fn_arg)
+        result = ground_thunk(result.get(KW_K).step(fn_arg))
         self.assertIsInstance(result, Answer)
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 42)

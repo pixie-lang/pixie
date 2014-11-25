@@ -1,6 +1,6 @@
 py_object = object
 from pixie.vm.effects.effects import Object, ArgList, Type, OpaqueIOFn
-from pixie.vm.effects.effect_transform import cps, resource_effect
+from pixie.vm.effects.effect_transform import cps
 from pixie.vm.effects.environment import OpaqueIO
 from pixie.vm.string import wrap_char
 from pixie.vm.persistent_list import PersistentList, EmptyList
@@ -44,6 +44,13 @@ FILE_KW = keyword(u"file")
 #ARG_ENV = code.intern_var(u"pixie.stdlib.reader", u"*arg-env*")
 #ARG_ENV.set_dynamic()
 #ARG_ENV.set_value(nil)
+
+class EOF(Object):
+    _type = Type(u"EOF")
+
+
+eof = EOF()
+
 
 
 class PlatformReader(Object):
@@ -247,8 +254,7 @@ def eat_whitespace_Ef(rdr):
     while True:
         ch = read_ch_Ef(rdr)
         if not is_whitespace(ch) or ch is eof:
-            unread_Ef(rdr, ch)
-            return
+            return unread_Ef(rdr, ch)
 
 class ReaderHandler(py_object):
     def invoke(self, rdr, ch):
@@ -709,13 +715,13 @@ def read_number_Ef(rdr, ch):
     acc = EMPTY_VECTOR
     acc = acc.conj(ch)
     end = False
-    while not end:
+    while True:
         ch = read_ch_Ef(rdr)
         if is_whitespace(ch) or ch in handlers or ch is eof:
             unread_Ef(rdr, ch)
-            end = True
-        else:
-            acc = acc.conj(ch)
+            break
+
+        acc = acc.conj(ch)
 
     joined = acc.to_str()
     parsed = parse_number(joined.str())
@@ -746,12 +752,6 @@ def read_symbol_Ef(rdr, ch):
     if sym_str == u"nil":
         return nil
     return symbol(sym_str)
-
-class EOF(Object):
-    _type = Type(u"EOF")
-
-
-eof = EOF()
 
 
 
