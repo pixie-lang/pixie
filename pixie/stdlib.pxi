@@ -346,12 +346,8 @@
 (set-macro! defmacro)
 
 (defmacro ->
-  {:doc "Threads `x` through `forms`, passing the result of one step as the first argument of the next.
-
-> (-> 3 inc inc)
-; => 5
-> (-> \"James\" (str \"is \" \"awesome \") (str \"(and stuff)\" \"!\"))
-; => \"James is awesome (and stuff)\""
+  {:doc "Threads `x` through `forms`, passing the result of one step as the first argument of the next."
+   :examples ["(-> 3 inc inc)" "(-> \"James\" (str \" is \" \"awesome \") (str \"(and stuff)\" \"!\"))"]
    :signatures [[x & forms]]
    :added "0.1"}
   [x & forms]
@@ -365,12 +361,9 @@
       x)))
 
 (defmacro ->>
-  {:doc "Threads `x` through `forms`, passing the result of one step as the last argument of the next.
-
-> (->> \"James\" (str \"we \" \"like \") (str \"you \" \"know \" \"what? \"))
-; => \"you know what? we like James\"
-> (->> 5 (range) (map inc) seq)
-; => (1 2 3 4 5)"
+  {:doc "Threads `x` through `forms`, passing the result of one step as the last argument of the next."
+   :examples ["(->> \"James\" (str \"we \" \"like \") (str \"you \" \"know \" \"what? \"))"
+              "(->> 5 (range) (map inc) seq)"]
    :signatures [[x & forms]]
    :added "0.1"}
   [x & forms]
@@ -599,23 +592,14 @@ returns true"
 (defn contains?
   {:doc "Checks if there is a value associated with key in the collection.
 
-> (contains? {:a 1} :a)
-; => true
-> (contains? {:a 1} :b)
-; => false
-> (contains? #{:a :b :c} :a)
-; => true
-
-Note the behaviour with indexed collections:
-
-> (contains? [:a :b :c] 0)
-; => true
-> (contains? [:a :b :c] 4)
-; => false
-> (contains? [:a :b :c] :a)
-; => false
-
-Use some to check if a value is present in a collection."
+Does *not* check for the presence of a value in the collection, only whether
+there's a value associated with the key. Use `some` for checking for values."
+   :examples ["(contains? {:a 1} :a)"
+              "(contains? {:a 1} :b)"
+              "(contains? #{:a :b :c} :a)"
+              "(contains? [:a :b :c] 0)"
+              "(contains? [:a :b :c] 4)"
+              "(contains? [:a :b :c] :a)"]
    :signatures [[coll key]]
    :added "0.1"}
   [coll key]
@@ -634,10 +618,8 @@ Use some to check if a value is present in a collection."
   (get-field inst :val))
 
 (defn comp
-  {:doc "Composes the given functions, applying the last function first.
-
-> ((comp inc first) [41 2 3])
-; => 42"
+  {:doc "Composes the given functions, applying the last function first."
+   :examples ["((comp inc first) [41 2 3])"]
    :signatures [[f] [f & fs]]
    :added "0.1"}
   ([f] f)
@@ -885,10 +867,8 @@ Stops if it finds such an element."
      (-val-at mp k not-found)))
 
 (defn get-in
-  {:doc "Get a value from a nested collection at the \"path\" given by the keys.
-
-> (get-in {:a [{:b 42}]} [:a 0 :b])
-42"
+  {:doc "Get a value from a nested collection at the \"path\" given by the keys."
+   :examples ["(get-in {:a [{:b 42}]} [:a 0 :b])"]
    :signatures [[m ks] [m ks not-found]]
    :added "0.1"}
   ([m ks]
@@ -907,10 +887,9 @@ Stops if it finds such an element."
 (defn assoc-in
   {:doc "Associate a value in a nested collection given by the path.
 
-Creates new maps if the keys are not present.
-
-> (assoc-in {} [:a :b :c] 42)
-{:a {:b {:c 42}}"}
+Creates new maps if the keys are not present."
+   :examples ["(assoc-in {} [:a :b :c] 42)"]
+   :added "0.1"}
   ([m ks v]
      (let [ks (seq ks)
            k  (first ks)
@@ -973,21 +952,17 @@ Creates new maps if the keys are not present.
   (instance? Protocol x))
 
 (defmacro deftype
-  {:doc "Define a custom type.
-
-(deftype Person [name]
+  {:doc "Define a custom type."
+   :examples ["(deftype Person [name]
   Object
   (say-hi [self other-name]
     (str \"Hi, I'm \" name \". You're \" other-name \", right?\"))
 
   IObject
   (-str [self]
-    (str \"<Person \" (pr-str name) \">\"))
-
-> (.say-hi (->Person \"James\") \"Paul\")
-; => \"Hi, I'm James. You're Paul, right?\"
-> (str (->Person \"James\"))
-; => \"<Person \\\"James\\\">"
+    (str \"<Person \" (pr-str name) \">\")))"
+              "(.say-hi (->Person \"James\") \"Paul\")"
+              "(str (->Person \"James\"))"]
    :added "0.1"}
   [nm fields & body]
   (let [ctor-name (symbol (str "->" (name nm)))
@@ -1151,12 +1126,20 @@ and implements IAssociative, ILookup and IObject."
         x (if vr @vr)
         doc (get (meta x) :doc)]
     (cond
-     doc (let [sigs (get (meta x) :signatures)]
+     doc (let [sigs (get (meta x) :signatures)
+               examples (get (meta x) :examples)]
            (println (str (namespace vr) "/" (name vr)))
            (if sigs
              (prn (seq sigs)))
            (println)
            (println doc)
+           (if examples
+             (do
+               (println)
+               (doseq [example examples]
+                 (println (str "user => " example))
+                 (println (eval (read-string example))))))
+           (println)
            nil)
      (the-ns v) (doc-ns v))))
 
@@ -1191,10 +1174,9 @@ The new value is thus `(apply f current-value-of-atom args)`."
   (reset! a (apply f @a args)))
 
 (defn update-in
-  {:doc "Update a value in a nested collection.
-
-> (update-in {:a [{:b 41}]} [:a 0 :b] inc)
-{:a [{:b 42}]}"}
+  {:doc "Update a value in a nested collection."
+   :examples ["(update-in {:a [{:b 41}]} [:a 0 :b] inc)"]
+   :added "0.1"}
   [m ks f & args]
   (let [f (fn [m] (apply f m args))
         update-inner-f (fn update-inner-f
@@ -1214,7 +1196,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defmacro foreach [binding & body]
   (assert (= 2 (count binding)) "binding and collection required")
   `(reduce
-    (fn [_ ~ (nth binding 0)]
+    (fn [_ ~(nth binding 0)]
         ~@body
         nil)
     nil
@@ -1233,13 +1215,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 
 (defmacro dotimes
-  {:doc "Execute the expressions in the body n times.
-
-> (dotimes [i 3] (println i))
-1
-2
-3
-; => nil"
+  {:doc "Execute the expressions in the body n times."
+   :examples ["(dotimes [i 3] (println i))"]
    :signatures [[[i n] & body]]
    :added "0.1"}
   [bind & body]
@@ -1257,14 +1234,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
             (yield (nth v x)))))
 
 (defmacro and
-  {:doc "Check if the given expressions return truthy values, returning the last, or false.
-
-> (and true false)
-; => false
-> (and 1 2 3)
-; => 3
-> (and 1 false 3)
-; => false"
+  {:doc "Check if the given expressions return truthy values, returning the last, or false."
+   :examples ["(and true false)" "(and 1 2 3)" "(and 1 false 3)"]
    :added "0.1"}
   ([] true)
   ([x] x)
@@ -1272,14 +1243,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
   ([x y & more] `(if ~x (and ~y ~@more))))
 
 (defmacro or
-  {:doc "Returns the value of the first expression that returns a truthy value, or false.
-
-> (or 1 2 3)
-; => 1
-> (or false 2)
-; => 2
-> (or false nil)
-; => nil"
+  {:doc "Returns the value of the first expression that returns a truthy value, or false."
+   :examples ["(or 1 2 3)" "(or false 2)" "(or false nil)"]
    :added "0.1"}
   ([] false)
   ([x] x)
@@ -1306,12 +1271,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
   (next (next coll)))
 
 (defn nthnext
-  {:doc "Returns the result of calling next n times on the collection.
-
-> (nthnext [1 2 3 4 5] 2)
-; => (3 4 5)
-> (nthnext [1 2 3 4 5] 7)
-; => nil"
+  {:doc "Returns the result of calling next n times on the collection."
+   :examples ["(nthnext [1 2 3 4 5] 2)" "(nthnext [1 2 3 4 5] 7)"]
    :added "0.1"}
   [coll n]
   (loop [n n
@@ -1341,14 +1302,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
   {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
 
 The last element of the result contains the remaining element, not necessarily of size n if
-not enough elements were present.
-
-> (partition 2 [1 2 3 4 5 6])
-; => ((1 2) (3 4) (5 6))
-> (partition 2 [1 2 3 4 5])
-; => ((1 2) (3 4) (5))
-> (partition 2 1 [1 2 3 4 5])
-; => ((1 2) (2 3) (3 4) (4 5) (5))"
+not enough elements were present."
+   :examples ["(partition 2 [1 2 3 4 5 6])" "(partition 2 [1 2 3 4 5])" "(partition 2 1 [1 2 3 4 5])"]
    :signatures [[n coll] [n step coll]]
    :added "0.1"}
   ([n coll] (partition n n coll))
@@ -1488,16 +1443,8 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
 
 
 (defn range
-  {:doc "Returns a range of numbers.
-
-> (seq (range 3))
-; => (0 1 2)
-> (seq (range 3 5))
-; => (3 4)
-> (seq (range 0 10 2))
-; => (0 2 4 6 8)
-> (seq (range 5 -1 -1))
-; => (5 4 3 2 1 0)"
+  {:doc "Returns a range of numbers."
+   :examples ["(seq (range 3))" "(seq (range 3 5))" "(seq (range 0 10 2))" "(seq (range 5 -1 -1))"]
    :signatures [[] [stop] [start stop] [start stop step]]
    :added "0.1"}
   ([] (->Range 0 MAX-NUMBER 1))
@@ -1619,11 +1566,10 @@ Supported filters:
     :refer  refer only the given vars
     :only   same as refer
 
-> (refer 'pixie.string :refer :all)
-> (refer 'pixie.string :only '(index-of starts-with ends-with))
-> (refer 'pixie.string :rename '{index-of find})
-> (refer 'pixie.string :exclude '(substring))
-"
+user => (refer 'pixie.string :refer :all)
+user => (refer 'pixie.string :only '(index-of starts-with ends-with))
+user => (refer 'pixie.string :rename '{index-of find})
+user => (refer 'pixie.string :exclude '(substring))"
    :added "0.1"}
   [ns-sym & filters]
   (let [ns (or (the-ns ns-sym) (throw (str "No such namespace: " ns-sym)))
@@ -1711,15 +1657,11 @@ The params can be destructuring bindings, see `(doc let)` for details."}
       (apply method dispatch-arg args))))
 
 (defmacro defmulti
-  {:doc "Define a multimethod, which dispatches to it's methods based on dispatch-fn.
-
-(defmulti greet first)
-
-(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))
-(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".))
-
-> (greet [:hi \"Jane\"])
-; => \"Hi, Jane!\""
+  {:doc "Define a multimethod, which dispatches to it's methods based on dispatch-fn."
+   :examples ["(defmulti greet first)"
+              "(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"
+              "(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"
+              "(greet [:hi \"Jane\"])"]
    :signatures [[name dispatch-fn & options]]
    :added "0.1"}
   [name & args]
