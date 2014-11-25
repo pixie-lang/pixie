@@ -311,7 +311,7 @@
 
 
 (def concat
-  (fn ^{:doc "Concatenates it's arguments."
+  (fn ^{:doc "Concatenates its arguments."
         :signatures [[& args]]
         :added "0.1"}
     concat
