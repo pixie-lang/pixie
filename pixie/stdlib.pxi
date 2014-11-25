@@ -1130,6 +1130,19 @@ and implements IAssociative, ILookup and IObject."
   ([n x]
      (take n (repeat x))))
 
+(defmacro doseq
+  {:doc "Evaluates all elements of the seq, presumably for side effects. Returns nil."
+   :added "0.1"}
+  [binding & body]
+  (assert (= (count binding) 2) "expected a binding and a collection")
+  (let [b (first binding)
+        s (second binding)]
+    `(loop [s# (seq ~s)]
+       (if s#
+         (let [~b (first s#)]
+           ~@body
+           (recur (next s#)))))))
+
 (defmacro doc
   {:doc "Returns the documentation of the given value."
    :added "0.1"}
