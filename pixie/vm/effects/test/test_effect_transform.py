@@ -13,7 +13,7 @@ def generator_Ef(max):
         YieldEffect(x).raise_Ef()
         x += 1
 
-    return False
+    return None
 
 @cps
 def generate_3_Ef():
@@ -51,7 +51,7 @@ class TestFunctionTransform(unittest.TestCase):
         x = ground_thunk(x.get(KW_K).step(None))
 
         self.assertIsInstance(x, Answer)
-        self.assertEqual(x.val(), False)
+        self.assertEqual(x.val(), None)
 
     def run_nested_fn_test(self):
         """
@@ -72,7 +72,7 @@ class TestFunctionTransform(unittest.TestCase):
         x = ground_thunk(x.get(KW_K).step(None))
 
         self.assertIsInstance(x, Answer)
-        self.assertEqual(x.val(), False)
+        self.assertEqual(x.val(), None)
 
 
     def test_custom_handler(self):

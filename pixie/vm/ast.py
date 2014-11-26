@@ -92,14 +92,16 @@ class PixieFunction(Object):
         return PixieFunction(self._w_name, self._args_w, self._w_body, env)
 
     def invoke_with_env_Ef(self, args, env):
-        for x in range(args.arg_count()):
+        x = 0
+        while x < args.arg_count():
             env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
+            x += 1
 
         return SyntaxThunk(self._w_body, env)
 
 
     @jit.unroll_safe
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
         env = self._env
         if self._w_name is not None:
             env = env.with_local(jit.promote(self._w_name), self)
@@ -136,13 +138,15 @@ class VariadicFunction(Object):
             start[self._required_args] = array(rest)
             args = ArgList(start)
 
-        for x in range(args.arg_count()):
+        x = 0
+        while x < args.arg_count():
             env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
+            x += 1
 
         return SyntaxThunk(self._w_body, env)
 
     @jit.unroll_safe
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
         env = self._env
         if self._w_name is not None:
             env = env.with_local(jit.promote(self._w_name), self)
@@ -173,14 +177,14 @@ class MultiArityFn(Object):
             return f
         return self._rest_fn
 
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
         env = self._env
         if self._w_name is not None:
             env = env.with_local(jit.promote(self._w_name), self)
         return self.get_fn(args.arg_count()).invoke_with_env_Ef(args, env)
 
 
-class FnLiteral(Object):
+class FnLiteral(Syntax):
     _type = Type(u"pixie.stdlib.PixieFunction")
     _immutable_fields_ = ["_w_fn"]
     def __init__(self, fn):
@@ -210,7 +214,7 @@ class Def(Object):
         nm = self._w_nm
         return declare_Ef(ns, nm, val)
 
-class Binding(Object):
+class Binding(Syntax):
     _type = Type(u"pixie.ast.Binding")
     _immutable_fields_ = ["_w_nm", "_w_binding_expr", "_w_body_expr"]
 
@@ -259,13 +263,13 @@ class Lookup(Syntax):
 
         ns = self._w_ns
         nm = self._w_nm
-        #val =
+        val = resolve_Ef(ns, nm)
 
-        #if val is None:
-        #    msg = nm.str() + u" is unresolved in " + ns.str()
-        #    throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
+        if val is None:
+            msg = nm.str() + u" is unresolved in " + ns.str()
+            throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
 
-        return resolve_Ef(ns, nm)
+        return val
 
 
 class If(Syntax):
@@ -295,6 +299,8 @@ class If(Syntax):
 class SyntaxThunk(Thunk):
     _immutable_ = True
     def __init__(self, ast, locals):
+        assert isinstance(ast, Syntax), type(ast)
+        assert isinstance(locals, Locals)
         self._w_ast = ast
         self._w_locals = locals
 

@@ -5,10 +5,16 @@ class Object(object):
     """
     Base class of all Pixie Object
     """
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
         """
         Everything is technically invokable, may throw an exception though
         """
+
+    def invoke_Ef(self, args):
+        assert isinstance(args, ArgList)
+        result =  self._invoke_Ef(args)
+        assert not isinstance(result, Object) and result is not None
+        return result
 
 class ArgList(object):
     _immutable_ = True
@@ -101,6 +107,7 @@ class Answer(EffectObject):
     """
     _immutable_=True
     def __init__(self, w_val):
+        assert not isinstance(w_val, EffectObject)
         self._w_val = w_val
 
     def val(self):
@@ -116,18 +123,25 @@ class Continuation(Object):
     def type(self):
         return Continuation._type
 
-    def step(self, x):
+    def _step(self, x):
         """
         Continue execution, x is the value returned by the effect.
         """
         raise NotImplementedError()
+
+    def step(self, x):
+        assert isinstance(x, Object) or x is None
+        result = self._step(x)
+        assert isinstance(result, EffectObject) or result is None
+        return result
+
 
 class AnswerContinuation(Continuation):
     _immutable_ = True
     def __index__(self):
         pass
 
-    def step(self, x):
+    def _step(self, x):
         return answer(x)
 
 answer_k = AnswerContinuation()
@@ -161,6 +175,7 @@ class Thunk(EffectObject):
 class InvokeThunk(Thunk):
     _immutable_ = True
     def __init__(self, w_fn, w_val):
+        assert isinstance(w_val, Object) or w_val is None
         self._w_fn = w_fn
         self._w_val = w_val
 
@@ -231,7 +246,7 @@ class HandledEffectExecutingContinuation(Continuation):
         self._effect_k = effect.get(KW_K)
         self._handler = handler
 
-    def step(self, val):
+    def _step(self, val):
         return handle_with(self._handler, ContinuationThunk(self._effect_k, val), self._k)
 
 
@@ -243,7 +258,7 @@ class ConstantValContinuation(Continuation):
         self._w_val = val
         self._w_k = k
 
-    def step(self, _):
+    def _step(self, _):
         return self._w_k(self._w_val)
 
 
@@ -261,7 +276,9 @@ class CallEffectFn(Thunk):
         self._effect = effect
 
     def execute_thunk(self):
-        return handle_with(self._handler, self._effect.execute_thunk(), self._k)
+        thval = self._effect.execute_thunk()
+        assert isinstance(thval, EffectObject) or thval is None
+        return handle_with(self._handler, thval, self._k)
 
     def get_loc(self):
         return self._effect.get_loc()
@@ -317,7 +334,7 @@ class ConstantValueContinuation(Continuation):
     def __init__(self, val):
         self._w_val = val
 
-    def step(self, _):
+    def _step(self, _):
         return Answer(self._w_val)
 
 

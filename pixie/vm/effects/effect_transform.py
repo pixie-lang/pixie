@@ -26,11 +26,12 @@ __RET__ = "__RET__"
 global_idx = 0
 
 class UserK(Continuation):
-    def step(self, x):
+    _immutable_ = True
+    def _step(self, x):
         try:
             return self._inner_step(x)
         except:
-            dis.dis(self._inner_step)
+            #dis.dis(self._inner_step)
             raise
 
 def sort_blocks(code):
@@ -307,7 +308,6 @@ class CPSTransformer(object):
 
         try:
             new_func = types.FunctionType(c.to_code(), f.func_globals, f.__name__)
-            dis.dis(new_func)
         except:
             print f.func_code.co_name
             pprint(start)
@@ -326,7 +326,6 @@ class CPSTransformer(object):
 
             try:
                 method = types.FunctionType(c.to_code(), f.func_globals, f.__name__)
-                dis.dis(method)
             except Exception as ex:
                 print f.func_code.co_name
                 pprint(code)
@@ -427,7 +426,15 @@ class OpEmitter(object):
     @staticmethod
     @skip_last(1)
     def len(hlop):
-        yield LOAD_CONST, len
+        yield LOAD_GLOBAL, "len"
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        yield CALL_FUNCTION, 1
+
+    @staticmethod
+    @skip_last(1)
+    def ord(hlop):
+        yield LOAD_GLOBAL, "ord"
         for x in OpEmitter.emit_arg(hlop.args[0]):
             yield x
         yield CALL_FUNCTION, 1
@@ -475,12 +482,25 @@ class Global(object):
     def __init__(self, name):
         self.name = name
 
+import __builtin__
+
+def _find_global(self, w_globals, varname):
+    try:
+        value = w_globals.value[varname]
+    except KeyError:
+        # not in the globals, now look in the built-ins
+        try:
+            value = getattr(__builtin__, varname)
+        except AttributeError:
+            return const(Global(varname))
+    return const(value)
+
 def cps(f):
     # ugly hack to avoid forward declarations
     old_find_global = FlowContext.find_global
 
     try:
-        FlowContext.find_global = lambda slf, gbls, nm: const(Global(nm))
+        FlowContext.find_global = _find_global
 
         xform = CPSTransformer()
         xform.scan_fn(f)

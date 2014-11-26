@@ -166,7 +166,8 @@ class BitmapIndexedNode(INode):
                 nodes[jdx] = BitmapIndexedNode_EMPTY.assoc_inode(shift + 5, hash_val, key, val, added_leaf)
                 j = 0
 
-                for i in range(32):
+                i = 0
+                while i < 32:
                     if (self._bitmap >> i) & 1 != 0:
                         if self._array[j] is None:
                             nodes[i] = self._array[j + 1]
@@ -174,6 +175,7 @@ class BitmapIndexedNode(INode):
                             nodes[i] = BitmapIndexedNode_EMPTY.assoc_inode(shift + 5, compute_hash_r(self._array[j]),
                                                                self._array[j], self._array[j + 1], added_leaf)
                         j += 2
+                    i += 1
 
                 return ArrayNode(None, n + 1, nodes)
             else:
@@ -200,7 +202,8 @@ class BitmapIndexedNode(INode):
 
 
     def reduce_inode(self, f, init):
-        for x in range(0, len(self._array), 2):
+        x = 0
+        while x < len(self._array):
             key_or_none = self._array[x]
             val_or_node = self._array[x + 1]
             if key_or_none is None and val_or_node is not None:
@@ -209,6 +212,7 @@ class BitmapIndexedNode(INode):
                 init = f.invoke([init, rt.map_entry(key_or_none, val_or_node)])
             if rt.reduced_QMARK_(init):
                 return init
+            x += 2
         return init
 
     def without_inode(self, shift, hash, key):

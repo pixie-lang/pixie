@@ -3,7 +3,7 @@ py_list = list
 py_str = str
 from rpython.rlib.objectmodel import specialize
 from rpython.rtyper.lltypesystem import lltype, rffi
-from pixie.vm.effects.effects import ArgList, raise_Ef, Continuation, answer_k, Object
+from pixie.vm.effects.effects import ArgList, raise_Ef, Continuation, answer_k, Object, EffectObject
 from pixie.vm.effects.environment import Resolve
 from pixie.vm.keyword import keyword
 from rpython.rlib.rbigint import rbigint
@@ -23,8 +23,9 @@ def wrap_fn(nm):
         def __init__(self, w_args):
             self._w_args = w_args
 
-        def step(self, result):
-            return result.invoke_Ef(self._w_args)
+        def _step(self, result):
+            val = result.invoke_Ef(self._w_args)
+            return val
 
     def wrapper(*args):
         return raise_Ef(Resolve(kw_ns, kw_nm), ResolveResult(ArgList(py_list(args))))

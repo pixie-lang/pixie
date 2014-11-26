@@ -15,12 +15,6 @@ from pixie.vm.ast import *
 
 VALUE_ERROR = keyword(u"VALUE-ERROR")
 
-
-# Forward decl
-compile_itm_Ef = lambda x: x
-compile_cons_Ef = lambda x: x
-compile_Ef = lambda x: x
-
 @cps
 def compile_if_Ef(form):
     form = rt.next_Ef(form)
@@ -70,7 +64,8 @@ def add_args(name, args):
     required_args = -1
     acc = EMPTY_VECTOR
 
-    for x in range(args.count()):
+    x = 0
+    while x < args.count():
         arg = args.nth(x)
 
         if arg.str() == u"&":
@@ -78,6 +73,7 @@ def add_args(name, args):
             continue
 
         acc = acc.conj(arg)
+        x += 1
 
     return required_args, acc
 
@@ -217,20 +213,20 @@ _builtins = {u"if": compile_if_Ef,
              u"do": compile_do,
              u"let*": compile_let}
 
-
+def invoke_builtin_Ef(bi_Ef, form):
+    return bi_Ef(form)
 
 @cps
 def compile_cons_Ef(form):
 
     fst = rt.first_Ef(form)
-    builtin_Ef = ns = name = None
     if isinstance(fst, Symbol):
         ns = fst.namespace()
         if ns == u"pixie.stdlib" or ns is None:
             name = fst.name()
             builtin_Ef = _builtins.get(name, None)
             if builtin_Ef is not None:
-                return builtin_Ef(form)
+                return invoke_builtin_Ef(builtin_Ef, form)
 
     acc = EMPTY_VECTOR
     while form is not nil:

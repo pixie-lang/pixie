@@ -70,7 +70,7 @@ class ReplFn(NativeFn):
         self._argv = args
 
     @cps
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
 
         s = rt.wrap("Pixie 0.1 - Interactive REPL")
         rt._print_Ef(s)
@@ -112,7 +112,7 @@ class ReplFn(NativeFn):
     def set_error_var(self, ex):
         STAR_E.set_root(ex)
 
-def entry_point(_):
+def entry_point():
     final = run_with_state(ReplFn([]), make_default_env())
     return 0
 

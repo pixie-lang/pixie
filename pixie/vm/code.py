@@ -13,7 +13,7 @@ def munge(s):
 class NativeFn(Object):
     _type = Type(u"pixie.stdlib.NativeFn")
 
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
         raise NotImplementedError()
 
 ## PYTHON FLAGS

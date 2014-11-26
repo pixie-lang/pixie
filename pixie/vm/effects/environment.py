@@ -106,7 +106,7 @@ class EnvOps(object):
         fns = env.get_in([KW_PROTO_FNS, w_pfn_kw])
         fn = fns.val_at(tp, None)
         if fn is None:
-            fn = env.val_at(fns, KW_DEFAULT, None)
+            fn = fns.val_at(KW_DEFAULT, None)
         return fn
 
     @staticmethod
@@ -151,15 +151,17 @@ class PolymorphicFn(Object):
         self._w_name = name
 
     @cps
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
         if args.arg_count() == 0:
             raise_polymorphic_arity_exception_Ef()
+            return
 
         tp = args.get_arg(0).type()
         result = FindPolymorphicOverride(self._w_name, tp).raise_Ef()
 
         if result is None:
             raise_override_error_Ef(self._w_name, tp)
+            return
 
         return result.invoke_Ef(args)
 
@@ -172,7 +174,7 @@ class DoublePolymorphicFn(Object):
         self._w_name = name
 
     @cps
-    def invoke_Ef(self, args):
+    def _invoke_Ef(self, args):
         if args.arg_count() <= 1:
             return raise_polymorphic_arity_exception_Ef()
 

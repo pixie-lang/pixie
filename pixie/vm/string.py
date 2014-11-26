@@ -62,12 +62,13 @@ def _str(x):
 def _repr(self):
     return String(u"\"" + self.str() + u"\"")
 
-@extend("pixie.stdlib.-nth", String, transform=False)
+@extend("pixie.stdlib.-nth", String)
 def _nth(self, idx):
     i = idx.int_val()
     if 0 <= i < len(self.str()):
         return Character(ord(self.str()[i]))
-    raise IndexError()
+    return nil
+    #raise IndexError()
 
 @extend("pixie.stdlib.-eq", String)
 def _eq(self, v):
