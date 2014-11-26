@@ -364,7 +364,7 @@
 (defmacro ->>
   {:doc "Threads `x` through `forms`, passing the result of one step as the last argument of the next."
    :examples [["(->> \"James\" (str \"we \" \"like \") (str \"you \" \"know \" \"what? \"))" nil "you know what? we like James"]
-              ["(->> 5 (range) (map inc) seq)" nil '(1 2 3 4 5)]]
+              ["(->> 5 (range) (map inc) seq)" nil (1 2 3 4 5)]]
    :signatures [[x & forms]]
    :added "0.1"}
   [x & forms]
@@ -1179,7 +1179,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 (defn update-in
   {:doc "Update a value in a nested collection."
-   :examples [["(update-in {:a [{:b 41}]} [:a 0 :b] inc)" nil {:a [{:b 42}]}]]
+;   :examples [["(update-in {:a [{:b 41}]} [:a 0 :b] inc)" nil {:a [{:b 42}]}]]
    :added "0.1"}
   [m ks f & args]
   (let [f (fn [m] (apply f m args))
@@ -1278,7 +1278,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 (defn nthnext
   {:doc "Returns the result of calling next n times on the collection."
-   :examples [["(nthnext [1 2 3 4 5] 2)" nil '(3 4 5)]
+   :examples [["(nthnext [1 2 3 4 5] 2)" nil (3 4 5)]
               ["(nthnext [1 2 3 4 5] 7)" nil nil]]
    :added "0.1"}
   [coll n]
@@ -1310,9 +1310,9 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 The last element of the result contains the remaining element, not necessarily of size n if
 not enough elements were present."
-   :examples [["(partition 2 [1 2 3 4 5 6])" nil '((1 2) (3 4) (5 6))]
-              ["(partition 2 [1 2 3 4 5])" nil '((1 2) (3 4) (5))]
-              ["(partition 2 1 [1 2 3 4 5])" nil '((1 2) (2 3) (3 4) (4 5) (5))]]
+   :examples [["(partition 2 [1 2 3 4 5 6])" nil ((1 2) (3 4) (5 6))]
+              ["(partition 2 [1 2 3 4 5])" nil ((1 2) (3 4) (5))]
+              ["(partition 2 1 [1 2 3 4 5])" nil ((1 2) (2 3) (3 4) (4 5) (5))]]
    :signatures [[n coll] [n step coll]]
    :added "0.1"}
   ([n coll] (partition n n coll))
@@ -1453,10 +1453,10 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
 
 (defn range
   {:doc "Returns a range of numbers."
-   :examples [["(seq (range 3))" nil '(0 1 2)]
-              ["(seq (range 3 5))" nil '(3 4)]
-              ["(seq (range 0 10 2))" nil '(0 2 4 6 8)]
-              ["(seq (range 5 -1 -1))" nil '(5 4 3 2 1 0)]]
+   :examples [["(seq (range 3))" nil (0 1 2)]
+              ["(seq (range 3 5))" nil (3 4)]
+              ["(seq (range 0 10 2))" nil (0 2 4 6 8)]
+              ["(seq (range 5 -1 -1))" nil (5 4 3 2 1 0)]]
    :signatures [[] [stop] [start stop] [start stop step]]
    :added "0.1"}
   ([] (->Range 0 MAX-NUMBER 1))
