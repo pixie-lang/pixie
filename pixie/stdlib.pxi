@@ -332,6 +332,12 @@
                          (merge meta (first rest))
                          meta)
                   rest (if (satisfies? IMap (first rest)) (next rest) rest)
+                  meta (if (-contains-key meta :signatures)
+                         meta
+                         (merge meta {:signatures
+                                      (if (satisfies? IVector (first rest))
+                                        [(first rest)]
+                                        (transduce (map first) conj rest))}))
                   nm (with-meta nm meta)]
               `(def ~nm (fn ~nm ~@rest)))))
 (set-macro! defn)
