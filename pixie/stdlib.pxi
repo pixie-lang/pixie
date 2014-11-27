@@ -82,6 +82,7 @@
                       (f result)))))
 
 (def map (fn ^{:doc "map - creates a transducer that applies f to every input element"
+               :signatures [[f] [f coll]]
                :added "0.1"}
            map
            ([f]
