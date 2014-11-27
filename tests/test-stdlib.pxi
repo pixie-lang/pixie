@@ -147,6 +147,14 @@
     (t/assert= (get-in m [:missing] :not-found) :not-found)
     (t/assert= (get-in m [:x :x 0] :not-found) 1)))
 
+(t/deftest test-assoc-in
+  (t/assert= (assoc-in {:a {:b 2}} [:a :b] 3) {:a {:b 3}})
+  (t/assert= (assoc-in {} [:a :b] 3) {:a {:b 3}}))
+
+(t/deftest test-update-in
+  (t/assert= (update-in {} [:a :b] (fnil inc 0)) {:a {:b 1}})
+  (t/assert= (update-in {:a {:b 2}} [:a :b] inc) {:a {:b 3}}))
+
 (t/deftest test-fn?
   (t/assert= (fn? inc) true)
   (t/assert= (fn? {}) true)
