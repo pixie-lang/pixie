@@ -1131,26 +1131,28 @@ and implements IAssociative, ILookup and IObject."
   [v]
   (let [vr (resolve v)
         x (if vr @vr)
-        doc (get (meta x) :doc)]
+        doc (get (meta x) :doc)
+        has-doc? (if doc true (get (meta x) :signatures))]
     (cond
-     doc (let [sigs (get (meta x) :signatures)
-               examples (get (meta x) :examples)]
-           (println (str (namespace vr) "/" (name vr)))
-           (if sigs
-             (prn (seq sigs)))
-           (println)
-           (println doc)
-           (if examples
-             (do
-               (println)
-               (doseq [example examples]
-                 (println (str "  user => " (first example)))
-                 (if (second example)
-                   (print (apply str (map #(str "  " % "\n") (pixie.string/split (second example) "\n")))))
-                 (if (contains? example 2)
-                   (println (str "  " (-repr (third example))))))))
-           (println)
-           nil)
+     has-doc? (let [sigs (get (meta x) :signatures)
+                    examples (get (meta x) :examples)]
+                (println (str (namespace vr) "/" (name vr)))
+                (if sigs
+                  (prn (seq sigs)))
+                (if doc
+                  (do (println)
+                      (println doc)))
+                (if examples
+                  (do
+                    (println)
+                    (doseq [example examples]
+                      (println (str "  user => " (first example)))
+                      (if (second example)
+                        (print (apply str (map #(str "  " % "\n") (pixie.string/split (second example) "\n")))))
+                      (if (contains? example 2)
+                        (println (str "  " (-repr (third example))))))))
+                (println)
+                nil)
      (the-ns v) (doc-ns v))))
 
 (defn doc-ns
