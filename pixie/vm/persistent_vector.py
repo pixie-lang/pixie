@@ -154,6 +154,27 @@ class PersistentVector(object.Object):
             ret._array[sub_idx] = None
             return ret
 
+    def assoc_at(self, idx, val):
+        if idx >= 0 and idx < self._cnt:
+            if idx >= self.tailoff():
+                new_tail = self._tail[:]
+                new_tail[idx & 0x01f] = val
+                return PersistentVector(self._meta, self._cnt, self._shift, self._root, new_tail)
+            return PersistentVector(self._meta, self._cnt, self._shift, do_assoc(self._shift, self._root, idx, val), self._tail)
+        if idx == self._cnt:
+            return self.conj(val)
+        else:
+            object.runtime_error(u"index out of range")
+
+def do_assoc(lvl, node, idx, val):
+    ret = Node(node._edit, node._array[:])
+    if lvl == 0:
+        ret._array[idx & 0x01f] = val
+    else:
+        subidx = (idx >> lvl) & 0x01f
+        ret._array[subidx] = do_assoc(lvl - 5, node._array[subidx], idx, val)
+    return ret
+
 def new_path(edit, level, node):
     if level == 0:
         return node
@@ -424,6 +445,12 @@ def _push(self, v):
 def _push(self):
     assert isinstance(self, PersistentVector)
     return self.pop()
+
+@extend(proto._assoc, PersistentVector)
+def _assoc(self, idx, val):
+    assert isinstance(self, PersistentVector)
+    affirm(isinstance(idx, Integer), u"key must be an integer")
+    return self.assoc_at(r_uint(idx.int_val()), val)
 
 @extend(proto._meta, PersistentVector)
 def _meta(self):
