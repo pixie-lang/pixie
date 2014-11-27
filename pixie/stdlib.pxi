@@ -22,9 +22,10 @@
 (set-macro! let)
 
 (def conj
-  (fn conj ^{:doc "Adds elements to the collection. Elements are added to the end except in the case of Cons lists"
-            :signatures [[] [coll] [coll item] [coll item & args]]
-            :added "0.1"}
+  (fn ^{:doc "Adds elements to the collection. Elements are added to the end except in the case of Cons lists"
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    conj
     ([] [])
     ([coll] coll)
     ([coll item] (-conj coll item))
@@ -32,44 +33,56 @@
        (reduce -conj (-conj coll item) args))))
 
 (def conj!
-  (fn conj! ^{:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
-             :signatures [[] [coll] [coll item] [coll item & args]]
-             :added "0.1"}
+  (fn ^{:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    conj!
     ([] (-transient []))
     ([coll] (-persistent! coll))
     ([coll item] (-conj! coll item))
     ([coll item & args]
        (reduce -conj! (-conj! coll item) args))))
 
-(def disj (fn disj
-           ([] [])
-           ([result] result)
-           ([result item] (-disj result item))))
+(def disj (fn ^{:doc "Removes elements from the collection."
+                :signatures [[] [coll] [coll item]]
+                :added "0.1"}
+            disj
+            ([] [])
+            ([coll] coll)
+            ([coll item] (-disj coll item))
+            ([coll item & items]
+               (reduce -disj (-disj coll item) items))))
 
-(def disj! (fn conj!
-             ([] (-transient []))
-             ([result] (-persistent! result))
-             ([result item] (-disj! result item))))
+(comment (def disj! (fn ^{:doc "Removes elements from the transient collection."
+                          :signatures [[] [coll] [coll item] [coll item & items]]
+                          :added "0.1"}
+                      disj!
+                      ([] (-transient []))
+                      ([result] (-persistent! result))
+                      ([result item] (-disj! result item))
+                      ([coll item & items]
+                         (reduce -disj! (-disj! coll item) items)))))
 
 (def transient (fn [coll] (-transient coll)))
 
 (def persistent! (fn [coll] (-persistent! coll)))
 
 (def transduce (fn transduce
-              ([f coll]
-                (let [result (-reduce coll f (f))]
+                 ([f coll]
+                    (let [result (-reduce coll f (f))]
                       (f result)))
 
-              ([xform rf coll]
-                (let [f (xform rf)
-                      result (-reduce coll f (f))]
+                 ([xform rf coll]
+                    (let [f (xform rf)
+                          result (-reduce coll f (f))]
                       (f result)))
-              ([xform rf init coll]
-                (let [f (xform rf)
-                      result (-reduce coll f init)]
+                 ([xform rf init coll]
+                    (let [f (xform rf)
+                          result (-reduce coll f init)]
                       (f result)))))
 
 (def map (fn ^{:doc "map - creates a transducer that applies f to every input element"
+               :signatures [[f] [f coll]]
                :added "0.1"}
            map
            ([f]
@@ -91,22 +104,31 @@
 (def reduce (fn [rf init col]
               (-reduce col rf init)))
 
-(def into (fn [to from]
+(def into (fn ^{:doc "Add the elements of `from` to the collection `to`."
+                :signatures [[to from]]
+                :added "0.1"}
+            into
+            [to from]
             (if (satisfies? IToTransient to)
               (persistent! (reduce conj! (transient to) from))
               (reduce conj to from))))
 
 (def interpose
-     (fn interpose [val]
-       (fn [xf]
-           (let [first? (atom true)]
-                (fn
+  (fn ^{:doc "Returns a transducer that inserts `val` in between elements of a collection."
+        :signatures [[val] [val coll]]
+        :added "0.1"}
+    interpose
+    ([val] (fn [xf]
+             (let [first? (atom true)]
+               (fn
                  ([] (xf))
                  ([result] (xf result))
                  ([result item] (if @first?
-                                    (do (reset! first? false)
-                                        (xf result item))
-                                  (xf (xf result val) item))))))))
+                                  (do (reset! first? false)
+                                      (xf result item))
+                                  (xf (xf result val) item)))))))
+    ([val coll]
+       (transduce (interpose val) conj coll))))
 
 
 (def preserving-reduced
@@ -118,7 +140,10 @@
           ret)))))
 
 (def cat
-  (fn cat [rf]
+  (fn ^{:doc "A transducer that concatenates elements of a collection."
+        :added "0.1"}
+    cat
+    [rf]
     (let [rrf (preserving-reduced rf)]
       (fn cat-inner
         ([] (rf))
@@ -149,7 +174,10 @@
                             init
                             (recur (f init (nth coll i)) (+ i 1))))))))
 
-(def rest (fn [coll] 
+(def rest (fn ^{:doc "Returns the elements after the first element, or () if there are no more elements."
+                :signatures [[coll]]
+                :added "0.1"}
+            [coll]
             (let [next (next coll)]
               (if next next '()))))
 
@@ -259,7 +287,10 @@
             (lazy-seq* (fn [] (stacklet->lazy-seq (-move-next! k))))))))
 
 (def sequence
-  (fn
+  (fn ^{:doc "Returns a lazy sequence of the `data`, optionally transforming it using `xform`."
+        :signatures [[data] [xform data]]
+        :added "0.1"}
+    sequence
     ([data]
        (let [f (create-stacklet
                  (fn [h]
@@ -280,12 +311,20 @@
 
 
 
-(def concat (fn [& args] (transduce cat conj args)))
+(def concat
+  (fn ^{:doc "Concatenates its arguments."
+        :signatures [[& args]]
+        :added "0.1"}
+    concat
+    [& args] (transduce cat conj args)))
 
 (def key (fn [x] (-key x)))
 (def val (fn [x] (-val x)))
 
-(def defn (fn [nm & rest]
+(def defn (fn ^{:doc "Defines a new function."
+                :signatures [[nm doc? meta? & body]]}
+            defn
+            [nm & rest]
             (let [meta (if (instance? String (first rest))
                          {:doc (first rest)}
                          {})
@@ -294,18 +333,31 @@
                          (merge meta (first rest))
                          meta)
                   rest (if (satisfies? IMap (first rest)) (next rest) rest)
+                  meta (if (-contains-key meta :signatures)
+                         meta
+                         (merge meta {:signatures
+                                      (if (satisfies? IVector (first rest))
+                                        [(first rest)]
+                                        (transduce (map first) conj rest))}))
                   nm (with-meta nm meta)]
               `(def ~nm (fn ~nm ~@rest)))))
 (set-macro! defn)
 
-(defn defmacro [nm & rest]
+(defn defmacro
+  {:doc "Defines a new macro."
+   :added "0.1"}
+  [nm & rest]
   `(do (defn ~nm ~@rest)
        (set-macro! ~nm)
        ~nm))
-
 (set-macro! defmacro)
 
 (defmacro ->
+  {:doc "Threads `x` through `forms`, passing the result of one step as the first argument of the next."
+   :examples [["(-> 3 inc inc)" nil 5]
+              ["(-> \"James\" (str \" is \" \"awesome \") (str \"(and stuff)\" \"!\"))" nil "James is awesome (and stuff)!"]]
+   :signatures [[x & forms]]
+   :added "0.1"}
   [x & forms]
   (loop [x x, forms forms]
     (if forms
@@ -317,6 +369,11 @@
       x)))
 
 (defmacro ->>
+  {:doc "Threads `x` through `forms`, passing the result of one step as the last argument of the next."
+   :examples [["(->> \"James\" (str \"we \" \"like \") (str \"you \" \"know \" \"what? \"))" nil "you know what? we like James"]
+              ["(->> 5 (range) (map inc) seq)" nil (1 2 3 4 5)]]
+   :signatures [[x & forms]]
+   :added "0.1"}
   [x & forms]
   (loop [x x, forms forms]
     (if forms
@@ -329,14 +386,14 @@
 
 (defn not
   {:doc "Inverts the input, if a truthy value is supplied, returns false, otherwise
-         returns true"
-   :signatures [[arg]]
+returns true"
+   :signatures [[x]]
    :added "0.1"}
   [x]
   (if x false true))
 
 (defn +
-  {:doc "Adds the arguments"
+  {:doc "Adds the arguments, returning 0 if no arguments"
    :signatures [[& args]]
    :added "0.1"}
   ([] 0)
@@ -373,7 +430,7 @@
 
 (defn =
   {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses
-         -eq to perform equality checks."
+-eq to perform equality checks."
    :signatures [[& args]]
    :added "0.1"}
   ([x] true)
@@ -384,7 +441,7 @@
 
 (defn not=
   {:doc "Returns true if one (or more) of the arguments are not equivalent to the others. Uses
-         -eq to perform equality checks."
+-eq to perform equality checks."
    :signatures [[& args]]
    :added "0.1"}
   ([x] false)
@@ -468,10 +525,18 @@
   [coll]
   (if (seq coll) true false))
 
-(defn even? [n]
+(defn even?
+  {:doc "Returns true if n is even"
+   :signatures [[n]]
+   :added "0.1"}
+  [n]
   (zero? (rem n 2)))
 
-(defn odd? [n]
+(defn odd?
+  {:doc "Returns true of n is odd"
+   :signatures [[n]]
+   :added "0.1"}
+  [n]
   (= (rem n 2) 1))
 
 (defn first
@@ -515,6 +580,9 @@
     (first (next (next (next coll))))))
 
 (defn assoc
+  {:doc "Associates the key with the value in the collection"
+   :signatures [[m] [m k v] [m k v & kvs]]
+   :added "0.1"}
   ([m] m)
   ([m k v]
      (-assoc m k v))
@@ -522,11 +590,27 @@
      (apply assoc (-assoc m k v) rest)))
 
 (defn dissoc
+  {:doc "Removes the value associated with the keys from the collection"
+   :signatures [[m] [m & ks]]
+   :addded "0.1"}
   ([m] m)
   ([m & ks]
     (reduce -dissoc m ks)))
 
-(defn contains? [coll key]
+(defn contains?
+  {:doc "Checks if there is a value associated with key in the collection.
+
+Does *not* check for the presence of a value in the collection, only whether
+there's a value associated with the key. Use `some` for checking for values."
+   :examples [["(contains? {:a 1} :a)" nil true]
+              ["(contains? {:a 1} :b)" nil false]
+              ["(contains? #{:a :b :c} :a)" nil true]
+              ["(contains? [:a :b :c] 0)" nil true]
+              ["(contains? [:a :b :c] 4)" nil false]
+              ["(contains? [:a :b :c] :a)" nil false]]
+   :signatures [[coll key]]
+   :added "0.1"}
+  [coll key]
   (-contains-key coll key))
 
 (defn vec
@@ -542,6 +626,10 @@
   (get-field inst :val))
 
 (defn comp
+  {:doc "Composes the given functions, applying the last function first."
+   :examples [["((comp inc first) [41 2 3])" nil 42]]
+   :signatures [[f] [f & fs]]
+   :added "0.1"}
   ([f] f)
   ([f1 f2]
      (fn [& args]
@@ -554,6 +642,9 @@
        (apply (transduce comp (apply list f1 f2 f3 fs)) args))))
 
 (defmacro cond
+  {:doc "Checks if any of the tests is truthy, if so, stops and returns the value of the corresponding body"
+   :signatures [[] [test then & clauses]]
+   :added "0.1"}
   ([] nil)
   ([test then & clauses]
       `(if ~test
@@ -589,6 +680,11 @@
           (fn [] ~@finally))))))
 
 (defn .
+  {:doc "Access the field named by the symbol.
+
+If further arguments are passed, invokes the method named by symbol, passing the object and arguments."
+   :signatures [[obj sym] [obj sym & args]]
+   :added "0.1"}
   ([obj sym]
      (get-field obj sym))
   ([obj sym & args]
@@ -612,12 +708,20 @@
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
 
-(defn last [coll]
+(defn last
+  {:doc "Returns the last element of the collection, or nil if none."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
   (if (next coll)
     (recur (next coll))
     (first coll)))
 
-(defn butlast [coll]
+(defn butlast
+  {:doc "Returns all elements but the last from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
   (loop [res []
          coll coll]
     (if (next coll)
@@ -636,7 +740,13 @@
       ([x y] (not (f x y)))
       ([x y & more] (not (apply f x y more))))))
 
-(defn some [pred coll]
+(defn some
+  {:doc "Checks if the predicate is true for any element of the collection.
+
+Stops if it finds such an element."
+   :signatures [[pred coll]]
+   :added "0.1"}
+  [pred coll]
   (cond
    (nil? (seq coll)) false
    (pred (first coll)) true
@@ -757,12 +867,18 @@
 (extend -invoke PersistentHashSet (fn [m k] (-val-at m k nil)))
 
 (defn get
+  {:doc "Get an element from a collection implementing ILookup, return nil or the default value if not found."
+   :added "0.1"}
   ([mp k]
      (get mp k nil))
   ([mp k not-found]
      (-val-at mp k not-found)))
 
 (defn get-in
+  {:doc "Get a value from a nested collection at the \"path\" given by the keys."
+   :examples [["(get-in {:a [{:b 42}]} [:a 0 :b])" nil 42]]
+   :signatures [[m ks] [m ks not-found]]
+   :added "0.1"}
   ([m ks]
      (reduce get m ks))
   ([m ks not-found]
@@ -777,6 +893,11 @@
          m))))
 
 (defn assoc-in
+  {:doc "Associate a value in a nested collection given by the path.
+
+Creates new maps if the keys are not present."
+   :examples [["(assoc-in {} [:a :b :c] 42)" nil {:a {:b {:c 42}}}]]
+   :added "0.1"}
   ([m ks v]
      (let [ks (seq ks)
            k  (first ks)
@@ -784,6 +905,19 @@
        (if ks
          (assoc m k (assoc-in (get m k) ks v))
          (assoc m k v)))))
+
+(defn update-in
+  {:doc "Update a value in a nested collection."
+   :examples [["(update-in {:a {:b {:c 41}}} [:a :b :c] inc)" nil {:a {:b {:c 42}}}]]
+   :added "0.1"}
+  [m ks f & args]
+  (let [f (fn [m] (apply f m args))
+        update-inner-f (fn update-inner-f
+                         ([m f k]
+                            (assoc m k (f (get m k))))
+                         ([m f k & ks]
+                            (assoc m k (apply update-inner-f (get m k) f ks))))]
+    (apply update-inner-f m f ks)))
 
 (def subs pixie.string/substring)
 
@@ -797,7 +931,10 @@
         nil
         (throw (str "Assert failed " ~msg)))))
 
-(defmacro resolve [sym]
+(defmacro resolve
+  {:doc "Resolve the var associated with the symbol in the current namespace."
+   :added "0.1"}
+  [sym]
   `(resolve-in (this-ns-name) ~sym))
 
 (defmacro with-bindings [binds & body]
@@ -835,7 +972,20 @@
 (defn protocol? [x]
   (instance? Protocol x))
 
-(defmacro deftype [nm fields & body]
+(defmacro deftype
+  {:doc "Define a custom type."
+   :examples [["(deftype Person [name]
+  Object
+  (say-hi [self other-name]
+    (str \"Hi, I'm \" name \". You're \" other-name \", right?\"))
+
+  IObject
+  (-str [self]
+    (str \"<Person \" (pr-str name) \">\")))"]
+              ["(.say-hi (->Person \"James\") \"Paul\")" nil "Hi, I'm James. You're Paul, right?"]
+              ["(str (->Person \"James\"))" nil "<Person \"James\">"]]
+   :added "0.1"}
+  [nm fields & body]
   (let [ctor-name (symbol (str "->" (name nm)))
         fields (transduce (map (comp keyword name)) conj fields)
         field-syms (transduce (map (comp symbol name)) conj fields)
@@ -895,7 +1045,13 @@
          ~ctor
          ~@proto-bodies)))
 
-(defmacro defrecord [nm fields & body]
+(defmacro defrecord
+  {:doc "Define a record type.
+
+Similar to `deftype`, but supports construction from a map using `map->Type`
+and implements IAssociative, ILookup and IObject."
+   :added "0.1"}
+  [nm fields & body]
   (let [ctor-name (symbol (str "->" (name nm)))
         map-ctor-name (symbol (str "map" (name ctor-name)))
         fields (transduce (map (comp keyword name)) conj fields)
@@ -934,36 +1090,114 @@
  (def printf (ffi-fn libc "printf" [String] Integer))
  (def getenv (ffi-fn libc "getenv" [String] String))
 
-(defn print [& args]
+(defn print
+  {:doc "Prints the arguments, seperated by spaces."
+   :added "0.1"}
+  [& args]
   (printf (transduce (interpose " ") str args)))
 
-(defn println [& args]
+(defn println
+  {:doc "Prints the arguments, separated by spaces, with a newline at the end."
+   :added "0.1"}
+  [& args]
   (puts (transduce (interpose " ") str args)))
 
-(defn pr-str [& args]
+(defn pr-str
+  {:doc "Formats the arguments using -repr, separated by spaces, returning a string."
+   :added "0.1"}
+  [& args]
   (transduce (comp (map -repr) (interpose " ")) str args))
 
-(defn pr [& args]
+(defn pr
+  {:doc "Prints the arguments using -repr, separated by spaces."
+   :added "0.1"}
+  [& args]
   (printf (apply pr-str args)))
 
-(defn prn [& args]
+(defn prn
+  {:doc "Prints the arguments using -repr, separated by spaces, with a newline at the end."
+   :added "0.1"}
+  [& args]
   (puts (apply pr-str args)))
 
-(defn doc [x]
-  (get (meta x) :doc))
+(defn repeat
+  ([x]
+     (cons x (lazy-seq* (fn [] (repeat x)))))
+  ([n x]
+     (take n (repeat x))))
 
-(defn swap! [a f & args]
+(defmacro doseq
+  {:doc "Evaluates all elements of the seq, presumably for side effects. Returns nil."
+   :added "0.1"}
+  [binding & body]
+  (assert (= (count binding) 2) "expected a binding and a collection")
+  (let [b (first binding)
+        s (second binding)]
+    `(loop [s# (seq ~s)]
+       (if s#
+         (let [~b (first s#)]
+           ~@body
+           (recur (next s#)))))))
+
+(defmacro doc
+  {:doc "Returns the documentation of the given value."
+   :added "0.1"}
+  [v]
+  (let [vr (resolve v)
+        x (if vr @vr)
+        doc (get (meta x) :doc)
+        has-doc? (if doc true (get (meta x) :signatures))]
+    (cond
+     has-doc? (let [sigs (get (meta x) :signatures)
+                    examples (get (meta x) :examples)]
+                (println (str (namespace vr) "/" (name vr)))
+                (if sigs
+                  (prn (seq sigs)))
+                (if doc
+                  (do (println)
+                      (println doc)))
+                (if examples
+                  (do
+                    (println)
+                    (doseq [example examples]
+                      (println (str "  user => " (first example)))
+                      (if (second example)
+                        (print (apply str (map #(str "  " % "\n") (pixie.string/split (second example) "\n")))))
+                      (if (contains? example 2)
+                        (println (str "  " (-repr (third example))))))))
+                (println)
+                nil)
+     (the-ns v) (doc-ns v))))
+
+(defn doc-ns
+  {:doc "Prints a summarizing documentation of the symbols in a namespace."
+   :added "0.1"}
+  [ns]
+  (let [ns (the-ns ns)
+        short-doc (fn [x]
+                    (let [doc (get (meta x) :doc)]
+                      (if doc
+                        (let [newline (pixie.string/index-of doc "\n")]
+                          (pixie.string/substring doc 0 (if (< newline 0) (count doc) newline))))))]
+    (println (str (name ns) ":"))
+    (vec (map (fn [sym]
+                (print (str "  " (name sym)))
+                (let [doc (short-doc @(resolve-in ns sym))]
+                  (if doc
+                    (print (str (apply str (repeat (- 30 (count (name sym))) " "))
+                                doc))))
+                (println))
+              (keys (ns-map ns))))
+    nil))
+
+(defn swap!
+  {:doc "Swaps the value in the atom, by applying f to the current value.
+
+The new value is thus `(apply f current-value-of-atom args)`."
+   :signatures [[atom f & args]]
+   :added "0.1"}
+  [a f & args]
   (reset! a (apply f @a args)))
-
-(defn update-in
-  [m ks f & args]
-  (let [f (fn [m] (apply f m args))
-        update-inner-f (fn update-inner-f
-                         ([m f k]
-                            (assoc m k (f (get m k))))
-                         ([m f k & ks]
-                            (assoc m k (apply update-inner-f m f ks))))]
-    (apply update-inner-f m f ks)))
 
 (defn nil? [x]
   (identical? x nil))
@@ -975,7 +1209,7 @@
 (defmacro foreach [binding & body]
   (assert (= 2 (count binding)) "binding and collection required")
   `(reduce
-    (fn [_ ~ (nth binding 0)]
+    (fn [_ ~(nth binding 0)]
         ~@body
         nil)
     nil
@@ -993,7 +1227,12 @@
            (recur))))))
 
 
-(defmacro dotimes [bind & body]
+(defmacro dotimes
+  {:doc "Execute the expressions in the body n times."
+   :examples [["(dotimes [i 3] (println i))" "1\n2\n3\n"]]
+   :signatures [[[i n] & body]]
+   :added "0.1"}
+  [bind & body]
   (let [b (nth bind 0)]
     `(let [max# ~(nth bind 1)]
        (loop [~b 0]
@@ -1008,12 +1247,20 @@
             (yield (nth v x)))))
 
 (defmacro and
+  {:doc "Check if the given expressions return truthy values, returning the last, or false."
+   :examples [["(and true false)" nil false]
+              ["(and 1 2 3)" nil 3]
+              ["(and 1 false 3)" nil false]]
+   :added "0.1"}
   ([] true)
   ([x] x)
   ([x y] `(if ~x ~y false))
   ([x y & more] `(if ~x (and ~y ~@more))))
 
 (defmacro or
+  {:doc "Returns the value of the first expression that returns a truthy value, or false."
+   :examples [["(or 1 2 3)" nil 1] ["(or false 2)" nil 2] ["(or false nil)" nil nil]]
+   :added "0.1"}
   ([] false)
   ([x] x)
   ([x y] `(let [r# ~x]
@@ -1032,28 +1279,51 @@
      (when ~(first binding)
        ~@body)))
 
-(defn nnext [coll]
+(defn nnext
+  {:doc "Equivalent to (next (next coll))"
+   :added "0.1"}
+  [coll]
   (next (next coll)))
 
-(defn nthnext [coll n]
+(defn nthnext
+  {:doc "Returns the result of calling next n times on the collection."
+   :examples [["(nthnext [1 2 3 4 5] 2)" nil (3 4 5)]
+              ["(nthnext [1 2 3 4 5] 7)" nil nil]]
+   :added "0.1"}
+  [coll n]
   (loop [n n
          xs (seq coll)]
     (if (and xs (pos? n))
       (recur (dec n) (next xs))
       xs)))
 
-(defn take [n coll]
+(defn take
+  {:doc "Takes n elements from the collection, or fewer, if not enough."
+   :added "0.1"}
+  [n coll]
   (when (pos? n)
     (when-let [s (seq coll)]
       (cons (first s) (take (dec n) (next s))))))
 
-(defn drop [n coll]
+(defn drop
+  {:doc "Drops n elements from the start of the collection."
+   :added "0.1"}
+  [n coll]
   (let [s (seq coll)]
     (if (and (pos? n) s)
       (recur (dec n) (next s))
       s)))
 
 (defn partition
+  {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
+
+The last element of the result contains the remaining element, not necessarily of size n if
+not enough elements were present."
+   :examples [["(partition 2 [1 2 3 4 5 6])" nil ((1 2) (3 4) (5 6))]
+              ["(partition 2 [1 2 3 4 5])" nil ((1 2) (3 4) (5))]
+              ["(partition 2 1 [1 2 3 4 5])" nil ((1 2) (2 3) (3 4) (4 5) (5))]]
+   :signatures [[n coll] [n step coll]]
+   :added "0.1"}
   ([n coll] (partition n n coll))
   ([n step coll]
      (when-let [s (seq coll)]
@@ -1106,7 +1376,31 @@
               res)]
     res))
 
-(defmacro let [bindings & body]
+(defmacro let
+  {:doc "Makes the bindings availlable in the body.
+
+The bindings must be a vector of binding-expr pairs. The binding can be a destructuring
+binding, as below.
+
+Vector destructuring:
+  [x y z]           binds the first three elements of the collection to x, y and z
+  [x y & rest]      binds rest to the elements after the first two elements of the collection
+  [x y :as v]       binds the value of the complete collection to v
+
+Map destructuring:
+  {a :a, b :b}      binds a and b to the values associated with :a and :b
+  {a :a :as m}      binds the value of the complete collection to m
+  {a :a :or {a 42}} binds a to the value associated with :a, or 42, if not present
+  {:keys [a b c]}   binds a, b and c to the values associated with :a, :b and :c
+
+All these forms can be combined and nested, in the example below:
+
+(let [[x y [z :as iv] :as v] [1 2 [3 4 5] 6 7]
+      {a :a [b c {:keys [d]}] :more :or {a 42}} {:a 1, :more [1 2 {:d 3, :e 4}]}]
+  ...)
+
+For more information, see http://clojure.org/special_forms#binding-forms"}
+  [bindings & body]
   (let* [destructured-bindings (transduce (map #(apply destructure %1))
                                           concat
                                           []
@@ -1119,7 +1413,10 @@
                       (recur (next s) (dec n))
                       (first s))))
 
-(defn abs [x]
+(defn abs
+  {:doc "Returns the absolute value of x."
+   :added "0.1"}
+  [x]
   (if (< x 0)
     (* -1 x)
     x))
@@ -1164,12 +1461,22 @@
 
 
 (defn range
+  {:doc "Returns a range of numbers."
+   :examples [["(seq (range 3))" nil (0 1 2)]
+              ["(seq (range 3 5))" nil (3 4)]
+              ["(seq (range 0 10 2))" nil (0 2 4 6 8)]
+              ["(seq (range 5 -1 -1))" nil (5 4 3 2 1 0)]]
+   :signatures [[] [stop] [start stop] [start stop step]]
+   :added "0.1"}
   ([] (->Range 0 MAX-NUMBER 1))
   ([stop] (->Range 0 stop 1))
   ([start stop] (->Range start stop 1))
   ([start stop step] (->Range start stop step)))
 
-(defn iterator [coll]
+(defn iterator
+  {:doc "Returns an iterator for the collection."
+   :added "0.1"}
+  [coll]
   (-iterator coll))
 
 (defn move-next! [i]
@@ -1221,27 +1528,37 @@
                   (-move-next! k)
                   (recur acc)))))))
 
-(defn filter [f]
-  (fn [xf]
-    (fn
-      ([] (xf))
-      ([acc] (xf acc))
-      ([acc i] (if (f i)
-                 (xf acc i)
-                 acc)))))
+(defn filter
+  {:doc "Filter the collection for elements matching the predicate."
+   :signatures [[pred] [pred coll]]
+   :added "0.1"}
+  ([f] (fn [xf]
+         (fn
+           ([] (xf))
+           ([acc] (xf acc))
+           ([acc i] (if (f i)
+                      (xf acc i)
+                      acc)))))
+  ([f coll]
+     (sequence (filter f) coll)))
 
-(defn distinct []
-  (fn [xf]
-    (let [seen (atom #{})]
-      (fn
-        ([] (xf))
-        ([acc] (xf acc))
-        ([acc i]
-           (if (contains? @seen i)
-             acc
-             (do
-               (swap! seen conj i)
-               (xf acc i))))))))
+(defn distinct
+  {:doc "Returns the distinct elements in the collection."
+   :signatures [[] [coll]]
+   :added "0.1"}
+  ([] (fn [xf]
+        (let [seen (atom #{})]
+          (fn
+            ([] (xf))
+            ([acc] (xf acc))
+            ([acc i]
+               (if (contains? @seen i)
+                 acc
+                 (do
+                   (swap! seen conj i)
+                   (xf acc i))))))))
+  ([coll]
+     (sequence (distinct) coll)))
 
 (defn keep
   ([f]
@@ -1259,7 +1576,23 @@
                 (if result
                   (yield result))))))
 
-(defn refer [ns-sym & filters]
+(defn refer
+  {:doc "Refer to the specified vars from a namespace directly.
+
+Supported filters:
+  :rename   refer to the given vars under a different name
+  :exclude  don't refer the given vars
+  :refer
+    :all    refer all vars
+    :refer  refer only the given vars
+    :only   same as refer
+
+user => (refer 'pixie.string :refer :all)
+user => (refer 'pixie.string :only '(index-of starts-with ends-with))
+user => (refer 'pixie.string :rename '{index-of find})
+user => (refer 'pixie.string :exclude '(substring))"
+   :added "0.1"}
+  [ns-sym & filters]
   (let [ns (or (the-ns ns-sym) (throw (str "No such namespace: " ns-sym)))
         filters (apply hashmap filters)
         nsmap (ns-map ns)
@@ -1290,13 +1623,24 @@
                              (recur (next s))))))
 (extend -at-end? EmptyList (fn [_] true))
 
-(defn every? [pred coll]
+(defn every?
+  {:doc "Check if every element of the collection satisfies the predicate."
+   :added "0.1"}
+  [pred coll]
   (cond
    (nil? (seq coll)) true
    (pred (first coll)) (recur pred (next coll))
    :else false))
 
-(defmacro fn [& decls]
+(defmacro fn
+  {:doc "Creates a function.
+
+The following two forms are allowed:
+  (fn name? [param*] & body)
+  (fn name? ([param*] & body)+)
+
+The params can be destructuring bindings, see `(doc let)` for details."}
+  [& decls]
   (let [name (if (symbol? (first decls)) (first decls) nil)
         decls (if name (next decls) decls)
         name (or name '-fn)
@@ -1333,7 +1677,15 @@
           _ (assert method (str "no method defined for " dispatch-val))]
       (apply method dispatch-arg args))))
 
-(defmacro defmulti [name & args]
+(defmacro defmulti
+  {:doc "Define a multimethod, which dispatches to it's methods based on dispatch-fn."
+   :examples [["(defmulti greet first)"]
+              ["(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"]
+              ["(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"]
+              ["(greet [:hi \"Jane\"])" nil "Hi, Jane!"]]
+   :signatures [[name dispatch-fn & options]]
+   :added "0.1"}
+  [name & args]
   (let [[meta args] (if (string? (first args))
                       [{:doc (first args)} (next args)]
                       [{} args])
@@ -1344,7 +1696,11 @@
         options (apply hashmap (next args))]
     `(def ~name (->MultiMethod ~dispatch-fn ~(get options :default :default) (atom {})))))
 
-(defmacro defmethod [name dispatch-val params & body]
+(defmacro defmethod
+  {:doc "Define a method of a multimethod. See `(doc defmulti)` for details."
+   :signatures [[name dispatch-val [param*] & body]]
+   :added "0.1"}
+  [name dispatch-val params & body]
   `(do
      (let [methods (.methods ~name)]
        (swap! methods
