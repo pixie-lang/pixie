@@ -1185,7 +1185,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 (defn update-in
   {:doc "Update a value in a nested collection."
-;   :examples [["(update-in {:a [{:b 41}]} [:a 0 :b] inc)" nil {:a [{:b 42}]}]]
+   :examples [["(update-in {:a {:b {:c 41}}} [:a :b :c] inc)" nil {:a {:b {:c 42}}}]]
    :added "0.1"}
   [m ks f & args]
   (let [f (fn [m] (apply f m args))
@@ -1193,7 +1193,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
                          ([m f k]
                             (assoc m k (f (get m k))))
                          ([m f k & ks]
-                            (assoc m k (apply update-inner-f m f ks))))]
+                            (assoc m k (apply update-inner-f (get m k) f ks))))]
     (apply update-inner-f m f ks)))
 
 (defn nil? [x]
