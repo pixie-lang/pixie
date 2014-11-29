@@ -1771,14 +1771,15 @@ Expands to calls to `extend-type`."
               ["(hi 42)" nil "Hi, #42!"]]
    :added "0.1"}
   [protocol & extensions]
-  (let [[_ exts] (reduce (fn [[tp res] extend-body]
-                           (cond
-                            (symbol? extend-body) [extend-body (assoc res extend-body [])]
-                            :else [tp (update-in res [tp] conj extend-body)]))
-                         [nil {}]
-                         extensions)
-        exts (reduce (fn [res [tp exts]]
-                       (conj res `(extend-type ~tp ~protocol ~@exts)))
+  ; tps is used to ensure protocols are extended in order
+  (let [[_ tps exts] (reduce (fn [[tp tps res] extend-body]
+                               (cond
+                                (symbol? extend-body) [extend-body (conj tps extend-body) (assoc res extend-body [])]
+                                :else [tp tps (update-in res [tp] conj extend-body)]))
+                             [nil [] {}]
+                             extensions)
+        exts (reduce (fn [res tp]
+                       (conj res `(extend-type ~tp ~protocol ~@(get exts tp))))
                      []
-                     exts)]
+                     tps)]
     `(do ~@exts)))
