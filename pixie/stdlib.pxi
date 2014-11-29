@@ -1843,3 +1843,9 @@ Expands to calls to `extend-type`."
                      `(let ~coll-bindings
                         [~@body])))]
     `(or (seq ~(gen-loop [] bindings)) '())))
+
+(defmacro use
+  [ns]
+  `(do
+     (load-ns ~ns)
+     (refer ~ns :refer :all)))
