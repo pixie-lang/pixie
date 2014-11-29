@@ -140,6 +140,14 @@
     (t/assert= (vec (keep pos?) v) [true true true true true])
     (t/assert= (vec (keep pos? v)) (vec (keep pos?) v))))
 
+(t/deftest test-assoc
+  (t/assert= (assoc {} :a 3) {:a 3})
+  (t/assert= (assoc {:a 1} :a 3) {:a 3})
+
+  (t/assert= (assoc [] 0 :ok) [:ok])
+  (t/assert= (assoc [1] 0 :ok) [:ok])
+  (t/assert= (assoc [1 2 3] 1 :ok) [1 :ok 3]))
+
 (t/deftest test-get-in
   (let [m {:a 1 :b 2 :x {:a 2 :x [1 2 3]}}]
     (t/assert= (get-in m [:a]) 1)
@@ -149,11 +157,15 @@
 
 (t/deftest test-assoc-in
   (t/assert= (assoc-in {:a {:b 2}} [:a :b] 3) {:a {:b 3}})
-  (t/assert= (assoc-in {} [:a :b] 3) {:a {:b 3}}))
+  (t/assert= (assoc-in {:a [{:b 2}]} [:a 0 :b] 3) {:a [{:b 3}]})
+  ; non existing keys create maps (not vectors, even if the keys are integers)
+  (t/assert= (assoc-in {} [:a :b] 3) {:a {:b 3}})
+  (t/assert= (assoc-in {} [:a 0 :b] 3) {:a {0 {:b 3}}}))
 
 (t/deftest test-update-in
   (t/assert= (update-in {} [:a :b] (fnil inc 0)) {:a {:b 1}})
-  (t/assert= (update-in {:a {:b 2}} [:a :b] inc) {:a {:b 3}}))
+  (t/assert= (update-in {:a {:b 2}} [:a :b] inc) {:a {:b 3}})
+  (t/assert= (update-in {:a [{:b 2}]} [:a 0 :b] inc) {:a [{:b 3}]}))
 
 (t/deftest test-fn?
   (t/assert= (fn? inc) true)
