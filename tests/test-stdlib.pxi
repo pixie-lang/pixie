@@ -186,6 +186,14 @@
   (t/assert= (macro? :foo) false)
   (t/assert= (macro? "foo") false))
 
+(def ^:dynamic *earmuffiness* :low)
+
+(t/deftest test-binding
+  (t/assert= *earmuffiness* :low)
+  (binding [*earmuffiness* :quite-high]
+    (t/assert= *earmuffiness* :quite-high))
+  (t/assert= *earmuffiness* :low))
+
 (t/deftest test-every?
   (t/assert= (every? even? [2 4 6 8]) true)
   (t/assert= (every? odd?  [2 4 6 8]) false)

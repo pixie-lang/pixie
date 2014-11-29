@@ -937,15 +937,17 @@ Creates new maps if the keys are not present."
   [sym]
   `(resolve-in (this-ns-name) ~sym))
 
-(defmacro with-bindings [binds & body]
-  `(do (push-binding-frame!)
-       (reduce (fn [_ map-entry]
-                 (set! (resolve (key map-entry)) (val map-entry)))
-               nil
-               (apply hashmap ~@binds))
-       (let [ret (do ~@body)]
-         (pop-binding-frame!)
-         ret)))
+(defmacro binding [bindings & body]
+  (let [bindings (apply hashmap bindings)
+        set-vars (reduce (fn [res binding]
+                           (conj res `(set! (resolve (quote ~(key binding))) ~(val binding))))
+                         []
+                         bindings)]
+    `(do (push-binding-frame!)
+         ~@set-vars
+         (let [ret (do ~@body)]
+           (pop-binding-frame!)
+           ret))))
 
 (def foo 42)
 (set-dynamic! (resolve 'pixie.stdlib/foo))
