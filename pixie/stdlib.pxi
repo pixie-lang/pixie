@@ -1300,6 +1300,11 @@ The new value is thus `(apply f current-value-of-atom args)`."
      (when ~(first binding)
        ~@body)))
 
+(defmacro if-let [binding & body]
+  `(let ~binding
+     (if ~(first binding)
+       ~@body)))
+
 (defn nnext
   {:doc "Equivalent to (next (next coll))"
    :added "0.1"}
