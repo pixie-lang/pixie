@@ -89,6 +89,18 @@
   (t/assert= (s/trimr "   hey  ") "   hey")
   (t/assert= (s/trimr "   h  ey   ") "   h  ey"))
 
+(t/deftest test-replace
+  (t/assert= (s/replace "hey,you,there" "," ", ") "hey, you, there")
+  (t/assert= (s/replace "hey,you,there" "," "") "heyyouthere")
+  (t/assert= (s/replace "&&&" "&" "&&") "&&&&&&")
+  (t/assert= (s/replace "oops" "" "WAT") "WAToWAToWATpWATsWAT"))
+
+(t/deftest test-replace-first
+  (t/assert= (s/replace-first "hey,you,there" "," ", ") "hey, you,there")
+  (t/assert= (s/replace-first "hey,you,there" "," "") "heyyou,there")
+  (t/assert= (s/replace-first "&&&" "&" "&&") "&&&&")
+  (t/assert= (s/replace-first "oops" "" "WAT") "WAToops"))
+
 (t/deftest test-char-literals
   (let [s "hey"]
     (t/assert= (nth s 0) \h)
