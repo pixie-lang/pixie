@@ -1708,3 +1708,7 @@ The params can be destructuring bindings, see `(doc let)` for details."}
               ~dispatch-val (fn ~params
                               ~@body))
        ~name)))
+
+(defmacro declare [& nms]
+  (let [defs (map (fn [nm] `(def ~nm)) (seq nms))]
+    `(do ~@defs)))
