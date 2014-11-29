@@ -164,7 +164,7 @@ def run_load_stdlib():
     f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.pxi"))
     data = f.read()
     f.close()
-    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pixie")
+    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pxi")
     result = nil
 
     if not we_are_translated():

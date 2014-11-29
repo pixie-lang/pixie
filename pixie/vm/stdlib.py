@@ -402,7 +402,7 @@ def load_file(filename):
         if newline_pos > 0:
             data = data[newline_pos:]
 
-    rt.load_reader(reader.StringReader(unicode(data)))
+    rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode(data)), unicode(filename)))
     return nil
 
 @as_var("load-reader")
