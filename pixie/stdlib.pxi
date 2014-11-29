@@ -158,6 +158,14 @@
         ([result input]
            (reduce rrf result input))))))
 
+(def mapcat
+  (fn ^{:doc "Maps f over the elements of coll and concatenates the result"
+        :added "0.1"}
+    mapcat
+    ([f]
+       (comp (map f) cat))
+    ([f coll]
+       (transduce (mapcat f) conj coll))))
 
 (def seq-reduce (fn seq-reduce
                   [coll f init]
@@ -1635,6 +1643,21 @@ user => (refer 'pixie.string :exclude '(substring))"
                              (yield (first s))
                              (recur (next s))))))
 (extend -at-end? EmptyList (fn [_] true))
+
+(defn merge-with
+  [f & maps]
+  (cond
+   (empty? maps) nil
+   (= (count maps) 1) (first maps)
+   :else (let [merge2 (fn [m1 m2]
+                        (reduce (fn [res e]
+                                  (let [k (key e) v (val e)]
+                                    (if (contains? m1 k)
+                                      (assoc res k (f (get m1 k) v))
+                                      (assoc res k v))))
+                                (or m1 {})
+                                m2))]
+           (reduce merge2 (first maps) (next maps)))))
 
 (defn every?
   {:doc "Check if every element of the collection satisfies the predicate."
