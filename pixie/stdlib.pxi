@@ -21,6 +21,13 @@
               (cons 'let* args)))
 (set-macro! let)
 
+(def identity
+  (fn ^{:doc "The identity function. Returns it's argument."
+        :added "0.1"}
+    identity
+    [x]
+    x))
+
 (def conj
   (fn ^{:doc "Adds elements to the collection. Elements are added to the end except in the case of Cons lists"
         :signatures [[] [coll] [coll item] [coll item & args]]
