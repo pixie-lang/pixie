@@ -8,7 +8,7 @@
   (let [ns (the-ns ns)
         syms (keys (ns-map ns))]
     (doseq [sym syms]
-      (let [meta (meta @(resolve sym))
+      (let [meta (meta @(resolve-in ns sym))
             examples (get meta :examples)]
         (doseq [example examples]
           (if (contains? example 2)
@@ -19,3 +19,7 @@
 
 (t/deftest test-stdlib-docs
   (check-examples 'pixie.stdlib))
+
+(t/deftest test-string-docs
+  (load-ns 'pixie.string)
+  (check-examples 'pixie.string))

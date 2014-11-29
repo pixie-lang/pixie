@@ -101,6 +101,16 @@
   (t/assert= (s/replace-first "&&&" "&" "&&") "&&&&")
   (t/assert= (s/replace-first "oops" "" "WAT") "WAToops"))
 
+(t/deftest test-join
+  (t/assert= (s/join []) "")
+  (t/assert= (s/join [1]) "1")
+  (t/assert= (s/join [1 2 3]) "123")
+
+  (t/assert= (s/join ", " []) "")
+  (t/assert= (s/join ", " [1]) "1")
+
+  (t/assert= (s/join ", " [1 2 3]) "1, 2, 3"))
+
 (t/deftest test-char-literals
   (let [s "hey"]
     (t/assert= (nth s 0) \h)

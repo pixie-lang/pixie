@@ -35,3 +35,17 @@
     (if (neg? i)
       s
       (str (substring s 0 i) r (substring s (+ i (count x)))))))
+
+(defn join
+  {:doc "Join the elements of the collection using an optional seperator."
+   :examples [["(require pixie.string :as s)"]
+              ["(s/join [1 2 3])" nil "123"]
+              ["(s/join \", \" [1 2 3])" nil "1, 2, 3"]]}
+  ([coll] (join "" coll))
+  ([seperator coll]
+     (loop [s (seq coll)
+            res ""]
+       (cond
+        (nil? s) res
+        (nil? (next s)) (str res (first s))
+        :else (recur (next s) (str res (first s) seperator))))))
