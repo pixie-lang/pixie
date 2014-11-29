@@ -1711,6 +1711,70 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                               ~@body))
        ~name)))
 
-(defmacro declare [& nms]
+(defmacro declare
+  {:doc "Forward declare the given variable names, setting them to nil."
+   :added "0.1"}
+  [& nms]
   (let [defs (map (fn [nm] `(def ~nm)) (seq nms))]
     `(do ~@defs)))
+
+(defmacro defprotocol
+  {:doc "Define a new protocol."
+   :examples [["(defprotocol SayHi (hi [x]))"]
+              ["(extend hi String (fn [name] (str \"Hi, \" name \"!\")))"]
+              ["(hi \"Jane\")" nil "Hi, Jane!"]]
+   :added "0.1"}
+  [nm & sigs]
+  `(pixie.stdlib.internal/-defprotocol (quote ~nm)
+                                       ~(reduce (fn [r sig]
+                                                  (conj r `(quote ~(first sig))))
+                                                []
+                                                sigs)))
+
+(defmacro extend-type
+  {:doc "Extend the protocols to the given type.
+
+Expands to calls to `extend`."
+   :examples [["(defprotocol SayHi (hi [x]))"]
+              ["(extend-type String SayHi (hi [name] (str \"Hi, \" name \"!\")))"]
+              ["(hi \"Jane\")" nil "Hi, Jane!"]]
+   :added "0.1"}
+  [tp & extensions]
+  (let [[_ extends] (reduce (fn [[proto res] extend]
+                              (cond
+                               (symbol? extend) [extend res]
+                               :else [proto (conj res `(extend ~(first extend) ~tp (fn ~@(next extend))))]))
+                            []
+                            extensions)]
+    `(do
+       ~@extends)))
+
+(defmacro extend-protocol
+  {:doc "Extend the protocol to the given types.
+
+Expands to calls to `extend-type`."
+   :examples [["(defprotocol SayHi (hi [x]))"]
+              ["(extend-protocol SayHi
+
+  String
+  (hi [name]
+    (str \"Hi, \" name \"!\"))
+
+  Integer
+  (hi [n]
+    (str \"Hi, #\" n \"!\")))"]
+              ["(hi \"Jane\")" nil "Hi, Jane!"]
+              ["(hi 42)" nil "Hi, #42!"]]
+   :added "0.1"}
+  [protocol & extensions]
+  (let [[_ exts] (reduce (fn [[tp res] extend-body]
+                           (cond
+                            (symbol? extend-body) [extend-body (assoc res extend-body [])]
+                            :else [tp (update-in res [tp] conj extend-body)]))
+                         [nil {}]
+                         extensions)
+        exts (reduce (fn [res [tp exts]]
+                       (conj res `(extend-type ~tp ~protocol ~@exts)))
+                     []
+                     exts)]
+    `(do ~@exts)))
