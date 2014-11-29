@@ -13,16 +13,16 @@ import pixie.vm.rt as rt
 
 
 
-@as_var("pixie.string", "starts-with")
+@as_var("pixie.string.internal", "starts-with")
 def startswith(a, b):
     return rt.wrap(rt.name(a).startswith(rt.name(b)))
 
 
-@as_var("pixie.string", "ends-with")
+@as_var("pixie.string.internal", "ends-with")
 def endswith(a, b):
     return rt.wrap(rt.name(a).endswith(rt.name(b)))
 
-@as_var("pixie.string", "split")
+@as_var("pixie.string.internal", "split")
 def split(a, b):
     affirm(rt.count(b) > 0, u"separator can't be empty")
     v = rt.vector()
@@ -36,7 +36,7 @@ def index_of2(a, sep):
 def index_of3(a, sep, start):
     affirm(isinstance(start, Integer), u"Third argument must be an integer")
     start = start.int_val()
-    if start > 0:
+    if start >= 0:
         return rt.wrap(rt.name(a).find(rt.name(sep), start))
     else:
         runtime_error(u"Third argument must be a non-negative integer")
@@ -45,12 +45,12 @@ def index_of4(a, sep, start, end):
     affirm(isinstance(start, Integer) and isinstance(end, Integer), u"Third and fourth argument must be integers")
     start = start.int_val()
     end = end.int_val()
-    if start > 0 and end > 0:
+    if start >= 0 and end >= 0:
         return rt.wrap(rt.name(a).find(rt.name(sep), start, end))
     else:
         runtime_error(u"Third and fourth argument must be non-negative integers")
 
-index_of = intern_var(u"pixie.string", u"index-of")
+index_of = intern_var(u"pixie.string.internal", u"index-of")
 index_of.set_root(MultiArityFn({2: wrap_fn(index_of2), 3: wrap_fn(index_of3), 4: wrap_fn(index_of4)},
                                required_arity = 2))
 
@@ -67,11 +67,11 @@ def substring3(a, start, end):
     else:
         runtime_error(u"Second and third argument must be non-negative integers")
 
-substring = intern_var(u"pixie.string", u"substring")
+substring = intern_var(u"pixie.string.internal", u"substring")
 substring.set_root(MultiArityFn({2: wrap_fn(substring2), 3: wrap_fn(substring3)},
                                 required_arity = 2))
 
-@as_var("pixie.string", "upper-case")
+@as_var("pixie.string.internal", "upper-case")
 def upper_case(a):
     a = rt.name(a)
     res = ""
@@ -79,7 +79,7 @@ def upper_case(a):
         res += chr(unicodedb.toupper(ord(ch)))
     return rt.wrap(res)
 
-@as_var("pixie.string", "lower-case")
+@as_var("pixie.string.internal", "lower-case")
 def lower_case(a):
     a = rt.name(a)
     res = ""
@@ -87,7 +87,7 @@ def lower_case(a):
         res += chr(unicodedb.tolower(ord(ch)))
     return rt.wrap(res)
 
-@as_var("pixie.string", "capitalize")
+@as_var("pixie.string.internal", "capitalize")
 def capitalize(a):
     a = rt.name(a)
     res = u""
@@ -95,7 +95,7 @@ def capitalize(a):
     res += a[1:]
     return rt.wrap(res)
 
-@as_var("pixie.string", "trim")
+@as_var("pixie.string.internal", "trim")
 def trim(a):
     a = rt.name(a)
     i = 0
@@ -108,7 +108,7 @@ def trim(a):
         return rt.wrap(u"")
     return rt.wrap(a[i:j])
 
-@as_var("pixie.string", "triml")
+@as_var("pixie.string.internal", "triml")
 def triml(a):
     a = rt.name(a)
     i = 0
@@ -116,7 +116,7 @@ def triml(a):
         i += 1
     return rt.wrap(a[i:len(a)])
 
-@as_var("pixie.string", "trimr")
+@as_var("pixie.string.internal", "trimr")
 def trimr(a):
     a = rt.name(a)
     j = len(a)

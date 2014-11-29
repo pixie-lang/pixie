@@ -35,8 +35,10 @@
 
     (t/assert= (s/index-of s "h" 2) 3)
     (t/assert= (s/index-of s "h" 4) 5)
+    (t/assert= (s/index-of s "hey" 0) 0)
     (t/assert= (s/index-of s "hey" 1) -1)
 
+    (t/assert= (s/index-of s "h" 0 0) -1)
     (t/assert= (s/index-of s "h" 1 2) -1)))
 
 (t/deftest test-substring
@@ -86,6 +88,28 @@
   (t/assert= (s/trimr "hey   ") "hey")
   (t/assert= (s/trimr "   hey  ") "   hey")
   (t/assert= (s/trimr "   h  ey   ") "   h  ey"))
+
+(t/deftest test-replace
+  (t/assert= (s/replace "hey,you,there" "," ", ") "hey, you, there")
+  (t/assert= (s/replace "hey,you,there" "," "") "heyyouthere")
+  (t/assert= (s/replace "&&&" "&" "&&") "&&&&&&")
+  (t/assert= (s/replace "oops" "" "WAT") "WAToWAToWATpWATsWAT"))
+
+(t/deftest test-replace-first
+  (t/assert= (s/replace-first "hey,you,there" "," ", ") "hey, you,there")
+  (t/assert= (s/replace-first "hey,you,there" "," "") "heyyou,there")
+  (t/assert= (s/replace-first "&&&" "&" "&&") "&&&&")
+  (t/assert= (s/replace-first "oops" "" "WAT") "WAToops"))
+
+(t/deftest test-join
+  (t/assert= (s/join []) "")
+  (t/assert= (s/join [1]) "1")
+  (t/assert= (s/join [1 2 3]) "123")
+
+  (t/assert= (s/join ", " []) "")
+  (t/assert= (s/join ", " [1]) "1")
+
+  (t/assert= (s/join ", " [1 2 3]) "1, 2, 3"))
 
 (t/deftest test-char-literals
   (let [s "hey"]

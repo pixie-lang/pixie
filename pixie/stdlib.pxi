@@ -919,7 +919,7 @@ Creates new maps if the keys are not present."
                             (assoc m k (apply update-inner-f (get m k) f ks))))]
     (apply update-inner-f m f ks)))
 
-(def subs pixie.string/substring)
+(def subs pixie.string.internal/substring)
 
 (defmacro assert
   ([test]
@@ -1162,7 +1162,7 @@ and implements IAssociative, ILookup and IObject."
                     (doseq [example examples]
                       (println (str "  user => " (first example)))
                       (if (second example)
-                        (print (apply str (map #(str "  " % "\n") (pixie.string/split (second example) "\n")))))
+                        (print (apply str (map #(str "  " % "\n") (pixie.string.internal/split (second example) "\n")))))
                       (if (contains? example 2)
                         (println (str "  " (-repr (third example))))))))
                 (println)
@@ -1177,8 +1177,8 @@ and implements IAssociative, ILookup and IObject."
         short-doc (fn [x]
                     (let [doc (get (meta x) :doc)]
                       (if doc
-                        (let [newline (pixie.string/index-of doc "\n")]
-                          (pixie.string/substring doc 0 (if (< newline 0) (count doc) newline))))))]
+                        (let [newline (pixie.string.internal/index-of doc "\n")]
+                          (pixie.string.internal/substring doc 0 (if (< newline 0) (count doc) newline))))))]
     (println (str (name ns) ":"))
     (vec (map (fn [sym]
                 (print (str "  " (name sym)))
