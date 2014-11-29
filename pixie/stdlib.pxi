@@ -1151,7 +1151,11 @@ and implements IAssociative, ILookup and IObject."
         has-doc? (if doc true (get (meta x) :signatures))]
     (cond
      has-doc? (let [sigs (get (meta x) :signatures)
-                    examples (get (meta x) :examples)]
+                    examples (get (meta x) :examples)
+                    indent (fn [s]
+                             (if (>= (pixie.string.internal/index-of s "\n") 0)
+                               (apply str "\n" (map #(str "  " % "\n") (pixie.string.internal/split s "\n")))
+                               s))]
                 (println (str (namespace vr) "/" (name vr)))
                 (if sigs
                   (prn (seq sigs)))
@@ -1162,9 +1166,9 @@ and implements IAssociative, ILookup and IObject."
                   (do
                     (println)
                     (doseq [example examples]
-                      (println (str "  user => " (first example)))
+                      (println (str "  user => " (indent (first  example))))
                       (if (second example)
-                        (print (apply str (map #(str "  " % "\n") (pixie.string.internal/split (second example) "\n")))))
+                        (print (indent (second example))))
                       (if (contains? example 2)
                         (println (str "  " (-repr (third example))))))))
                 (println)
