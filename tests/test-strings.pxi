@@ -35,8 +35,10 @@
 
     (t/assert= (s/index-of s "h" 2) 3)
     (t/assert= (s/index-of s "h" 4) 5)
+    (t/assert= (s/index-of s "hey" 0) 0)
     (t/assert= (s/index-of s "hey" 1) -1)
 
+    (t/assert= (s/index-of s "h" 0 0) -1)
     (t/assert= (s/index-of s "h" 1 2) -1)))
 
 (t/deftest test-substring

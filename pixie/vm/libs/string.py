@@ -36,7 +36,7 @@ def index_of2(a, sep):
 def index_of3(a, sep, start):
     affirm(isinstance(start, Integer), u"Third argument must be an integer")
     start = start.int_val()
-    if start > 0:
+    if start >= 0:
         return rt.wrap(rt.name(a).find(rt.name(sep), start))
     else:
         runtime_error(u"Third argument must be a non-negative integer")
@@ -45,7 +45,7 @@ def index_of4(a, sep, start, end):
     affirm(isinstance(start, Integer) and isinstance(end, Integer), u"Third and fourth argument must be integers")
     start = start.int_val()
     end = end.int_val()
-    if start > 0 and end > 0:
+    if start >= 0 and end >= 0:
         return rt.wrap(rt.name(a).find(rt.name(sep), start, end))
     else:
         runtime_error(u"Third and fourth argument must be non-negative integers")
