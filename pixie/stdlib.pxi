@@ -22,7 +22,7 @@
 (set-macro! let)
 
 (def identity
-  (fn ^{:doc "The identity function. Returns it's argument."
+  (fn ^{:doc "The identity function. Returns its argument."
         :added "0.1"}
     identity
     [x]
@@ -1719,7 +1719,7 @@ The params can be destructuring bindings, see `(doc let)` for details."}
       (apply method dispatch-arg args))))
 
 (defmacro defmulti
-  {:doc "Define a multimethod, which dispatches to it's methods based on dispatch-fn."
+  {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
    :examples [["(defmulti greet first)"]
               ["(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"]
               ["(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"]
