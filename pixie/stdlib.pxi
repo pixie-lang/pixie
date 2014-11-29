@@ -1783,3 +1783,28 @@ Expands to calls to `extend-type`."
                      []
                      tps)]
     `(do ~@exts)))
+
+(defmacro for
+  {:doc "A list comprehension for the bindings."
+   :examples [["(for [x [1 2 3]] x)" nil [1 2 3]]
+              ["(for [x [1 2 3] y [:a :b :c]] [x y])" nil [[1 :a] [1 :b] [1 :c] [2 :a] [2 :b] [2 :c] [3 :a] [3 :b] [3 :c]]]]
+   :added "0.1"}
+  [bindings & body]
+  (assert (and (pos? (count bindings)) (even? (count bindings))) "for requires an even number of bindings")
+  (let [gen-loop (fn gen-loop [coll-bindings bindings]
+                   (if (seq bindings)
+                     (let [c (gensym "coll__")
+                           binding (first bindings)
+                           coll (second bindings)]
+                       `(loop [res# []
+                               ~c (seq ~coll)]
+                          (if ~c
+                            (recur (into res#
+                                         ~(gen-loop (into coll-bindings
+                                                          [binding `(first ~c)])
+                                                    (nnext bindings)))
+                                   (next ~c))
+                            res#)))
+                     `(let ~coll-bindings
+                        [~@body])))]
+    `(or (seq ~(gen-loop [] bindings)) '())))
