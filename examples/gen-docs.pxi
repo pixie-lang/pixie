@@ -38,7 +38,7 @@
                               [:article
                                [:h2 {:id (str ns "/" name)} name (when added [:span.version (str " (since " added ")")])]
                                (when signatures
-                                 [:pre (pr-str signatures)])
+                                 [:pre (pr-str (seq signatures))])
                                (when doc
                                  [:pre doc])
                                (when examples
