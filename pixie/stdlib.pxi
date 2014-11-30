@@ -340,9 +340,10 @@
                 :signatures [[nm doc? meta? & body]]}
             defn
             [nm & rest]
-            (let [meta (if (instance? String (first rest))
-                         {:doc (first rest)}
-                         {})
+            (let [meta (if (meta nm) (meta nm) {})
+                  meta (if (instance? String (first rest))
+                         (assoc meta :doc (first rest))
+                         meta)
                   rest (if (instance? String (first rest)) (next rest) rest)
                   meta (if (satisfies? IMap (first rest))
                          (merge meta (first rest))
@@ -366,6 +367,14 @@
        (set-macro! ~nm)
        ~nm))
 (set-macro! defmacro)
+
+(defmacro defn-
+  {:doc "Define a new non-public function. Otherwise the same as defn"
+   :signatures [[nm doc? meta? & body]]
+   :added "0.1"}
+  [nm & rest]
+  (let [nm (with-meta nm (assoc (meta nm) :private true))]
+    (cons `defn (cons nm rest))))
 
 (defmacro ->
   {:doc "Threads `x` through `forms`, passing the result of one step as the first argument of the next."

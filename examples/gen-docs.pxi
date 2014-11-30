@@ -19,6 +19,12 @@
 .version {
   color: #aaa;
 }
+
+#overview ul {
+  -webkit-column-width: 15em;
+  -moz-column-width: 15em;
+  column-width: 15em;
+}
 "]]
          [:body
           [:h1 ns]
@@ -29,7 +35,7 @@
                                        (filter (complement nil?)))
                                  conj
                                  (keys (ns-map ns)))]
-            (list [:section
+            (list [:section#overview
                    [:h2 "Overview"]
                    [:ul
                     (for [{name :name} infos]
