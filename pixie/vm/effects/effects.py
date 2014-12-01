@@ -107,7 +107,7 @@ class Answer(EffectObject):
     """
     _immutable_=True
     def __init__(self, w_val):
-        assert not isinstance(w_val, EffectObject)
+        assert not isinstance(w_val, EffectObject), w_val
         self._w_val = w_val
 
     def val(self):
@@ -130,7 +130,7 @@ class Continuation(Object):
         raise NotImplementedError()
 
     def step(self, x):
-        assert isinstance(x, Object) or x is None
+        assert isinstance(x, Object) or x is None, x
         result = self._step(x)
         assert isinstance(result, EffectObject) or result is None
         return result
@@ -172,15 +172,6 @@ class Thunk(EffectObject):
         return (None, None)
 
 
-class InvokeThunk(Thunk):
-    _immutable_ = True
-    def __init__(self, w_fn, w_val):
-        assert isinstance(w_val, Object) or w_val is None
-        self._w_fn = w_fn
-        self._w_val = w_val
-
-    def execute_thunk(self):
-        return self._w_fn.invoke_Ef(ArgList([self._w_val]))
 
 def answer(x):
     """
@@ -212,7 +203,7 @@ def handle_with(handler, effect, k=answer_k):
     """
     Installs a handler into the effect stack so that both k and effect are handed to handler after effect has executed.
     """
-    assert isinstance(effect, EffectObject)
+    assert isinstance(effect, EffectObject), str(effect)
     if isinstance(effect, Thunk):
         return CallEffectFn(handler, effect, k)
     else:
@@ -277,7 +268,7 @@ class CallEffectFn(Thunk):
 
     def execute_thunk(self):
         thval = self._effect.execute_thunk()
-        assert isinstance(thval, EffectObject) or thval is None
+        assert isinstance(thval, EffectObject)
         return handle_with(self._handler, thval, self._k)
 
     def get_loc(self):

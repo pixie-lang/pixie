@@ -96,8 +96,19 @@ def wrap_fn(transform=True):
     return with_fn
 
 
+def default_fn(pfn, transform=True):
 
+    from pixie.vm.keyword import keyword
 
+    pfn = keyword(unicode(pfn))
+
+    tp1 = keyword("default")
+
+    def extend_inner(fn):
+        mod_builtins(EnvOps.extend, pfn, tp1, wrap_fn(transform=transform)(fn))
+        return fn
+
+    return extend_inner
 
 def extend(pfn, tp1, tp2=None, transform=True):
     """Extends a protocol to the given Type (not python type), with the decorated function
@@ -122,6 +133,7 @@ def extend(pfn, tp1, tp2=None, transform=True):
 def as_global(ns, nm):
     from pixie.vm.keyword import keyword
     def with_f(val):
+        assert isinstance(val, Object)
         mod_builtins(EnvOps.declare, keyword(ns), keyword(nm), val)
         return val
     return with_f
@@ -149,3 +161,12 @@ def defprotocol(ns, name, methods):
 def link_builtins(frm, to):
     from pixie.vm.keyword import keyword
     mod_builtins(EnvOps.copy_val, keyword("pixie.stdlib"), keyword(frm), keyword(to))
+
+def mark_satisfies(proto):
+    def with_cls(klass):
+        from pixie.vm.keyword import keyword
+        tp = klass._type
+        mod_builtins(EnvOps.mark_satisfies, keyword(proto), tp)
+        return klass
+
+    return with_cls

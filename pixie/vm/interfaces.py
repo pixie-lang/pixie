@@ -28,10 +28,6 @@ defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
 defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
 defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
 
-link_builtins("-count", "count")
-link_builtins("-first", "first")
-link_builtins("-next", "next")
-
 defprotocol("pixie.stdlib", "IIndexed", ["-nth"])
 
 defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj", "-disj"])
@@ -48,3 +44,9 @@ defprotocol("pixie.stdlib", "IDeref", ["-deref"])
 defprotocol("pixie.stdlib", "IReset", ["-reset!"])
 
 defprotocol("pixie.stdlib", "INamed", ["-namespace", "-name"])
+
+
+link_builtins("-count", "count")
+link_builtins("-first", "first")
+link_builtins("-next", "next")
+link_builtins("-nth", "nth")

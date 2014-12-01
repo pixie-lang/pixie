@@ -1,5 +1,11 @@
 (__ns__ pixie.stdlib)
 
+(def map (fn [f]
+           (fn [from]
+             (foreach [x from]
+               (yield (f x))))))
+
+(comment
  (def libc (ffi-library pixie.platform/lib-c-name))
  (def exit (ffi-fn libc "exit" [Integer] Integer))
  (def puts (ffi-fn libc "puts" [String] Integer))
@@ -1229,3 +1235,5 @@
     (if (= (count decls) 1)
       `(fn* ~name ~(first (first decls)) ~@(next (first decls)))
       `(fn* ~name ~@decls))))
+
+)

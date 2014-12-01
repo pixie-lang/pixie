@@ -4,6 +4,7 @@ from pixie.vm.effects.environment import *
 from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.code import wrap_fn
 from pixie.vm.keyword import keyword
+import pixie.vm.rt as rt
 
 defeffect("pixie.stdlib.test.TestResource", "TestResource", ["a", "b"])
 
@@ -28,7 +29,7 @@ class TestEnvironment(unittest.TestCase):
             ns = keyword(u"foo-ns")
             nm = keyword(u"foo-name")
 
-            Declare(ns, nm, 42).raise_Ef()
+            Declare(ns, nm, rt.wrap(42)).raise_Ef()
 
             result = Resolve(ns, nm).raise_Ef()
 
@@ -37,18 +38,18 @@ class TestEnvironment(unittest.TestCase):
         result = run_with_state(doit, default_env)
 
         self.assertIsInstance(result, Answer)
-        self.assertEqual(result.val(), 42)
+        self.assertEqual(result.val().int_val(), 42)
 
 
-    def test_opaque_resources(self):
-
-
-        @wrap_fn()
-        def doit():
-
-            result = foo_Ef(1, 2)
-
-            return result
-
-        result = run_thunk_with_state(handle_with(ResourceHandler(), doit.invoke_Ef(ArgList()), answer_k), default_env)
-        pass
+    # def test_opaque_resources(self):
+    #
+    #
+    #     @wrap_fn()
+    #     def doit():
+    #
+    #         result = foo_Ef(rt.wra1, 2)
+    #
+    #         return result
+    #
+    #     result = run_thunk_with_state(handle_with(ResourceHandler(), doit.invoke_Ef(ArgList()), answer_k), default_env)
+    #     pass

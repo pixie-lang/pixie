@@ -1,8 +1,8 @@
 from pixie.vm.effects.effects import ContinuationThunk, Effect, ArgList, Thunk, Answer, answer_k, Handler, handle_with, \
-                                    Object, Type, raise_Ef
+                                    Object, Type, raise_Ef, _type_registry
 from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.effects.effect_transform import cps
-from pixie.vm.primitives import nil, true
+from pixie.vm.primitives import nil, true, false
 from rpython.rlib.jit import promote, JitDriver
 import rpython.rlib.jit as jit
 from pixie.vm.keyword import keyword
@@ -38,10 +38,12 @@ KW_PROTOCOL = keyword(u"protocol")
 
 defeffect("pixie.stdlib.Resolve", "Resolve", ["namespace", "name"])
 defeffect("pixie.stdlib.Declare", "Declare", ["namespace", "name", "val"])
+defeffect("pixie.stdlib.Satisfies?", "Satisfies", ["name", "tp"])
 defeffect("pixie.stdlib.FindPolymorphicOverride", "FindPolymorphicOverride", ["name", "tp"])
 defeffect("pixie.stdlib.FindDoublePolymorphicOverride", "FindDoublePolymorphicOverride", ["name", "tp1", "tp2"])
 defeffect("pixie.stdlib.Exception", "ExceptionEffect", ["kw", "msg"])
 defeffect("pixie.stdlib.OpaqueIO", "OpaqueIO", ["effect"])
+
 
 ExceptionEffect.__repr__ = lambda self: str(self._w_kw.__repr__()) + " : " + str(self._w_msg.str())
 
@@ -53,7 +55,13 @@ class EnvOps(object):
 
     @staticmethod
     def resolve(env, w_ns, w_nm):
-        return env.get_in([KW_DEFS, w_ns, w_nm])
+        result = env.get_in([KW_DEFS, w_ns, w_nm])
+        if result is None:
+            tp = _type_registry.get(w_nm.str())
+            if tp is not None:
+                return tp
+        else:
+            return result
 
     @staticmethod
     def make_proto_fn(env, w_ns, w_protocol, w_method_name):
@@ -114,6 +122,10 @@ class EnvOps(object):
         return env.get_in([KW_PROTOCOLS, w_protocol, KW_TYPES, tp]) is not None
 
     @staticmethod
+    def mark_satisfies(env, w_protocol, tp):
+        return env.assoc_in([KW_PROTOCOLS, w_protocol, KW_TYPES, tp], tp)
+
+    @staticmethod
     def copy_val(env, w_protocol, frm, to):
         resolved = EnvOps.resolve(env, w_protocol, frm)
         return EnvOps.declare(env, w_protocol, to, resolved)
@@ -145,6 +157,9 @@ def raise_override_error_Ef(name, tp):
 
 class PolymorphicFn(Object):
     _type = Type(u"pixie.stdlib.PolymorphicFn")
+
+    def type(self):
+        return PolymorphicFn._type
 
     def __init__(self, protocol, name):
         self._w_protocol = protocol
@@ -244,6 +259,10 @@ class EnvironmentHandler(Handler):
             elif tp is FindDoublePolymorphicOverride._type:
                 val = self._w_env.get_in([KW_DOUBLE_PROTO_FNS, effect.get(KW_NAME), effect.get(KW_TP1), effect.get(KW_TP2)])
                 return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
+            elif tp is Satisfies._type:
+                val = true if EnvOps.is_satisfied(env, effect.get(KW_NAME), effect.get(KW_TP)) else false
+                return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val))
+
         return None
 
 

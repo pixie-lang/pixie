@@ -36,8 +36,8 @@ class TestRTDispatch(unittest.TestCase):
         self.assertIs(result.get(KW_NAMESPACE), ns)
         self.assertIs(result.get(KW_NAME), nm)
 
-        result = result.get(KW_K).step(42)
+        result = result.get(KW_K).step(rt.wrap(42))
 
         self.assertIsInstance(result, Answer)
-        self.assertEqual(result.val(), 42)
+        self.assertEqual(result.val().int_val(), 42)
 

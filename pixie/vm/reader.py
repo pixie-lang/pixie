@@ -326,9 +326,11 @@ class QuoteReader(ReaderHandler):
         return cons(symbol(u"quote"), cons(itm))
 
 class KeywordReader(ReaderHandler):
-    def invoke(self, rdr, ch):
-        itm = read(rdr, True)
-        affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
+    @cps
+    def invoke_Ef(self, rdr, ch):
+        itm = read_Ef(rdr, True)
+
+        #affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
 
         return keyword(itm.str())
 
@@ -641,7 +643,7 @@ handlers = {wrap_char(ord(u"(")): ListReader(),
             # u"{": MapReader(),
             # u"}": UnmachedMapReader(),
             # u"'": QuoteReader(),
-            # u":": KeywordReader(),
+            wrap_char(ord(u":")): KeywordReader(),
             # u"\"": LiteralStringReader(),
             # u"\\": LiteralCharacterReader(),
             # u"@": DerefReader(),

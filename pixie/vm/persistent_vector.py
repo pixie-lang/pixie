@@ -1,11 +1,12 @@
 from pixie.vm.effects.effects import Object, Type
 from pixie.vm.effects.effect_transform import cps
-from pixie.vm.code import as_global, extend
+from pixie.vm.code import as_global, extend, mark_satisfies
 from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer
 import pixie.vm.stdlib as proto
 from rpython.rlib.rarithmetic import r_uint, intmask, widen
+from pixie.vm.keyword import keyword
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 
@@ -27,7 +28,7 @@ class Node(Object):
 
 EMPTY_NODE = Node(None)
 
-
+@mark_satisfies("pixie.stdlib.IVector")
 class PersistentVector(Object):
     _type = Type(u"pixie.stdlib.PersistentVector")
     _immutable_fields_ = ["_tail[*]", "_cnt", "_meta", "_shift", "_root"]
@@ -439,26 +440,42 @@ def _val_at(self, key, not_found):
     else:
         return not_found
 
-# @extend("pixie.stdlib.-eq", PersistentVector)
-# def _eq(self, obj):
-#     if isinstance(obj, PersistentVector):
-#         if self.count() != obj.count():
-#             return false
-#         for i in range(0, intmask(self._cnt)):
-#             if not rt.eq(self.nth(i), obj.nth(i)):
-#                 return false
-#         return true
-#     else:
-#         if not rt.satisfies_QMARK_(proto.ISeqable, obj):
-#             return false
-#         seq = rt.seq(obj)
-#         for i in range(0, intmask(self._cnt)):
-#             if seq is nil or not rt.eq(self.nth(i), rt.first(seq)):
-#                 return false
-#             seq = rt.next(seq)
-#         if seq is not nil:
-#             return false
-#         return true
+KW_ISEQABLE = keyword("pixie.stdlib.ISeqable")
+KW_IVECTOR = keyword("pixie.stdlib.IVector")
+
+@extend("pixie.stdlib.-eq", PersistentVector)
+def _eq(self, obj):
+    if isinstance(self, PersistentVector):
+        if self.count() != obj.count():
+            return false
+        i = 0
+        while i < self.count():
+            if not rt.eq_Ef(self.nth(i), obj.nth(i)):
+                return false
+            i += 1
+        return true
+    elif rt.satisfies_QMARK__Ef(KW_IVECTOR):
+        if self.count() != rt.count_Ef(obj).r_uint_val():
+            return false
+        i = 0
+        while i < self.count():
+            if not rt.eq_Ef(self.nth(i), rt.nth_Ef(self, rt.wrap(i))):
+                return false
+            i += 1
+        return true
+    else:
+        if not rt.satisfies_QMARK__Ef(KW_ISEQABLE, obj):
+            return false
+        seq = rt.seq_Ef(obj)
+        i = 0
+        while i < self.count():
+            if seq is nil or not rt.eq_Ef(self.nth(i), rt.first_Ef(seq)):
+                return false
+            seq = rt.next_Ef(seq)
+            i += 1
+        if seq is not nil:
+            return false
+        return true
 #
 # @extend(proto._contains_key, PersistentVector)
 # def _contains_key(self, key):

@@ -247,7 +247,10 @@ class CPSTransformer(object):
         else:
             assert len(block.exits) == 2
             other_block = Label()
-            yield LOAD_FAST, block.exitswitch.name
+            if isinstance(block.exitswitch, Variable):
+                yield LOAD_FAST, block.exitswitch.name
+            else:
+                yield LOAD_CONST, block.exitswitch.value
             yield POP_JUMP_IF_TRUE, other_block
 
             for op in self.emit_link(block.exits[0]):
@@ -399,6 +402,10 @@ class OpEmitter(object):
         yield COMPARE_OP, ">="
 
     @staticmethod
+    def ne(hlop):
+        yield COMPARE_OP, "!="
+
+    @staticmethod
     @skip_all
     def contains(hlop):
         for x in OpEmitter.emit_arg(hlop.args[1]):
@@ -419,6 +426,22 @@ class OpEmitter(object):
     @skip_last(1)
     def str(hlop):
         yield LOAD_CONST, str
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        yield CALL_FUNCTION, 1
+
+    @staticmethod
+    @skip_last(1)
+    def iter(hlop):
+        yield LOAD_CONST, iter
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        yield CALL_FUNCTION, 1
+
+    @staticmethod
+    @skip_last(1)
+    def next(hlop):
+        yield LOAD_CONST, next
         for x in OpEmitter.emit_arg(hlop.args[0]):
             yield x
         yield CALL_FUNCTION, 1

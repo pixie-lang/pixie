@@ -4,6 +4,7 @@ from pixie.vm.effects.environment import Resolve, resolve_Ef, declare_Ef, throw_
 from pixie.vm.array import array
 from pixie.vm.primitives import true, false, nil
 from pixie.vm.keyword import keyword
+from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
@@ -78,6 +79,9 @@ class Do(Syntax):
 class PixieFunction(Object):
     _type = Type(u"pixie.stdlib.PixieFunction")
     _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env"]
+
+    def type(self):
+        return PixieFunction._type
 
     def __init__(self, name, args, body, env=None):
         self._w_name = name
@@ -261,12 +265,10 @@ class Lookup(Syntax):
             if local is not None:
                 return local
 
-        ns = self._w_ns
-        nm = self._w_nm
-        val = resolve_Ef(ns, nm)
+        val = resolve_Ef( self._w_ns, self._w_nm)
 
         if val is None:
-            msg = nm.str() + u" is unresolved in " + ns.str()
+            msg = self._w_nm.str() + u" is unresolved in " + self._w_ns.str()
             throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
 
         return val
@@ -309,6 +311,25 @@ class SyntaxThunk(Thunk):
 
     def get_loc(self):
         return (self._w_ast, self._w_locals)
+
+class Vector(Syntax):
+    _immutable_fields_ = ["_array_w"]
+    _type = Type(u"pixie.ast.Vector")
+
+    def type(self):
+        return Vector._type
+
+    def __init__(self, array_w):
+        self._array_w = array_w
+
+    @cps
+    def interpret_Ef(self, env):
+        acc = EMPTY_VECTOR
+        idx = 0
+        while idx < len(self._array_w):
+            acc = acc.conj(self._array_w[idx].interpret_Ef(env))
+            idx += 1
+        return acc
 
 
 NOT_FOUND = r_uint(1024 * 1024)

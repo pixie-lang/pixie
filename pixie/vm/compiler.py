@@ -5,12 +5,13 @@ from pixie.vm.primitives import nil, true, false
 from pixie.vm.persistent_vector import PersistentVector, EMPTY as EMPTY_VECTOR
 from pixie.vm.persistent_list import PersistentList
 from pixie.vm.symbol import Symbol
-from pixie.vm.keyword import keyword
+from pixie.vm.keyword import keyword, Keyword
 from pixie.vm.effects.effect_transform import cps
 from pixie.vm.effects.environment import throw_Ef
 from rpython.rlib.rarithmetic import intmask
 from pixie.vm.numbers import Integer
 from pixie.vm.ast import *
+import pixie.vm.ast as ast
 
 
 VALUE_ERROR = keyword(u"VALUE-ERROR")
@@ -49,7 +50,6 @@ def multi_fn_from_acc(name, acc):
 def args_to_kws_Ef(args):
     acc = EMPTY_VECTOR
     idx = 0
-    arg = None
     while idx < args.count():
         arg = args.nth(idx)
         if not isinstance(arg, Symbol):
@@ -64,8 +64,7 @@ def add_args(name, args):
     required_args = -1
     acc = EMPTY_VECTOR
 
-    x = 0
-    while x < args.count():
+    for x in range(args.count()):
         arg = args.nth(x)
 
         if arg.str() == u"&":
@@ -73,7 +72,6 @@ def add_args(name, args):
             continue
 
         acc = acc.conj(arg)
-        x += 1
 
     return required_args, acc
 
@@ -133,8 +131,7 @@ def compile_fn_Ef(form):
                 throw_Ef(VALUE_ERROR, u"Argument lists must be vectors")
             body = rt.next_Ef(arity)
 
-            args_kws = args_to_kws_Ef(args)
-            body_fn = compile_fn_body_Ef(None, args_kws, body)
+            body_fn = compile_fn_body_Ef(None, args_to_kws_Ef(args), body)
             acc = acc.conj(body_fn)
             form = rt.next_Ef(form)
 
@@ -237,6 +234,19 @@ def compile_cons_Ef(form):
 
     return Invoke(acc.to_list())
 
+@cps
+def compile_vector_Ef(form):
+    acc = EMPTY_VECTOR
+    idx = 0
+    cnt = rt.count_Ef(form).int_val()
+    while idx < cnt:
+        val = rt._nth_Ef(form, rt.wrap(idx))
+        acc = acc.conj(compile_itm_Ef(val))
+        idx += 1
+
+    return ast.Vector(acc.to_list())
+
+KW_IVECTOR = keyword(u"pixie.stdlib.IVector")
 
 @cps
 def compile_itm_Ef(form):
@@ -258,6 +268,16 @@ def compile_itm_Ef(form):
 
     if form is nil:
         return Constant(nil)
+
+    if isinstance(form, Keyword):
+        return Constant(form)
+
+    if rt.satisfies_QMARK__Ef(KW_IVECTOR, form) is true:
+        return compile_vector_Ef(form)
+
+    #assert False
+
+
 
 @cps
 def compile_Ef(form):
