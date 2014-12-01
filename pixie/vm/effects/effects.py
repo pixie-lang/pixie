@@ -12,8 +12,8 @@ class Object(object):
 
     def invoke_Ef(self, args):
         assert isinstance(args, ArgList)
-        result =  self._invoke_Ef(args)
-        assert not isinstance(result, Object) and result is not None
+        result = self._invoke_Ef(args)
+        assert not isinstance(result, Object) and result is not None, [type(result), self]
         return result
 
 class ArgList(object):
@@ -132,7 +132,7 @@ class Continuation(Object):
     def step(self, x):
         assert isinstance(x, Object) or x is None, x
         result = self._step(x)
-        assert isinstance(result, EffectObject) or result is None
+        assert isinstance(result, EffectObject), [type(result), type(self)]
         return result
 
 
@@ -268,7 +268,7 @@ class CallEffectFn(Thunk):
 
     def execute_thunk(self):
         thval = self._effect.execute_thunk()
-        assert isinstance(thval, EffectObject)
+        assert isinstance(thval, EffectObject), [type(thval), type(self._effect)]
         return handle_with(self._handler, thval, self._k)
 
     def get_loc(self):

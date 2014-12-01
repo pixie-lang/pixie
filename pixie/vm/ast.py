@@ -1,6 +1,6 @@
 from pixie.vm.effects.effects import Object, Type, Answer, Thunk, ArgList, raise_Ef
 from pixie.vm.effects.effect_transform import cps
-from pixie.vm.effects.environment import Resolve, resolve_Ef, declare_Ef, throw_Ef
+from pixie.vm.effects.environment import Resolve, resolve_Ef, declare_Ef, throw_Ef, unresolved
 from pixie.vm.array import array
 from pixie.vm.primitives import true, false, nil
 from pixie.vm.keyword import keyword
@@ -45,6 +45,7 @@ class Invoke(Syntax):
 
         fn = self._fn_and_args_w[0]
         fn_resolved = syntax_thunk_Ef(fn, env)
+        assert fn_resolved is not None
 
         idx = 1
         while idx < len(self._fn_and_args_w):
@@ -198,7 +199,7 @@ class FnLiteral(Syntax):
         return Answer(self._w_fn.with_env(env))
 
 
-class Def(Object):
+class Def(Syntax):
     _type = Type(u"pixie.ast.Def")
     _immutable_fields_ = ["_w_nm", "_w_nm", "_w_expr"]
 
@@ -265,11 +266,10 @@ class Lookup(Syntax):
             if local is not None:
                 return local
 
-        val = resolve_Ef( self._w_ns, self._w_nm)
-
-        if val is None:
+        val = resolve_Ef(self._w_ns, self._w_nm)
+        if val is unresolved:
             msg = self._w_nm.str() + u" is unresolved in " + self._w_ns.str()
-            throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
+            return throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
 
         return val
 

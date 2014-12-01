@@ -1,4 +1,5 @@
 from pixie.vm.compiler import compile_Ef
+from pixie.vm.primitives import true
 from pixie.vm.code import wrap_fn
 from pixie.vm.reader import StringReader, read_Ef
 from pixie.vm.effects.effects import Answer
@@ -150,4 +151,27 @@ class TestCompilation(unittest.TestCase):
         self.assertIsInstance(result.val(), Integer)
         self.assertEqual(result.val().int_val(), 3)
 
-"((fn* self [x] (if (-num-eq x 10000) x (self (-add 1 x)))) 0)"
+    def test_yield_exists(self):
+        from pixie.vm.effects.generators import YieldEffect
+        ast = run_with_state(read_and_compile, default_env,
+
+                             """(yield 42)""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env, error_on_unhandled=False)
+
+        self.assertIsInstance(result, YieldEffect, str(result))
+
+    def test_handle_works(self):
+        from pixie.vm.effects.generators import YieldEffect
+        ast = run_with_state(read_and_compile, default_env,
+
+                             """(-handle
+                                  (fn* [e]
+                                    (effect? e))
+                                  (fn* [] (yield 42)))""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env, error_on_unhandled=False)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIs(result.val(), true)
+

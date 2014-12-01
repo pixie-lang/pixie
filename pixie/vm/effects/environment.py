@@ -47,6 +47,17 @@ defeffect("pixie.stdlib.OpaqueIO", "OpaqueIO", ["effect"])
 
 ExceptionEffect.__repr__ = lambda self: str(self._w_kw.__repr__()) + " : " + str(self._w_msg.str())
 
+class Unresolved(Object):
+    _type = Type(u"pixie.stdlib.Unresolved")
+    def __init__(self):
+        pass
+
+    def type(self):
+        return Unresolved._type
+
+unresolved = Unresolved()
+unresolved_answer = Answer(unresolved)
+
 class EnvOps(object):
 
     @staticmethod
@@ -60,6 +71,7 @@ class EnvOps(object):
             tp = _type_registry.get(w_nm.str())
             if tp is not None:
                 return tp
+            return unresolved
         else:
             return result
 
@@ -249,6 +261,7 @@ class EnvironmentHandler(Handler):
             tp = effect.type()
             if tp is Resolve._type:
                 val = EnvOps.resolve(self._w_env, effect.get(KW_NAMESPACE), effect.get(KW_NAME))
+                assert val is not None
                 return handle_with(EnvironmentHandler(self._w_env), ContinuationThunk(effect.get(KW_K), val), answer_k)
             elif tp is Declare._type:
                 env = EnvOps.declare(env, effect.get(KW_NAMESPACE), effect.get(KW_NAME), effect.get(KW_VAL))
@@ -274,7 +287,7 @@ def run_with_state(fn, env, arg=None):
 
     return run_thunk_with_state(t, env)
 
-def run_thunk_with_state(t, env):
+def run_thunk_with_state(t, env, error_on_unhandled=True):
     t = handle_with(EnvironmentHandler(env), t, answer_k)
     while True:
         if isinstance(t, Thunk):
@@ -298,7 +311,8 @@ def run_thunk_with_state(t, env):
             t = t.get(KW_K).step(result)
 
         else:
-            assert False, t
+            assert not error_on_unhandled, t
+            return t
 
 class WithDynamicVars(Handler):
     def __init__(self, state):

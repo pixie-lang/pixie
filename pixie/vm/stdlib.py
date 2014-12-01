@@ -85,6 +85,11 @@ def _handle(fn, body):
 def _yield(val):
     return generators.YieldEffect(val)
 
+@as_global("pixie.stdlib", "effect?")
+@wrap_fn()
+def _effect(val):
+    return rt.wrap(isinstance(val, WrappedEffect))
+
 ### Ref
 
 defeffect("pixie.stdlib.Ref", "RefSwap", ["ref", "val"])

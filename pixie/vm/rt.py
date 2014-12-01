@@ -4,7 +4,7 @@ py_str = str
 from rpython.rlib.objectmodel import specialize
 from rpython.rtyper.lltypesystem import lltype, rffi
 from pixie.vm.effects.effects import ArgList, raise_Ef, Continuation, answer_k, Object, EffectObject
-from pixie.vm.effects.environment import Resolve
+from pixie.vm.effects.environment import Resolve, throw_Ef, unresolved
 from pixie.vm.keyword import keyword
 from rpython.rlib.rbigint import rbigint
 
@@ -13,6 +13,8 @@ from pixie.vm.code import munge
 #import pixie.vm.stdlib
 
 
+
+KW_UNRESOVLED_SYMBOL = keyword(u"UNRESOLVED-SYMBOL")
 
 def wrap_fn(nm):
     kw_nm = keyword(unicode(nm))
@@ -24,6 +26,8 @@ def wrap_fn(nm):
             self._w_args = w_args
 
         def _step(self, result):
+            if result is unresolved:
+                return throw_Ef(KW_UNRESOVLED_SYMBOL, u"")
             val = result.invoke_Ef(self._w_args)
             return val
 
