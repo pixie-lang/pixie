@@ -49,6 +49,17 @@
       (swap! c inc))
     (t/assert= @c 3)))
 
+(t/deftest test-when-let-destructuring
+  (t/assert= (when-let [[x y & z] false] :yay) nil)
+  (t/assert= (when-let [[x y & z] nil] :yay) nil)
+  (t/assert= (when-let [{:keys [a b]} nil] :yay) nil)
+
+  (t/assert= (when-let [[x y & z] [1 2 3]] :yay) :yay)
+  (t/assert= (when-let [[x y & z] [1 2 3]] [x y z]) [1 2 '(3)])
+  (t/assert= (when-let [{:keys [a b]} {}] :yay) :yay)
+  (t/assert= (when-let [{:keys [a b]} {}] [a b]) [nil nil])
+  (t/assert= (when-let [{:keys [a b]} {:a 1, :b 41}] [a b]) [1 41]))
+
 (t/deftest test-if-let
   (t/assert= (if-let [v false] :yay :nay) :nay)
   (t/assert= (if-let [v false] :yay) nil)
@@ -59,7 +70,21 @@
 
   (t/assert= (if-let [v true] :yay :nay) :yay)
   (t/assert= (if-let [v true] :yay) :yay)
-  (t/assset= (if-let [v (+ 3 4)] v :nay) 7)
-  (t/assset= (if-let [v (+ 3 4)] v) 7)
+  (t/assert= (if-let [v (+ 3 4)] v :nay) 7)
+  (t/assert= (if-let [v (+ 3 4)] v) 7)
   (t/assert= (if-let [v {}] v :nay) {})
   (t/assert= (if-let [v {}] v) {}))
+
+(t/deftest test-if-let-destructuring
+  (t/assert= (if-let [[x y & z] false] :yay :nay) :nay)
+  (t/assert= (if-let [[x y & z] false] :yay) nil)
+  (t/assert= (if-let [[x y & z] nil] :yay :nay) :nay)
+  (t/assert= (if-let [[x y & z] nil] :yay) nil)
+  (t/assert= (if-let [{:keys [a b]} nil] :yay :nay) :nay)
+  (t/assert= (if-let [{:keys [a b]} nil] :yay) nil)
+
+  (t/assert= (if-let [[x y & z] [1 2 3]] :yay :nay) :yay)
+  (t/assert= (if-let [[x y & z] [1 2 3]] [x y z] :nay) [1 2 '(3)])
+  (t/assert= (if-let [{:keys [a b]} {}] :yay :nay) :yay)
+  (t/assert= (if-let [{:keys [a b]} {}] [a b] :nay) [nil nil])
+  (t/assert= (if-let [{:keys [a b]} {:a 1, :b 41}] [a b] :nay) [1 41]))

@@ -1305,14 +1305,23 @@ The new value is thus `(apply f current-value-of-atom args)`."
   `(if (not ~test) (do ~@body)))
 
 (defmacro when-let [binding & body]
-  `(let ~binding
-     (when ~(first binding)
-       ~@body)))
+  (let [bind (nth binding 0)
+        test (nth binding 1)]
+    `(let [tmp# ~test]
+       (when tmp#
+         (let [~bind tmp#]
+           ~@body)))))
 
-(defmacro if-let [binding & body]
-  `(let ~binding
-     (if ~(first binding)
-       ~@body)))
+(defmacro if-let
+  ([binding then] `(if-let ~binding ~then nil))
+  ([binding then else]
+     (let [bind (nth binding 0)
+           test (nth binding 1)]
+       `(let [tmp# ~test]
+          (if tmp#
+            (let [~bind tmp#]
+              ~then)
+            ~else)))))
 
 (defn nnext
   {:doc "Equivalent to (next (next coll))"
