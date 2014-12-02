@@ -1,6 +1,7 @@
-from pixie.vm.effects.effects import Object, Type
+from pixie.vm.effects.effects import Object, Type, handle_with, InvokeThunk
 from pixie.vm.effects.effect_transform import cps
-from pixie.vm.code import as_global, extend, mark_satisfies
+from pixie.vm.effects.generators import yield_Ef, generator_handler
+from pixie.vm.code import as_global, extend, mark_satisfies, wrap_fn
 from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer
@@ -476,6 +477,27 @@ def _eq(self, obj):
         if seq is not nil:
             return false
         return true
+
+@wrap_fn()
+def iterator_inner(self):
+    i = 0
+    while i < self._cnt:
+        array = self.array_for(i)
+        j = 0
+        while j < len(array):
+            item = array[j]
+            yield_Ef(item)
+            j += 1
+
+        step = len(array)
+        i += step
+    return nil
+
+@extend("pixie.stdlib.-iterator", PersistentVector, transform=False)
+def _iterator(self):
+    return handle_with(generator_handler,
+                       InvokeThunk(iterator_inner, self))
+
 #
 # @extend(proto._contains_key, PersistentVector)
 # def _contains_key(self, key):

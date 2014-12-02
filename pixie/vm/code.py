@@ -5,6 +5,7 @@ from pixie.vm.effects.effect_transform import cps
 from pixie.vm.effects.effects import Object, Type, raise_Ef
 from pixie.vm.effects.environment import FindPolymorphicOverride, extend_builtin, extend_builtin2, add_builtin, \
                                          FindDoublePolymorphicOverride, ExceptionEffect, EnvOps, mod_builtins
+import types
 
 def munge(s):
      return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
@@ -130,9 +131,12 @@ def extend(pfn, tp1, tp2=None, transform=True):
     return extend_inner
 
 
-def as_global(ns, nm):
+def as_global(ns, nm, transform=True):
     from pixie.vm.keyword import keyword
     def with_f(val):
+        if isinstance(val, types.FunctionType):
+            val = wrap_fn(transform=transform)(val)
+
         assert isinstance(val, Object)
         mod_builtins(EnvOps.declare, keyword(ns), keyword(nm), val)
         return val

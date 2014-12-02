@@ -2,7 +2,7 @@
 from pixie.vm.primitives import true, false, nil
 from pixie.vm.code import defprotocol, as_global, wrap_fn, default_fn, extend
 from pixie.vm.effects.effects import OpaqueIOFn, raise_Ef, answer_k, Object, Type, Handler, Answer, handle_with, \
-    ContinuationThunk, ArgList, Thunk
+    ContinuationThunk, ArgList, Thunk, InvokeThunk
 
 from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.effects.environment import link_builtins, throw_Ef, OpaqueIO, Satisfies
@@ -39,20 +39,7 @@ class WrappedEffect(Object):
         self._effect = effect
 
 
-class InvokeThunk(Thunk):
-    _immutable_ = True
-    def __init__(self, w_fn, w_val=None):
-        assert isinstance(w_val, Object) or w_val is None
-        self._w_fn = w_fn
-        self._w_val = w_val
 
-    def execute_thunk(self):
-        if self._w_val:
-            result = self._w_fn.invoke_Ef(ArgList([self._w_val]))
-        else:
-            result = self._w_fn.invoke_Ef(ArgList())
-
-        return result
 
 KW_TYPE = keyword("type")
 

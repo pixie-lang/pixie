@@ -6,8 +6,10 @@ from pixie.vm.effects.effects import Answer
 from pixie.vm.numbers import Integer
 from pixie.vm.string import String
 from pixie.vm.effects.effect_transform import cps
+from pixie.vm.effects.generators import Generator
 from pixie.vm.ast import SyntaxThunk, Locals
 from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state
+from pixie.vm.keyword import keyword
 
 import unittest
 
@@ -174,4 +176,47 @@ class TestCompilation(unittest.TestCase):
 
         self.assertIsInstance(result, Answer)
         self.assertIs(result.val(), true)
+
+
+    def test_generators(self):
+        ast = run_with_state(read_and_compile, default_env,
+
+                             """(-generator
+                                  (fn* [] (yield 42)
+                                          (yield 43)
+                                          :done))""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Generator)
+        self.assertEqual(result.val().val().int_val(), 42)
+
+        result = run_with_state(result.val(), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIsInstance(result.val(), Generator)
+        self.assertEqual(result.val().val().int_val(), 43)
+
+        result = run_with_state(result.val(), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertNotIsInstance(result.val(), Generator)
+        self.assertIs(result.val(), keyword("done"))
+
+
+    def test_count_generator(self):
+        ast = run_with_state(read_and_compile, default_env,
+
+                             """((fn* loop [g i]
+                                  (if (generator? g)
+                                    (loop (g) (-add i 1))
+                                    i))
+                                  (-iterator [1 2 3])
+                                  0)""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertEqual(result.val().int_val(), 3)
 

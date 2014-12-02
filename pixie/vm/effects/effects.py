@@ -328,6 +328,20 @@ class ConstantValueContinuation(Continuation):
     def _step(self, _):
         return Answer(self._w_val)
 
+class InvokeThunk(Thunk):
+    _immutable_ = True
+    def __init__(self, w_fn, w_val=None):
+        assert isinstance(w_val, Object) or w_val is None
+        self._w_fn = w_fn
+        self._w_val = w_val
+
+    def execute_thunk(self):
+        if self._w_val:
+            result = self._w_fn.invoke_Ef(ArgList([self._w_val]))
+        else:
+            result = self._w_fn.invoke_Ef(ArgList())
+
+        return result
 
 
 ## End Default Handler
