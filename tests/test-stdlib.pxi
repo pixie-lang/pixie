@@ -1,6 +1,11 @@
 (ns pixie.tests.test-stdlib
   (require pixie.test :as t))
 
+(t/deftest test-identity
+  (let [vs [nil true false [1 2 3] #{1 2 3} :oops]]
+    (doseq [v vs]
+      (t/assert= (identity v) v))))
+
 (t/deftest test-str
   (t/assert= (str nil) "nil")
   (t/assert= (str true) "true")
