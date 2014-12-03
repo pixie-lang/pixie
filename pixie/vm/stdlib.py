@@ -614,10 +614,9 @@ def merge_fn(acc, x):
 @jit.unroll_safe
 def _merge__args(args):
     affirm(len(args) > 0, u"Merge takes at least one arg")
-    x = 1
     acc = args[0]
     for x in range(1, len(args)):
-        acc = rt._reduce(acc, merge_fn, args[x])
+        acc = rt._reduce(args[x], merge_fn, acc)
     return acc
 
 
