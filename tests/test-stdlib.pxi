@@ -6,6 +6,10 @@
     (doseq [v vs]
       (t/assert= (identity v) v))))
 
+(t/deftest test-mapcat
+  (t/assert= (mapcat identity []) [])
+  (t/assert= (mapcat first [[[1 2]] [[3] [:not :present]] [[4 5 6]]]) [1 2 3 4 5 6]))
+
 (t/deftest test-str
   (t/assert= (str nil) "nil")
   (t/assert= (str true) "true")
