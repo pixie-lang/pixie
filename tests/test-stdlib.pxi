@@ -224,6 +224,7 @@
   (t/assert= (vec (distinct) [nil nil nil]) [nil]))
 
 (t/deftest test-merge
+  (t/assert= (merge nil) nil)
   (t/assert= (merge {}) {})
   (t/assert= (merge {:a 1} nil) {:a 1})
 
@@ -233,6 +234,20 @@
 
   (t/assert= (merge {:a 1} {:a 2, :b 3}) {:a 2, :b 3})
   (t/assert= (merge {:a 1, :b 4} {:a 2} {:a 3}) {:a 3, :b 4}))
+
+(t/deftest test-merge-with
+  (t/assert= (merge-with identity nil) nil)
+  (t/assert= (merge-with identity {}) {})
+
+  (t/assert= (merge-with identity {} {:a 1, :b 2}) {:a 1, :b 2})
+  (t/assert= (merge-with identity {:a 1} {:b 2}) {:a 1, :b 2})
+
+  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2}) {:a 1})
+  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2} {:a 3}) {:a 1})
+  (t/assert= (merge-with #(identity %2) {:a 1} {:a 2}) {:a 2})
+
+  (t/assert= (merge-with + {:a 21} {:a 21}) {:a 42})
+  (t/assert= (merge-with + {:a 21} {:a 21, :b 1}) {:a 42, :b 1}))
 
 (t/deftest test-for
   (t/assert= (for [x [1 2 3]] x) [1 2 3])
