@@ -68,7 +68,7 @@ class EnvOps(object):
     def resolve(env, w_ns, w_nm):
         result = env.get_in([KW_DEFS, w_ns, w_nm])
         if result is None:
-            tp = _type_registry.get(w_nm.str())
+            tp = _type_registry.get(w_nm.str(), None)
             if tp is not None:
                 return tp
             return unresolved

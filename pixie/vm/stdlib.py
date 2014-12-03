@@ -32,6 +32,7 @@ def print_Ef(s):
 
 class WrappedEffect(Object):
     _type = Type(u"pixie.stdlib.EffectMap")
+    _immutable_fields_ = ["_effect"]
     def type(self):
         return WrappedEffect._type
 
@@ -52,6 +53,7 @@ def _val_at(self, k):
 
 
 class FnHandler(Handler):
+    _immutable_ = True
     def __init__(self, fn):
         self._w_fn = fn
 

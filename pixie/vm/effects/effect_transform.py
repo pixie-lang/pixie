@@ -311,10 +311,10 @@ class CPSTransformer(object):
 
         try:
             new_func = types.FunctionType(c.to_code(), f.func_globals, f.__name__)
-        except:
+        except Exception as ex:
             print f.func_code.co_name
             pprint(start)
-            raise
+            raise ex
 
         for eff_link in self._effect_links:
             if eff_link.target is self._graph.returnblock:
@@ -500,6 +500,22 @@ class OpEmitter(object):
     @staticmethod
     def getitem(hlop):
         yield BINARY_SUBSCR, None
+
+    @staticmethod
+    def newdict(hlop):
+        yield BUILD_MAP, len(hlop.args) / 2
+
+    @staticmethod
+    @skip_all
+    def setitem(hlop):
+        for x in OpEmitter.emit_arg(hlop.args[1]):
+            yield x
+        for x in OpEmitter.emit_arg(hlop.args[0]):
+            yield x
+        for x in OpEmitter.emit_arg(hlop.args[2]):
+            yield x
+        yield STORE_SUBSCR, None
+
 
 class Global(object):
     def __init__(self, name):

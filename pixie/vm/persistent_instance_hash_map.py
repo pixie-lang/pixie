@@ -41,6 +41,9 @@ class PersistentInstanceHashMap(Object):
         self._root = root
         self._meta = meta
 
+    def count(self):
+        return self._cnt
+
     def meta(self):
         return self._meta
 

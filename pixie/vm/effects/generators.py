@@ -11,6 +11,7 @@ def yield_Ef(val):
     return YieldEffect(val)
 
 class Generator(Object):
+
     _type = Type(u"pixie.stdlib.Generator")
     def __init__(self, val, k):
         self._w_val = val
@@ -33,6 +34,7 @@ class Generator(Object):
 
 
 class GeneratorHandler(Handler):
+    _immutable_ = True
     def __init__(self):
         pass
 
@@ -53,7 +55,7 @@ def _generator(fn):
 def _generator_(x):
     return rt.wrap(isinstance(x, Generator))
 
-@extend("pixie.stdlib.-deref", Generator)
-def _deref(gen):
-    return gen.val()
+#@extend("pixie.stdlib.-deref", Generator)
+#def _deref(gen):
+#    return gen.val()
 

@@ -45,7 +45,8 @@ class Invoke(Syntax):
 
         fn = self._fn_and_args_w[0]
         fn_resolved = syntax_thunk_Ef(fn, env)
-        assert fn_resolved is not None
+        # TODO: NPE?
+        #assert fn_resolved is not None
 
         idx = 1
         while idx < len(self._fn_and_args_w):
@@ -79,12 +80,13 @@ class Do(Syntax):
 
 class PixieFunction(Object):
     _type = Type(u"pixie.stdlib.PixieFunction")
-    _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env"]
+    _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env", "_name_idx"]
 
     def type(self):
         return PixieFunction._type
 
-    def __init__(self, name, args, body, env=None):
+    def __init__(self, name, args, body, name_idx, env=None):
+        self._name_idx = name_idx
         self._w_name = name
         self._args_w = args
         self._w_body = body
@@ -94,12 +96,12 @@ class PixieFunction(Object):
         return len(self._args_w)
 
     def with_env(self, env):
-        return PixieFunction(self._w_name, self._args_w, self._w_body, env)
+        return PixieFunction(self._w_name, self._args_w, self._w_body, self._name_idx, env)
 
     def invoke_with_env_Ef(self, args, env):
         x = 0
         while x < args.arg_count():
-            env = env.with_local(jit.promote(self._args_w[x]), args.get_arg(x))
+            env = env.with_local(self._args_w[x], args.get_arg(x))
             x += 1
 
         return SyntaxThunk(self._w_body, env)
@@ -109,15 +111,16 @@ class PixieFunction(Object):
     def _invoke_Ef(self, args):
         env = self._env
         if self._w_name is not None:
-            env = env.with_local(jit.promote(self._w_name), self)
+            env = env.with_local(self._name_idx, self)
         return self.invoke_with_env_Ef(args, env)
 
 class VariadicFunction(Object):
-    _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env", "_required_args"]
+    _immutable_fields_ = ["_w_name", "_args_w[*]", "_w_body", "_env", "_required_args", "_name_idx"]
     def type(self):
         return PixieFunction._type
 
-    def __init__(self, name, args, required_args, body, env=None):
+    def __init__(self, name, args, required_args, body, name_idx, env=None):
+        self._name_idx = name_idx
         self._w_name = name
         self._args_w = args
         self._w_body = body
@@ -128,7 +131,7 @@ class VariadicFunction(Object):
         return -1
 
     def with_env(self, env):
-        return VariadicFunction(self._w_name, self._args_w, self._required_args, self._w_body, env)
+        return VariadicFunction(self._w_name, self._args_w, self._required_args, self._w_body, self._name_idx, env)
 
     def invoke_with_env_Ef(self, args, env):
         if self._required_args == 0:
@@ -154,7 +157,7 @@ class VariadicFunction(Object):
     def _invoke_Ef(self, args):
         env = self._env
         if self._w_name is not None:
-            env = env.with_local(jit.promote(self._w_name), self)
+            env = env.with_local(self._name_idx, self)
         return self.invoke_with_env_Ef(args, env)
     
     
@@ -163,7 +166,8 @@ class MultiArityFn(Object):
     def type(self):
         return PixieFunction._type
 
-    def __init__(self, w_name, arities, rest_fn=None, env=None, meta=nil):
+    def __init__(self, w_name, arities, name_idx, rest_fn=None, env=None, meta=nil):
+        self._name_idx = name_idx
         self._w_name = w_name
         self._arities = arities
         self._rest_fn = rest_fn
@@ -172,8 +176,7 @@ class MultiArityFn(Object):
 
 
     def with_env(self, env):
-        return MultiArityFn(self._w_name, self._arities, self._rest_fn, env, self._meta)
-
+        return MultiArityFn(self._w_name, self._arities, self._name_idx, self._rest_fn, env, self._meta)
 
     @jit.elidable_promote()
     def get_fn(self, arity):
@@ -185,7 +188,7 @@ class MultiArityFn(Object):
     def _invoke_Ef(self, args):
         env = self._env
         if self._w_name is not None:
-            env = env.with_local(jit.promote(self._w_name), self)
+            env = env.with_local(self._name_idx, self)
         return self.get_fn(args.arg_count()).invoke_with_env_Ef(args, env)
 
 
@@ -226,8 +229,9 @@ class Binding(Syntax):
     def type(self):
         return Binding._type
 
-    def __init__(self, w_nm, w_binding_expr, w_body_expr):
-        self._w_nm = w_nm
+    def __init__(self, idx, w_binding_expr, w_body_expr):
+        assert isinstance(idx, r_uint)
+        self._idx = idx
         self._w_binding_expr = w_binding_expr
         self._w_body_expr = w_body_expr
 
@@ -235,7 +239,7 @@ class Binding(Syntax):
     def interpret_Ef(self, locals):
         ast = self._w_binding_expr
         result = syntax_thunk_Ef(ast, locals)
-        locals = locals.with_local(self._w_nm, result)
+        locals = locals.with_local(self._idx, result)
         ast = self._w_body_expr
         return syntax_thunk_Ef(ast, locals)
 
@@ -246,8 +250,8 @@ class Binding(Syntax):
 
 KW_UNRESOVLED_SYMBOL = keyword(u"UNRESOLVED-SYMBOL")
 
-class Lookup(Syntax):
-    _type = Type(u"pixie.ast.Lookup")
+class LookupGlobal(Syntax):
+    _type = Type(u"pixie.ast.LookupGlobal")
     _immutable_fields_ = ["_w_ns", "_w_nm", "_explicit_namespace"]
 
     def __init__(self, ns, nm, explicit_namespace = False):
@@ -257,21 +261,31 @@ class Lookup(Syntax):
 
 
     def type(self):
-        return Lookup._type
+        return LookupGlobal._type
 
     @cps
     def interpret_Ef(self, env):
-        if not self._explicit_namespace:
-            local = env.lookup_local(self._w_nm)
-            if local is not None:
-                return local
-
         val = resolve_Ef(self._w_ns, self._w_nm)
         if val is unresolved:
             msg = self._w_nm.str() + u" is unresolved in " + self._w_ns.str()
             return throw_Ef(KW_UNRESOVLED_SYMBOL, msg)
 
         return val
+
+class LookupLocal(Syntax):
+    _type = Type(u"pixie.ast.LookupLocal")
+    _immutable_fields_ = ["_idx"]
+
+    def __init__(self, idx):
+        self._idx = idx
+
+    def type(self):
+        return LookupLocal._type
+
+    @cps
+    def interpret_Ef(self, env):
+        return env.lookup_local(self._idx)
+
 
 
 class If(Syntax):
@@ -335,56 +349,34 @@ class Vector(Syntax):
 NOT_FOUND = r_uint(1024 * 1024)
 
 class Locals(Object):
-    _immutable_fields_ = ["_names[*]", "_vals[*]"]
-    _virtualizable_ = ["_names[*]", "_vals[*]"]
+    _immutable_fields_ = ["_vals[*]"]
+    _virtualizable_ = ["_vals[*]"]
 
-    def __init__(self, names=[], vals=[]):
+    def __init__(self, vals=[]):
         self = jit.hint(self, access_directly=True, fresh_virtualizable=True)
-        self._names = names
         self._vals = vals
 
-    @jit.unroll_safe
-    def name_idx(self, nm):
-        x = r_uint(0)
-        while x < r_uint(len(self._names)):
-            val = self._names[x]
-            if nm is val:
-                return x
-            x += 1
-        return NOT_FOUND
-
-    def lookup_local(self, nm):
-        idx = jit.promote(self.name_idx(nm))
-        if idx == NOT_FOUND:
-            return None
+    def lookup_local(self, idx):
+        assert isinstance(idx, r_uint)
+        assert idx < len(self._vals)
         return self._vals[idx]
 
     @jit.unroll_safe
-    def with_local(self, name, val):
-        idx = 0
-        while idx < len(self._names):
-            if self._names[idx] is name:
-                break
-            idx += 1
-
-        if idx == len(self._names):
-            new_size = idx + 1
+    def with_local(self, idx, val):
+        assert idx <= len(self._vals) + 1, [idx, self._vals]
+        if idx >= len(self._vals):
+            new_locals = [None] * (idx + 1)
         else:
-            new_size = len(self._names)
+            new_locals = [None] * len(self._vals)
 
-        new_names = [None] * new_size
-        new_vals = [None] * new_size
+        i = 0
+        while i < len(self._vals):
+            new_locals[i] = self._vals[i]
+            i += 1
 
-        x = 0
-        while x < len(self._names):
-            new_names[x] = self._names[x]
-            new_vals[x] = self._vals[x]
-            x += 1
+        new_locals[idx] = val
 
-        new_names[idx] = name
-        new_vals[idx] = val
-
-        return Locals(new_names, new_vals)
+        return Locals(new_locals)
 
 
 ### Helpers

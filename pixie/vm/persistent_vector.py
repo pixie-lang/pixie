@@ -174,6 +174,16 @@ class PersistentVector(Object):
 
         return lst
 
+    def to_r_uint_list(self):
+        lst = [None] * self._cnt
+
+        x = 0
+        while x < len(lst):
+            lst[x] = self.nth(x).r_uint_val()
+            x += 1
+
+        return lst
+
     def to_str(self):
 
         acc = []

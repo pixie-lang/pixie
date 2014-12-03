@@ -7,6 +7,7 @@ from rpython.rlib.rarithmetic import intmask, r_uint
 
 class PersistentList(Object):
     _type = Type(u"pixie.stdlib.PersistentList")
+    _immutable_fields_ = ["_cnt", "_meta", "_first", "_next"]
 
     def type(self):
         return PersistentList._type

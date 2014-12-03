@@ -7,6 +7,7 @@ from pixie.vm.reader import StringReader, read_Ef, PromptReader #, MetaDataReade
 from pixie.vm.keyword import keyword
 # from pixie.vm.interpreter import interpret
 
+import pixie.vm.interfaces
 from pixie.vm.code import wrap_fn, NativeFn
 # from pixie.vm.stacklet import with_stacklets
 # import pixie.vm.stacklet as stacklet
@@ -356,5 +357,5 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    entry_point()
-    #run_debug(sys.argv)
+    #entry_point()
+    run_debug(sys.argv)

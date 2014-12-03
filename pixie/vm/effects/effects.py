@@ -1,7 +1,7 @@
 import rpython.rlib.jit as jit
 
 class Object(object):
-    _immutable_fields_ = ["_str"]
+    _immutable_fields_ = ["_str", "_cnt", "_effect"]
     """
     Base class of all Pixie Object
     """
@@ -13,7 +13,7 @@ class Object(object):
     def invoke_Ef(self, args):
         assert isinstance(args, ArgList)
         result = self._invoke_Ef(args)
-        assert not isinstance(result, Object) and result is not None, [type(result), self]
+        assert not isinstance(result, Object) and result is not None
         return result
 
 class ArgList(object):

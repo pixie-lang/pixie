@@ -10,7 +10,6 @@ from pixie.vm.effects.generators import Generator
 from pixie.vm.ast import SyntaxThunk, Locals
 from pixie.vm.effects.environment import run_with_state, default_env, run_thunk_with_state
 from pixie.vm.keyword import keyword
-
 import unittest
 
 @wrap_fn()
@@ -205,7 +204,7 @@ class TestCompilation(unittest.TestCase):
         self.assertIs(result.val(), keyword("done"))
 
 
-    def test_count_generator(self):
+    def test_vector_generator(self):
         ast = run_with_state(read_and_compile, default_env,
 
                              """((fn* loop [g i]
@@ -219,4 +218,28 @@ class TestCompilation(unittest.TestCase):
 
         self.assertIsInstance(result, Answer)
         self.assertEqual(result.val().int_val(), 3)
+
+    def test_loop_generator(self):
+        ast = run_with_state(read_and_compile, default_env,
+
+                             """((fn* loop [g i]
+                                  (if (generator? g)
+                                    (loop (g) (-add i 1))
+                                    i))
+                                  (-generator
+                                   (fn* []
+                                    ((fn* loop [i]
+                                     (if (-num-eq i 5)
+                                       i
+                                       (do (yield i)
+                                           (loop (-add i 1)))))
+                                     0)))
+                                  0)""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertEqual(result.val().int_val(), 5)
+
+
 
