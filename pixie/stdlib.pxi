@@ -21,6 +21,13 @@
               (cons 'let* args)))
 (set-macro! let)
 
+(def identity
+  (fn ^{:doc "The identity function. Returns its argument."
+        :added "0.1"}
+    identity
+    [x]
+    x))
+
 (def conj
   (fn ^{:doc "Adds elements to the collection. Elements are added to the end except in the case of Cons lists"
         :signatures [[] [coll] [coll item] [coll item & args]]
@@ -151,6 +158,14 @@
         ([result input]
            (reduce rrf result input))))))
 
+(def mapcat
+  (fn ^{:doc "Maps f over the elements of coll and concatenates the result"
+        :added "0.1"}
+    mapcat
+    ([f]
+       (comp (map f) cat))
+    ([f coll]
+       (transduce (mapcat f) conj coll))))
 
 (def seq-reduce (fn seq-reduce
                   [coll f init]
@@ -325,9 +340,10 @@
                 :signatures [[nm doc? meta? & body]]}
             defn
             [nm & rest]
-            (let [meta (if (instance? String (first rest))
-                         {:doc (first rest)}
-                         {})
+            (let [meta (if (meta nm) (meta nm) {})
+                  meta (if (instance? String (first rest))
+                         (assoc meta :doc (first rest))
+                         meta)
                   rest (if (instance? String (first rest)) (next rest) rest)
                   meta (if (satisfies? IMap (first rest))
                          (merge meta (first rest))
@@ -351,6 +367,14 @@
        (set-macro! ~nm)
        ~nm))
 (set-macro! defmacro)
+
+(defmacro defn-
+  {:doc "Define a new non-public function. Otherwise the same as defn"
+   :signatures [[nm doc? meta? & body]]
+   :added "0.1"}
+  [nm & rest]
+  (let [nm (with-meta nm (assoc (meta nm) :private true))]
+    (cons `defn (cons nm rest))))
 
 (defmacro ->
   {:doc "Threads `x` through `forms`, passing the result of one step as the first argument of the next."
@@ -937,15 +961,17 @@ Creates new maps if the keys are not present."
   [sym]
   `(resolve-in (this-ns-name) ~sym))
 
-(defmacro with-bindings [binds & body]
-  `(do (push-binding-frame!)
-       (reduce (fn [_ map-entry]
-                 (set! (resolve (key map-entry)) (val map-entry)))
-               nil
-               (apply hashmap ~@binds))
-       (let [ret (do ~@body)]
-         (pop-binding-frame!)
-         ret)))
+(defmacro binding [bindings & body]
+  (let [bindings (apply hashmap bindings)
+        set-vars (reduce (fn [res binding]
+                           (conj res `(set! (resolve (quote ~(key binding))) ~(val binding))))
+                         []
+                         bindings)]
+    `(do (push-binding-frame!)
+         ~@set-vars
+         (let [ret (do ~@body)]
+           (pop-binding-frame!)
+           ret))))
 
 (def foo 42)
 (set-dynamic! (resolve 'pixie.stdlib/foo))
@@ -1149,7 +1175,11 @@ and implements IAssociative, ILookup and IObject."
         has-doc? (if doc true (get (meta x) :signatures))]
     (cond
      has-doc? (let [sigs (get (meta x) :signatures)
-                    examples (get (meta x) :examples)]
+                    examples (get (meta x) :examples)
+                    indent (fn [s]
+                             (if (>= (pixie.string.internal/index-of s "\n") 0)
+                               (apply str "\n" (map #(str "  " % "\n") (pixie.string.internal/split s "\n")))
+                               s))]
                 (println (str (namespace vr) "/" (name vr)))
                 (if sigs
                   (prn (seq sigs)))
@@ -1160,9 +1190,9 @@ and implements IAssociative, ILookup and IObject."
                   (do
                     (println)
                     (doseq [example examples]
-                      (println (str "  user => " (first example)))
+                      (println (str "  user => " (indent (first  example))))
                       (if (second example)
-                        (print (apply str (map #(str "  " % "\n") (pixie.string.internal/split (second example) "\n")))))
+                        (print (indent (second example))))
                       (if (contains? example 2)
                         (println (str "  " (-repr (third example))))))))
                 (println)
@@ -1275,9 +1305,23 @@ The new value is thus `(apply f current-value-of-atom args)`."
   `(if (not ~test) (do ~@body)))
 
 (defmacro when-let [binding & body]
-  `(let ~binding
-     (when ~(first binding)
-       ~@body)))
+  (let [bind (nth binding 0)
+        test (nth binding 1)]
+    `(let [tmp# ~test]
+       (when tmp#
+         (let [~bind tmp#]
+           ~@body)))))
+
+(defmacro if-let
+  ([binding then] `(if-let ~binding ~then nil))
+  ([binding then else]
+     (let [bind (nth binding 0)
+           test (nth binding 1)]
+       `(let [tmp# ~test]
+          (if tmp#
+            (let [~bind tmp#]
+              ~then)
+            ~else)))))
 
 (defn nnext
   {:doc "Equivalent to (next (next coll))"
@@ -1623,6 +1667,21 @@ user => (refer 'pixie.string :exclude '(substring))"
                              (recur (next s))))))
 (extend -at-end? EmptyList (fn [_] true))
 
+(defn merge-with
+  [f & maps]
+  (cond
+   (empty? maps) nil
+   (= (count maps) 1) (first maps)
+   :else (let [merge2 (fn [m1 m2]
+                        (reduce (fn [res e]
+                                  (let [k (key e) v (val e)]
+                                    (if (contains? m1 k)
+                                      (assoc res k (f (get m1 k) v))
+                                      (assoc res k v))))
+                                (or m1 {})
+                                m2))]
+           (reduce merge2 (first maps) (next maps)))))
+
 (defn every?
   {:doc "Check if every element of the collection satisfies the predicate."
    :added "0.1"}
@@ -1678,7 +1737,7 @@ The params can be destructuring bindings, see `(doc let)` for details."}
       (apply method dispatch-arg args))))
 
 (defmacro defmulti
-  {:doc "Define a multimethod, which dispatches to it's methods based on dispatch-fn."
+  {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
    :examples [["(defmulti greet first)"]
               ["(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"]
               ["(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"]
@@ -1708,3 +1767,103 @@ The params can be destructuring bindings, see `(doc let)` for details."}
               ~dispatch-val (fn ~params
                               ~@body))
        ~name)))
+
+(defmacro declare
+  {:doc "Forward declare the given variable names, setting them to nil."
+   :added "0.1"}
+  [& nms]
+  (let [defs (map (fn [nm] `(def ~nm)) (seq nms))]
+    `(do ~@defs)))
+
+(defmacro defprotocol
+  {:doc "Define a new protocol."
+   :examples [["(defprotocol SayHi (hi [x]))"]
+              ["(extend hi String (fn [name] (str \"Hi, \" name \"!\")))"]
+              ["(hi \"Jane\")" nil "Hi, Jane!"]]
+   :added "0.1"}
+  [nm & sigs]
+  `(pixie.stdlib.internal/-defprotocol (quote ~nm)
+                                       ~(reduce (fn [r sig]
+                                                  (conj r `(quote ~(first sig))))
+                                                []
+                                                sigs)))
+
+(defmacro extend-type
+  {:doc "Extend the protocols to the given type.
+
+Expands to calls to `extend`."
+   :examples [["(defprotocol SayHi (hi [x]))"]
+              ["(extend-type String SayHi (hi [name] (str \"Hi, \" name \"!\")))"]
+              ["(hi \"Jane\")" nil "Hi, Jane!"]]
+   :added "0.1"}
+  [tp & extensions]
+  (let [[_ extends] (reduce (fn [[proto res] extend]
+                              (cond
+                               (symbol? extend) [extend res]
+                               :else [proto (conj res `(extend ~(first extend) ~tp (fn ~@(next extend))))]))
+                            []
+                            extensions)]
+    `(do
+       ~@extends)))
+
+(defmacro extend-protocol
+  {:doc "Extend the protocol to the given types.
+
+Expands to calls to `extend-type`."
+   :examples [["(defprotocol SayHi (hi [x]))"]
+              ["(extend-protocol SayHi
+
+  String
+  (hi [name]
+    (str \"Hi, \" name \"!\"))
+
+  Integer
+  (hi [n]
+    (str \"Hi, #\" n \"!\")))"]
+              ["(hi \"Jane\")" nil "Hi, Jane!"]
+              ["(hi 42)" nil "Hi, #42!"]]
+   :added "0.1"}
+  [protocol & extensions]
+  ; tps is used to ensure protocols are extended in order
+  (let [[_ tps exts] (reduce (fn [[tp tps res] extend-body]
+                               (cond
+                                (symbol? extend-body) [extend-body (conj tps extend-body) (assoc res extend-body [])]
+                                :else [tp tps (update-in res [tp] conj extend-body)]))
+                             [nil [] {}]
+                             extensions)
+        exts (reduce (fn [res tp]
+                       (conj res `(extend-type ~tp ~protocol ~@(get exts tp))))
+                     []
+                     tps)]
+    `(do ~@exts)))
+
+(defmacro for
+  {:doc "A list comprehension for the bindings."
+   :examples [["(for [x [1 2 3]] x)" nil [1 2 3]]
+              ["(for [x [1 2 3] y [:a :b :c]] [x y])" nil [[1 :a] [1 :b] [1 :c] [2 :a] [2 :b] [2 :c] [3 :a] [3 :b] [3 :c]]]]
+   :added "0.1"}
+  [bindings & body]
+  (assert (and (pos? (count bindings)) (even? (count bindings))) "for requires an even number of bindings")
+  (let [gen-loop (fn gen-loop [coll-bindings bindings]
+                   (if (seq bindings)
+                     (let [c (gensym "coll__")
+                           binding (first bindings)
+                           coll (second bindings)]
+                       `(loop [res# []
+                               ~c (seq ~coll)]
+                          (if ~c
+                            (recur (into res#
+                                         ~(gen-loop (into coll-bindings
+                                                          [binding `(first ~c)])
+                                                    (nnext bindings)))
+                                   (next ~c))
+                            res#)))
+                     `(let ~coll-bindings
+                        [~@body])))]
+    `(or (seq ~(gen-loop [] bindings)) '())))
+
+(defmacro use
+  [ns]
+  `(do
+     (load-ns ~ns)
+     (refer ~ns :refer :all)))

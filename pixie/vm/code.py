@@ -580,6 +580,8 @@ class PolymorphicFn(BaseCode):
         BaseCode.__init__(self)
         self._name = name
         self._dict = {}
+        # stored separately to allow ordered extending (e.g. more general protocols later)
+        self._protos = []
         self._rev = 0
         self._protocol = protocol
         self._default_fn = DefaultProtocolFn(self)
@@ -588,6 +590,8 @@ class PolymorphicFn(BaseCode):
 
     def extend(self, tp, fn):
         self._dict[tp] = fn
+        if isinstance(tp, Protocol):
+            self._protos.append(tp)
         self._rev += 1
         self._fn_cache = {}
         self._protocol.add_satisfies(tp)
@@ -596,18 +600,13 @@ class PolymorphicFn(BaseCode):
         ## Search the entire object tree to find the function to execute
         assert isinstance(tp, object.Type)
 
-        protos = []
-        for p, fn in self._dict.iteritems():
-            if isinstance(p, Protocol):
-                protos.append(p)
-
         find_tp = tp
         while True:
             result = self._dict.get(find_tp, None)
             if result is not None:
                 return result
 
-            for proto in protos:
+            for proto in self._protos:
                 if proto.satisfies(find_tp):
                     return self._dict[proto]
 

@@ -1,6 +1,15 @@
 (ns pixie.tests.test-stdlib
   (require pixie.test :as t))
 
+(t/deftest test-identity
+  (let [vs [nil true false [1 2 3] #{1 2 3} :oops]]
+    (doseq [v vs]
+      (t/assert= (identity v) v))))
+
+(t/deftest test-mapcat
+  (t/assert= (mapcat identity []) [])
+  (t/assert= (mapcat first [[[1 2]] [[3] [:not :present]] [[4 5 6]]]) [1 2 3 4 5 6]))
+
 (t/deftest test-str
   (t/assert= (str nil) "nil")
   (t/assert= (str true) "true")
@@ -186,6 +195,14 @@
   (t/assert= (macro? :foo) false)
   (t/assert= (macro? "foo") false))
 
+(def ^:dynamic *earmuffiness* :low)
+
+(t/deftest test-binding
+  (t/assert= *earmuffiness* :low)
+  (binding [*earmuffiness* :quite-high]
+    (t/assert= *earmuffiness* :quite-high))
+  (t/assert= *earmuffiness* :low))
+
 (t/deftest test-every?
   (t/assert= (every? even? [2 4 6 8]) true)
   (t/assert= (every? odd?  [2 4 6 8]) false)
@@ -205,3 +222,36 @@
   (t/assert= (sequence (distinct) [1 2 3 2 1]) '(1 2 3))
   (t/assert= (vec (distinct) [1 1 2 2 3 3]) [1 2 3])
   (t/assert= (vec (distinct) [nil nil nil]) [nil]))
+
+(t/deftest test-merge
+  (t/assert= (merge nil) nil)
+  (t/assert= (merge {}) {})
+  (t/assert= (merge {:a 1} nil) {:a 1})
+
+  (t/assert= (merge {} {:a 1, :b 2}) {:a 1, :b 2})
+  (t/assert= (merge {:a 1} {:b 2}) {:a 1, :b 2})
+  (t/assert= (merge {} {:a 1} {:b 2}) {:a 1, :b 2})
+
+  (t/assert= (merge {:a 1} {:a 2, :b 3}) {:a 2, :b 3})
+  (t/assert= (merge {:a 1, :b 4} {:a 2} {:a 3}) {:a 3, :b 4}))
+
+(t/deftest test-merge-with
+  (t/assert= (merge-with identity nil) nil)
+  (t/assert= (merge-with identity {}) {})
+
+  (t/assert= (merge-with identity {} {:a 1, :b 2}) {:a 1, :b 2})
+  (t/assert= (merge-with identity {:a 1} {:b 2}) {:a 1, :b 2})
+
+  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2}) {:a 1})
+  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2} {:a 3}) {:a 1})
+  (t/assert= (merge-with #(identity %2) {:a 1} {:a 2}) {:a 2})
+
+  (t/assert= (merge-with + {:a 21} {:a 21}) {:a 42})
+  (t/assert= (merge-with + {:a 21} {:a 21, :b 1}) {:a 42, :b 1}))
+
+(t/deftest test-for
+  (t/assert= (for [x [1 2 3]] x) [1 2 3])
+  (t/assert= (for [x [1 2 3] y [:a :b :c]] [x y])
+             [[1 :a] [1 :b] [1 :c]
+              [2 :a] [2 :b] [2 :c]
+              [3 :a] [3 :b] [3 :c]]))
