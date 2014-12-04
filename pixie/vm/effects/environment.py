@@ -7,6 +7,7 @@ from rpython.rlib.jit import promote, JitDriver
 import rpython.rlib.jit as jit
 from pixie.vm.keyword import keyword
 from pixie.vm.persistent_instance_hash_map import EMPTY as EMPTY_MAP
+from rpython.rlib.objectmodel import compute_unique_id
 
 """
 Environments are immutable, and have the following format:
@@ -48,6 +49,7 @@ defeffect("pixie.stdlib.OpaqueIO", "OpaqueIO", ["effect"])
 ExceptionEffect.__repr__ = lambda self: str(self._w_kw.__repr__()) + " : " + str(self._w_msg.str())
 
 class Unresolved(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Unresolved")
     def __init__(self):
         pass
@@ -152,8 +154,8 @@ def mod_builtins(fn, *args):
 def get_printable_location(ast):
     return str(ast)
 
-jitdriver = JitDriver(greens=["ast"], reds=["locals", "thunk", "globals"],
-                      virtualizables=["locals"],
+jitdriver = JitDriver(greens=["ast"], reds=["locals", "thunk"],
+                      #_virtualizables=["locals"],
                       get_printable_location=get_printable_location)
 
 def raise_polymorphic_arity_exception_Ef():
@@ -168,6 +170,7 @@ def raise_override_error_Ef(name, tp):
     return ExceptionEffect(keyword(u"NO-OVERRIDE"), String(name.str()))
 
 class PolymorphicFn(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.PolymorphicFn")
 
     def type(self):
@@ -194,6 +197,7 @@ class PolymorphicFn(Object):
 
 
 class DoublePolymorphicFn(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.DoublePolymorphicFn")
 
     def __init__(self, protocol, name):
@@ -288,12 +292,17 @@ def run_with_state(fn, env, arg=None):
     return run_thunk_with_state(t, env)
 
 def run_thunk_with_state(t, env, error_on_unhandled=True):
+    from pixie.vm.ast import TailCallSyntaxThunk
     t = handle_with(EnvironmentHandler(env), t, answer_k)
     while True:
+        if isinstance(t, Thunk) and t.is_recur_point():
+            (ast, locals) = t.get_loc()
+            jitdriver.can_enter_jit(ast=ast, locals=locals, thunk=t)
+
         if isinstance(t, Thunk):
             (ast, locals) = t.get_loc()
             if ast is not None:
-                jitdriver.jit_merge_point(ast=ast, globals=env, locals=locals, thunk=t)
+                jitdriver.jit_merge_point(ast=ast, locals=locals, thunk=t)
             t = t.execute_thunk()
 
         elif isinstance(t, Answer):

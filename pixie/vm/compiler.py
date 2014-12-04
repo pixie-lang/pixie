@@ -41,6 +41,7 @@ class WithLocalsAssignment(Handler):
                 return handle_with(self, ContinuationThunk(effect.get(KW_K), val))
 
 class InvokeWith(Thunk):
+    _immutable_ = True
     def __init__(self, comp_f, form):
         self._comp_f = comp_f
         self._w_form = form

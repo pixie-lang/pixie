@@ -11,6 +11,7 @@ from rpython.rlib.rarithmetic import build_int
 UNROLL_IF_SMALLER_THAN = 8
 
 class Array(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Array")
     __immutable_fields__ = ["_list[*]"]
     def type(self):

@@ -8,6 +8,7 @@ from rpython.rlib.rarithmetic import intmask
 
 
 class Symbol(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Symbol")
     _immutable_fields_ = ["_hash", "_str"]
 

@@ -41,11 +41,11 @@ def wrap_fn(nm):
     return wrapper
 
 
-_inited_fns = ["first", "count", "list", "next", "-str", "-print", "eq", "-eq", "satisfies?", "seq", "nth", "-nth"]
+_inited_fns = ["first", "count", "list", "next", "-str", "-print", "eq", "-eq", "satisfies?", "seq", "nth", "-nth",
+               "-val-at"]
 
 for x in _inited_fns:
     nm = munge(x+"_Ef")
-    print nm
     globals()[nm] = wrap_fn(x)
 
 _inited_vals = ["load-paths"]

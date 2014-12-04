@@ -1,10 +1,11 @@
 from pixie.vm.effects.effects import Object, Type
+from pixie.vm.effects.effect_transform import cps
 import pixie.vm.effects.effects as effects
 from pixie.vm.primitives import nil
 from rpython.rlib.objectmodel import specialize
 
-
 class Keyword(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Keyword")
     __immutable_fields__ = ["_hash", "_str"]
     def __init__(self, name):
@@ -38,6 +39,10 @@ class Keyword(Object):
 
     def str(self):
         return self._str
+
+    def invoke_Ef(self, args):
+        import pixie.vm.rt as rt
+        return rt._val_at_Ef(args.get_arg(0), self)
 
 
 class KeywordCache(object):

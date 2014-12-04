@@ -1,7 +1,8 @@
 import rpython.rlib.jit as jit
+import rpython.rlib.debug as debug
 
 class Object(object):
-    _immutable_fields_ = ["_str", "_cnt", "_effect"]
+    _immutable_ = True
     """
     Base class of all Pixie Object
     """
@@ -9,6 +10,7 @@ class Object(object):
         """
         Everything is technically invokable, may throw an exception though
         """
+        assert False
 
     def invoke_Ef(self, args):
         assert isinstance(args, ArgList)
@@ -20,6 +22,7 @@ class ArgList(object):
     _immutable_ = True
     _immutable_fields_ = "_args_w[*]"
     def __init__(self, args=[]):
+        debug.make_sure_not_resized(args)
         self._args_w = args
 
     @jit.unroll_safe
@@ -46,6 +49,7 @@ class ArgList(object):
 _type_registry = {}
 
 class Type(Object):
+    _immutable_ = True
     _immutable_fields_ = ["_name", "_parent"]
     def __init__(self, name, parent = None):
         assert isinstance(name, unicode), u"Type names must be unicode"
@@ -76,7 +80,6 @@ class Effect(EffectObject):
     Base class for any effects
     """
     _immutable_ = True
-    pass
 
     def without_k(self):
         """
@@ -90,6 +93,7 @@ class Effect(EffectObject):
 
 
 class OpaqueIOFn(Object):
+    _immutable_ = True
     """
     Base class for an effect that mutates some resource.
     """
@@ -132,8 +136,11 @@ class Continuation(Object):
     def step(self, x):
         assert isinstance(x, Object) or x is None, x
         result = self._step(x)
-        assert isinstance(result, EffectObject), [type(result), type(self)]
+        assert isinstance(result, EffectObject)
         return result
+
+    def invoke_Ef(self, args):
+        return self._step(args.get_arg(0))
 
 
 class AnswerContinuation(Continuation):
@@ -170,6 +177,9 @@ class Thunk(EffectObject):
 
     def get_loc(self):
         return (None, None)
+
+    def is_recur_point(self):
+        return False
 
 
 
@@ -268,11 +278,14 @@ class CallEffectFn(Thunk):
 
     def execute_thunk(self):
         thval = self._effect.execute_thunk()
-        assert isinstance(thval, EffectObject), [type(thval), type(self._effect)]
+        assert isinstance(thval, EffectObject)
         return handle_with(self._handler, thval, self._k)
 
     def get_loc(self):
         return self._effect.get_loc()
+
+    def is_recur_point(self):
+        return self._effect.is_recur_point()
 
 
 class HandleRecFn(Handler):

@@ -111,9 +111,9 @@ class TestCompilation(unittest.TestCase):
 
     def test_recursive_fn(self):
         ast = run_with_state(read_and_compile, default_env, """((fn* self [x]
-                                                                  (if (-num-eq x 10)
+                                                                  (if (-num-eq x 10000)
                                                                     x
-                                                                    (self (-add 1 x))))
+                                                                    (self (-add ((fn* [] 1)) x))))
                                                                 0)""")
         result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
 
@@ -164,6 +164,7 @@ class TestCompilation(unittest.TestCase):
 
     def test_handle_works(self):
         from pixie.vm.effects.generators import YieldEffect
+        from pixie.vm.effects.environment import Resolve
         ast = run_with_state(read_and_compile, default_env,
 
                              """(-handle
@@ -175,6 +176,35 @@ class TestCompilation(unittest.TestCase):
 
         self.assertIsInstance(result, Answer)
         self.assertIs(result.val(), true)
+
+        ast = run_with_state(read_and_compile, default_env,
+
+                             """(-handle
+                                  (fn* [e]
+                                    (:type e))
+                                  (fn* [] (foo 42)))""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIs(result.val(), Resolve._type)
+
+
+        ast = run_with_state(read_and_compile, default_env,
+
+                             """(-handle
+                                  (fn* [e]
+                                    (if (effect? e)
+                                      (if (identical? (:type e) pixie.stdlib.YieldEffect)
+                                        ((:k e) nil)
+                                        (-unhandled e))
+                                      e))
+                                  (fn* [] (yield 1) 42))""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertIs(result.val().int_val(), 42)
 
 
     def test_generators(self):
@@ -218,6 +248,30 @@ class TestCompilation(unittest.TestCase):
 
         self.assertIsInstance(result, Answer)
         self.assertEqual(result.val().int_val(), 3)
+
+    def test_yield_direct_generator(self):
+        ast = run_with_state(read_and_compile, default_env,
+                             """(-handle ((fn* counter [i]
+               (fn* [e]
+                    (if (effect? e)
+                      (if (identical? (:type e) pixie.stdlib.YieldEffect)
+                        (-handle (counter (-add i 1))
+                                 (fn* [] ((:k e) nil)))
+                        (-unhandled e))
+                      i)))
+          0)
+         (fn* []
+              ((fn* loop [i]
+                     (if (-num-eq i 10000)
+                       i
+                       (do (yield i)
+                           (loop (-add i 1)))))
+               0)))""")
+
+        result = run_thunk_with_state(SyntaxThunk(ast.val(), Locals()), default_env)
+
+        self.assertIsInstance(result, Answer)
+        self.assertEqual(result.val().int_val(), 10)
 
     def test_loop_generator(self):
         ast = run_with_state(read_and_compile, default_env,

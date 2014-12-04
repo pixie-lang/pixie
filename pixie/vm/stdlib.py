@@ -2,7 +2,7 @@
 from pixie.vm.primitives import true, false, nil
 from pixie.vm.code import defprotocol, as_global, wrap_fn, default_fn, extend
 from pixie.vm.effects.effects import OpaqueIOFn, raise_Ef, answer_k, Object, Type, Handler, Answer, handle_with, \
-    ContinuationThunk, ArgList, Thunk, InvokeThunk
+    ContinuationThunk, ArgList, Thunk, InvokeThunk, HandledEffectExecutingContinuation
 
 from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.effects.environment import link_builtins, throw_Ef, OpaqueIO, Satisfies
@@ -14,6 +14,7 @@ import pixie.vm.rt as rt
 import pixie.vm.interfaces
 
 class PrintFn(OpaqueIOFn):
+    _immutable_ = True
     def __init__(self, str):
         self._str = str
 
@@ -31,6 +32,7 @@ def print_Ef(s):
     return OpaqueIO(PrintFn(s.str()))
 
 class WrappedEffect(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.EffectMap")
     _immutable_fields_ = ["_effect"]
     def type(self):
@@ -38,6 +40,9 @@ class WrappedEffect(Object):
 
     def __init__(self, effect):
         self._effect = effect
+
+    def effect(self):
+        return self._effect
 
 
 
@@ -47,10 +52,22 @@ KW_TYPE = keyword("type")
 @extend(u"pixie.stdlib.-val-at", WrappedEffect)
 def _val_at(self, k):
     if k is KW_TYPE:
-        return self._effect.type()
-    val = self._effect.get(k)
+        return self.effect().type()
+    val = self.effect().get(k)
     return val if val else nil
 
+defeffect("pixie.stdlib.UnhandledEffect", "UnhandledEffect", ["effect"])
+
+class WrappedEffectUnwrapper(Handler):
+    _immutable_ = True
+    def __init__(self, handler):
+        self._handler = handler
+    def handle(self, effect, k):
+        if isinstance(effect, Answer):
+            return effect
+        if isinstance(effect, UnhandledEffect):
+            e = effect.get(KW_EFFECT).effect()
+            return e.assoc(KW_K, HandledEffectExecutingContinuation(self._handler, e, answer_k))
 
 class FnHandler(Handler):
     _immutable_ = True
@@ -59,15 +76,21 @@ class FnHandler(Handler):
 
     def handle(self, effect, k):
         if isinstance(effect, Answer):
-            return self._w_fn.invoke_Ef(ArgList([effect.val()]))
+            return handle_with(WrappedEffectUnwrapper(self),
+                               self._w_fn.invoke_Ef(ArgList([effect.val()])))
         else:
-            return self._w_fn.invoke_Ef(ArgList([WrappedEffect(effect)]))
+            return handle_with(WrappedEffectUnwrapper(self),
+                               self._w_fn.invoke_Ef(ArgList([WrappedEffect(effect)])))
 
 
 @as_global("pixie.stdlib", "-handle")
 @wrap_fn(transform=False)
 def _handle(fn, body):
     return handle_with(FnHandler(fn), InvokeThunk(body))
+
+@as_global("pixie.stdlib", "-unhandled", transform=False)
+def _unhandled(effect):
+    return UnhandledEffect(effect)
 
 @as_global("pixie.stdlib", "yield")
 @wrap_fn(transform=False)
@@ -87,6 +110,7 @@ defeffect("pixie.stdlib.Ref", "RefGet", ["ref"])
 
 
 class Ref(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Ref")
 
     def type(self):
@@ -145,6 +169,11 @@ def eq(a, b):
 @wrap_fn(transform=False)
 def satisfies_QMARK(a, b):
     return Satisfies(a, b.type())
+
+@as_global("pixie.stdlib", "identical?")
+def identical(a, b):
+    return rt.wrap(a is b)
+
 
 @as_global("pixie.stdlib", "type")
 @wrap_fn()

@@ -13,12 +13,14 @@ import pixie.vm.interfaces
 import math
 
 class Number(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Number")
 
     def type(self):
         return Number._type
 
 class Integer(Number):
+    _immutable_ = True
     _immutable_fields_ = ["_int_val"]
     _type = Type(u"pixie.stdlib.Integer", Number._type)
 
@@ -41,6 +43,7 @@ zero_int = Integer(0)
 one_int = Integer(1)
 
 class BigInteger(Number):
+    _immutable_ = True
     _immutable_fields_ = ["_bigint_val"]
 
     _type = Type(u"pixie.stdlib.BigInteger", Number._type)
@@ -55,6 +58,7 @@ class BigInteger(Number):
         return self._type
 
 class Float(Number):
+    _immutable_ = True
     _immutable_fields_ = ["_float_val"]
 
     _type = Type(u"pixie.stdlib.Float", Number._type)
@@ -69,6 +73,7 @@ class Float(Number):
         return Float._type
 
 class Ratio(Number):
+    _immutable_ = True
     _immutable_fields_ = ["_numerator", "_denominator"]
 
     _type = Type(u"pixie.stdlib.Ratio", Number._type)

@@ -14,6 +14,7 @@ import pixie.vm.rt as rt
 
 
 class Node(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.PersistentVectorNode")
     _immutable_fields_ = ["_edit", "_array[*]"]
     def type(self):
@@ -31,6 +32,7 @@ EMPTY_NODE = Node(None)
 
 @mark_satisfies("pixie.stdlib.IVector")
 class PersistentVector(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.PersistentVector")
     _immutable_fields_ = ["_tail[*]", "_cnt", "_meta", "_shift", "_root"]
 
@@ -175,7 +177,7 @@ class PersistentVector(Object):
         return lst
 
     def to_r_uint_list(self):
-        lst = [None] * self._cnt
+        lst = [r_uint(0)] * self._cnt
 
         x = 0
         while x < len(lst):
@@ -491,7 +493,7 @@ def _eq(self, obj):
 @wrap_fn()
 def iterator_inner(self):
     i = 0
-    while i < self._cnt:
+    while i < self.count():
         array = self.array_for(i)
         j = 0
         while j < len(array):

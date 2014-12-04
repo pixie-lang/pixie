@@ -1,6 +1,7 @@
 py_object = object
 from pixie.vm.effects.effects import Object, ArgList, Type, OpaqueIOFn
 from pixie.vm.effects.effect_transform import cps
+from pixie.vm.effects.effect_generator import defeffect
 from pixie.vm.effects.environment import OpaqueIO
 from pixie.vm.string import wrap_char
 from pixie.vm.persistent_list import PersistentList, EmptyList
@@ -30,6 +31,7 @@ from pixie.vm.libs.readline import _readline
 from rpython.rlib.rbigint import rbigint
 from rpython.rlib.rsre import rsre_re as re
 
+
 LINE_NUMBER_KW = keyword(u"line-number")
 COLUMN_NUMBER_KW = keyword(u"column-number")
 LINE_KW = keyword(u"line")
@@ -46,6 +48,7 @@ FILE_KW = keyword(u"file")
 #ARG_ENV.set_value(nil)
 
 class EOF(Object):
+    _immutable_ = True
     _type = Type(u"EOF")
 
 
@@ -53,7 +56,7 @@ eof = EOF()
 
 
 
-class PlatformReader(Object):
+class PlatformReader(object):
     _type = Type(u"PlatformReader")
 
     def read(self):
@@ -66,6 +69,7 @@ class PlatformReader(Object):
         return self
 
 class ReadCh(OpaqueIOFn):
+    _immutable_ = True
     def __init__(self, rdr):
         self._rdr = rdr
 
@@ -76,6 +80,7 @@ def read_ch_Ef(rdr):
     return OpaqueIO(ReadCh(rdr))
 
 class UnreadCh(OpaqueIOFn):
+    _immutable_ = True
     def __init__(self, rdr, ch):
         self._rdr = rdr
         self._w_ch = ch

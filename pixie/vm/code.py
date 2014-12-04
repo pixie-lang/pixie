@@ -12,6 +12,7 @@ def munge(s):
 
 
 class NativeFn(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.NativeFn")
 
     def _invoke_Ef(self, args):
@@ -26,10 +27,10 @@ def wrap_fn(transform=True):
 
         """Converts a native Python function into a pixie function."""
         def as_native_fn(f):
-            return type("W"+fn.__name__, (NativeFn,), {"invoke_Ef": f})()
+            return type("W"+fn.__name__, (NativeFn,), {"invoke_Ef": f, "_immutable_": True})()
 
         def as_variadic_fn(f):
-            return type("W"+fn.__name__[:len("__args")], (NativeFn,), {"invoke_Ef": f})()
+            return type("W"+fn.__name__[:len("__args")], (NativeFn,), {"invoke_Ef": f, "_immutable_": True})()
 
         code = fn.func_code
         if fn.__name__.endswith("__args"):

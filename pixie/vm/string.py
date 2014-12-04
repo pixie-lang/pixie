@@ -8,6 +8,7 @@ from pixie.vm.util import hash_unencoded_chars, hash_int
 
 
 class String(Object):
+    _immutable_ = True
     _immutable_fields_ = ["_str"]
     _type = Type(u"pixie.stdlib.String")
 
@@ -22,6 +23,7 @@ class String(Object):
         return self._str
 
 class Character(Object):
+    _immutable_ = True
     _immutable_fields_ = ["_str"]
     _type = Type(u"pixie.stdlib.Character")
 

@@ -67,6 +67,7 @@ def init():
     globals()["rt"] = rt
 
 class ReplFn(NativeFn):
+    _immutable_ = True
     def __init__(self, args):
         self._argv = args
 
@@ -113,7 +114,11 @@ class ReplFn(NativeFn):
     def set_error_var(self, ex):
         STAR_E.set_root(ex)
 
-def entry_point():
+def entry_point(args):
+    final = run_with_state(ReplFn([]), make_default_env())
+    return 0
+
+def entry_point_no_arg():
     final = run_with_state(ReplFn([]), make_default_env())
     return 0
 
@@ -322,7 +327,7 @@ def run_debug(argv):
 
     # first annotate and rtype
     try:
-        interp, graph = get_interpreter(entry_point, [], backendopt=False,
+        interp, graph = get_interpreter(entry_point_no_arg, [], backendopt=False,
                                         #config=config,
                                         #type_system=config.translation.type_system,
                                         policy=Policy())

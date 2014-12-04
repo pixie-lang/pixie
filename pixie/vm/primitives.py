@@ -2,6 +2,7 @@ from pixie.vm.effects.effects import Object, Type
 
 
 class Nil(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Nil")
 
     def type(self):
@@ -12,6 +13,7 @@ nil = Nil()
 
 
 class Bool(Object):
+    _immutable_ = True
     _type = Type(u"pixie.stdlib.Bool")
 
     def type(self):
