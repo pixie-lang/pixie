@@ -63,3 +63,14 @@
 (t/deftest test-fn-multiple-args
   (t/assert= ((fn [[x y z] {:keys [a b c]}] [x y z a b c]) [1 2 3] {:a 4, :b 5, :c 6})
              [1 2 3 4 5 6]))
+
+(t/deftest test-fn-rest-args
+  (let [f1 (fn [& [status]] (or status :yay))]
+    (t/assert= (f1) :yay)
+    (t/assert= (f1 :nay) :nay)
+    (t/assert= (f1 :nay :something-else :whatever) :nay))
+  (let [f2 (fn [x & [y]]
+             (+ x (or y 1)))]
+    (t/assert= (f2 41) 42)
+    (t/assert= (f2 21 21) 42)
+    (t/assert= (f2 21 21 :something-else :whatever) 42)))

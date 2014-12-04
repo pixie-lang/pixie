@@ -1710,10 +1710,12 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                :else decls)
         decls (seq (map (fn* [decl]
                           (let [argv (first decl)
-                                names (vec (map #(gensym "arg__") argv))
+                                names (vec (map #(if (= % '&) '& (gensym "arg__")) argv))
                                 bindings (loop [i 0 bindings []]
                                            (if (< i (count argv))
-                                             (recur (inc i) (reduce conj bindings [(nth argv i) (nth names i)]))
+                                             (if (= (nth argv i) '&)
+                                               (recur (inc i) bindings)
+                                               (recur (inc i) (reduce conj bindings [(nth argv i) (nth names i)])))
                                              bindings))
                                 body (next decl)]
                             (if (every? symbol? argv)
