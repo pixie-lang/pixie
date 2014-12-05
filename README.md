@@ -29,6 +29,15 @@ Some planned and implemented features:
     ./make-with-jit
     ./pixie-vm
 
+## Special Note for Macs
+
+If you are having trouble building on Mac, checkout this issue
+[https://github.com/pixie-lang/pixie/issues/49](https://github.com/pixie-lang/pixie/issues/49).
+In particular, try this:
+
+```
+PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' ./make-with-jit
+```
 
 ## Running the tests
 
@@ -41,6 +50,10 @@ There are example in the /examples directory.
 Try out "Hello World" with:
 
     ./examples/hello-world.pxi
+
+
+## Build Tool
+Pixie now comes with a build tool called [dust](https://github.com/pixie-lang/dust). Try it and start making magic of your own.
 
 ## FAQ
 
