@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/pixie-lang/pixie.svg?branch=master)](https://travis-ci.org/pixie-lang/pixie)
+[![Build Status](https://travis-ci.org/pixie-lang/pixie.svg?branch=master)](https://travis-ci.org/pixie-lang/pixie)[![License: LGPL] (http://img.shields.io/badge/license-LGPL-green.svg)](http://img.shields.io/badge/license-LGPL-green.svg)
 # Pixie
 
 ## Intro
