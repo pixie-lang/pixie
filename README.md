@@ -36,7 +36,7 @@ If you are having trouble building on Mac, checkout this issue
 In particular, try this:
 
 ```
-export PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig:/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig
+PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' ./make-with-jit
 ```
 
 ## Running the tests
