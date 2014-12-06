@@ -751,20 +751,6 @@ def compile_yield(form, ctx):
     compile_form(arg, ctx)
     ctx.bytecode.append(code.YIELD)
 
-def compile_effect(form, ctx):
-    form = rt.next(form)
-    affirm(isinstance(rt.first(form), Keyword), u"First argument to -effect must be a keyword")
-    affirm(rt.count(form) == 2, u"Must provide a value to -effect")
-
-    eff_name = rt.first(form)
-    form = rt.next(form)
-    eff_val = rt.next(form)
-    compile_form(eff_val, ctx)
-    ctx.push_const(eff_name)
-    ctx.bytecode.append(code.EFFECT)
-    ctx.sub_sp(1)
-
-
 builtins = {u"fn*": compile_fn,
             u"if": compile_if,
             u"platform=": compile_platform_eq,
@@ -779,8 +765,7 @@ builtins = {u"fn*": compile_fn,
             u"__ns__": compile_ns,
             u"catch": compile_catch,
             u"this-ns-name": compile_this_ns,
-            u"yield": compile_yield,
-            u"-effect": compile_effect}
+            u"yield": compile_yield}
 
 def compiler_special(s):
     if isinstance(s, symbol.Symbol):

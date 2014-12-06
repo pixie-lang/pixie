@@ -211,7 +211,7 @@ def entry_point(args):
                 i += 1
                 if i < len(args):
                     expr = args[i]
-                    with_stacklets(EvalFn(expr))
+                    EvalFn(expr).invoke([])
                     return 0
                 else:
                     print "Expected argument for " + arg
