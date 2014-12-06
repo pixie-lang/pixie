@@ -321,8 +321,16 @@
                               data)))]
           (stacklet->lazy-seq f)))))
 
+(def = -eq)
 
-(extend -seq PersistentVector sequence)
+(extend -seq PersistentVector
+  (fn vector-seq
+   ([self]
+    (vector-seq self 0))
+   ([self x]
+    (if (= x (count self))
+      nil
+      (cons (nth self x) (lazy-seq* (fn [] (vector-seq self (+ x 1)))))))))
 
 
 

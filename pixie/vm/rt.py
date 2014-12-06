@@ -54,7 +54,6 @@ def init():
     import pixie.vm.bits as bits
     from pixie.vm.code import wrap_fn
     import pixie.vm.interpreter
-    import pixie.vm.stacklet as stacklet
     import pixie.vm.atom
     import pixie.vm.reduced
     import pixie.vm.util

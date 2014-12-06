@@ -6,8 +6,6 @@ from rpython.rlib.jit import JitHookInterface, Counters
 from rpython.rlib.rfile import create_stdio
 from rpython.annotator.policy import AnnotatorPolicy
 from pixie.vm.code import wrap_fn, NativeFn, intern_var, Var
-from pixie.vm.stacklet import with_stacklets
-import pixie.vm.stacklet as stacklet
 from pixie.vm.object import RuntimeException, WrappedException
 from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
@@ -184,14 +182,7 @@ def run_load_stdlib():
         print "done"
 
 def load_stdlib():
-
-
-
-
-
-
-
-    stacklet.with_stacklets(run_load_stdlib)
+    run_load_stdlib.invoke([])
 
 def entry_point(args):
     interactive = True
@@ -244,9 +235,9 @@ def entry_point(args):
         i += 1
 
     if interactive:
-        with_stacklets(ReplFn(args))
+        ReplFn(args).invoke([])
     else:
-        with_stacklets(BatchModeFn(script_args))
+        BatchModeFn(script_args).invoke([])
 
     return 0
 

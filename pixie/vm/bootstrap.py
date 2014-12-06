@@ -1,5 +1,3 @@
-from pixie.vm.stacklet import with_stacklets
-import pixie.vm.stacklet as stacklet
 from pixie.vm.code import wrap_fn
 
 @wrap_fn
@@ -10,7 +8,3 @@ def bootstrap():
     rt.load_ns(rt.wrap(u"pixie/stdlib.pxi"))
 
 
-# run bootstrap
-#with_stacklets(bootstrap)
-# reset the stacklet state so we can translate with different settings
-stacklet.global_state = stacklet.GlobalState()
