@@ -4,7 +4,7 @@ from pixie.vm.cons import Cons
 from pixie.vm.numbers import Integer
 from pixie.vm.symbol import symbol, Symbol
 from pixie.vm.keyword import Keyword
-from pixie.vm.compiler import compile_form, compile
+from pixie.vm.compiler import compile_form, compile, with_ns
 from pixie.vm.interpreter import interpret
 from pixie.vm.code import Code, Var
 from pixie.vm.primitives import nil, true, false
@@ -14,41 +14,45 @@ import unittest
 import pixie.vm.libs.readline
 
 def read_code(s):
-    return read(StringReader(unicode(s)), False)
+    with with_ns(u"user"):
+        return read(StringReader(unicode(s)), False)
 
 def test_add_compilation():
-    code = compile(read_code(u"(platform+ 1 2)"))
-    assert isinstance(code, Code)
+    with with_ns(u"user"):
+        code = compile(read_code(u"(platform+ 1 2)"))
+        assert isinstance(code, Code)
 
     #interpret(code)
 
 def eval_string(s):
-    rdr = StringReader(unicode(s))
-    result = nil
-    while True:
-        form = read(rdr, False)
-        if form is eof:
-            return result
+    with with_ns(u"user", True):
+        rdr = StringReader(unicode(s))
+        result = nil
+        while True:
+            form = read(rdr, False)
+            if form is eof:
+                return result
 
-        result = compile(form).invoke([])
+            result = compile(form).invoke([])
 
 def test_fn():
-    code = compile(read_code("((fn [x y] (+ x y)) 1 2)"))
-    assert isinstance(code, Code)
-    retval = interpret(code)
-    assert isinstance(retval, Integer) and retval.int_val() == 3
+    with with_ns(u"user", True):
+        code = compile(read_code("((fn* [x y] (-add x y)) 1 2)"))
+        assert isinstance(code, Code)
+        retval = interpret(code)
+        assert isinstance(retval, Integer) and retval.int_val() == 3
 
 def test_multiarity_fn():
-    retval = eval_string("""(let [v 1
-                                      f (fn ([] v)
+    retval = eval_string("""(let* [v 1
+                                      f (fn* ([] v)
                                             ([x] (+ v x)))]
                                  (f))
 
                                   """)
     assert isinstance(retval, Integer) and retval.int_val() == 1
 
-    retval = eval_string("""(let [v 1
-                                      f (fn ([] v)
+    retval = eval_string("""(let* [v 1
+                                      f (fn* ([] v)
                                             ([x] (+ v x)))]
                                  (f 2))
 
@@ -74,10 +78,10 @@ def test_if_eq():
     assert eval_string("(if (platform= 1 2) true false)") is false
 
 def test_return_self():
-    assert isinstance(eval_string("((fn r [] r))"), Code)
+    assert isinstance(eval_string("((fn* r [] r))"), Code)
 
 def test_recursive():
-    retval = eval_string("""((fn rf [x]
+    retval = eval_string("""((fn* rf [x]
                                (if (platform= x 10)
                                    x
                                    (recur (+ x 1))))
@@ -137,7 +141,7 @@ def test_loop():
     assert retval.int_val() == 10
 
 def test_closures():
-    retval = eval_string("""((fn [x] ((fn [] x))) 42)""")
+    retval = eval_string("""((fn* [x] ((fn* [] x))) 42)""")
 
     assert isinstance(retval, Integer)
     assert retval.int_val() == 42
@@ -160,7 +164,7 @@ def test_native():
 
 
 def test_build_list():
-    retval = eval_string("""((fn [i lst]
+    retval = eval_string("""((fn* [i lst]
                               (if (platform= i 10)
                                 (count lst)
                                 (recur (+ i 1) (cons i lst)))) 0 nil)
@@ -169,7 +173,7 @@ def test_build_list():
     assert isinstance(retval, Integer) and retval.int_val() == 10
 
 def test_build_vector():
-    retval = eval_string("""((fn [i lst]
+    retval = eval_string("""((fn* [i lst]
                               (if (platform= i 10)
                                 (count lst)
                                 (recur (+ i 1) (conj lst i)))) 0 [])
@@ -186,17 +190,17 @@ def test_build_vector():
 #    assert isinstance(retval, Integer) and retval.int_val() == 42
 
 def test_let():
-    retval = eval_string(""" (let [x 42] x) """)
+    retval = eval_string(""" (let* [x 42] x) """)
 
     assert isinstance(retval, Integer) and retval.int_val() == 42
 
-    retval = eval_string(""" (let [x 42 y 1] (+ x y)) """)
+    retval = eval_string(""" (let* [x 42 y 1] (+ x y)) """)
 
     assert isinstance(retval, Integer) and retval.int_val() == 43
 
 def test_variadic_fn():
     from pixie.vm.array import Array
-    retval = eval_string(""" ((fn [& rest] rest) 1 2 3 4) """)
+    retval = eval_string(""" ((fn* [& rest] rest) 1 2 3 4) """)
     print retval
     assert isinstance(retval, Array) and len(retval._list) == 4
 #

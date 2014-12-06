@@ -39,12 +39,16 @@ gensym = code.intern_var(u"pixie.stdlib", u"gensym")
 gensym.set_root(code.MultiArityFn({0: code.wrap_fn(gensym1), 1: code.wrap_fn(gensym2)}))
 
 class with_ns(object):
-    def __init__(self, nm):
+    def __init__(self, nm, include_stdlib=False):
         assert isinstance(nm, unicode)
         self._ns = nm
+        self._include_stdlib=include_stdlib
+
     def __enter__(self):
         code._dynamic_vars.push_binding_frame()
         NS_VAR.set_value(code._ns_registry.find_or_make(self._ns))
+        if self._include_stdlib:
+            NS_VAR.deref().include_stdlib()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         code._dynamic_vars.pop_binding_frame()
@@ -747,6 +751,19 @@ def compile_yield(form, ctx):
     compile_form(arg, ctx)
     ctx.bytecode.append(code.YIELD)
 
+def compile_effect(form, ctx):
+    form = rt.next(form)
+    affirm(isinstance(rt.first(form), Keyword), u"First argument to -effect must be a keyword")
+    affirm(rt.count(form) == 2, u"Must provide a value to -effect")
+
+    eff_name = rt.first(form)
+    form = rt.next(form)
+    eff_val = rt.next(form)
+    compile_form(eff_val, ctx)
+    ctx.push_const(eff_name)
+    ctx.bytecode.append(code.EFFECT)
+    ctx.sub_sp(1)
+
 
 builtins = {u"fn*": compile_fn,
             u"if": compile_if,
@@ -762,7 +779,8 @@ builtins = {u"fn*": compile_fn,
             u"__ns__": compile_ns,
             u"catch": compile_catch,
             u"this-ns-name": compile_this_ns,
-            u"yield": compile_yield}
+            u"yield": compile_yield,
+            u"-effect": compile_effect}
 
 def compiler_special(s):
     if isinstance(s, symbol.Symbol):
