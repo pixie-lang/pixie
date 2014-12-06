@@ -71,6 +71,7 @@ def init():
     import pixie.vm.symbol
     import pixie.vm.libs.path
     import pixie.vm.libs.string
+    import pixie.vm.threads
 
 
 
