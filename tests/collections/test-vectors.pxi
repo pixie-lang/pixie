@@ -24,10 +24,13 @@
 
 (t/deftest vector-equals
   (let [v [1 2 3]]
+    (t/assert= [] '())
     (t/assert= v v)
     (t/assert= v [1 2 3])
     (t/assert= v '(1 2 3))
 
+    (t/assert= (= [] nil) false)
+    (t/assert= (= v []) false)
     (t/assert= (= v [1 2]) false)
     (t/assert= (= v [1 2 3 4]) false)
     (t/assert= (= v '(1 2)) false)

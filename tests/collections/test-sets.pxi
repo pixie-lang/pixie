@@ -42,6 +42,10 @@
     (t/assert= s #{1 2 3})
     (t/assert= #{1 2 3} s)
 
+    (t/assert= (= #{} nil) false)
+    (t/assert= (= #{} []) false)
+    (t/assert= (= #{} '()) false)
+
     (t/assert= (= s [1 2 3]) false)
     (t/assert= (= s '(1 2 3)) false)
     (t/assert= (= s #{1 2}) false)

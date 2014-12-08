@@ -419,7 +419,7 @@ class SyntaxQuoteReader(ReaderHandler):
             raise Exception("Unquote splicing not used inside list")
         elif rt.vector_QMARK_(form) is true:
             ret = rt.list(APPLY, CONCAT, SyntaxQuoteReader.expand_list(form))
-        elif rt.seq_QMARK_(form) is true:
+        elif form is not nil and rt.seq_QMARK_(form) is true:
             ret = rt.list(APPLY, LIST, rt.cons(CONCAT, SyntaxQuoteReader.expand_list(rt.seq(form))))
         else:
             ret = rt.list(QUOTE, form)

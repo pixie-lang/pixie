@@ -31,12 +31,13 @@ Some planned and implemented features:
 
 ## Special Note for Macs
 
-If you are having trouble building on Mac, checkout this issue
+If you are having trouble building or running the interpreter on Mac, check out this issue
 [https://github.com/pixie-lang/pixie/issues/49](https://github.com/pixie-lang/pixie/issues/49).
 In particular, try this:
 
 ```
 PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' ./make-with-jit
+PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' ./run-interpreted
 ```
 
 ## Running the tests

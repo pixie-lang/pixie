@@ -141,6 +141,8 @@ def seq_QMARK_(x):
 def _seq_eq(a, b):
     if a is b:
         return true
+    if a is nil or b is nil:
+        return false
     if not (rt.satisfies_QMARK_(rt.ISeqable.deref(), b) or rt.satisfies_QMARK_(rt.ISeq.deref(), b)):
         return false
 

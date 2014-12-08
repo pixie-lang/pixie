@@ -413,7 +413,7 @@ def _eq(self, obj):
                 return false
         return true
     else:
-        if not rt.satisfies_QMARK_(proto.ISeqable, obj):
+        if obj is nil or not rt.satisfies_QMARK_(proto.ISeqable, obj):
             return false
         seq = rt.seq(obj)
         for i in range(0, intmask(self._cnt)):

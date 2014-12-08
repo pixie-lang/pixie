@@ -3,6 +3,9 @@
  (def libc (ffi-library pixie.platform/lib-c-name))
  (def exit (ffi-fn libc "exit" [Integer] Integer))
  (def puts (ffi-fn libc "puts" [String] Integer))
+ (def sh (ffi-fn libc "system" [String] Integer))
+ (def printf (ffi-fn libc "printf" [String] Integer))
+ (def getenv (ffi-fn libc "getenv" [String] String))
 
  (def libreadline (ffi-library (str "libreadline." pixie.platform/so-ext)))
  (def readline (ffi-fn libreadline "readline" [String] String))
@@ -222,6 +225,8 @@
 (extend -repr Nil -str)
 (extend -reduce Nil (fn [self f init] init))
 (extend -hash Nil (fn [self] 100000))
+(extend -with-meta Nil (fn [self _] nil))
+(extend -at-end? Nil (fn [_] true))
 
 (extend -hash Integer hash-int)
 
@@ -1097,12 +1102,6 @@ and implements IAssociative, ILookup and IObject."
         deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
     `(do ~type-from-map
          ~deftype-decl)))
-
- (def libc (ffi-library pixie.platform/lib-c-name))
- (def exit (ffi-fn libc "exit" [Integer] Integer))
- (def puts (ffi-fn libc "puts" [String] Integer))
- (def printf (ffi-fn libc "printf" [String] Integer))
- (def getenv (ffi-fn libc "getenv" [String] String))
 
 (defn print
   {:doc "Prints the arguments, seperated by spaces."

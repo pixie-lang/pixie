@@ -17,6 +17,7 @@
     (t/assert= (-eq m {:a 1, :b 2, :c 3}) true)
 
     (t/assert= (-eq m {}) false)
+    (t/assert= (-eq m nil) false)
 
     (t/assert= (-eq m {:a 1, :b 2}) false)
     (t/assert= (-eq m [[:a 1] [:b 2] [:c 3]]) false)
