@@ -535,9 +535,9 @@ def _try_catch(main_fn, catch_fn, final):
         if not isinstance(ex, WrappedException):
             from pixie.vm.string import String
             if isinstance(ex, Exception):
-                ex = RuntimeException(rt.wrap(u"Some error"))
                 if not we_are_translated():
-                    print "Error", ex
+                    print "Python Error Info: ", ex.__dict__, type(ex)
+                ex = RuntimeException(rt.wrap(u"Some error"))
             else:
                 ex = RuntimeException(nil)
             return catch_fn.invoke([ex])
