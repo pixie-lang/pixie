@@ -35,6 +35,8 @@
     (t/assert= l '(1 2 3))
     (t/assert= l [1 2 3])
 
+    (t/assert= (= nil '()) false)
+    (t/assert= (= '() nil) false)
     (t/assert= (= l '(1 2 3 4)) false)
     (t/assert= (= l [1 2 3 4]) false)))
 
