@@ -118,7 +118,7 @@
 
 (t/deftest test-keys
   (let [v {:a 1 :b 2 :c 3}]
-    (t/assert= (keys v) #{:a :b :c})
+    (t/assert= (set (keys v)) #{:a :b :c})
     (t/assert= (transduce (keys) conj! v) (keys v))))
 
 (t/deftest test-vals

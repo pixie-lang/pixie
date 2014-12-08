@@ -301,26 +301,6 @@
       (cons (-current k)
             (lazy-seq* (fn [] (stacklet->lazy-seq (-move-next! k))))))))
 
-(def sequence
-  (fn ^{:doc "Returns a lazy sequence of the `data`, optionally transforming it using `xform`."
-        :signatures [[data] [xform data]]
-        :added "0.1"}
-    sequence
-    ([data]
-       (let [f (create-stacklet
-                 (fn [h]
-                   (reduce (fn ([h item] (h item) h)) h data)))]
-          (stacklet->lazy-seq f)))
-    ([xform data]
-        (let [f (create-stacklet
-                 (fn [h]
-                   (transduce xform
-                              (fn ([] h)
-                                ([h item] (h item) h)
-                                ([h] nil))
-                              data)))]
-          (stacklet->lazy-seq f)))))
-
 (def = -eq)
 
 (extend -seq PersistentVector
@@ -838,7 +818,7 @@ Stops if it finds such an element."
         (fn [v]
           (transduce cat unordered-hash-reducing-fn v)))
 
-(extend -seq PersistentHashSet sequence)
+(extend -seq PersistentHashSet (fn [self] (seq (iterator self))))
 
 (extend -str PersistentHashSet
         (fn [s]
@@ -1579,7 +1559,6 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                 (let [acc (f acc (-current k))]
                   (-move-next! k)
                   (recur acc)))))))
-
 (defn filter
   {:doc "Filter the collection for elements matching the predicate."
    :signatures [[pred] [pred coll]]
@@ -1592,7 +1571,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                       (xf acc i)
                       acc)))))
   ([f coll]
-     (sequence (filter f) coll)))
+    nil))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
@@ -1610,7 +1589,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                    (swap! seen conj i)
                    (xf acc i))))))))
   ([coll]
-     (sequence (distinct) coll)))
+     nil))
 
 (defn keep
   ([f]

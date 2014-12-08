@@ -7,7 +7,6 @@ from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
-import rpython.rlib.rstacklet as rstacklet
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.interpreter import ShallowContinuation
 

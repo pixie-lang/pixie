@@ -52,6 +52,10 @@ def new_thread(fn):
     ident = rthread.start_new_thread(bootstrap, ())
     return nil
 
+@as_var("-yield-thread")
+def yield_thread():
+    do_yield_thread()
+    return nil
 
 ## From PYPY
 

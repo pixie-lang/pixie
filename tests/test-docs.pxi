@@ -12,9 +12,14 @@
             examples (get meta :examples)]
         (doseq [example examples]
           (if (contains? example 2)
-            (do
+            (try
+              (println (first example))
+              (println ".")
               (t/assert= (eval (read-string (first example)))
-                         (third example)))
+                         (third example))
+              (catch ex
+                (println "Example Failed")
+                (println example)))
             (eval (read-string (first example)))))))))
 
 (t/deftest test-stdlib-docs
