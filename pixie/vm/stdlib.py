@@ -9,7 +9,7 @@ import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.interpreter import ShallowContinuation
-
+from rpython.rlib.objectmodel import we_are_translated
 
 defprotocol("pixie.stdlib", "ISeq", ["-first", "-next"])
 defprotocol("pixie.stdlib", "ISeqable", ["-seq"])
@@ -536,6 +536,8 @@ def _try_catch(main_fn, catch_fn, final):
             from pixie.vm.string import String
             if isinstance(ex, Exception):
                 ex = RuntimeException(rt.wrap(u"Some error"))
+                if not we_are_translated():
+                    print "Error", ex
             else:
                 ex = RuntimeException(nil)
             return catch_fn.invoke([ex])

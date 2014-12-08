@@ -632,6 +632,8 @@ def compile_recur(form, ctx):
         ctx.enable_tail_call()
     if args > 0:
         ctx.sub_sp(r_uint(args - 1))
+    else:
+        ctx.add_sp(r_uint(1))
 
 
 def compile_let(form, ctx):

@@ -1571,7 +1571,12 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                       (xf acc i)
                       acc)))))
   ([f coll]
-    nil))
+    (let [iter (iterator coll)]
+      (loop []
+        (when (not (at-end? iter))
+          (yield (current iter))
+          (move-next! iter)
+          (recur))))))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
@@ -1589,7 +1594,17 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                    (swap! seen conj i)
                    (xf acc i))))))))
   ([coll]
-     nil))
+    (let [iter (iterator coll)]
+      (loop [acc #{}]
+        (when (not (at-end? iter))
+          (if (contains? acc (current iter))
+            (do (move-next! iter)
+                (recur acc))
+            (let [val (current iter)]
+              (yield val)
+              (move-next! iter)
+              (recur (conj acc val)))))))))
+
 
 (defn keep
   ([f]
