@@ -225,6 +225,8 @@
 (extend -repr Nil -str)
 (extend -reduce Nil (fn [self f init] init))
 (extend -hash Nil (fn [self] 100000))
+(extend -with-meta Nil (fn [self _] nil))
+(extend -at-end? Nil (fn [_] true))
 
 (extend -hash Integer hash-int)
 
