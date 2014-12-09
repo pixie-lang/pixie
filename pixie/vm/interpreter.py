@@ -9,7 +9,7 @@ import rpython.rlib.debug as debug
 import pixie.vm.rt as rt
 
 def get_location(ip, sp, is_continuation, bc, base_code):
-    return code.BYTECODES[bc[ip]] + " in " + str(base_code._name)
+    return code.BYTECODES[bc[ip]] + " in " + str(base_code.name())
 
 jitdriver = JitDriver(greens=["ip", "sp", "is_continuation", "bc", "base_code"], reds=["frame"], virtualizables=["frame"],
                       get_printable_location=get_location)
@@ -290,7 +290,7 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
             debug_ip = frame.ip
             var = frame.pop()
             if not isinstance(var, code.Var):
-                affirm(False, u"Can't deref " + var.type()._name)
+                affirm(False, u"Can't deref " + var.type().name())
             try:
                 frame.push(var.deref())
                 continue

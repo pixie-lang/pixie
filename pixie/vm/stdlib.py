@@ -99,7 +99,7 @@ for x in (code.Code, code.Closure, code.VariadicCode, code.MultiArityFn):
 def default_str(x):
     from pixie.vm.string import String
 
-    return rt.wrap(u"<inst " + x.type()._name + u">")
+    return rt.wrap(u"<inst " + x.type().name() + u">")
 
 _str.set_default_fn(wrap_fn(default_str))
 _repr.set_default_fn(wrap_fn(default_str))
@@ -162,12 +162,12 @@ def type(x):
 @extend(_str, Type)
 def _str(tp):
     import pixie.vm.string as string
-    return string.rt.wrap(u"<type " + tp._name + u">")
+    return string.rt.wrap(u"<type " + tp.name() + u">")
 
 @extend(_repr, Type)
 def _repr(tp):
     import pixie.vm.string as string
-    return string.rt.wrap(tp._name)
+    return string.rt.wrap(tp.name())
 
 @extend(_first, nil._type)
 def _first(_):

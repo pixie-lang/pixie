@@ -197,6 +197,9 @@ class Code(BaseCode):
         self._debug_points = debug_points
         self._meta = meta
 
+    def name(self):
+        return self._name
+
     def with_meta(self, meta):
         return Code(self._name, self._bytecode, self._consts, self._stack_size, self._debug_points, meta)
 
@@ -289,7 +292,7 @@ class Closure(BaseCode):
         try:
             return interpret(self, args, self_obj=self_fn)
         except object.WrappedException as ex:
-            ex._ex._trace.append(object.PixieCodeInfo(self._code._name))
+            ex._ex._trace.append(object.PixieCodeInfo(self._code.name()))
             raise
 
     def get_closed_over(self, idx):
@@ -540,8 +543,8 @@ class DefaultProtocolFn(NativeFn):
 
     def invoke(self, args):
         from pixie.vm.string import String
-        tp = args[0].type()._name
-        affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
+        tp = args[0].type().name()
+        affirm(False, u"No override for " + tp + u" on " + self._pfn.name() + u" in protocol " + self._pfn._protocol.name())
 
 
 class Protocol(object.Object):
@@ -557,6 +560,8 @@ class Protocol(object.Object):
         self._satisfies = {}
         self._rev = 0
 
+    def name(self):
+        return self._name
 
     def add_method(self, pfn):
         self._polyfns[pfn] = pfn
@@ -590,6 +595,9 @@ class PolymorphicFn(BaseCode):
         self._default_fn = DefaultProtocolFn(self)
         self._fn_cache = {}
         protocol.add_method(self)
+
+    def name(self):
+        return self._name
 
     def extend(self, tp, fn):
         self._dict[tp] = fn

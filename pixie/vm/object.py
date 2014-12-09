@@ -68,6 +68,9 @@ class Type(Object):
 
         self._subclasses = []
 
+    def name(self):
+        return self._name
+
     def parent(self):
         return self._parent
 
@@ -180,7 +183,7 @@ class PolymorphicCodeInfo(ErrorInfo):
         self._tp = tp
 
     def __repr__(self):
-        return u"in polymorphic function " + self._name + u" dispatching on " + self._tp._name + u"\n"
+        return u"in polymorphic function " + self._name + u" dispatching on " + self._tp.name() + u"\n"
 
 
 
