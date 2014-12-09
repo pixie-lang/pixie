@@ -437,8 +437,8 @@ def ns_map(ns):
             return nil
 
     m = rt.hashmap()
-    for name in ns._registry:
-        var = ns._registry.get(name, nil)
+    for name in ns.registry():
+        var = ns.registry().get(name, nil)
         m = rt.assoc(m, rt.symbol(rt.wrap(name)), var)
 
     return m

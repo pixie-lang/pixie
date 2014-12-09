@@ -463,6 +463,9 @@ class Namespace(object.Object):
         stdlib = _ns_registry.find_or_make(u"pixie.stdlib")
         self.add_refer(stdlib, refer_all=True)
 
+    def registry(self):
+        return self._registry
+
     def resolve(self, s, use_refers=True):
         import pixie.vm.symbol as symbol
         affirm(isinstance(s, symbol.Symbol), u"Must resolve symbols")
@@ -481,7 +484,7 @@ class Namespace(object.Object):
         else:
             resolved_ns = self
 
-        var = resolved_ns._registry.get(name, None)
+        var = resolved_ns.registry().get(name, None)
         if var is None and use_refers:
             for refer_nm in self._refers:
                 refer = self._refers[refer_nm]
@@ -610,12 +613,11 @@ class PolymorphicFn(BaseCode):
                 if proto.satisfies(find_tp):
                     return self._dict[proto]
 
-            find_tp = find_tp._parent
+            find_tp = find_tp.parent()
             if find_tp is None:
                 break
 
         return self._default_fn
-
 
     def set_default_fn(self, fn):
         self._default_fn = fn

@@ -68,6 +68,9 @@ class Type(Object):
 
         self._subclasses = []
 
+    def parent(self):
+        return self._parent
+
     def type(self):
         return Type._type
 
