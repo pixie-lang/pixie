@@ -12,7 +12,7 @@ Some planned and implemented features:
 
 * Immutable datastructures
 * Protocols first implementation
-* Transducers at-the-bottom (most primitves are based off of reduce)
+* Transducers at-the-bottom (most primitives are based off of reduce)
 * Coroutines for transducer inversion of control (transducer to lazy-seq conversion)
 * A "good enough" JIT (implemented, tuning still a WIP, but not bad performance today)
 * Easy FFI (TODO)
