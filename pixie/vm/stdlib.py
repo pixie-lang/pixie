@@ -7,10 +7,9 @@ from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
-import rpython.rlib.rstacklet as rstacklet
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.interpreter import ShallowContinuation
-
+from rpython.rlib.objectmodel import we_are_translated
 
 defprotocol("pixie.stdlib", "ISeq", ["-first", "-next"])
 defprotocol("pixie.stdlib", "ISeqable", ["-seq"])
@@ -538,6 +537,8 @@ def _try_catch(main_fn, catch_fn, final):
         if not isinstance(ex, WrappedException):
             from pixie.vm.string import String
             if isinstance(ex, Exception):
+                if not we_are_translated():
+                    print "Python Error Info: ", ex.__dict__, ex
                 ex = RuntimeException(rt.wrap(u"Some error"))
             else:
                 ex = RuntimeException(nil)

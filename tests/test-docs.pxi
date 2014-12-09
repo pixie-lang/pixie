@@ -12,9 +12,8 @@
             examples (get meta :examples)]
         (doseq [example examples]
           (if (contains? example 2)
-            (do
-              (t/assert= (eval (read-string (first example)))
-                         (third example)))
+            (t/assert= (eval (read-string (first example)))
+                         (third example))
             (eval (read-string (first example)))))))))
 
 (t/deftest test-stdlib-docs

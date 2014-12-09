@@ -2,7 +2,7 @@ all: help
 
 EXTERNALS=../externals
 
-PYTHON ?= python
+PYTHON ?= pypy
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 help:
@@ -13,10 +13,10 @@ help:
 	@echo "make build_no_jit      - build without jit"
 
 build_with_jit: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --continuation --no-shared target.py
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target.py
 
 build_no_jit: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --continuation --no-shared target.py
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --thread --no-shared target.py
 
 fetch_externals: $(EXTERNALS)/pypy
 

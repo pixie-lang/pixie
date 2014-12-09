@@ -54,7 +54,6 @@ def init():
     import pixie.vm.bits as bits
     from pixie.vm.code import wrap_fn
     import pixie.vm.interpreter
-    import pixie.vm.stacklet as stacklet
     import pixie.vm.atom
     import pixie.vm.reduced
     import pixie.vm.util
@@ -72,6 +71,7 @@ def init():
     import pixie.vm.symbol
     import pixie.vm.libs.path
     import pixie.vm.libs.string
+    import pixie.vm.threads
 
 
 
@@ -112,7 +112,7 @@ def init():
     for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():
         name = munge(name)
         print name
-        if isinstance(var.deref(), BaseCode):
+        if var.is_defined() and isinstance(var.deref(), BaseCode):
             globals()[name] = unwrap(var)
         else:
             globals()[name] = var
@@ -127,7 +127,7 @@ def init():
                 continue
 
             print "Found ->> ", name, var.deref()
-            if isinstance(var.deref(), BaseCode):
+            if var.is_defined() and  isinstance(var.deref(), BaseCode):
                 globals()[name] = unwrap(var)
             else:
                 globals()[name] = var

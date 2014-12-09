@@ -118,12 +118,12 @@
 
 (t/deftest test-keys
   (let [v {:a 1 :b 2 :c 3}]
-    (t/assert= (keys v) #{:a :b :c})
+    (t/assert= (set (keys v)) #{:a :b :c})
     (t/assert= (transduce (keys) conj! v) (keys v))))
 
 (t/deftest test-vals
   (let [v {:a 1 :b 2 :c 3}]
-    (t/assert= (vals v) #{1 2 3})
+    (t/assert= (set (vals v)) #{1 2 3})
     (t/assert= (transduce (vals) conj! v) (vals v))))
 
 
@@ -219,7 +219,7 @@
   (t/assert= (some odd? [2]) false))
 
 (t/deftest test-distinct
-  (t/assert= (sequence (distinct) [1 2 3 2 1]) '(1 2 3))
+  (t/assert= (seq (distinct [1 2 3 2 1])) '(1 2 3))
   (t/assert= (vec (distinct) [1 1 2 2 3 3]) [1 2 3])
   (t/assert= (vec (distinct) [nil nil nil]) [nil]))
 

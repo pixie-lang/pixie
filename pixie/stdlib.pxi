@@ -306,28 +306,16 @@
       (cons (-current k)
             (lazy-seq* (fn [] (stacklet->lazy-seq (-move-next! k))))))))
 
-(def sequence
-  (fn ^{:doc "Returns a lazy sequence of the `data`, optionally transforming it using `xform`."
-        :signatures [[data] [xform data]]
-        :added "0.1"}
-    sequence
-    ([data]
-       (let [f (create-stacklet
-                 (fn [h]
-                   (reduce (fn ([h item] (h item) h)) h data)))]
-          (stacklet->lazy-seq f)))
-    ([xform data]
-        (let [f (create-stacklet
-                 (fn [h]
-                   (transduce xform
-                              (fn ([] h)
-                                ([h item] (h item) h)
-                                ([h] nil))
-                              data)))]
-          (stacklet->lazy-seq f)))))
+(def = -eq)
 
-
-(extend -seq PersistentVector sequence)
+(extend -seq PersistentVector
+  (fn vector-seq
+   ([self]
+    (vector-seq self 0))
+   ([self x]
+    (if (= x (count self))
+      nil
+      (cons (nth self x) (lazy-seq* (fn [] (vector-seq self (+ x 1)))))))))
 
 
 
@@ -835,7 +823,7 @@ Stops if it finds such an element."
         (fn [v]
           (transduce cat unordered-hash-reducing-fn v)))
 
-(extend -seq PersistentHashSet sequence)
+(extend -seq PersistentHashSet (fn [self] (seq (iterator self))))
 
 (extend -str PersistentHashSet
         (fn [s]
@@ -1570,7 +1558,6 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                 (let [acc (f acc (-current k))]
                   (-move-next! k)
                   (recur acc)))))))
-
 (defn filter
   {:doc "Filter the collection for elements matching the predicate."
    :signatures [[pred] [pred coll]]
@@ -1583,7 +1570,12 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                       (xf acc i)
                       acc)))))
   ([f coll]
-     (sequence (filter f) coll)))
+    (let [iter (iterator coll)]
+      (loop []
+        (when (not (at-end? iter))
+          (yield (current iter))
+          (move-next! iter)
+          (recur))))))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
@@ -1601,7 +1593,17 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                    (swap! seen conj i)
                    (xf acc i))))))))
   ([coll]
-     (sequence (distinct) coll)))
+    (let [iter (iterator coll)]
+      (loop [acc #{}]
+        (when (not (at-end? iter))
+          (if (contains? acc (current iter))
+            (do (move-next! iter)
+                (recur acc))
+            (let [val (current iter)]
+              (yield val)
+              (move-next! iter)
+              (recur (conj acc val)))))))))
+
 
 (defn keep
   ([f]
