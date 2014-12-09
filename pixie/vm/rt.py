@@ -72,6 +72,7 @@ def init():
     import pixie.vm.libs.path
     import pixie.vm.libs.string
     import pixie.vm.threads
+    import pixie.vm.libs.uv
 
 
 

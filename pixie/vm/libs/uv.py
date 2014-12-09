@@ -75,8 +75,7 @@ def run_loop(loop):
     return loop
 
 def _timer_cb(timer_t, status):
-    print "timer done!", timer_t, status
-    id = rffi.cast(rffi.INT, timer_t)
+    id = rffi.cast(rffi.SIZE_T, timer_t)
     data = data_store[id]
     del data_store[id]
     data.invoke([])
@@ -89,7 +88,7 @@ def timeout(loop, ms, fn):
     affirm(isinstance(loop, UVLoop), u"First argument must be a UVLoop")
     timeout = ms.int_val()
     timer = lltype.malloc(uv_timer_t, flavor="raw")
-    data_store[rffi.cast(rffi.INT, timer)] = fn
+    data_store[rffi.cast(rffi.SIZE_T, timer)] = fn
     timer_init(loop.loop(), timer)
     timer_start(timer, _timer_cb, timeout, 0)
     return loop
