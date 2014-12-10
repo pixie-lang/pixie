@@ -102,20 +102,19 @@ def set_native_value(ptr, val, tp):
     if tp is Integer._type:
         pnt = rffi.cast(rffi.LONGP, ptr)
         pnt[0] = rffi.cast(rffi.LONG, val.int_val())
-        return rffi.cast(rffi.CCHARP, rffi.ptradd(pnt, rffi.sizeof(rffi.LONG)))
+        return rffi.ptradd(rffi.cast(pnt, rffi.CCHARP), rffi.sizeof(rffi.LONG))
     if tp is Float._type:
         pnt = rffi.cast(rffi.DOUBLEP, ptr)
         pnt[0] = rffi.cast(rffi.DOUBLE, val.float_val())
-        return rffi.cast(rffi.CCHARP, rffi.ptradd(pnt, rffi.sizeof(rffi.DOUBLE)))
+        return rffi.ptradd(rffi.cast(pnt, rffi.CCHARP), rffi.sizeof(rffi.DOUBLE))
     if tp is String._type:
         pnt = rffi.cast(rffi.CCHARPP, ptr)
         pnt[0] = rffi.str2charp(str(rt.name(val)))
-        print "sizeof", rffi.sizeof(rffi.CCHARP)
         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
     if tp is FFIVoidP._type:
         pnt = rffi.cast(rffi.VOIDPP, ptr)
         pnt[0] = val.voidp_data()
-        return rffi.cast(rffi.CCHARP, rffi.ptradd(pnt, rffi.sizeof(rffi.VOIDP)))
+        return rffi.ptradd(rffi.cast(pnt, rffi.CCHARP), rffi.sizeof(rffi.VOIDP))
     assert False
 
 class FFIFn(object.Object):
@@ -172,8 +171,6 @@ class FFIFn(object.Object):
             self._arg0_offset = arg0_offset
             self._ret_offset = ret_offset
 
-            print exchange_buffer_size, arg0_offset, ret_offset
-
             self._is_inited = True
 
         return self
@@ -192,7 +189,6 @@ class FFIFn(object.Object):
         offset_p = rffi.ptradd(exb, self._arg0_offset)
 
         for x in range(len(self._arg_types)):
-            print offset_p
             offset_p = set_native_value(offset_p, args[x], self._arg_types[x])
         return exb
 
@@ -205,9 +201,7 @@ class FFIFn(object.Object):
     def _invoke(self, args):
 
         exb = self.prep_exb(args)
-        print "calling"
         jit_ffi_call(self._cd, self._f_ptr, exb)
-        print "done"
         ret_val = self.get_ret_val_from_buffer(exb)
         lltype.free(exb, flavor="raw")
         return ret_val
