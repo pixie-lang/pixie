@@ -20,8 +20,9 @@ Some planned and implemented features:
 
 ## Dependencies
 
-*  libuv
+*  libuv-dev
 *  libffi-dev
+*  libreadline-dev
 
 ## Building
 
