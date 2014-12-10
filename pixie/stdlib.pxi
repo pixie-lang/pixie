@@ -14,6 +14,9 @@
  (def fopen (ffi-fn libc "fopen" [String String] VoidP))
  (def atan2 (ffi-fn libc "atan2" [Float Float] Float))
  (def floor (ffi-fn libc "floor" [Float] Float))
+ (def strstr (ffi-fn libc "strstr" [String String] String))
+ (def strlen (ffi-fn libc "strlen" [String] Integer))
+ (def printf (ffi-fn libc "printf" [String String] Integer))
 
 (def reset! -reset!)
 
