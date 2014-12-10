@@ -102,11 +102,11 @@ def set_native_value(ptr, val, tp):
     if tp is Integer._type:
         pnt = rffi.cast(rffi.LONGP, ptr)
         pnt[0] = rffi.cast(rffi.LONG, val.int_val())
-        return rffi.ptradd(rffi.cast(pnt, rffi.CCHARP), rffi.sizeof(rffi.LONG))
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.LONG))
     if tp is Float._type:
         pnt = rffi.cast(rffi.DOUBLEP, ptr)
         pnt[0] = rffi.cast(rffi.DOUBLE, val.float_val())
-        return rffi.ptradd(rffi.cast(pnt, rffi.CCHARP), rffi.sizeof(rffi.DOUBLE))
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.DOUBLE))
     if tp is String._type:
         pnt = rffi.cast(rffi.CCHARPP, ptr)
         pnt[0] = rffi.str2charp(str(rt.name(val)))
@@ -114,7 +114,7 @@ def set_native_value(ptr, val, tp):
     if tp is FFIVoidP._type:
         pnt = rffi.cast(rffi.VOIDPP, ptr)
         pnt[0] = val.voidp_data()
-        return rffi.ptradd(rffi.cast(pnt, rffi.CCHARP), rffi.sizeof(rffi.VOIDP))
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.VOIDP))
     assert False
 
 class FFIFn(object.Object):
