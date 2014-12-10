@@ -544,7 +544,7 @@ class DefaultProtocolFn(NativeFn):
     def invoke(self, args):
         from pixie.vm.string import String
         tp = args[0].type().name()
-        affirm(False, u"No override for " + tp + u" on " + self._pfn.name() + u" in protocol " + self._pfn._protocol.name())
+        affirm(False, u"No override for " + tp + u" on " + self._pfn.name() + u" in protocol " + self._pfn.protocol().name())
 
 
 class Protocol(object.Object):
@@ -606,6 +606,9 @@ class PolymorphicFn(BaseCode):
         self._rev += 1
         self._fn_cache = {}
         self._protocol.add_satisfies(tp)
+
+    def protocol(self):
+        return self._protocol
 
     def _find_parent_fn(self, tp):
         ## Search the entire object tree to find the function to execute
