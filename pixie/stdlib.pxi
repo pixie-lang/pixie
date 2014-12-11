@@ -12,8 +12,10 @@
  (def rand (ffi-fn libc "rand" [Integer] Integer))
  (def srand (ffi-fn libc "srand" [Integer] Integer))
  (def fopen (ffi-fn libc "fopen" [String String] VoidP))
+ (def fread (ffi-fn libc "fread" [Buffer Integer Integer VoidP] Integer))
  (def atan2 (ffi-fn libc "atan2" [Float Float] Float))
  (def floor (ffi-fn libc "floor" [Float] Float))
+
 
 (def reset! -reset!)
 

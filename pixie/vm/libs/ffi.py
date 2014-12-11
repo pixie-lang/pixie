@@ -1,7 +1,8 @@
 import rpython.rlib.rdynload as dynload
 import pixie.vm.object as object
 import pixie.vm.code as code
-from pixie.vm.code import as_var, affirm
+import pixie.vm.stdlib  as proto
+from pixie.vm.code import as_var, affirm, extend
 import pixie.vm.rt as rt
 from rpython.rtyper.lltypesystem import rffi, lltype
 from pixie.vm.primitives import nil
@@ -10,6 +11,7 @@ from pixie.vm.string import String
 from rpython.rlib import clibffi
 from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION
 import rpython.rlib.jit as jit
+from rpython.rlib.rarithmetic import intmask
 
 
 """
@@ -71,6 +73,8 @@ def get_native_size(tp):
         return rffi.sizeof(rffi.DOUBLE)
     if tp == String._type:
         return rffi.sizeof(rffi.CCHARP)
+    if tp == Buffer._type:
+        return rffi.sizeof(rffi.CCHARP)
     if tp == FFIVoidP._type:
         return rffi.sizeof(rffi.VOIDP)
     assert False
@@ -110,6 +114,10 @@ def set_native_value(ptr, val, tp):
     if tp is String._type:
         pnt = rffi.cast(rffi.CCHARPP, ptr)
         pnt[0] = rffi.str2charp(str(rt.name(val)))
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
+    if tp is Buffer._type:
+        pnt = rffi.cast(rffi.CCHARPP, ptr)
+        pnt[0] = val.buffer()
         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
     if tp is FFIVoidP._type:
         pnt = rffi.cast(rffi.VOIDPP, ptr)
@@ -219,6 +227,8 @@ def get_clibffi_type(arg):
         return clibffi.cast_type_to_ffitype(rffi.DOUBLE)
     if arg == String._type:
         return clibffi.ffi_type_pointer
+    if arg == Buffer._type:
+        return clibffi.ffi_type_pointer
     if arg == FFIVoidP._type:
         return clibffi.ffi_type_pointer
     assert False
@@ -260,3 +270,49 @@ class FFIVoidP(object.Object):
 
 
 
+class Buffer(object.Object):
+    """ Defines a byte buffer with non-gc'd (therefore non-movable) contents
+    """
+    _type = object.Type(u"pixie.stdlib.Buffer")
+
+    def type(self):
+        return Buffer._type
+
+    def __init__(self, size):
+        self._size = size
+        self._used_size = 0
+        self._buffer = lltype.malloc(rffi.CCHARP.TO, size, flavor="raw")
+
+
+    def __del__(self):
+        lltype.free(self._buffer, flavor="raw")
+
+    def set_used_size(self, size):
+        self._used_size = size
+
+    def buffer(self):
+        return self._buffer
+
+    def count(self):
+        return self._used_size
+
+    def nth(self, idx):
+        return self._buffer[idx]
+
+
+@extend(proto._nth, Buffer)
+def _nth(self, idx):
+    return rt.wrap(ord(self.nth(idx.int_val())))
+
+@extend(proto._count, Buffer)
+def _count(self):
+    return self.count()
+
+@as_var("buffer")
+def buffer(size):
+    return Buffer(size.int_val())
+
+@as_var("set-buffer-count")
+def set_buffer_size(self, size):
+    self.set_used_size(size.int_val())
+    return self
