@@ -5,11 +5,10 @@ from pixie.vm.code import as_var, affirm
 import pixie.vm.rt as rt
 from rpython.rtyper.lltypesystem import rffi, lltype
 from pixie.vm.primitives import nil
-from pixie.vm.numbers import Integer
+from pixie.vm.numbers import Integer, Float
 from pixie.vm.string import String
-from rpython.rlib.jit_libffi import CIF_DESCRIPTION
 from rpython.rlib import clibffi
-from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call
+from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION
 import rpython.rlib.jit as jit
 
 
@@ -68,8 +67,12 @@ class ExternalLib(object.Object):
 def get_native_size(tp):
     if tp == Integer._type:
         return rffi.sizeof(rffi.LONG)
+    if tp == Float._type:
+        return rffi.sizeof(rffi.DOUBLE)
     if tp == String._type:
         return rffi.sizeof(rffi.CCHARP)
+    if tp == FFIVoidP._type:
+        return rffi.sizeof(rffi.VOIDP)
     assert False
 
 def get_ret_val(ptr, tp):
@@ -77,6 +80,10 @@ def get_ret_val(ptr, tp):
         pnt = rffi.cast(rffi.LONGP, ptr)
         val = pnt[0]
         return Integer(val)
+    if tp == Float._type:
+        pnt = rffi.cast(rffi.DOUBLEP, ptr)
+        val = pnt[0]
+        return Float(val)
     if tp == String._type:
         pnt = rffi.cast(rffi.CCHARPP, ptr)
         if pnt[0] == lltype.nullptr(rffi.CCHARP.TO):
@@ -84,17 +91,30 @@ def get_ret_val(ptr, tp):
         else:
             return String(unicode(rffi.charp2str(pnt[0])))
 
+    if tp == FFIVoidP._type:
+        pnt = rffi.cast(rffi.VOIDPP, ptr)
+        val = pnt[0]
+        return FFIVoidP(val)
+
     assert False
 
 def set_native_value(ptr, val, tp):
     if tp is Integer._type:
         pnt = rffi.cast(rffi.LONGP, ptr)
         pnt[0] = rffi.cast(rffi.LONG, val.int_val())
-        return rffi.cast(rffi.CCHARP, rffi.ptradd(pnt, rffi.sizeof(rffi.LONG)))
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.LONG))
+    if tp is Float._type:
+        pnt = rffi.cast(rffi.DOUBLEP, ptr)
+        pnt[0] = rffi.cast(rffi.DOUBLE, val.float_val())
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.DOUBLE))
     if tp is String._type:
         pnt = rffi.cast(rffi.CCHARPP, ptr)
         pnt[0] = rffi.str2charp(str(rt.name(val)))
-        return rffi.cast(rffi.CCHARP, rffi.ptradd(pnt, rffi.sizeof(rffi.CCHARP)))
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
+    if tp is FFIVoidP._type:
+        pnt = rffi.cast(rffi.VOIDPP, ptr)
+        pnt[0] = val.voidp_data()
+        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.VOIDP))
     assert False
 
 class FFIFn(object.Object):
@@ -117,36 +137,37 @@ class FFIFn(object.Object):
     def thaw(self):
         if not self._is_inited:
             self._f_ptr = self._lib.get_fn_ptr(self._name)
-            transfer_size = 0
-            arg0_offset = len(self._arg_types) * rffi.sizeof(rffi.CCHARP)
-            exchange_result = arg0_offset
-            for x in self._arg_types:
-                exchange_result = transfer_size
-                transfer_size += get_native_size(x)
+            nargs = len(self._arg_types)
 
-            ret_offset = transfer_size
-            transfer_size += get_native_size(self._ret_type)
+            exchange_buffer_size = nargs * rffi.sizeof(rffi.CCHARP)
 
-            cd = lltype.malloc(CIF_DESCRIPTION, len(self._arg_types), flavor="raw")
+            cd = lltype.malloc(CIF_DESCRIPTION, nargs, flavor="raw")
             cd.abi = clibffi.FFI_DEFAULT_ABI
-            cd.nargs = len(self._arg_types)
+            cd.nargs = nargs
             cd.rtype = get_clibffi_type(self._ret_type)
-            atypes = lltype.malloc(clibffi.FFI_TYPE_PP.TO, len(self._arg_types), flavor="raw")
 
-            for x in range(len(self._arg_types)):
-                atypes[x] = get_clibffi_type(self._arg_types[x])
+            atypes = lltype.malloc(clibffi.FFI_TYPE_PP.TO, nargs, flavor="raw")
+            arg0_offset = exchange_buffer_size
+            for idx in range(nargs):
+                cd.exchange_args[idx] = exchange_buffer_size
+                tp = self._arg_types[idx]
+                native_size = get_native_size(tp)
+                atypes[idx] = get_clibffi_type(tp)
+                exchange_buffer_size += native_size
+
+            ret_offset = exchange_buffer_size
+            exchange_buffer_size += get_native_size(self._ret_type)
 
 
 
             cd.atypes = atypes
-            cd.exchange_size = transfer_size
+            cd.exchange_size = exchange_buffer_size
             cd.exchange_result = ret_offset
             cd.exchange_result_libffi = ret_offset
-            cd.exchange_args[0] = arg0_offset
 
             jit_ffi_prep_cif(cd)
             self._cd = cd
-            self._transfer_size = transfer_size
+            self._transfer_size = exchange_buffer_size
             self._arg0_offset = arg0_offset
             self._ret_offset = ret_offset
 
@@ -194,7 +215,11 @@ class FFIFn(object.Object):
 def get_clibffi_type(arg):
     if arg == Integer._type:
         return clibffi.cast_type_to_ffitype(rffi.LONG)
+    if arg == Float._type:
+        return clibffi.cast_type_to_ffitype(rffi.DOUBLE)
     if arg == String._type:
+        return clibffi.ffi_type_pointer
+    if arg == FFIVoidP._type:
         return clibffi.ffi_type_pointer
     assert False
 
@@ -219,5 +244,19 @@ def _ffi_fn(lib, nm, args, ret_type):
 
     f = FFIFn(lib, rt.name(nm), new_args, ret_type)
     return f
+
+class FFIVoidP(object.Object):
+    _type = object.Type(u"pixie.stdlib.VoidP")
+
+    def type(self):
+        return FFIVoidP._type
+
+    def __init__(self, data):
+        self._voidp_data = data
+
+    def voidp_data(self):
+        return self._voidp_data
+
+
 
 
