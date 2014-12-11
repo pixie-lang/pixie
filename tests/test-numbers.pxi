@@ -36,3 +36,8 @@
   (t/assert= (- 1/2 1/2) 0)
   (t/assert= (* 1/2 1/2) 1/4)
   (t/assert= (/ 1/2 1/2) 1))
+
+(t/deftest ratio-accessors
+  (doseq [[r n d] [[3/2 3 2] [1/9 1 9] [-3/89 -3 89]]]
+    (t/assert= (numerator r) n)
+    (t/assert= (denominator r) d)))

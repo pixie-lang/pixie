@@ -1,4 +1,5 @@
 import pixie.vm.object as object
+from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.rbigint import rbigint
@@ -340,3 +341,13 @@ def init():
     @extend(proto._str, Ratio._type)
     def _str(r):
         return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
+
+    @as_var("numerator")
+    def numerator(r):
+        affirm(isinstance(r, Ratio), u"First argument must be a Ratio")
+        return rt.wrap(r.numerator())
+
+    @as_var("denominator")
+    def denominator(r):
+        affirm(isinstance(r, Ratio), u"First argument must be a Ratio")
+        return rt.wrap(r.denominator())
