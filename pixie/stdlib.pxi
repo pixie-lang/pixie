@@ -1528,6 +1528,9 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
     nil
     (cons (current i) (lazy-seq (iterator-seq (move-next! i))))))
 
+(extend -first IIterator -current)
+(extend -iterator IIterator identity)
+
 (extend -seq IIterator iterator-seq)
 (extend -seq IIterable (comp seq iterator))
 
@@ -1561,6 +1564,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                 (let [acc (f acc (-current k))]
                   (-move-next! k)
                   (recur acc)))))))
+
 (defn filter
   {:doc "Filter the collection for elements matching the predicate."
    :signatures [[pred] [pred coll]]
