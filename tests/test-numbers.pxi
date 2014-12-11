@@ -36,3 +36,16 @@
   (t/assert= (- 1/2 1/2) 0)
   (t/assert= (* 1/2 1/2) 1/4)
   (t/assert= (/ 1/2 1/2) 1))
+
+(t/deftest ratio-accessors
+  (doseq [[r n d] [[3/2 3 2] [1/9 1 9] [-3/89 -3 89]]]
+    (t/assert= (numerator r) n)
+    (t/assert= (denominator r) d)))
+
+(t/deftest test-int
+  (doseq [[x i] [[1 1] [3.0 3] [3.5 3] [3.999 3] [3/2 1]]]
+    (t/assert= (int x) i)))
+
+(t/deftest test-float
+  (doseq [[x f] [[1 1.0] [3 3.0] [3.333 3.333] [3/2 1.5] [1/7 (/ 1.0 7.0)]]]
+    (t/assert= (float x) f)))

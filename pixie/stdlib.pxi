@@ -13,8 +13,11 @@
  (def srand (ffi-fn libc "srand" [Integer] Integer))
  (def fopen (ffi-fn libc "fopen" [String String] VoidP))
  (def fread (ffi-fn libc "fread" [Buffer Integer Integer VoidP] Integer))
- (def atan2 (ffi-fn libc "atan2" [Float Float] Float))
- (def floor (ffi-fn libc "floor" [Float] Float))
+
+ (def libm (ffi-library (str "libm." pixie.platform/so-ext)))
+ (def atan2 (ffi-fn libm "atan2" [Float Float] Float))
+ (def floor (ffi-fn libm "floor" [Float] Float))
+ (def lround (ffi-fn libm "lround" [Float] Integer))
 
 
 (def reset! -reset!)
@@ -729,6 +732,24 @@ If further arguments are passed, invokes the method named by symbol, passing the
 
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
+
+(defn float
+  {:doc "Converts a number to a float."
+   :since "0.1"}
+  [x]
+  (cond
+   (number? x) (+ x 0.0)
+   :else (throw (str "Can't convert a value of type " (type x) " to a Float"))))
+
+(defn int
+  {:doc "Converts a number to an integer."
+   :since "0.1"}
+  [x]
+  (cond
+   (integer? x) x
+   (float? x) (lround (floor x))
+   (ratio? x) (int (/ (float (numerator x)) (float (denominator x))))
+   :else (throw (str "Can't convert a value of type " (type x) " to an Integer"))))
 
 (defn last
   {:doc "Returns the last element of the collection, or nil if none."
