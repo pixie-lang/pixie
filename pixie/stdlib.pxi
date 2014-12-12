@@ -222,6 +222,8 @@
 
 (comment (extend -reduce Array indexed-reduce))
 
+(extend -reduce Buffer indexed-reduce)
+
 (extend -str Bool
   (fn [x]
     (if (identical? x true)
@@ -1039,7 +1041,8 @@ Creates new maps if the keys are not present."
                   (let [fn-name (first body)
                         _ (assert (symbol? fn-name) "protocol override must have a name")
                         args (second body)
-                        _ (assert (vector? args) "protocol override must have arguments")
+                        _ (assert (or (vector? args)
+                                      (seq? args)) "protocol override must have arguments")
                         self-arg (first args)
                         _ (assert (symbol? self-arg) "protocol override must have at least one `self' argument")
                         field-lets (transduce (comp (map (fn [f]

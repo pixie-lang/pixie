@@ -3,8 +3,8 @@
   (require pixie.io :as io))
 
 (t/deftest test-file-reduction
-  (let [f (io/open-read "test/test-io.txt")]
+  (let [f (io/open-read "tests/pixie/test/test-io.txt")]
     (t/assert= (transduce (map identity)
                           count-rf
                           f)
-               10)))
+               78)))
