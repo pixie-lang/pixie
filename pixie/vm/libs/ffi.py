@@ -9,6 +9,7 @@ from pixie.vm.primitives import nil
 from pixie.vm.numbers import Integer, Float
 from pixie.vm.string import String
 from rpython.rlib import clibffi
+from rpython.rlib.runicode import unicode_encode_utf_8
 from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import intmask
@@ -113,7 +114,9 @@ def set_native_value(ptr, val, tp):
         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.DOUBLE))
     if tp is String._type:
         pnt = rffi.cast(rffi.CCHARPP, ptr)
-        pnt[0] = rffi.str2charp(str(rt.name(val)))
+        s = rt.name(val)
+        s = unicode_encode_utf_8(s, len(s), 'strict')
+        pnt[0] = rffi.str2charp(s)
         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
     if tp is Buffer._type:
         pnt = rffi.cast(rffi.CCHARPP, ptr)

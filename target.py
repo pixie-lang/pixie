@@ -16,6 +16,7 @@ import os
 import os.path as path
 import rpython.rlib.rpath as rpath
 import rpython.rlib.rpath as rposix
+import rpython.rlib.runicode as runicode
 from rpython.rlib.objectmodel import we_are_translated
 
 class DebugIFace(JitHookInterface):
@@ -90,7 +91,7 @@ class ReplFn(NativeFn):
                     break
                 val = rt._repr(val)
                 assert isinstance(val, String), "str should always return a string"
-                print val._str
+                print runicode.unicode_encode_utf_8(val._str, len(val._str), 'strict')
 
     def set_recent_vars(self, val):
         if rt.eq(val, STAR_1.deref()):
