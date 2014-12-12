@@ -1,8 +1,8 @@
 (ns collections.test-sets
   (require pixie.test :as t)
-  (require tests.utils :as u))
+  (require pixie.tests.utils :as u))
 
-(def worst-hashers (vec (map u/->WorstHasher) 
+(def worst-hashers (vec (map u/->WorstHasher)
                         (range 100)))
 
 (t/deftest test-count
@@ -10,7 +10,7 @@
   (t/assert= (count (set [1 2 3])) 3)
   (t/assert= (count (set [1 1 2 1])) 2)
   (t/assert= (count (set worst-hashers)) 100))
-    
+
 (t/deftest test-contains
   (let [s #{1 2 3}
         c [1 2 3]

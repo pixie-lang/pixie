@@ -222,6 +222,8 @@
 
 (comment (extend -reduce Array indexed-reduce))
 
+(extend -reduce Buffer indexed-reduce)
+
 (extend -str Bool
   (fn [x]
     (if (identical? x true)
@@ -235,6 +237,7 @@
 (extend -hash Nil (fn [self] 100000))
 (extend -with-meta Nil (fn [self _] nil))
 (extend -at-end? Nil (fn [_] true))
+(extend -deref Nil (fn [_] nil))
 
 (extend -hash Integer hash-int)
 
@@ -774,7 +777,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn complement
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
-  [f] 
+  [f]
   (if (not (fn? f))
     (throw "Complement must be passed a function")
     (fn
@@ -992,12 +995,10 @@ Creates new maps if the keys are not present."
            (pop-binding-frame!)
            ret))))
 
-(def foo 42)
-(set-dynamic! (resolve 'pixie.stdlib/foo))
-
 (defmacro require [ns kw as-nm]
   (assert (= kw :as) "Require expects :as as the second argument")
   `(do (load-ns (quote ~ns))
+       (assert (the-ns (quote ~ns)) (str "Couldn't find the namespace " (quote ~ns) " after loading the file"))
        (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
 
 (defmacro ns [nm & body]
@@ -1038,7 +1039,8 @@ Creates new maps if the keys are not present."
                   (let [fn-name (first body)
                         _ (assert (symbol? fn-name) "protocol override must have a name")
                         args (second body)
-                        _ (assert (vector? args) "protocol override must have arguments")
+                        _ (assert (or (vector? args)
+                                      (seq? args)) "protocol override must have arguments")
                         self-arg (first args)
                         _ (assert (symbol? self-arg) "protocol override must have at least one `self' argument")
                         field-lets (transduce (comp (map (fn [f]
@@ -1052,7 +1054,9 @@ Creates new maps if the keys are not present."
                   (cond
                    (symbol? body) (cond
                                    (= body 'Object) [body (second res) (third res)]
-                                   (protocol? @(resolve body)) [@(resolve body) (second res) (conj (third res) body)]
+                                   (protocol? @(resolve-in *ns* body)) [@(resolve-in *ns* body)
+                                                                        (second res)
+                                                                        (conj (third res) body)]
                                    :else (throw (str "can only extend protocols or Object, not " body)))
                    (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
                                  (if (protocol? proto)
@@ -1298,7 +1302,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
   ([] true)
   ([x] x)
   ([x y] `(if ~x ~y false))
-  ([x y & more] `(if ~x (and ~y ~@more))))
+  ([x y & more] `(if ~x (and ~y ~@more) false)))
 
 (defmacro or
   {:doc "Returns the value of the first expression that returns a truthy value, or false."
@@ -1900,3 +1904,9 @@ Expands to calls to `extend-type`."
   `(do
      (load-ns ~ns)
      (refer ~ns :refer :all)))
+
+(defn count-rf
+  "A Reducing function that counts the items reduced over"
+  ([] 0)
+  ([result] result)
+  ([result _] (inc result)))

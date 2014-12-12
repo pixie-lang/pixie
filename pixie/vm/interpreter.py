@@ -372,6 +372,11 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
             else:
                 return frame.pop()
 
+        if inst == code.PUSH_NS:
+            from pixie.vm.compiler import NS_VAR
+            frame.push(NS_VAR.deref())
+            continue
+
 
         affirm(False, u"NO DISPATCH FOR: " + unicode(code.BYTECODES[inst]))
         raise Exception()
