@@ -1,9 +1,9 @@
 import pixie.vm.rt as rt
-from pixie.vm.object import Object, Type
+from pixie.vm.object import Object, Type, affirm
 from pixie.vm.code import extend, as_var
 from pixie.vm.primitives import nil, true, false
+from pixie.vm.numbers import Integer, _add
 import pixie.vm.stdlib as proto
-import pixie.vm.numbers as numbers
 import pixie.vm.util as util
 from rpython.rlib.rarithmetic import intmask, r_uint
 
@@ -88,6 +88,16 @@ def _eq(self, obj):
 @extend(proto._hash, Character)
 def _hash(self):
     return rt.wrap(intmask(util.hash_int(r_uint(self.char_val()))))
+
+@extend(_add, Character._type, Integer._type)
+def _add(a, b):
+    assert isinstance(a, Character) and isinstance(b, Integer)
+    return rt._add(rt.wrap(a.char_val()), b)
+
+@extend(_add, Character._type, Character._type)
+def _add(a, b):
+    assert isinstance(a, Character) and isinstance(b, Character)
+    return Character(a.char_val() + b.char_val())
 
 
 @extend(proto._name, String)

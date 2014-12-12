@@ -726,6 +726,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn float? [v] (instance? Float v))
 (defn ratio? [v] (instance? Ratio v))
 
+(defn char? [v] (instance? Character v))
 (defn string? [v] (instance? String v))
 (defn keyword? [v] (instance? Keyword v))
 
@@ -752,6 +753,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
    (integer? x) x
    (float? x) (lround (floor x))
    (ratio? x) (int (/ (float (numerator x)) (float (denominator x))))
+   (char? x) (+ x 0)
    :else (throw (str "Can't convert a value of type " (type x) " to an Integer"))))
 
 (defn last
