@@ -111,7 +111,6 @@ def init():
 
     for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():
         name = munge(name)
-        print name
         if var.is_defined() and isinstance(var.deref(), BaseCode):
             globals()[name] = unwrap(var)
         else:
@@ -126,7 +125,6 @@ def init():
             if name in globals():
                 continue
 
-            print "Found ->> ", name, var.deref()
             if var.is_defined() and  isinstance(var.deref(), BaseCode):
                 globals()[name] = unwrap(var)
             else:

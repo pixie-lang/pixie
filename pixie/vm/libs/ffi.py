@@ -299,6 +299,9 @@ class Buffer(object.Object):
     def nth_char(self, idx):
         return self._buffer[idx]
 
+    def capacity(self):
+        return self._size
+
 
 @extend(proto._nth, Buffer)
 def _nth(self, idx):
@@ -312,7 +315,11 @@ def _count(self):
 def buffer(size):
     return Buffer(size.int_val())
 
-@as_var("set-buffer-count")
+@as_var("buffer-capacity")
+def buffer_capacity(buffer):
+    return rt.wrap(buffer.capacity())
+
+@as_var("set-buffer-count!")
 def set_buffer_size(self, size):
     self.set_used_size(size.int_val())
     return self

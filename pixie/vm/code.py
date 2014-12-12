@@ -30,7 +30,8 @@ BYTECODES = ["LOAD_CONST",
              "POP_UP_N",
              "MAKE_MULTI_ARITY",
              "MAKE_VARIADIC",
-             "YIELD"]
+             "YIELD",
+             "PUSH_NS"]
 
 for x in range(len(BYTECODES)):
     globals()[BYTECODES[x]] = r_uint(x)

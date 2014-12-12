@@ -235,6 +235,7 @@
 (extend -hash Nil (fn [self] 100000))
 (extend -with-meta Nil (fn [self _] nil))
 (extend -at-end? Nil (fn [_] true))
+(extend -deref Nil (fn [_] nil))
 
 (extend -hash Integer hash-int)
 
@@ -774,7 +775,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn complement
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
-  [f] 
+  [f]
   (if (not (fn? f))
     (throw "Complement must be passed a function")
     (fn
@@ -974,11 +975,11 @@ Creates new maps if the keys are not present."
         nil
         (throw (str "Assert failed " ~msg)))))
 
-(defmacro resolve
+(defn resolve
   {:doc "Resolve the var associated with the symbol in the current namespace."
    :added "0.1"}
   [sym]
-  `(resolve-in (this-ns-name) ~sym))
+  (resolve-in (this-ns-name) sym))
 
 (defmacro binding [bindings & body]
   (let [bindings (apply hashmap bindings)
@@ -1298,7 +1299,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
   ([] true)
   ([x] x)
   ([x y] `(if ~x ~y false))
-  ([x y & more] `(if ~x (and ~y ~@more))))
+  ([x y & more] `(if ~x (and ~y ~@more) false)))
 
 (defmacro or
   {:doc "Returns the value of the first expression that returns a truthy value, or false."
@@ -1900,3 +1901,9 @@ Expands to calls to `extend-type`."
   `(do
      (load-ns ~ns)
      (refer ~ns :refer :all)))
+
+(defn count-rf
+  "A Reducing function that counts the items reduced over"
+  ([] 0)
+  ([result] result)
+  ([result _] (inc result)))

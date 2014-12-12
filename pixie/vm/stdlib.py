@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance
+from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
+    runtime_error
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           resize_list, list_copy, returns, get_var_if_defined, intern_var
 import pixie.vm.code as code
@@ -467,7 +468,9 @@ def refer_symbol(ns, sym, var):
 
 @as_var("extend")
 def _extend(proto_fn, tp, fn):
-    affirm(isinstance(proto_fn, PolymorphicFn), u"First argument to extend should be a PolymorphicFn")
+    if not isinstance(proto_fn, PolymorphicFn):
+        runtime_error(u"Fist argument to extend should be a PolymorphicFn not a " + proto_fn.type().name())
+
     affirm(isinstance(tp, Type) or isinstance(tp, Protocol), u"Second argument to extend must be a Type or Protocol")
     affirm(isinstance(fn, BaseCode), u"Last argument to extend must be a function")
     proto_fn.extend(tp, fn)

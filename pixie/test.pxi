@@ -30,6 +30,7 @@
   (set! (var *stats*) (atom {:fail 0 :pass 0}))
 
   (let [match (or (first args) "")
+        _ (println (keys @tests))
         tests (transduce (comp (filter #(>= (s/index-of (str (key %1)) match) 0))
                                (map val))
                          conj
