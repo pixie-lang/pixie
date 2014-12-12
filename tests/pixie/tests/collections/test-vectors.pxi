@@ -1,4 +1,4 @@
-(ns collections.test-vectors
+(ns pixie.tests.collections.test-vectors
   (require pixie.test :as t))
 
 (def MAX-SIZE 1064)

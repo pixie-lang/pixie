@@ -729,8 +729,7 @@ def compile_ns(form, ctx):
     ctx.push_const(nil)
 
 def compile_this_ns(form, ctx):
-    ctx.bytecode.append(code.PUSH_NS)
-    ctx.add_sp(1)
+    ctx.push_const(NS_VAR.deref())
 
 def compile_var(form, ctx):
     form = rt.next(form)

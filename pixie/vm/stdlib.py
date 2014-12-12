@@ -447,9 +447,19 @@ def ns_map(ns):
 @as_var("refer-ns")
 def refer(ns, refer, alias):
     from pixie.vm.symbol import Symbol
+    from pixie.vm.string import String
+    from pixie.vm.code import _ns_registry
+
+    if isinstance(ns, Symbol) or isinstance(ns, String):
+        ns = _ns_registry.find_or_make(rt.name(ns))
+
+    if isinstance(refer, Symbol) or isinstance(refer, String):
+        refer = _ns_registry.find_or_make(rt.name(refer))
 
     affirm(isinstance(ns, code.Namespace), u"First argument must be a namespace")
-    affirm(isinstance(refer, code.Namespace), u"Second argument must be a namespace")
+    if not isinstance(refer, code.Namespace):
+        runtime_error(u"Second argument must be a namespace not a " + refer.type().name())
+
     affirm(isinstance(alias, Symbol), u"Third argument must be a symbol")
 
     ns.add_refer(refer, rt.name(alias))
@@ -572,7 +582,8 @@ def set_dynamic(var):
 
 @as_var("set!")
 def set(var, val):
-    affirm(isinstance(var, Var), u"Can only set the dynamic value of a var")
+    if not isinstance(var, Var):
+        runtime_error(u"Can only set the dynamic value of a var. Not a: " + var.type().name())
     var.set_value(val)
     return var
 

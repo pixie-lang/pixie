@@ -977,11 +977,11 @@ Creates new maps if the keys are not present."
         nil
         (throw (str "Assert failed " ~msg)))))
 
-(defn resolve
+(defmacro resolve
   {:doc "Resolve the var associated with the symbol in the current namespace."
    :added "0.1"}
   [sym]
-  (resolve-in (this-ns-name) sym))
+  `(resolve-in (this-ns-name) ~sym))
 
 (defmacro binding [bindings & body]
   (let [bindings (apply hashmap bindings)
@@ -995,12 +995,10 @@ Creates new maps if the keys are not present."
            (pop-binding-frame!)
            ret))))
 
-(def foo 42)
-(set-dynamic! (resolve 'pixie.stdlib/foo))
-
 (defmacro require [ns kw as-nm]
   (assert (= kw :as) "Require expects :as as the second argument")
   `(do (load-ns (quote ~ns))
+       (assert (the-ns (quote ~ns)) (str "Couldn't find the namespace " (quote ~ns) " after loading the file"))
        (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
 
 (defmacro ns [nm & body]
@@ -1056,7 +1054,9 @@ Creates new maps if the keys are not present."
                   (cond
                    (symbol? body) (cond
                                    (= body 'Object) [body (second res) (third res)]
-                                   (protocol? @(resolve body)) [@(resolve body) (second res) (conj (third res) body)]
+                                   (protocol? @(resolve-in *ns* body)) [@(resolve-in *ns* body)
+                                                                        (second res)
+                                                                        (conj (third res) body)]
                                    :else (throw (str "can only extend protocols or Object, not " body)))
                    (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
                                  (if (protocol? proto)
