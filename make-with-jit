@@ -1,1 +1,1 @@
-python ../externals/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target_preload.py
+python ../externals/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target_preload.py  2>&1 >/dev/null | grep -v 'WARNING'

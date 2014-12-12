@@ -155,12 +155,24 @@ class EvalFn(NativeFn):
 
             interpret(compile(read(StringReader(unicode(self._expr)), True)))
 
-stdlib_loaded = False
+
+class IsPreloadFlag(object):
+    def __init__(self):
+        self._is_true = False
+
+    def is_true(self):
+        return self._is_true
+
+    def set_true(self):
+        self._is_true = True
+
+
+stdlib_loaded = IsPreloadFlag()
 
 @wrap_fn
 def run_load_stdlib():
     global stdlib_loaded
-    if stdlib_loaded:
+    if stdlib_loaded.is_true():
         return
     import pixie.vm.compiler as compiler
     import pixie.vm.reader as reader
@@ -186,7 +198,7 @@ def run_load_stdlib():
     if not we_are_translated():
         print "done"
 
-    stdlib_loaded = True
+    stdlib_loaded.set_true()
 
 def load_stdlib():
     run_load_stdlib.invoke([])
