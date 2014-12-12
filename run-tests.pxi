@@ -1,5 +1,8 @@
 (require pixie.test :as t)
 
+
+(swap! load-paths conj "./tests/")
+
 (println @load-paths)
 
 (if (= 0 (count program-arguments))
