@@ -18,6 +18,12 @@ build_with_jit: fetch_externals
 build_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --thread --no-shared target.py
 
+build_preload_with_jit: fetch_externals
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target_preload.py
+
+build_preload_no_jit: fetch_externals
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --thread --no-shared target_preload.py
+
 fetch_externals: $(EXTERNALS)/pypy
 
 $(EXTERNALS)/pypy:
