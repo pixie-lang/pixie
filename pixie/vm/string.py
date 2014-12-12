@@ -24,8 +24,23 @@ def _str(x):
 
 @extend(proto._repr, String)
 def _repr(self):
-    return rt.wrap(u"\"" + self._str + u"\"")
-
+    res = u""
+    for c in self._str:
+        if c == "\"":
+            res += u"\\\""
+        elif c == "\n":
+            res += u"\\n"
+        elif c == "\t":
+            res += u"\\t"
+        elif c == "\b":
+            res += u"\\b"
+        elif c == "\f":
+            res += u"\\f"
+        elif c == "\r":
+            res += u"\\r"
+        else:
+            res += c
+    return rt.wrap(u"\"" + res + u"\"")
 
 @extend(proto._count, String)
 def _count(self):
