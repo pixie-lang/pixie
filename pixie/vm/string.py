@@ -89,6 +89,11 @@ def _eq(self, obj):
 def _hash(self):
     return rt.wrap(intmask(util.hash_int(r_uint(self.char_val()))))
 
+@as_var("char")
+def char(val):
+    affirm(isinstance(val, Integer), u"First argument must be an Integer")
+    return Character(val.int_val())
+
 @extend(_add, Character._type, Integer._type)
 def _add(a, b):
     assert isinstance(a, Character) and isinstance(b, Integer)
