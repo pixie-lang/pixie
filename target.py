@@ -155,8 +155,25 @@ class EvalFn(NativeFn):
 
             interpret(compile(read(StringReader(unicode(self._expr)), True)))
 
+
+class IsPreloadFlag(object):
+    def __init__(self):
+        self._is_true = False
+
+    def is_true(self):
+        return self._is_true
+
+    def set_true(self):
+        self._is_true = True
+
+
+stdlib_loaded = IsPreloadFlag()
+
 @wrap_fn
 def run_load_stdlib():
+    global stdlib_loaded
+    if stdlib_loaded.is_true():
+        return
     import pixie.vm.compiler as compiler
     import pixie.vm.reader as reader
     f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.pxi"))
@@ -180,6 +197,8 @@ def run_load_stdlib():
 
     if not we_are_translated():
         print "done"
+
+    stdlib_loaded.set_true()
 
 def load_stdlib():
     run_load_stdlib.invoke([])
@@ -326,6 +345,7 @@ def target(*args):
     rt.__config__ = args[0].config
 
 
+    print "ARG INFO: ", args
 
 
     return entry_point, None
