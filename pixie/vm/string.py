@@ -86,7 +86,8 @@ def _repr(self):
     cv = self.char_val()
     if cv < 128:
         return rt.wrap(u"\\"+unicode(chr(cv)))
-    return rt.wrap(u"\\u"+unicode(str(cv)))
+    hexv = rt.name(rt.bit_str(rt.wrap(self.char_val()), rt.wrap(4)))
+    return rt.wrap(u"\\u" + u"0" * (4 - len(hexv)) + hexv)
 
 @extend(proto._eq, Character)
 def _eq(self, obj):
