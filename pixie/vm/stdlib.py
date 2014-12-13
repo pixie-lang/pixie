@@ -388,6 +388,7 @@ def load_ns(filename):
 @as_var("load-file")
 def load_file(filename):
     from pixie.vm.string import String
+    from pixie.vm.util import unicode_from_utf8
     import pixie.vm.reader as reader
     import os.path as path
 
@@ -404,7 +405,7 @@ def load_file(filename):
         if newline_pos > 0:
             data = data[newline_pos:]
 
-    rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode(data)), unicode(filename)))
+    rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
     return nil
 
 @as_var("load-reader")

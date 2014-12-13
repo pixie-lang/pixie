@@ -11,7 +11,7 @@ from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
 from pixie.vm.atom import Atom
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
-from pixie.vm.util import unicode_to_utf8
+from pixie.vm.util import unicode_from_utf8, unicode_to_utf8
 import sys
 import os
 import os.path as path
@@ -139,7 +139,7 @@ class BatchModeFn(NativeFn):
                     if newline_pos > 0:
                         data = data[newline_pos:]
 
-                rt.load_reader(StringReader(unicode(data)))
+                rt.load_reader(StringReader(unicode_from_utf8(data)))
             except WrappedException as ex:
                 print "Error: ", ex._ex.__repr__()
                 os._exit(1)
@@ -154,7 +154,7 @@ class EvalFn(NativeFn):
         with with_ns(u"user"):
             NS_VAR.deref().include_stdlib()
 
-            interpret(compile(read(StringReader(unicode(self._expr)), True)))
+            interpret(compile(read(StringReader(unicode_from_utf8(self._expr)), True)))
 
 
 class IsPreloadFlag(object):
