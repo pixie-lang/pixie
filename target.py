@@ -11,12 +11,12 @@ from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
 from pixie.vm.atom import Atom
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
+from pixie.vm.util import unicode_to_utf8
 import sys
 import os
 import os.path as path
 import rpython.rlib.rpath as rpath
 import rpython.rlib.rpath as rposix
-import rpython.rlib.runicode as runicode
 from rpython.rlib.objectmodel import we_are_translated
 
 class DebugIFace(JitHookInterface):
@@ -91,7 +91,7 @@ class ReplFn(NativeFn):
                     break
                 val = rt._repr(val)
                 assert isinstance(val, String), "str should always return a string"
-                print runicode.unicode_encode_utf_8(val._str, len(val._str), 'strict')
+                print unicode_to_utf8(val._str)
 
     def set_recent_vars(self, val):
         if rt.eq(val, STAR_1.deref()):

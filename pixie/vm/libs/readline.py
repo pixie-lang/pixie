@@ -1,6 +1,7 @@
 import py
 
-from rpython.rlib.runicode import str_decode_utf_8
+from pixie.vm.util import unicode_from_utf8
+
 from rpython.rtyper.lltypesystem import lltype, rffi
 from rpython.rtyper.lltypesystem.lloperation import llop
 from rpython.translator import cdir
@@ -23,9 +24,4 @@ def _readline(prompt):
     if result == lltype.nullptr(rffi.CCHARP.TO):
         return u""
     else:
-        s = rffi.charp2str(result)
-        try:
-            return unicode(s) + u"\n"
-        except UnicodeDecodeError:
-            res, _ = str_decode_utf_8(s, len(s), 'strict')
-            return res + u"\n"
+        return unicode_from_utf8(rffi.charp2str(result)) + u"\n"
