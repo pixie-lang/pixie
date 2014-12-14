@@ -11,8 +11,8 @@ from rpython.translator.tool.cbuild import ExternalCompilationInfo
 
 srcdir = py.path.local(cdir) / 'src'
 compilation_info = ExternalCompilationInfo(
-        includes=['readline/readline.h'],
-        libraries=["readline"])
+        includes=['editline/readline.h'],
+        libraries=["edit"])
 
 def llexternal(*args, **kwargs):
     return rffi.llexternal(*args, compilation_info=compilation_info, **kwargs)

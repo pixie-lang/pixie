@@ -7,8 +7,8 @@
  (def printf (ffi-fn libc "printf" [String] Integer))
  (def getenv (ffi-fn libc "getenv" [String] String))
 
- (def libreadline (ffi-library (str "libreadline." pixie.platform/so-ext)))
- (def readline (ffi-fn libreadline "readline" [String] String))
+ (def libedit (ffi-library (str "libedit." pixie.platform/so-ext)))
+ (def readline (ffi-fn libedit "readline" [String] String))
  (def rand (ffi-fn libc "rand" [Integer] Integer))
  (def srand (ffi-fn libc "srand" [Integer] Integer))
  (def fopen (ffi-fn libc "fopen" [String String] VoidP))
