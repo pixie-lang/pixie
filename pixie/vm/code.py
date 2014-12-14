@@ -1,9 +1,9 @@
 py_object = object
 import pixie.vm.object as object
 from pixie.vm.object import affirm
-from pixie.vm.primitives import nil, true, false
+from pixie.vm.primitives import nil, false
 from rpython.rlib.rarithmetic import r_uint
-from rpython.rlib.jit import elidable, elidable_promote, promote
+from rpython.rlib.jit import elidable_promote, promote
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 
@@ -48,6 +48,7 @@ def resize_list(lst, new_size):
         i += 1
     return new_list
 
+
 @jit.unroll_safe
 def list_copy(from_lst, from_loc, to_list, to_loc, count):
     from_loc = r_uint(from_loc)
@@ -56,9 +57,10 @@ def list_copy(from_lst, from_loc, to_list, to_loc, count):
 
     i = r_uint(0)
     while i < count:
-        to_list[to_loc + i] = from_lst[from_loc+i]
+        to_list[to_loc + i] = from_lst[from_loc + i]
         i += 1
     return to_list
+
 
 @jit.unroll_safe
 def slice_to_end(from_list, start_pos):
@@ -68,11 +70,13 @@ def slice_to_end(from_list, start_pos):
     list_copy(from_list, start_pos, new_lst, 0, items_to_copy)
     return new_lst
 
+
 @jit.unroll_safe
 def slice_from_start(from_list, count, extra=r_uint(0)):
     new_lst = [None] * (count + extra)
     list_copy(from_list, 0, new_lst, 0, count)
     return new_lst
+
 
 # class TailCall(object.Object):
 #     _type = object.Type("TailCall")
@@ -159,8 +163,6 @@ class MultiArityFn(BaseCode):
         return self.get_fn(len(args)).invoke_with(args, self_fn)
 
 
-
-
 class NativeFn(BaseCode):
     """Wrapper for a native function"""
     _type = object.Type(u"pixie.stdlib.NativeFn")
@@ -231,7 +233,6 @@ class Code(BaseCode):
         return self
 
 
-
 class VariadicCode(BaseCode):
     __immutable_fields__ = ["_required_arity", "_code", "_meta"]
     _type = object.Type(u"pixie.stdlib.VariadicCode")
@@ -267,9 +268,11 @@ class VariadicCode(BaseCode):
             return self._code.invoke_with(start, self_fn)
         affirm(False, u"Got " + unicode(str(argc)) + u" arg(s) need at least " + unicode(str(self._required_arity)))
 
+
 class Closure(BaseCode):
     _type = object.Type(u"pixie.stdlib.Closure")
     __immutable_fields__ = ["_closed_overs[*]", "_code", "_meta"]
+    
     def type(self):
         return Closure._type
 
@@ -314,6 +317,7 @@ class Closure(BaseCode):
     def get_debug_points(self):
         return self._code.get_debug_points()
 
+
 class Undefined(object.Object):
     _type = object.Type(u"pixie.stdlib.Undefined")
 
@@ -321,6 +325,7 @@ class Undefined(object.Object):
         return Undefined._type
 
 undefined = Undefined()
+
 
 class DynamicVars(py_object):
     def __init__(self):
@@ -339,6 +344,7 @@ class DynamicVars(py_object):
         self._vars[-1][var] = val
 
 _dynamic_vars = DynamicVars()
+
 
 class Var(BaseCode):
     _type = object.Type(u"pixie.stdlib.Var")
@@ -365,7 +371,6 @@ class Var(BaseCode):
         _dynamic_vars.set_var_value(self, val)
         return self
 
-
     def set_dynamic(self):
         self._dynamic = True
         self._rev += 1
@@ -380,7 +385,6 @@ class Var(BaseCode):
     @elidable_promote()
     def get_root(self, rev):
         return self._root
-
 
     def deref(self):
         if self.is_dynamic(self._rev):
@@ -399,9 +403,10 @@ class Var(BaseCode):
     def invoke(self, args):
         return self.deref().invoke(args)
 
+
 class bindings(py_object):
     def __init__(self, *args):
-       self._args = list(args)
+        self._args = list(args)
 
     def __enter__(self):
         _dynamic_vars.push_binding_frame()
@@ -493,10 +498,9 @@ class Namespace(object.Object):
             return None
         return var
 
-
-
     def get(self, name, default):
         return self._registry.get(name, default)
+
 
 class NamespaceRegistry(py_object):
     def __init__(self):
@@ -509,7 +513,6 @@ class NamespaceRegistry(py_object):
             v = Namespace(name)
             self._registry[name] = v
         return v
-
 
     def get(self, name, default):
         return self._registry.get(name, default)
@@ -524,6 +527,7 @@ def intern_var(ns, name=None):
 
     return _ns_registry.find_or_make(ns).intern_or_make(name)
 
+
 def get_var_if_defined(ns, name, els=None):
     w_ns = _ns_registry.get(ns, None)
     if w_ns is None:
@@ -531,13 +535,11 @@ def get_var_if_defined(ns, name, els=None):
     return w_ns.get(name, els)
 
 
-
 class DefaultProtocolFn(NativeFn):
     def __init__(self, pfn):
         self._pfn = pfn
 
     def invoke(self, args):
-        from pixie.vm.string import String
         tp = args[0].type()._name
         affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
 
@@ -546,6 +548,7 @@ class Protocol(object.Object):
     _type = object.Type(u"pixie.stdlib.Protocol")
 
     __immutable_fields__ = ["_rev?"]
+
     def type(self):
         return Protocol._type
 
@@ -554,7 +557,6 @@ class Protocol(object.Object):
         self._polyfns = {}
         self._satisfies = {}
         self._rev = 0
-
 
     def add_method(self, pfn):
         self._polyfns[pfn] = pfn
@@ -573,10 +575,12 @@ class Protocol(object.Object):
 
 class PolymorphicFn(BaseCode):
     _type = object.Type(u"pixie.stdlib.PolymorphicFn")
+
     def type(self):
         return PolymorphicFn._type
 
     __immutable_fields__ = ["_rev?"]
+
     def __init__(self, name, protocol):
         BaseCode.__init__(self)
         self._name = name
@@ -617,7 +621,6 @@ class PolymorphicFn(BaseCode):
 
         return self._default_fn
 
-
     def set_default_fn(self, fn):
         self._default_fn = fn
         self._rev += 1
@@ -642,6 +645,7 @@ class PolymorphicFn(BaseCode):
             ex._ex._trace.append(object.PolymorphicCodeInfo(self._name, args[0].type()))
             raise
 
+
 class DoublePolymorphicFn(BaseCode):
     """A function that is polymorphic on the first two arguments"""
     _type = object.Type(u"pixie.stdlib.DoublePolymorphicFn")
@@ -650,6 +654,7 @@ class DoublePolymorphicFn(BaseCode):
         return DefaultProtocolFn._type
 
     __immutable_fields__ = ["_rev?"]
+
     def __init__(self, name, protocol):
         BaseCode.__init__(self)
         self._name = name
@@ -688,7 +693,6 @@ class DoublePolymorphicFn(BaseCode):
         return fn.invoke(args)
 
 
-
 # class ElidableFn(object.Object):
 #     _type = object.Type(u"pixie.stdlib.ElidableFn")
 #     __immutable_fields__ = ["_boxed_fn"]
@@ -722,10 +726,14 @@ class DoublePolymorphicFn(BaseCode):
 #             return self._elidable_invoke_2(fn, args[0].promote(), args[1].promote()).promote()
 #         affirm(False, u"Too many args to Elidable Fn")
 
+
 def munge(s):
     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")
 
+
 import inspect
+
+
 def defprotocol(ns, name, methods):
     """Define a protocol in the given namespace with the given name and methods, vars will
        be created in the namespace for the protocol and methods. This function will dump
@@ -734,13 +742,14 @@ def defprotocol(ns, name, methods):
     name = unicode(name)
     methods = map(unicode, methods)
     gbls = inspect.currentframe().f_back.f_globals
-    proto =  Protocol(name)
+    proto = Protocol(name)
     intern_var(ns, name).set_root(proto)
     gbls[munge(name)] = proto
     for method in methods:
-        poly = PolymorphicFn(method,  proto)
+        poly = PolymorphicFn(method, proto)
         intern_var(ns, method).set_root(poly)
         gbls[munge(method)] = poly
+
 
 def assert_type(x, tp):
     affirm(isinstance(x, tp), u"Fatal Error, this should never happen")
@@ -749,13 +758,15 @@ def assert_type(x, tp):
 
 ## PYTHON FLAGS
 CO_VARARGS = 0x4
+
+
 def wrap_fn(fn, tp=object.Object):
     """Converts a native Python function into a pixie function."""
     def as_native_fn(f):
-        return type("W"+fn.__name__, (NativeFn,), {"inner_invoke": f})()
+        return type("W" + fn.__name__, (NativeFn,), {"inner_invoke": f})()
 
     def as_variadic_fn(f):
-        return type("W"+fn.__name__[:len("__args")], (NativeFn,), {"inner_invoke": f})()
+        return type("W" + fn.__name__[:len("__args")], (NativeFn,), {"inner_invoke": f})()
 
     code = fn.func_code
     if fn.__name__.endswith("__args"):
@@ -841,7 +852,6 @@ def extend(pfn, tp1, tp2=None):
     return extend_inner
 
 
-
 def as_var(ns, name=None):
     """Locates a var with the given name (defaulting to the namespace pixie.stdlib), sets
        the root to the decorated function. If the function is not an instance of BaseCode it will
@@ -854,6 +864,7 @@ def as_var(ns, name=None):
     ns = ns if isinstance(ns, unicode) else unicode(ns)
 
     var = intern_var(ns, name)
+
     def with_fn(fn):
         fn.__real_name__ = name
         if not isinstance(fn, object.Object):
