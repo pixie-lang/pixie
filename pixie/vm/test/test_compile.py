@@ -11,7 +11,7 @@ from pixie.vm.primitives import nil, true, false
 from pixie.vm.custom_types import CustomTypeInstance
 import unittest
 
-import pixie.vm.libs.readline
+import pixie.vm.libs.libedit
 
 def read_code(s):
     with with_ns(u"user"):
