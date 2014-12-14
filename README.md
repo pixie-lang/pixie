@@ -22,7 +22,7 @@ Some planned and implemented features:
 
 *  [libuv-dev](https://github.com/libuv/libuv)
 *  [libffi-dev](https://sourceware.org/libffi/)
-*  [libreadline-dev](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html)
+*  [libedit-dev](http://thrysoee.dk/editline/)
 
 ## Building
 
