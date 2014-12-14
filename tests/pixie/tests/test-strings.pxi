@@ -124,3 +124,13 @@
     (t/assert= (nth s 2) \y)
     (t/assert= (nth s 2) \o171)
     (t/assert= (nth s 2) \u0079)))
+
+(t/deftest test-char-conversions
+  (t/assert= (int \a) 97)
+  (t/assert= (char 97) \a)
+
+  (t/assert= (int \u269b) 0x269b)
+  (t/assert= (char 0x269b) \u269b))
+
+(t/deftest test-unicode
+  (t/assert= "hâllo" "hâllo"))

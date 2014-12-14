@@ -1,4 +1,5 @@
 from rpython.rlib.rarithmetic import r_uint, LONG_BIT, intmask, LONG_MASK
+from rpython.rlib.runicode import str_decode_utf_8, unicode_encode_utf_8
 from pixie.vm.object import affirm
 
 seed = 0
@@ -123,3 +124,14 @@ def finish_hash_state(acc):
 def _hash_int(acc):
     return rt.wrap(intmask(hash_int(acc.r_uint_val())))
 
+
+# unicode utils
+
+def unicode_from_utf8(s):
+    """Converts a `str` value to a `unicode` value assuming it's encoded in UTF8."""
+    res, _ = str_decode_utf_8(s, len(s), 'strict')
+    return res
+
+def unicode_to_utf8(s):
+    """Converts a `unicode` value to a UTF8 encoded `str` value."""
+    return unicode_encode_utf_8(s, len(s), 'strict')

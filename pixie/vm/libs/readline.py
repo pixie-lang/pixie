@@ -1,5 +1,7 @@
 import py
 
+from pixie.vm.util import unicode_from_utf8
+
 from rpython.rtyper.lltypesystem import lltype, rffi
 from rpython.rtyper.lltypesystem.lloperation import llop
 from rpython.translator import cdir
@@ -22,4 +24,4 @@ def _readline(prompt):
     if result == lltype.nullptr(rffi.CCHARP.TO):
         return u""
     else:
-        return unicode(rffi.charp2str(result)) + u"\n"
+        return unicode_from_utf8(rffi.charp2str(result)) + u"\n"
