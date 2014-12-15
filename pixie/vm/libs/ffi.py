@@ -324,3 +324,60 @@ def buffer_capacity(buffer):
 def set_buffer_size(self, size):
     self.set_used_size(size.int_val())
     return self
+
+
+
+class CStructType(object.Type):
+    def __init__(self, name, size, desc):
+        object.Type.__init__(self, name)
+        self._desc = desc
+        self._size = size
+        #offsets is a dict of {nm, (type, offset)}
+
+    def get_offset(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return offset
+
+    def get_type(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return tp
+
+    def get_desc(self, nm):
+        return self._desc[nm]
+
+class CType(object.Type):
+    def __init__(self, name):
+        object.Type.__init__(self, name)
+
+class CInt(CType):
+    def __init__(self):
+        CType.__init__(self, "pixie.stdlib.CInt")
+
+    def ffi_load_from(self, ptr):
+        casted = rffi.cast(rffi.INTP, ptr)
+        return rt.wrap(casted[0])
+
+    def ffi_save_to(self, ptr, val):
+        casted = rffi.cast(rffi.INTP, ptr)
+        casted[0] = val.int_val()
+        return ptr
+
+
+class CStruct(object.Object):
+    def __init__(self, tp, buffer):
+        self._type = tp
+        self._buffer = buffer
+
+    def type(self):
+        return self._type
+
+    def get_item(self, nm):
+        (tp, offset) = self._type.get_desc(nm)
+        ptr = rffi.ptradd(self._buffer, offset)
+        return tp.ffi_load_from(ptr)
