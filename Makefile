@@ -6,11 +6,15 @@ PYTHON ?= pypy
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 help:
-	@echo "make help              - display this message"
-	@echo "make run               - run the compiled interpreter"
-	@echo "make run_interactive   - run without compiling (slow)"
-	@echo "make build_with_jit    - build with jit enabled"
-	@echo "make build_no_jit      - build without jit"
+	@echo "make help                   - display this message"
+	@echo "make run                    - run the compiled interpreter"
+	@echo "make run_interactive        - run without compiling (slow)"
+	@echo "make build_with_jit         - build with jit enabled"
+	@echo "make build_no_jit           - build without jit"
+	@echo "make build_preload_with_jit - build with jit enabled and preload the stdlib"
+	@echo "                              (this means that pixie-vm will run as a standalone binary,"
+	@echo "                               without having to load 'stdlib.pxi' and friends.)"
+	@echo "make build_preload_no_jit   - build without jit and preload the stdlib"
 
 build_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target.py
