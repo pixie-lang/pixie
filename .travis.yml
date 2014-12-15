@@ -1,5 +1,5 @@
 script:
-  - make build_preload_with_jit
+  - make PYTHON=python build_preload_with_jit
   - make run_built_tests
 
 before_install:
