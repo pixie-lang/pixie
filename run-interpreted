@@ -1,1 +1,1 @@
-PYTHONPATH=$PYTHONPATH:../externals/pypy python target.py
+echo "This script will be removed soon, please use 'make run_interactive' instead."

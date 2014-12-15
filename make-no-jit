@@ -1,1 +1,1 @@
-python ../externals/pypy/rpython/bin/rpython --continuation --no-shared --lldebug target.py
+echo "This script will be removed soon, please use 'make build_no_jit' instead."
