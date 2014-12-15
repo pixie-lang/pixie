@@ -19,7 +19,7 @@ build_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --thread --no-shared target.py
 
 build_preload_with_jit: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target_preload.py
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target_preload.py 2>&1 >/dev/null | grep -v 'WARNING'
 
 build_preload_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --thread --no-shared target_preload.py

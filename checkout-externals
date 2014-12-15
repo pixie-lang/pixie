@@ -1,7 +1,1 @@
-mkdir ../externals
-cd ../externals
-curl https://bitbucket.org/pypy/pypy/get/default.tar.bz2 >  pypy.tar.bz2
-mkdir pypy
-cd pypy
-tar -jxf ../pypy.tar.bz2 --strip-components=1
-cd -
+echo "This script will be removed soon, please use 'make build_with_jit' or one of it's variants instead."
