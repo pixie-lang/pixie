@@ -8,3 +8,7 @@
                           count-rf
                           f)
                78)))
+
+(t/deftest test-process-reduction
+  (let [f (io/run-command "ls tests/pixie/tests/test-io.txt")]
+    (t/assert= f "tests/pixie/tests/test-io.txt\n")))
