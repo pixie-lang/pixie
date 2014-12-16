@@ -9,7 +9,7 @@ from pixie.vm.symbol import symbol, Symbol
 from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
-from pixie.vm.libs.readline import _readline
+from pixie.vm.libs.libedit import _readline
 from pixie.vm.string import Character, String
 from pixie.vm.code import wrap_fn, extend
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP

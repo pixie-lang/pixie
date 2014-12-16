@@ -12,7 +12,7 @@ from pixie.vm.util import unicode_to_utf8
 from rpython.rlib import clibffi
 from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION
 import rpython.rlib.jit as jit
-from rpython.rlib.rarithmetic import intmask
+from rpython.rlib.rarithmetic import intmask, r_uint
 
 
 """
@@ -289,6 +289,7 @@ class Buffer(object.Object):
         return self._used_size
 
     def nth_char(self, idx):
+        assert isinstance(idx, int)
         return self._buffer[idx]
 
     def capacity(self):
@@ -301,7 +302,7 @@ def _nth(self, idx):
 
 @extend(proto._count, Buffer)
 def _count(self):
-    return rt.wrap(self.count())
+    return rt.wrap(intmask(self.count()))
 
 @as_var("buffer")
 def buffer(size):
@@ -309,7 +310,7 @@ def buffer(size):
 
 @as_var("buffer-capacity")
 def buffer_capacity(buffer):
-    return rt.wrap(buffer.capacity())
+    return rt.wrap(intmask(buffer.capacity()))
 
 @as_var("set-buffer-count!")
 def set_buffer_size(self, size):
@@ -352,7 +353,7 @@ class CInt(CType):
 
     def ffi_get_value(self, ptr):
         casted = rffi.cast(rffi.INTP, ptr)
-        return Integer(casted[0])
+        return Integer(rffi.cast(rffi.LONG, casted[0]))
 
     def ffi_set_value(self, ptr, val):
         casted = rffi.cast(rffi.INTP, ptr)
@@ -372,7 +373,7 @@ class CDouble(CType):
 
     def ffi_get_value(self, ptr):
         casted = rffi.cast(rffi.DOUBLEP, ptr)
-        return Integer(casted[0])
+        return Float(casted[0])
 
     def ffi_set_value(self, ptr, val):
         casted = rffi.cast(rffi.DOUBLEP, ptr)
@@ -419,12 +420,14 @@ class CVoidP(CType):
         if casted[0] == lltype.nullptr(rffi.VOIDP.TO):
             return nil
         else:
-            return Buffer(casted[0])
+            return VoidP(casted[0])
 
     def ffi_set_value(self, ptr, val):
         pnt = rffi.cast(rffi.VOIDPP, ptr)
         if isinstance(val, Buffer):
             pnt[0] = val.buffer()
+        elif isinstance(val, VoidP):
+            pnt[0] = val.raw_data()
         else:
             affirm(False, u"Cannot encode this type")
         return ptr
@@ -434,8 +437,19 @@ class CVoidP(CType):
 
     def ffi_type(self):
         return clibffi.ffi_type_pointer
+cvoidp = CVoidP()
 
-CCharP()
+class VoidP(object.Object):
+    def type(self):
+        return cvoidp
+
+    def __init__(self, raw_data):
+        self._raw_data = raw_data
+
+    def raw_data(self):
+        return self._raw_data
+
+
 
 class CStruct(object.Object):
     def __init__(self, tp, buffer):

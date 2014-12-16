@@ -22,12 +22,11 @@ Some planned and implemented features:
 
 *  [libuv-dev](https://github.com/libuv/libuv)
 *  [libffi-dev](https://sourceware.org/libffi/)
-*  [libreadline-dev](http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html)
+*  [libedit-dev](http://thrysoee.dk/editline/)
 
 ## Building
 
-    ./checkout-externals
-    ./make-with-jit
+    make build_with_jit
     ./pixie-vm
 
 ## Special Note for Macs
@@ -37,8 +36,8 @@ If you are having trouble building or running the interpreter on Mac, check out 
 In particular, try this:
 
 ```
-PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' ./make-with-jit
-PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' ./run-interpreted
+PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' make build_with_jit
+PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' make run_interactive
 ```
 
 ## Running the tests
@@ -61,7 +60,8 @@ Pixie now comes with a build tool called [dust](https://github.com/pixie-lang/du
 
 ### So this is written in Python?
 
-It's actually written in the RPython, the same language PyPy is written in. The script `./make-with-jit` will compile Pixie using the PyPy toolchain. After some time, it will produce an executable called `pixie-vm` this executable is a full blown native interpreter with a JIT, GC, etc. So yes, the guts are written in RPython, just like the guts of most lisp interpreters are written in C. At runtime the only thing that is interpreted is the Pixie bytecode, that is until the JIT kicks in...
+It's actually written in the RPython, the same language PyPy is written in. `make build_with_jit` will compile Pixie using the PyPy toolchain. After some time, it will produce an executable called `pixie-vm` this executable is a full blown native interpreter with a JIT, GC, etc. So yes, the guts are written in RPython, just like the guts of most lisp interpreters are written in C. At runtime the only thing that is interpreted is the Pixie bytecode, that is until the JIT kicks in...
+
 
 ### What's this bit about "magical powers"?
 
