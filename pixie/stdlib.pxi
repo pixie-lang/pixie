@@ -1,23 +1,24 @@
 (__ns__ pixie.stdlib)
 
  (def libc (ffi-library pixie.platform/lib-c-name))
- (def exit (ffi-fn libc "exit" [Integer] Integer))
- (def puts (ffi-fn libc "puts" [String] Integer))
- (def sh (ffi-fn libc "system" [String] Integer))
- (def printf (ffi-fn libc "printf" [String] Integer))
- (def getenv (ffi-fn libc "getenv" [String] String))
+ (def exit (ffi-fn libc "exit" [CInt] CInt))
+ (def puts (ffi-fn libc "puts" [CCharP] CInt))
+
+ (def sh (ffi-fn libc "system" [CCharP] CInt))
+ (def printf (ffi-fn libc "printf" [CCharP] CInt))
+ (def getenv (ffi-fn libc "getenv" [CCharP] CCharP))
 
  (def libreadline (ffi-library (str "libreadline." pixie.platform/so-ext)))
- (def readline (ffi-fn libreadline "readline" [String] String))
- (def rand (ffi-fn libc "rand" [Integer] Integer))
- (def srand (ffi-fn libc "srand" [Integer] Integer))
- (def fopen (ffi-fn libc "fopen" [String String] VoidP))
- (def fread (ffi-fn libc "fread" [Buffer Integer Integer VoidP] Integer))
+ (def readline (ffi-fn libreadline "readline" [CCharP] CCharP))
+ (def rand (ffi-fn libc "rand" [CInt] CInt))
+ (def srand (ffi-fn libc "srand" [CInt] CInt))
+ (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
+ (def fread (ffi-fn libc "fread" [CVoidP CInt CInt CVoidP] CInt))
 
  (def libm (ffi-library (str "libm." pixie.platform/so-ext)))
- (def atan2 (ffi-fn libm "atan2" [Float Float] Float))
- (def floor (ffi-fn libm "floor" [Float] Float))
- (def lround (ffi-fn libm "lround" [Float] Integer))
+ (def atan2 (ffi-fn libm "atan2" [CDouble CDouble] CDouble))
+ (def floor (ffi-fn libm "floor" [CDouble] CDouble))
+ (def lround (ffi-fn libm "lround" [CDouble] CInt))
 
 
 (def reset! -reset!)
