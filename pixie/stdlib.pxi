@@ -1915,4 +1915,9 @@ Expands to calls to `extend-type`."
   ([result] result)
   ([result _] (inc result)))
 
+(defn string-builder
+  "Creates a reducing function that builds a string based on calling str on the transduced collection"
+  ([] (-string-builder))
+  ([sb] (str sb))
+  ([sb item] (conj! sb item)))
 
