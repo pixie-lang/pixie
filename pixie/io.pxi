@@ -1,9 +1,9 @@
 (ns pixie.io)
 
-(def fopen (ffi-fn libc "fopen" [String String] VoidP))
-(def fread (ffi-fn libc "fread" [Buffer Integer Integer VoidP] Integer))
-(def fgetc (ffi-fn libc "fgetc" [VoidP] Integer))
-(def fclose (ffi-fn libc "fclose" [VoidP] Integer))
+(def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
+(def fread (ffi-fn libc "fread" [CVoidP CInt CInt CVoidP] CInt))
+(def fgetc (ffi-fn libc "fgetc" [CVoidP] CInt))
+(def fclose (ffi-fn libc "fclose" [CVoidP] CInt))
 
 
 (defprotocol IInputStream

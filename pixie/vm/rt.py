@@ -1,9 +1,8 @@
 __config__ = None
 py_list = list
 py_str = str
-from rpython.rlib.objectmodel import specialize
+from rpython.rlib.objectmodel import specialize, we_are_translated
 from rpython.rtyper.lltypesystem import lltype, rffi
-
 
 
 
@@ -96,6 +95,8 @@ def init():
         if x is None:
             return nil
 
+        if not we_are_translated():
+            print x, type(x)
         affirm(False, u"Bad wrap")
 
     globals()["wrap"] = wrap

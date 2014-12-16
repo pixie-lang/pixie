@@ -1,15 +1,10 @@
+
 script:
   - make PYTHON=python build_preload_with_jit
   - make run_built_tests
 
 before_install:
-  - sudo apt-add-repository ppa:linuxjedi/ppa -y
-  - sudo apt-get update -qq
-  - sudo apt-get update
-  - sudo apt-get install libffi-dev libuv-dev libedit-dev
-
-os:
-  - osx
+  - sudo apt-get install libffi-dev libedit-dev
 
 notifications:
   irc: "chat.freenode.net#pixie-lang"

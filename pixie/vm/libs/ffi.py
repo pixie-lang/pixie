@@ -12,7 +12,7 @@ from pixie.vm.util import unicode_to_utf8
 from rpython.rlib import clibffi
 from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION
 import rpython.rlib.jit as jit
-from rpython.rlib.rarithmetic import intmask
+from rpython.rlib.rarithmetic import intmask, r_uint
 
 
 """
@@ -67,64 +67,64 @@ class ExternalLib(object.Object):
         self._is_inited = False
 
 
-def get_native_size(tp):
-    if tp == Integer._type:
-        return rffi.sizeof(rffi.LONG)
-    if tp == Float._type:
-        return rffi.sizeof(rffi.DOUBLE)
-    if tp == String._type:
-        return rffi.sizeof(rffi.CCHARP)
-    if tp == Buffer._type:
-        return rffi.sizeof(rffi.CCHARP)
-    if tp == FFIVoidP._type:
-        return rffi.sizeof(rffi.VOIDP)
-    assert False
+# def get_native_size(tp):
+#     if tp == Integer._type:
+#         return rffi.sizeof(rffi.LONG)
+#     if tp == Float._type:
+#         return rffi.sizeof(rffi.DOUBLE)
+#     if tp == String._type:
+#         return rffi.sizeof(rffi.CCHARP)
+#     if tp == Buffer._type:
+#         return rffi.sizeof(rffi.CCHARP)
+#     if tp == FFIVoidP._type:
+#         return rffi.sizeof(rffi.VOIDP)
+#     assert False
+#
+# def get_ret_val(ptr, tp):
+#     if tp == Integer._type:
+#         pnt = rffi.cast(rffi.LONGP, ptr)
+#         val = pnt[0]
+#         return Integer(val)
+#     if tp == Float._type:
+#         pnt = rffi.cast(rffi.DOUBLEP, ptr)
+#         val = pnt[0]
+#         return Float(val)
+#     if tp == String._type:
+#         pnt = rffi.cast(rffi.CCHARPP, ptr)
+#         if pnt[0] == lltype.nullptr(rffi.CCHARP.TO):
+#             return nil
+#         else:
+#             return String(unicode(rffi.charp2str(pnt[0])))
+#
+#     if tp == FFIVoidP._type:
+#         pnt = rffi.cast(rffi.VOIDPP, ptr)
+#         val = pnt[0]
+#         return FFIVoidP(val)
+#
+#     assert False
 
-def get_ret_val(ptr, tp):
-    if tp == Integer._type:
-        pnt = rffi.cast(rffi.LONGP, ptr)
-        val = pnt[0]
-        return Integer(val)
-    if tp == Float._type:
-        pnt = rffi.cast(rffi.DOUBLEP, ptr)
-        val = pnt[0]
-        return Float(val)
-    if tp == String._type:
-        pnt = rffi.cast(rffi.CCHARPP, ptr)
-        if pnt[0] == lltype.nullptr(rffi.CCHARP.TO):
-            return nil
-        else:
-            return String(unicode(rffi.charp2str(pnt[0])))
-
-    if tp == FFIVoidP._type:
-        pnt = rffi.cast(rffi.VOIDPP, ptr)
-        val = pnt[0]
-        return FFIVoidP(val)
-
-    assert False
-
-def set_native_value(ptr, val, tp):
-    if tp is Integer._type:
-        pnt = rffi.cast(rffi.LONGP, ptr)
-        pnt[0] = rffi.cast(rffi.LONG, val.int_val())
-        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.LONG))
-    if tp is Float._type:
-        pnt = rffi.cast(rffi.DOUBLEP, ptr)
-        pnt[0] = rffi.cast(rffi.DOUBLE, val.float_val())
-        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.DOUBLE))
-    if tp is String._type:
-        pnt = rffi.cast(rffi.CCHARPP, ptr)
-        pnt[0] = rffi.str2charp(unicode_to_utf8(rt.name(val)))
-        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
-    if tp is Buffer._type:
-        pnt = rffi.cast(rffi.CCHARPP, ptr)
-        pnt[0] = val.buffer()
-        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
-    if tp is FFIVoidP._type:
-        pnt = rffi.cast(rffi.VOIDPP, ptr)
-        pnt[0] = val.voidp_data()
-        return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.VOIDP))
-    assert False
+# def set_native_value(ptr, val, tp):
+#     if tp is Integer._type:
+#         pnt = rffi.cast(rffi.LONGP, ptr)
+#         pnt[0] = rffi.cast(rffi.LONG, val.int_val())
+#         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.LONG))
+#     if tp is Float._type:
+#         pnt = rffi.cast(rffi.DOUBLEP, ptr)
+#         pnt[0] = rffi.cast(rffi.DOUBLE, val.float_val())
+#         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.DOUBLE))
+#     if tp is String._type:
+#         pnt = rffi.cast(rffi.CCHARPP, ptr)
+#         pnt[0] = rffi.str2charp(unicode_to_utf8(rt.name(val)))
+#         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
+#     if tp is Buffer._type:
+#         pnt = rffi.cast(rffi.CCHARPP, ptr)
+#         pnt[0] = val.buffer()
+#         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.CCHARP))
+#     if tp is FFIVoidP._type:
+#         pnt = rffi.cast(rffi.VOIDPP, ptr)
+#         pnt[0] = val.voidp_data()
+#         return rffi.ptradd(rffi.cast(rffi.CCHARP, pnt), rffi.sizeof(rffi.VOIDP))
+#     assert False
 
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
@@ -153,19 +153,19 @@ class FFIFn(object.Object):
             cd = lltype.malloc(CIF_DESCRIPTION, nargs, flavor="raw")
             cd.abi = clibffi.FFI_DEFAULT_ABI
             cd.nargs = nargs
-            cd.rtype = get_clibffi_type(self._ret_type)
+            cd.rtype = self._ret_type.ffi_type()
 
             atypes = lltype.malloc(clibffi.FFI_TYPE_PP.TO, nargs, flavor="raw")
             arg0_offset = exchange_buffer_size
             for idx in range(nargs):
                 cd.exchange_args[idx] = exchange_buffer_size
                 tp = self._arg_types[idx]
-                native_size = get_native_size(tp)
-                atypes[idx] = get_clibffi_type(tp)
+                native_size = tp.ffi_size()
+                atypes[idx] = tp.ffi_type()
                 exchange_buffer_size += native_size
 
             ret_offset = exchange_buffer_size
-            exchange_buffer_size += get_native_size(self._ret_type)
+            exchange_buffer_size += self._ret_type.ffi_size()
 
 
 
@@ -198,12 +198,13 @@ class FFIFn(object.Object):
         offset_p = rffi.ptradd(exb, self._arg0_offset)
 
         for x in range(len(self._arg_types)):
-            offset_p = set_native_value(offset_p, args[x], self._arg_types[x])
+            self._arg_types[x].ffi_set_value(offset_p, args[x])
+            offset_p = rffi.ptradd(offset_p, self._arg_types[x].ffi_size())
         return exb
 
     def get_ret_val_from_buffer(self, exb):
         offset_p = rffi.ptradd(exb, self._cd.exchange_result_libffi)
-        ret_val = get_ret_val(offset_p, self._ret_type)
+        ret_val = self._ret_type.ffi_get_value(offset_p)
         return ret_val
 
     @jit.unroll_safe
@@ -221,18 +222,18 @@ class FFIFn(object.Object):
 
 
 
-def get_clibffi_type(arg):
-    if arg == Integer._type:
-        return clibffi.cast_type_to_ffitype(rffi.LONG)
-    if arg == Float._type:
-        return clibffi.cast_type_to_ffitype(rffi.DOUBLE)
-    if arg == String._type:
-        return clibffi.ffi_type_pointer
-    if arg == Buffer._type:
-        return clibffi.ffi_type_pointer
-    if arg == FFIVoidP._type:
-        return clibffi.ffi_type_pointer
-    assert False
+# def get_clibffi_type(arg):
+#     if arg == Integer._type:
+#         return clibffi.cast_type_to_ffitype(rffi.LONG)
+#     if arg == Float._type:
+#         return clibffi.cast_type_to_ffitype(rffi.DOUBLE)
+#     if arg == String._type:
+#         return clibffi.ffi_type_pointer
+#     if arg == Buffer._type:
+#         return clibffi.ffi_type_pointer
+#     if arg == FFIVoidP._type:
+#         return clibffi.ffi_type_pointer
+#     assert False
 
 
 @as_var("ffi-library")
@@ -256,17 +257,7 @@ def _ffi_fn(lib, nm, args, ret_type):
     f = FFIFn(lib, rt.name(nm), new_args, ret_type)
     return f
 
-class FFIVoidP(object.Object):
-    _type = object.Type(u"pixie.stdlib.VoidP")
 
-    def type(self):
-        return FFIVoidP._type
-
-    def __init__(self, data):
-        self._voidp_data = data
-
-    def voidp_data(self):
-        return self._voidp_data
 
 
 
@@ -298,6 +289,7 @@ class Buffer(object.Object):
         return self._used_size
 
     def nth_char(self, idx):
+        assert isinstance(idx, int)
         return self._buffer[idx]
 
     def capacity(self):
@@ -310,7 +302,7 @@ def _nth(self, idx):
 
 @extend(proto._count, Buffer)
 def _count(self):
-    return rt.wrap(self.count())
+    return rt.wrap(intmask(self.count()))
 
 @as_var("buffer")
 def buffer(size):
@@ -318,9 +310,156 @@ def buffer(size):
 
 @as_var("buffer-capacity")
 def buffer_capacity(buffer):
-    return rt.wrap(buffer.capacity())
+    return rt.wrap(intmask(buffer.capacity()))
 
 @as_var("set-buffer-count!")
 def set_buffer_size(self, size):
     self.set_used_size(size.int_val())
     return self
+
+
+
+class CStructType(object.Type):
+    def __init__(self, name, size, desc):
+        object.Type.__init__(self, name)
+        self._desc = desc
+        self._size = size
+        #offsets is a dict of {nm, (type, offset)}
+
+    def get_offset(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return offset
+
+    def get_type(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return tp
+
+    def get_desc(self, nm):
+        return self._desc[nm]
+
+class CType(object.Type):
+    def __init__(self, name):
+        object.Type.__init__(self, name)
+
+class CInt(CType):
+    def __init__(self):
+        CType.__init__(self, u"pixie.stdlib.CInt")
+
+    def ffi_get_value(self, ptr):
+        casted = rffi.cast(rffi.INTP, ptr)
+        return Integer(rffi.cast(rffi.LONG, casted[0]))
+
+    def ffi_set_value(self, ptr, val):
+        casted = rffi.cast(rffi.INTP, ptr)
+        casted[0] = rffi.cast(rffi.INT, val.int_val())
+        return ptr
+
+    def ffi_size(self):
+        return rffi.sizeof(rffi.INT)
+
+    def ffi_type(self):
+        return clibffi.cast_type_to_ffitype(rffi.INT)
+CInt()
+
+class CDouble(CType):
+    def __init__(self):
+        CType.__init__(self, u"pixie.stdlib.CDouble")
+
+    def ffi_get_value(self, ptr):
+        casted = rffi.cast(rffi.DOUBLEP, ptr)
+        return Float(casted[0])
+
+    def ffi_set_value(self, ptr, val):
+        casted = rffi.cast(rffi.DOUBLEP, ptr)
+        casted[0] = rffi.cast(rffi.DOUBLE, val.float_val())
+        return ptr
+
+    def ffi_size(self):
+        return rffi.sizeof(rffi.DOUBLE)
+
+    def ffi_type(self):
+        return clibffi.cast_type_to_ffitype(rffi.DOUBLE)
+CDouble()
+
+class CCharP(CType):
+    def __init__(self):
+        CType.__init__(self, u"pixie.stdlib.CCharP")
+
+    def ffi_get_value(self, ptr):
+        casted = rffi.cast(rffi.CCHARPP, ptr)
+        if casted[0] == lltype.nullptr(rffi.CCHARP.TO):
+            return nil
+        else:
+            return String(unicode(rffi.charp2str(casted[0])))
+
+    def ffi_set_value(self, ptr, val):
+        pnt = rffi.cast(rffi.CCHARPP, ptr)
+        pnt[0] = rffi.str2charp(unicode_to_utf8(rt.name(val)))
+        return ptr
+
+    def ffi_size(self):
+        return rffi.sizeof(rffi.CCHARP)
+
+    def ffi_type(self):
+        return clibffi.ffi_type_pointer
+CCharP()
+
+
+class CVoidP(CType):
+    def __init__(self):
+        CType.__init__(self, u"pixie.stdlib.CVoidP")
+
+    def ffi_get_value(self, ptr):
+        casted = rffi.cast(rffi.VOIDPP, ptr)
+        if casted[0] == lltype.nullptr(rffi.VOIDP.TO):
+            return nil
+        else:
+            return VoidP(casted[0])
+
+    def ffi_set_value(self, ptr, val):
+        pnt = rffi.cast(rffi.VOIDPP, ptr)
+        if isinstance(val, Buffer):
+            pnt[0] = val.buffer()
+        elif isinstance(val, VoidP):
+            pnt[0] = val.raw_data()
+        else:
+            affirm(False, u"Cannot encode this type")
+        return ptr
+
+    def ffi_size(self):
+        return rffi.sizeof(rffi.VOIDP)
+
+    def ffi_type(self):
+        return clibffi.ffi_type_pointer
+cvoidp = CVoidP()
+
+class VoidP(object.Object):
+    def type(self):
+        return cvoidp
+
+    def __init__(self, raw_data):
+        self._raw_data = raw_data
+
+    def raw_data(self):
+        return self._raw_data
+
+
+
+class CStruct(object.Object):
+    def __init__(self, tp, buffer):
+        self._type = tp
+        self._buffer = buffer
+
+    def type(self):
+        return self._type
+
+    def get_item(self, nm):
+        (tp, offset) = self._type.get_desc(nm)
+        ptr = rffi.ptradd(self._buffer, offset)
+        return tp.ffi_load_from(ptr)
