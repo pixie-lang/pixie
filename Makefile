@@ -5,6 +5,10 @@ EXTERNALS=../externals
 PYTHON ?= pypy
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
+COMMON_BUILD_OPTS?=--thread --no-shared
+JIT_OPTS?=--opt=jit
+TARGET_OPTS?=target.py
+
 help:
 	@echo "make help                   - display this message"
 	@echo "make run                    - run the compiled interpreter"
@@ -17,16 +21,19 @@ help:
 	@echo "make build_preload_no_jit   - build without jit and preload the stdlib"
 
 build_with_jit: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target.py
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target.py
 
 build_no_jit: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --thread --no-shared target.py
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target.py
 
 build_preload_with_jit: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --opt=jit --thread --no-shared target_preload.py 2>&1 >/dev/null | grep -v 'WARNING'
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target_preload.py 2>&1 >/dev/null | grep -v 'WARNING'
 
 build_preload_no_jit: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython --thread --no-shared target_preload.py
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target_preload.py
+
+build: fetch_externals
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS) 2>&1 >/dev/null | grep -v 'WARNING'
 
 fetch_externals: $(EXTERNALS)/pypy
 
