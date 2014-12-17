@@ -1,6 +1,14 @@
+env:
+  - JIT_OPTS='--opt=jit' TARGET_OPTS='target.py'
+  - JIT_OPTS='' TARGET_OPTS='target.py'
+  - JIT_OPTS='--opt=jit' TARGET_OPTS='target_preload.py'
+  - JIT_OPTS='' TARGET_OPTS='target_preload.py'
+
+matrix:
+  fast_finish: true 
 
 script:
-  - make PYTHON=python build_with_jit
+  - make PYTHON=python build
   - make run_built_tests
 
 before_install:
