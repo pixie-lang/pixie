@@ -12,3 +12,7 @@
 (t/deftest test-process-reduction
   (let [f (io/run-command "ls tests/pixie/tests/test-io.txt")]
     (t/assert= f "tests/pixie/tests/test-io.txt\n")))
+
+(t/deftest test-slurp-spit
+  (let [val (vec (range 1024))]
+    (t/assert= val (read-string (io/slurp "test.tmp" (io/spit "test.tmp" val))))))

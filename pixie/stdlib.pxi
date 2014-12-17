@@ -222,9 +222,11 @@
 (extend -reduce PersistentList seq-reduce)
 (extend -reduce LazySeq seq-reduce)
 
+
 (comment (extend -reduce Array indexed-reduce))
 
 (extend -reduce Buffer indexed-reduce)
+(extend -reduce String indexed-reduce)
 
 (extend -str Bool
   (fn [x]
@@ -1297,6 +1299,11 @@ The new value is thus `(apply f current-value-of-atom args)`."
           (dotimes [x (count v)]
             (yield (nth v x)))))
 
+(extend -iterator Array
+        (fn [v]
+          (dotimes [x (count v)]
+            (yield (nth v x)))))
+
 (defmacro and
   {:doc "Check if the given expressions return truthy values, returning the last, or false."
    :examples [["(and true false)" nil false]
@@ -1920,4 +1927,3 @@ Expands to calls to `extend-type`."
   ([] (-string-builder))
   ([sb] (str sb))
   ([sb item] (conj! sb item)))
-
