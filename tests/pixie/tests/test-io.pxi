@@ -14,5 +14,5 @@
     (t/assert= f "tests/pixie/tests/test-io.txt\n")))
 
 (t/deftest test-slurp-spit
-  (let [val (vec (range 1024))]
+  (let [val (vec (range 128))]
     (t/assert= val (read-string (io/slurp "test.tmp" (io/spit "test.tmp" val))))))

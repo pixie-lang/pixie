@@ -341,9 +341,9 @@ class CCharP(CType):
     def ffi_set_value(self, ptr, val):
         pnt = rffi.cast(rffi.CCHARPP, ptr)
         utf8 = unicode_to_utf8(rt.name(val))
-        data, pinned, raw = rffi.get_nonmovingbuffer(utf8)
-        pnt[0] = data
-        return CCharPToken(utf8, data, pinned, raw)
+        raw = rffi.str2charp(utf8)
+        pnt[0] = raw
+        return CCharPToken(raw)
 
     def ffi_size(self):
         return rffi.sizeof(rffi.CCHARP)
@@ -353,14 +353,11 @@ class CCharP(CType):
 CCharP()
 
 class CCharPToken(Token):
-    def __init__(self, s, data, pinned, raw):
-        self._s = s
-        self._data = data
-        self._pinned = pinned
+    def __init__(self, raw):
         self._raw = raw
 
     def finalize_token(self):
-        rffi.free_nonmovingbuffer(self._s, self._data, self._pinned, self._raw)
+        rffi.free_charp(self._raw)
 
 
 
