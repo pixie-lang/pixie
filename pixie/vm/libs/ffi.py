@@ -382,6 +382,7 @@ class CVoidP(CType):
         elif isinstance(val, VoidP):
             pnt[0] = val.raw_data()
         else:
+            print val
             affirm(False, u"Cannot encode this type")
 
     def ffi_size(self):
