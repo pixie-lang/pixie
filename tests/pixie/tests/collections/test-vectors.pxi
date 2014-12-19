@@ -52,3 +52,10 @@
   (t/assert= [] (persistent! (pop! (transient [1]))))
   (t/assert= [1] (persistent! (pop! (transient [1 2]))))
   (t/assert= [1 2] (persistent! (pop! (transient [1 2 3])))))
+
+(t/deftest transient-vector-count
+  (t/assert= 0 (count (transient [])))
+  (t/assert= 1 (count (transient [1])))
+  (t/assert= 2 (count (transient [1 2])))
+  (t/assert= 1 (count (pop! (transient [1 2]))))
+  (t/assert= 100 (count (reduce conj! (transient []) (range 0 100)))))
