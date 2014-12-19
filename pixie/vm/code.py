@@ -356,6 +356,7 @@ class Var(BaseCode):
         return Var._type
 
     def __init__(self, ns, name):
+        BaseCode.__init__(self)
         self._ns = ns
         self._name = name
         self._rev = 0
