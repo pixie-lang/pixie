@@ -28,19 +28,19 @@ class CustomTypeInstance(Object):
     __immutable_fields__ = ["_type"]
     def __init__(self, type):
         affirm(isinstance(type, CustomType), u"Can't create a instance of a non custom type")
-        self._type = type
-        self._fields = [None] * self._type.get_num_slots()
+        self._custom_type = type
+        self._fields = [None] * self._custom_type.get_num_slots()
 
     def type(self):
-        return self._type
+        return self._custom_type
 
     def set_field(self, name, val):
-        idx = self._type.get_slot_idx(name)
+        idx = self._custom_type.get_slot_idx(name)
         self._fields[idx] = val
         return self
 
     def get_field(self, name):
-        idx = self._type.get_slot_idx(name)
+        idx = self._custom_type.get_slot_idx(name)
         return self._fields[idx]
 
     def set_field_by_idx(self, idx, val):

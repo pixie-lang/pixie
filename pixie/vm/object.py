@@ -3,6 +3,7 @@ import rpython.rlib.jit as jit
 class Object(object):
     """ Base Object for all VM objects
     """
+    _attrs_ = ()
 
     def type(self):
         affirm(False, u".type isn't overloaded")
@@ -114,7 +115,7 @@ class RuntimeException(Object):
             s.append(x.__repr__())
             s.append(u"\n")
 
-        s.extend([u"RuntimeException: " + rt.str(self._data)._str + u"\n"])
+        s.extend([u"RuntimeException: " + rt.name(rt.str(self._data)) + u"\n"])
 
 
         return u"".join(s)
@@ -180,7 +181,9 @@ class PolymorphicCodeInfo(ErrorInfo):
         self._tp = tp
 
     def __repr__(self):
-        return u"in polymorphic function " + self._name + u" dispatching on " + self._tp._name + u"\n"
+        tp = self._tp
+        assert isinstance(tp, Type)
+        return u"in polymorphic function " + self._name + u" dispatching on " + tp._name + u"\n"
 
 
 

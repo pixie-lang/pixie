@@ -290,7 +290,9 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
             debug_ip = frame.ip
             var = frame.pop()
             if not isinstance(var, code.Var):
-                affirm(False, u"Can't deref " + var.type()._name)
+                tp = var.type()
+                assert isinstance(tp, Type)
+                affirm(False, u"Can't deref " + tp._name)
             try:
                 frame.push(var.deref())
                 continue

@@ -293,7 +293,9 @@ class Closure(BaseCode):
         try:
             return interpret(self, args, self_obj=self_fn)
         except object.WrappedException as ex:
-            ex._ex._trace.append(object.PixieCodeInfo(self._code._name))
+            code = self._code
+            assert isinstance(code, Code)
+            ex._ex._trace.append(object.PixieCodeInfo(code._name))
             raise
 
     def get_closed_over(self, idx):
@@ -460,7 +462,7 @@ class Namespace(object.Object):
         name = rt.name(sym)
         prev_binding = self._registry.get(name, None)
         if prev_binding is not None:
-            print rt.str(rt.wrap(u"Warning: "), sym, rt.wrap(u" already refers to "), prev_binding)._str
+            print rt.name(rt.str(rt.wrap(u"Warning: "), sym, rt.wrap(u" already refers to "), prev_binding))
 
         self._registry[name] = var
         return var
@@ -486,6 +488,8 @@ class Namespace(object.Object):
                 affirm(False, u"Unable to resolve namespace: " + ns + u" inside namespace " + self._name)
         else:
             resolved_ns = self
+
+        assert isinstance(resolved_ns, Namespace)
 
         var = resolved_ns._registry.get(name, None)
         if var is None and use_refers:
@@ -540,8 +544,9 @@ class DefaultProtocolFn(NativeFn):
         self._pfn = pfn
 
     def invoke(self, args):
-        tp = args[0].type()._name
-        affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
+        tp = args[0].type()
+        assert isinstance(tp, object.Type)
+        affirm(False, u"No override for " + tp._name + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
 
 
 class Protocol(object.Object):
