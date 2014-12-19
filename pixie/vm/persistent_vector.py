@@ -297,7 +297,7 @@ class TransientVector(object.Object):
             node = self._root
             level = self._shift
             while level > 0:
-                node = self.ensure_node_editable(node._array[(i >> self._level) & 0x1f])
+                node = self.ensure_node_editable(node._array[(i >> level) & 0x1f])
 
                 level -= 5
             return node._array
