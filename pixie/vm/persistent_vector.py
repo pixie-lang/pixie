@@ -326,7 +326,7 @@ class TransientVector(object.Object):
             self._cnt -= 1
             return self
 
-        new_tail = self.editable_array_for(self._cnt - 2)
+        new_tail = self.editable_array_for(self._cnt - 1)
 
         new_root = self.pop_tail(self._shift, self._root)
         new_shift = self._shift
