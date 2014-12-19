@@ -44,6 +44,11 @@
   (t/assert= [1 2] (persistent! (conj! (transient [1]) 2)))
   (t/assert= [1 2 3] (persistent! (conj! (transient [1]) 2 3))))
 
+(t/deftest vector-push!
+  (t/assert= [1] (persistent! (push! (transient []) 1)))
+  (t/assert= [1 2] (persistent! (push! (transient [1]) 2))))
+
 (t/deftest vector-pop!
-  (t/assert= [1 2] (persistent! (pop! (transient [1 2 3]))))
-  (t/assert= [1 2 3] (persistent! (pop! (transient [1 2 3 4])))))
+  (t/assert= [] (persistent! (pop! (transient [1]))))
+  (t/assert= [1] (persistent! (pop! (transient [1 2]))))
+  (t/assert= [1 2] (persistent! (pop! (transient [1 2 3])))))
