@@ -442,7 +442,7 @@ def _push(self, v):
     return self.conj(v)
 
 @extend(proto._pop, PersistentVector)
-def _push(self):
+def _pop(self):
     assert isinstance(self, PersistentVector)
     return self.pop()
 
