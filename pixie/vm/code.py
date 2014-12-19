@@ -92,6 +92,7 @@ def slice_from_start(from_list, count, extra=r_uint(0)):
 class BaseCode(object.Object):
     def __init__(self):
         assert isinstance(self, BaseCode)
+        self._name = u"unknown"
         self._is_macro = False
         self._meta = nil
 
@@ -105,6 +106,7 @@ class BaseCode(object.Object):
         self._is_macro = True
 
     def is_macro(self):
+        assert isinstance(self, BaseCode)
         return self._is_macro
 
     def get_consts(self):
@@ -542,12 +544,21 @@ def get_var_if_defined(ns, name, els=None):
 
 class DefaultProtocolFn(NativeFn):
     def __init__(self, pfn):
+        BaseCode.__init__(self)
         self._pfn = pfn
 
     def invoke(self, args):
         tp = args[0].type()
         assert isinstance(tp, object.Type)
-        affirm(False, u"No override for " + tp._name + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
+        pfn = self._pfn
+        if isinstance(pfn, PolymorphicFn):
+            protocol = pfn._protocol
+        elif isinstance(pfn, DoublePolymorphicFn):
+            protocol = pfn._protocol
+        else:
+            assert False
+        assert isinstance(protocol, Protocol)
+        affirm(False, u"No override for " + tp._name + u" on " + self._pfn._name + u" in protocol " + protocol._name)
 
 
 class Protocol(object.Object):
