@@ -297,7 +297,7 @@ class TransientVector(object.Object):
             node = self._root
             level = self._shift
             while level > 0:
-                node = self.ensure_node_editable(node._array[(i >> self._level) & 0x1f])
+                node = self.ensure_node_editable(node._array[(i >> level) & 0x1f])
 
                 level -= 5
             return node._array
@@ -326,7 +326,7 @@ class TransientVector(object.Object):
             self._cnt -= 1
             return self
 
-        new_tail = self.editable_array_for(self._cnt - 2)
+        new_tail = self.editable_array_for(self._cnt - 1)
 
         new_root = self.pop_tail(self._shift, self._root)
         new_shift = self._shift
@@ -442,7 +442,7 @@ def _push(self, v):
     return self.conj(v)
 
 @extend(proto._pop, PersistentVector)
-def _push(self):
+def _pop(self):
     assert isinstance(self, PersistentVector)
     return self.pop()
 
@@ -507,6 +507,17 @@ def _persistent(self):
 def _conj(self, val):
     assert isinstance(self, TransientVector)
     return self.conj(val)
+
+@extend(proto._pop_BANG_, TransientVector)
+def _pop(self):
+    assert isinstance(self, TransientVector)
+    return self.pop()
+
+@extend(proto._push_BANG_, TransientVector)
+def _push(self, val):
+    assert isinstance(self, TransientVector)
+    return self.conj(val)
+
 
 proto.IVector.add_satisfies(PersistentVector._type)
 

@@ -83,6 +83,20 @@
                       ([coll item & items]
                          (reduce -disj! (-disj! coll item) items)))))
 
+(def pop!
+  (fn ^{:doc "Pops elements off a transient stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    pop!
+    ([coll] (-pop! coll))))
+
+(def push!
+  (fn ^{:doc "Push an element on to a transient stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    push!
+    ([coll x] (-push! coll x))))
+
 (def transient (fn [coll] (-transient coll)))
 
 (def persistent! (fn [coll] (-persistent! coll)))
