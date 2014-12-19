@@ -518,6 +518,10 @@ def _push(self, val):
     assert isinstance(self, TransientVector)
     return self.conj(val)
 
+@extend(proto._count, TransientVector)
+def _count(self):
+    assert isinstance(self, TransientVector)
+    return rt.wrap(intmask(self._cnt))
 
 proto.IVector.add_satisfies(PersistentVector._type)
 
