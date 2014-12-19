@@ -43,3 +43,7 @@
 (t/deftest vector-conj!
   (t/assert= [1 2] (persistent! (conj! (transient [1]) 2)))
   (t/assert= [1 2 3] (persistent! (conj! (transient [1]) 2 3))))
+
+(t/deftest vector-pop!
+  (t/assert= [1 2] (persistent! (pop! (transient [1 2 3]))))
+  (t/assert= [1 2 3] (persistent! (pop! (transient [1 2 3 4])))))

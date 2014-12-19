@@ -508,6 +508,17 @@ def _conj(self, val):
     assert isinstance(self, TransientVector)
     return self.conj(val)
 
+@extend(proto._pop_BANG_, TransientVector)
+def _pop(self):
+    assert isinstance(self, TransientVector)
+    return self.pop()
+
+@extend(proto._push_BANG_, TransientVector)
+def _push(self, val):
+    assert isinstance(self, TransientVector)
+    return self.conj(val)
+
+
 proto.IVector.add_satisfies(PersistentVector._type)
 
 EMPTY = PersistentVector(nil, r_uint(0), r_uint(5), EMPTY_NODE, [])

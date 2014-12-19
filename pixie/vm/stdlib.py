@@ -54,6 +54,7 @@ defprotocol("pixie.stdlib", "ITransient", ["-persistent!"])
 defprotocol("pixie.stdlib", "IToTransient", ["-transient"])
 
 defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
+defprotocol("pixie.stdlib", "ITransientStack", ["-push!", "-pop!"])
 
 defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
 defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
