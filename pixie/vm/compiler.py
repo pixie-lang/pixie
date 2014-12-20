@@ -502,6 +502,7 @@ def compile_fn(form, ctx):
     if rt.meta(name) is not nil:
         compile_meta(rt.meta(name), ctx)
 
+LOOP = symbol.symbol(u"loop")
 
 def compile_fn_body(name, args, body, ctx):
     new_ctx = Context(rt.name(name), rt.count(args), ctx)
@@ -512,7 +513,15 @@ def compile_fn_body(name, args, body, ctx):
         affirm(isinstance(name, symbol.Symbol), u"Function names must be symbols")
         #new_ctx.add_local(name._str, Self())
 
-    new_ctx.push_recur_point(FunctionRecurPoint())
+    arg_syms = EMPTY
+    for x in range(rt.count(args)):
+        sym = rt.nth(args, rt.wrap(x))
+        if not rt.name(sym) == u"&":
+            arg_syms = rt.conj(rt.conj(arg_syms, sym), sym)
+
+    body = rt.list(rt.cons(LOOP, rt.cons(arg_syms, body)))
+
+    #new_ctx.push_recur_point(FunctionRecurPoint())
 
     new_ctx.disable_tail_call()
     if body is nil:

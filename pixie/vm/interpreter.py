@@ -80,7 +80,10 @@ class Frame(object):
     def pop(self):
         #print type(self.sp), self.sp
         self.sp -= 1
-        assert 0 <= self.sp < len(self.stack), u"Stack out of range: " + unicode(str(self.sp))
+
+        if not 0 <= self.sp < len(self.stack):
+            runtime_error(u"Stack out of range: " + unicode(str(self.sp)))
+
         v = self.stack[self.sp]
         self.stack[self.sp] = None
         return v
@@ -96,7 +99,10 @@ class Frame(object):
         self.push(self.nth(delta))
 
     def push_arg(self, idx):
-        affirm(0 <= idx < len(self.args), u"Argument doesn't exist")
+        if not 0 <= idx < len(self.args):
+            runtime_error(u"Invalid argument " + unicode(str(idx)) + u" function takes "
+                          + unicode(str(len(self.args))) + u" args")
+
         self.push(self.args[r_uint(idx)])
 
     @unroll_safe
@@ -301,21 +307,6 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
                 if dp:
                     ex._ex._trace.append(dp)
                 raise
-
-
-        if inst == code.RECUR:
-            argc = frame.get_inst()
-            args = frame.pop_n(argc)
-
-            frame = Frame(frame.code_obj, args, frame.self_obj)
-
-            jitdriver.can_enter_jit(bc=frame.bc,
-                                  ip=frame.ip,
-                                  sp=frame.sp,
-                                  base_code=frame.base_code,
-                                  frame=frame,
-                                  is_continuation=frame._is_continuation)
-            continue
 
         if inst == code.PUSH_SELF:
             frame.push(frame.self_obj)
