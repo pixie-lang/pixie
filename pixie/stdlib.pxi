@@ -166,8 +166,8 @@
 
 
 (def preserving-reduced
-  (fn [rf]
-    (fn [a b]
+  (fn preserving-reduced [rf]
+    (fn pr-inner [a b]
       (let [ret (rf a b)]
         (if (reduced? ret)
           (reduced ret)
@@ -819,10 +819,9 @@ Stops if it finds such an element."
    :else (recur pred (next coll))))
 
 (extend -count MapEntry (fn [self] 2))
-(extend -nth MapEntry (fn [self idx not-found]
+(extend -nth MapEntry (fn map-entry-nth [self idx]
                           (cond (= idx 0) (-key self)
-                                (= idx 1) (-val self)
-                                :else not-found)))
+                                (= idx 1) (-val self))))
 
 (extend -reduce MapEntry indexed-reduce)
 
