@@ -260,7 +260,7 @@ def resolve_local(ctx, name):
 
 def is_macro_call(form, ctx):
     if rt.seq_QMARK_(form) is true and isinstance(rt.first(form), symbol.Symbol):
-        name = rt.first(form)._str
+        name = rt.name(rt.first(form))
         if resolve_local(ctx, name):
             return None
         var = resolve_var(ctx, rt.first(form))
@@ -366,7 +366,7 @@ def compile_form(form, ctx):
         return
 
     if isinstance(form, symbol.Symbol):
-        name = form._str
+        name = rt.name(form)
         loc = resolve_local(ctx, name)
         if loc is None:
             var = resolve_var(ctx, form)
@@ -460,11 +460,11 @@ def add_args(name, args, ctx):
     for x in range(rt.count(args)):
         arg = rt.nth(args, rt.wrap(x))
         affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
-        if arg._str == u"&":
+        if rt.name(arg) == u"&":
 
             required_args = intmask(x)
             continue
-        ctx.add_local(arg._str, Arg(local_idx))
+        ctx.add_local(rt.name(arg), Arg(local_idx))
         local_idx += 1
     return required_args
 
@@ -504,8 +504,8 @@ def compile_fn(form, ctx):
 
 
 def compile_fn_body(name, args, body, ctx):
-    new_ctx = Context(name._str, rt.count(args), ctx)
-    required_args = add_args(name._str, args, new_ctx)
+    new_ctx = Context(rt.name(name), rt.count(args), ctx)
+    required_args = add_args(rt.name(name), args, new_ctx)
     bc = 0
 
     if name is not None:
@@ -654,7 +654,7 @@ def compile_let(form, ctx):
 
         compile_form(bind, ctx)
 
-        ctx.add_local(name._str, LetBinding(ctx.sp()))
+        ctx.add_local(rt.name(name), LetBinding(ctx.sp()))
 
     if ctc:
         ctx.enable_tail_call()
@@ -691,7 +691,7 @@ def compile_loop(form, ctx):
 
         compile_form(bind, ctx)
 
-        ctx.add_local(name._str, LetBinding(ctx.sp()))
+        ctx.add_local(rt.name(name), LetBinding(ctx.sp()))
 
     if ctc:
         ctx.enable_tail_call()

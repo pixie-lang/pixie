@@ -25,6 +25,7 @@ def _str(x):
 @extend(proto._repr, String)
 def _repr(self):
     res = u""
+    assert isinstance(self, String)
     for c in self._str:
         if c == "\"":
             res += u"\\\""
@@ -44,10 +45,12 @@ def _repr(self):
 
 @extend(proto._count, String)
 def _count(self):
+    assert isinstance(self, String)
     return rt.wrap(len(self._str))
 
 @extend(proto._nth, String)
 def _nth(self, idx):
+    assert isinstance(self, String)
     i = idx.int_val()
     if 0 <= i < len(self._str):
         return Character(ord(self._str[i]))
@@ -55,6 +58,7 @@ def _nth(self, idx):
 
 @extend(proto._eq, String)
 def _eq(self, v):
+    assert isinstance(self, String)
     if not isinstance(v, String):
         return false
     return true if self._str == v._str else false
@@ -128,4 +132,5 @@ def _namespace(self):
 
 @extend(proto._hash, String)
 def _hash(self):
+    assert isinstance(self, String)
     return rt.wrap(intmask(util.hash_unencoded_chars(self._str)))

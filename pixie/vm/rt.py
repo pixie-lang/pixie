@@ -32,7 +32,10 @@ def init():
                     ret = fn.invoke(py_list(args))
                     if ret is nil:
                         return None
-                    affirm(isinstance(ret, String), u"Invalid return value, expected String")
+
+                    if not isinstance(ret, String):
+                        from pixie.vm.object import runtime_error
+                        runtime_error(u"Invalid return value, expected String")
                     return ret._str
                 return wrapper
             else:

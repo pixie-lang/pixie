@@ -48,7 +48,7 @@ class BigInteger(Number):
         return self._bigint_val
 
     def type(self):
-        return self._type
+        return BigInteger._type
 
 class Float(Number):
     _type = object.Type(u"pixie.stdlib.Float", Number._type)

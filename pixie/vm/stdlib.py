@@ -100,8 +100,9 @@ for x in (code.Code, code.Closure, code.VariadicCode, code.MultiArityFn):
 
 def default_str(x):
     from pixie.vm.string import String
-
-    return rt.wrap(u"<inst " + x.type()._name + u">")
+    tp = x.type()
+    assert isinstance(tp, Type)
+    return rt.wrap(u"<inst " + tp._name + u">")
 
 _str.set_default_fn(wrap_fn(default_str))
 _repr.set_default_fn(wrap_fn(default_str))
@@ -164,11 +165,13 @@ def type(x):
 @extend(_str, Type)
 def _str(tp):
     import pixie.vm.string as string
+    assert isinstance(tp, Type)
     return string.rt.wrap(u"<type " + tp._name + u">")
 
 @extend(_repr, Type)
 def _repr(tp):
     import pixie.vm.string as string
+    assert isinstance(tp, Type)
     return string.rt.wrap(tp._name)
 
 @extend(_first, nil._type)
@@ -294,7 +297,7 @@ def str__args(args):
     from pixie.vm.string import String
     acc = []
     for x in args:
-        acc.append(rt._str(x)._str)
+        acc.append(rt.name(rt._str(x)))
     return rt.wrap(u"".join(acc))
 
 @as_var("apply")
@@ -430,6 +433,8 @@ def the_ns(ns_name):
 
 @as_var("ns-map")
 def ns_map(ns):
+    from pixie.vm.code import Namespace
+    assert isinstance(ns, Namespace)
     from pixie.vm.symbol import Symbol
 
     affirm(isinstance(ns, code.Namespace) or isinstance(ns, Symbol), u"ns must be a symbol or a namespace")
@@ -498,7 +503,8 @@ def satisfy(protocol, tp):
 @as_var("type-by-name")
 def type_by_name(nm):
     import pixie.vm.string as string
-    affirm(isinstance(nm, string.String), u"type name must be string")
+    if not isinstance(nm, string.String):
+        runtime_error(u"type name must be string")
     return _type_registry.get_by_name(nm._str, nil)
 
 
@@ -554,6 +560,7 @@ def _try_catch(main_fn, catch_fn, final):
             if isinstance(ex, Exception):
                 if not we_are_translated():
                     print "Python Error Info: ", ex.__dict__, ex
+                    raise
                 ex = RuntimeException(rt.wrap(u"Some error"))
             else:
                 ex = RuntimeException(nil)

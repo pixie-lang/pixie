@@ -74,5 +74,7 @@ def _hash(self):
 
 @as_var("keyword")
 def _keyword(s):
-    affirm(isinstance(s, String), u"Symbol name must be a string")
+    if not isinstance(s, String):
+        from pixie.vm.object import runtime_error
+        runtime_error(u"Symbol name must be a string")
     return keyword(s._str)
