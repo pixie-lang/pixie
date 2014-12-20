@@ -560,6 +560,7 @@ def _try_catch(main_fn, catch_fn, final):
             if isinstance(ex, Exception):
                 if not we_are_translated():
                     print "Python Error Info: ", ex.__dict__, ex
+                    raise
                 ex = RuntimeException(rt.wrap(u"Some error"))
             else:
                 ex = RuntimeException(nil)
