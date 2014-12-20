@@ -19,6 +19,18 @@
   (str "std::cout << \"{:name " (keyword name)" :sizeof \" << sizeof( " name
        ") << \"}\" << std::endl; \n"))
 
+(defmethod emit-infer-code :offsetof-struct
+  [{:keys [struct-name member-name]}]
+  (str "std::cout << \"{:name " (keyword member-name)" :offsetof \" << offsetof(struct " struct-name ", "
+       member-name
+       ") << \"}\" << std::endl; \n"))
+
+(defmethod emit-infer-code :group
+  [{:keys [ops]}]
+  (str "std::cout << \"[\" << std::endl; "
+       (apply str (map emit-infer-code ops))
+       "std::cout << \"]\" << std::endl; "))
+
 (defn start-string []
   " #include <stdio.h>
     #include <stdlib.h>
@@ -56,13 +68,19 @@
 (io/spit "/tmp/tmp.cpp" (str (start-string)
                              (apply str (map emit-infer-code
                                              [ {:op :constant :name "RAND_MAX"}
-                                               {:op :sizeof-struct :name "stat"}
                                                {:op :sizeof :name "int"}
-                                               {:op :offsetof-struct :struct "stat" :member ""}]))
+                                               {:op :group
+                                                :ops [ {:op :sizeof-struct :name "stat"}
+                                                       {:op :offsetof-struct :struct-name "stat" :member-name "st_size"}]}]))
                                  (end-string)))
 
 (do (io/spit "/tmp/tmp.cpp" (str (start-string)
-                                 (emit-infer-code {:op :constant :name "RAND_MAX"})
+                             (apply str (map emit-infer-code
+                                             [ {:op :constant :name "RAND_MAX"}
+                                               {:op :sizeof :name "int"}
+                                               {:op :group
+                                                :ops [ {:op :sizeof-struct :name "stat"}
+                                                       {:op :offsetof-struct :struct-name "stat" :member-name "st_size"}]}]))
                                  (end-string)))
     (read-string (io/run-command "c++ /tmp/tmp.cpp && ./a.out")))
 
