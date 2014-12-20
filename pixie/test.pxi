@@ -49,14 +49,13 @@
   (println "Looking for tests...")
   (foreach [path @load-paths]
            (println "Looking for tests in:" path)
-           (foreach [desc (pixie.path/file-list path)]
-                    (if (= (nth desc 1) :file)
-                      (let [filename (nth desc 2)]
-                        (if (pixie.string/starts-with filename "test-")
-                          (if (pixie.string/ends-with filename ".pxi")
-                            (let [fullpath (str (nth desc 0) "/" filename)]
-                              (println "Loading" fullpath)
-                              (load-file fullpath)))))))))
+           (foreach [[dir desc filename] (pixie.path/file-list path)]
+                    (if (= desc :file)
+                      (if (pixie.string/starts-with filename "test-")
+                        (if (pixie.string/ends-with filename ".pxi")
+                          (let [fullpath (str dir "/" filename)]
+                            (println "Loading" fullpath)
+                            (load-file fullpath))))))))
 
 
 (defmacro assert= [x y]
