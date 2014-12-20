@@ -85,10 +85,12 @@ Type._type = Type(u"Type")
 
 @jit.elidable_promote()
 def istypeinstance(obj, t):
-    if obj.type() is t:
+    obj_type = obj.type()
+    assert isinstance(obj_type, Type)
+    if obj_type is t:
         return True
-    elif obj.type()._parent is not None:
-        obj_type = obj.type()._parent
+    elif obj_type._parent is not None:
+        obj_type = obj_type._parent
         while obj_type is not None:
             if obj_type is t:
                 return True
