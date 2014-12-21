@@ -1631,7 +1631,8 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
     (let [iter (iterator coll)]
       (loop []
         (when (not (at-end? iter))
-          (yield (current iter))
+          (if (f (current iter))
+            (yield (current iter)))
           (move-next! iter)
           (recur))))))
 
