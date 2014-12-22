@@ -7,7 +7,8 @@ env:
 matrix:
   fast_finish: true 
   allow_failures:
-    - TARGET_OPTS='target_preload.py'
+    - env: JIT_OPTS='--opt=jit' TARGET_OPTS='target_preload.py'
+    - env: JIT_OPTS='' TARGET_OPTS='target_preload.py'
 
 script:
   - make PYTHON=python build
