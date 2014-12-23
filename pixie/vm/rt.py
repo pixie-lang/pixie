@@ -2,15 +2,12 @@ __config__ = None
 py_list = list
 py_str = str
 from rpython.rlib.objectmodel import specialize, we_are_translated
-from rpython.rtyper.lltypesystem import lltype, rffi
-
 
 
 def init():
-
     import pixie.vm.code as code
     from pixie.vm.object import affirm, _type_registry
-    from rpython.rlib.rarithmetic import r_uint, intmask
+    from rpython.rlib.rarithmetic import r_uint
     from rpython.rlib.rbigint import rbigint
     from pixie.vm.primitives import nil, true, false
     from pixie.vm.string import String
@@ -35,23 +32,24 @@ def init():
                     ret = fn.invoke(py_list(args))
                     if ret is nil:
                         return None
-                    affirm(isinstance(ret, String), u"Invalid return value, expected String")
+
+                    if not isinstance(ret, String):
+                        from pixie.vm.object import runtime_error
+                        runtime_error(u"Invalid return value, expected String")
                     return ret._str
                 return wrapper
             else:
                 assert False, "Don't know how to convert" + str(tp)
         return lambda *args: fn.invoke(py_list(args))
 
-
-    if globals().has_key("__inited__"):
+    if "__inited__" in globals():
         return
 
     import sys
-    sys.setrecursionlimit(100000) # Yeah we blow the stack sometimes, we promise it's not a bug
+    #sys.setrecursionlimit(10000)  # Yeah we blow the stack sometimes, we promise it's not a bug
 
     import pixie.vm.numbers as numbers
-    import pixie.vm.bits as bits
-    from pixie.vm.code import wrap_fn
+    import pixie.vm.bits
     import pixie.vm.interpreter
     import pixie.vm.atom
     import pixie.vm.reduced
@@ -62,9 +60,7 @@ def init():
     import pixie.vm.persistent_hash_map
     import pixie.vm.persistent_hash_set
     import pixie.vm.custom_types
-    import pixie.vm.compiler as compiler
     import pixie.vm.map_entry
-    import pixie.vm.reader as reader
     import pixie.vm.libs.platform
     import pixie.vm.libs.ffi
     import pixie.vm.symbol
@@ -72,8 +68,6 @@ def init():
     import pixie.vm.libs.string
     import pixie.vm.threads
     import pixie.vm.string_builder
-
-
 
     numbers.init()
 
@@ -102,7 +96,6 @@ def init():
 
     globals()["wrap"] = wrap
 
-
     def int_val(x):
         affirm(isinstance(x, numbers.Number), u"Expected number")
         return x.int_val()
@@ -118,7 +111,6 @@ def init():
         else:
             globals()[name] = var
 
-
     import pixie.vm.bootstrap
 
     def reinit():
@@ -127,7 +119,7 @@ def init():
             if name in globals():
                 continue
 
-            if var.is_defined() and  isinstance(var.deref(), BaseCode):
+            if var.is_defined() and isinstance(var.deref(), BaseCode):
                 globals()[name] = unwrap(var)
             else:
                 globals()[name] = var
@@ -149,7 +141,6 @@ def init():
     #             reinit()
     #
     # stacklet.with_stacklets(run_load_stdlib)
-
 
     init_fns = [u"reduce", u"get", u"reset!", u"assoc", u"key", u"val", u"keys", u"vals", u"vec"]
     for x in init_fns:

@@ -4,15 +4,15 @@ from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer
 import pixie.vm.stdlib as proto
-from  pixie.vm.code import extend, as_var
-from rpython.rlib.rarithmetic import r_uint, intmask, widen
+from pixie.vm.code import extend, as_var
+from rpython.rlib.rarithmetic import r_uint, intmask
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 
 
-
 class Node(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentVectorNode")
+
     def type(self):
         return Node._type
 
@@ -59,6 +59,7 @@ class PersistentVector(object.Object):
                 assert isinstance(node, Node)
                 node = node._array[(i >> level) & 0x01f]
                 level -= 5
+            assert isinstance(node, Node)
             return node._array
 
         affirm(False, u"Index out of Range")
@@ -72,20 +73,25 @@ class PersistentVector(object.Object):
 
     def conj(self, val):
         assert self._cnt < r_uint(0xFFFFFFFF)
-        i = self._cnt
 
         if self._cnt - self.tailoff() < 32:
             new_tail = self._tail[:]
             new_tail.append(val)
             return PersistentVector(self._meta, self._cnt + 1, self._shift, self._root, new_tail)
 
-        tail_node = Node(self._root._edit, self._tail)
+        root = self._root
+        assert isinstance(root, Node)
+        tail_node = Node(root._edit, self._tail)
         new_shift = self._shift
 
         if (self._cnt >> 5) > (r_uint(1) << self._shift):
-            new_root = Node(self._root._edit)
+            root = self._root
+            assert isinstance(root, Node)
+            new_root = Node(root._edit)
             new_root._array[0] = self._root
-            new_root._array[1] = new_path(self._root._edit, self._shift, tail_node)
+            root = self._root
+            assert isinstance(root, Node)
+            new_root._array[1] = new_path(root._edit, self._shift, tail_node)
             new_shift += 5
 
         else:
@@ -95,7 +101,12 @@ class PersistentVector(object.Object):
 
     def push_tail(self, level, parent, tail_node):
         subidx = ((self._cnt - 1) >> level) & 0x01f
+        assert isinstance(parent, Node)
         ret = Node(parent._edit, parent._array[:])
+
+        root = self._root
+        assert isinstance(root, Node)
+
         if (level == 5):
             node_to_insert = tail_node
         else:
@@ -103,12 +114,10 @@ class PersistentVector(object.Object):
             if child is not None:
                 node_to_insert = self.push_tail(level - 5, child, tail_node)
             else:
-                node_to_insert = new_path(self._root._edit, level - 5, tail_node)
+                node_to_insert = new_path(root._edit, level - 5, tail_node)
 
         ret._array[subidx] = node_to_insert
         return ret
-
-
 
     def pop(self):
         affirm(self._cnt != 0, u"Can't pop an empty vector")
@@ -118,7 +127,7 @@ class PersistentVector(object.Object):
 
         if self._cnt - self.tailoff() > 1:
             size = len(self._tail) - 1
-            assert size >= 0 # for translation
+            assert size >= 0  # for translation
             new_tail = self._tail[:size]
             return PersistentVector(self._meta, self._cnt - 1, self._shift, self._root, new_tail)
 
@@ -138,11 +147,14 @@ class PersistentVector(object.Object):
     def pop_tail(self, level, node):
         sub_idx = ((self._cnt - 1) >> level) & 0x01f
         if level > 5:
+            assert isinstance(node, Node)
             new_child = self.pop_tail(level - 5, node._array[sub_idx])
             if new_child is None or sub_idx == 0:
                 return None
             else:
-                ret = Node(self._root._edit, node._array[:])
+                root = self._root
+                assert isinstance(root, Node)
+                ret = Node(root._edit, node._array[:])
                 ret._array[sub_idx] = new_child
                 return ret
 
@@ -150,7 +162,10 @@ class PersistentVector(object.Object):
             return None
 
         else:
-            ret = Node(self._root._edit, node._array[:])
+            root = self._root
+            assert isinstance(root, Node)
+            assert isinstance(node, Node)
+            ret = Node(root._edit, node._array[:])
             ret._array[sub_idx] = None
             return ret
 
@@ -166,7 +181,9 @@ class PersistentVector(object.Object):
         else:
             object.runtime_error(u"index out of range")
 
+
 def do_assoc(lvl, node, idx, val):
+    assert isinstance(node, Node)
     ret = Node(node._edit, node._array[:])
     if lvl == 0:
         ret._array[idx & 0x01f] = val
@@ -175,6 +192,7 @@ def do_assoc(lvl, node, idx, val):
         ret._array[subidx] = do_assoc(lvl - 5, node._array[subidx], idx, val)
     return ret
 
+
 def new_path(edit, level, node):
     if level == 0:
         return node
@@ -182,7 +200,9 @@ def new_path(edit, level, node):
     ret._array[0] = new_path(edit, level - 5, node)
     return ret
 
+
 edited = u"edited"
+
 
 class TransientVector(object.Object):
     _type = object.Type(u"pixie.stdlib.TransientVector")
@@ -198,17 +218,24 @@ class TransientVector(object.Object):
 
     @staticmethod
     def editable_root(node):
+        assert isinstance(node, Node)
         return Node(edited, node._array[:])
 
     def ensure_editable(self):
-        affirm(self._root._edit is not None, u"Transient used after call to persist!")
+        root = self._root
+        assert isinstance(root, Node)
+        affirm(root._edit is not None, u"Transient used after call to persist!")
 
     def ensure_node_editable(self, node):
-        if node._edit is self._root._edit:
+        assert isinstance(node, Node)
+        root = self._root
+        assert isinstance(root, Node)
+        if node._edit is root._edit:
             return node
 
-        return Node(self._root._edit, node._array[:])
-
+        root = self._root
+        assert isinstance(root, Node)
+        return Node(root._edit, node._array[:])
 
     def tailoff(self):
         if self._cnt < 32:
@@ -218,7 +245,10 @@ class TransientVector(object.Object):
     def persistent(self):
         self.ensure_editable()
 
-        self._root._edit = None
+        root = self._root
+        assert isinstance(root, Node)
+
+        root._edit = None
         trimmed = [None] * (self._cnt - self.tailoff())
         list_copy(self._tail, 0, trimmed, 0, len(trimmed))
         return PersistentVector(nil, self._cnt, self._shift, self._root, trimmed)
@@ -238,15 +268,18 @@ class TransientVector(object.Object):
             self._cnt += 1
             return self
 
-        tail_node = Node(self._root._edit, self._tail)
+        root = self._root
+        assert isinstance(root, Node)
+
+        tail_node = Node(root._edit, self._tail)
         self._tail = [None] * 32
         self._tail[0] = val
         new_shift = self._shift
 
         if (self._cnt >> 5) > (r_uint(1) << self._shift):
-            new_root = Node(self._root._edit)
+            new_root = Node(root._edit)
             new_root._array[0] = self._root
-            new_root._array[1] = new_path(self._root._edit, self._shift, tail_node)
+            new_root._array[1] = new_path(root._edit, self._shift, tail_node)
             new_shift += 5
 
         else:
@@ -260,6 +293,9 @@ class TransientVector(object.Object):
     def push_tail(self, level, parent, tail_node):
         parent = self.ensure_node_editable(parent)
 
+        root = self._root
+        assert isinstance(root, Node)
+
         sub_idx = ((self._cnt - 1) >> level) & 0x01f
 
         ret = parent
@@ -270,7 +306,7 @@ class TransientVector(object.Object):
             if child is not None:
                 node_to_insert = self.push_tail(level - 5, child, tail_node)
             else:
-                node_to_insert = new_path(self._root._edit, level-5, tail_node)
+                node_to_insert = new_path(root._edit, level - 5, tail_node)
 
         ret._array[sub_idx] = node_to_insert
         return ret
@@ -297,7 +333,7 @@ class TransientVector(object.Object):
             node = self._root
             level = self._shift
             while level > 0:
-                node = self.ensure_node_editable(node._array[(i >> self._level) & 0x1f])
+                node = self.ensure_node_editable(node._array[(i >> level) & 0x1f])
 
                 level -= 5
             return node._array
@@ -326,13 +362,16 @@ class TransientVector(object.Object):
             self._cnt -= 1
             return self
 
-        new_tail = self.editable_array_for(self._cnt - 2)
+        new_tail = self.editable_array_for(self._cnt - 1)
 
         new_root = self.pop_tail(self._shift, self._root)
         new_shift = self._shift
 
+        root = self._root
+        assert isinstance(root, Node)
+
         if new_root is None:
-            new_root = Node(self._root._edit)
+            new_root = Node(root._edit)
 
         if self._shift > 5 and new_root._array[1] is None:
             new_root = self.ensure_node_editable(new_root._array[0])
@@ -366,9 +405,6 @@ class TransientVector(object.Object):
             return ret
 
 
-
-
-
 @jit.unroll_safe
 def list_copy(from_lst, from_loc, to_list, to_loc, count):
     from_loc = r_uint(from_loc)
@@ -377,10 +413,9 @@ def list_copy(from_lst, from_loc, to_list, to_loc, count):
 
     i = r_uint(0)
     while i < count:
-        to_list[to_loc + i] = from_lst[from_loc+i]
+        to_list[to_loc + i] = from_lst[from_loc + i]
         i += 1
     return to_list
-
 
 
 @extend(proto._count, PersistentVector)
@@ -388,10 +423,12 @@ def _count(self):
     assert isinstance(self, PersistentVector)
     return rt.wrap(intmask(self._cnt))
 
+
 @extend(proto._nth, PersistentVector)
 def _nth(self, idx):
     assert isinstance(self, PersistentVector)
     return self.nth(idx.int_val())
+
 
 @extend(proto._val_at, PersistentVector)
 def _val_at(self, key, not_found):
@@ -401,8 +438,10 @@ def _val_at(self, key, not_found):
     else:
         return not_found
 
+
 @extend(proto._eq, PersistentVector)
 def _eq(self, obj):
+    assert isinstance(self, PersistentVector)
     if self is obj:
         return true
     elif isinstance(obj, PersistentVector):
@@ -424,27 +463,33 @@ def _eq(self, obj):
             return false
         return true
 
+
 @extend(proto._contains_key, PersistentVector)
 def _contains_key(self, key):
+    assert isinstance(self, PersistentVector)
     if not isinstance(key, Integer):
         return false
     else:
         return true if key.int_val() >= 0 and key.int_val() < intmask(self._cnt) else false
+
 
 @extend(proto._conj, PersistentVector)
 def _conj(self, v):
     assert isinstance(self, PersistentVector)
     return self.conj(v)
 
+
 @extend(proto._push, PersistentVector)
 def _push(self, v):
     assert isinstance(self, PersistentVector)
     return self.conj(v)
 
+
 @extend(proto._pop, PersistentVector)
-def _push(self):
+def _pop(self):
     assert isinstance(self, PersistentVector)
     return self.pop()
+
 
 @extend(proto._assoc, PersistentVector)
 def _assoc(self, idx, val):
@@ -452,10 +497,12 @@ def _assoc(self, idx, val):
     affirm(isinstance(idx, Integer), u"key must be an integer")
     return self.assoc_at(r_uint(idx.int_val()), val)
 
+
 @extend(proto._meta, PersistentVector)
 def _meta(self):
     assert isinstance(self, PersistentVector)
     return self.meta()
+
 
 @extend(proto._with_meta, PersistentVector)
 def _with_meta(self, meta):
@@ -464,8 +511,9 @@ def _with_meta(self, meta):
 
 
 _reduce_driver = jit.JitDriver(name="pixie.stdlib.PersistentVector_reduce",
-                              greens=["f"],
-                              reds="auto")
+                               greens=["f"],
+                               reds="auto")
+
 
 @extend(proto._reduce, PersistentVector)
 def _reduce(self, f, init):
@@ -474,7 +522,6 @@ def _reduce(self, f, init):
     while i < self._cnt:
         array = self.array_for(i)
         for j in range(len(array)):
-            item = array[j]
             _reduce_driver.jit_merge_point(f=f)
 
             init = f.invoke([init, array[j]])
@@ -493,20 +540,41 @@ def vector__args(args):
         acc = rt._conj_BANG_(acc, args[x])
     return rt._persistent_BANG_(acc)
 
+
 @extend(proto._transient, PersistentVector)
 def _transient(self):
     assert isinstance(self, PersistentVector)
     return TransientVector(self._cnt, self._shift, TransientVector.editable_root(self._root), TransientVector.editable_tail(self._tail))
+
 
 @extend(proto._persistent_BANG_, TransientVector)
 def _persistent(self):
     assert isinstance(self, TransientVector)
     return self.persistent()
 
+
 @extend(proto._conj_BANG_, TransientVector)
 def _conj(self, val):
     assert isinstance(self, TransientVector)
     return self.conj(val)
+
+
+@extend(proto._pop_BANG_, TransientVector)
+def _pop(self):
+    assert isinstance(self, TransientVector)
+    return self.pop()
+
+
+@extend(proto._push_BANG_, TransientVector)
+def _push(self, val):
+    assert isinstance(self, TransientVector)
+    return self.conj(val)
+
+
+@extend(proto._count, TransientVector)
+def _count(self):
+    assert isinstance(self, TransientVector)
+    return rt.wrap(intmask(self._cnt))
 
 proto.IVector.add_satisfies(PersistentVector._type)
 

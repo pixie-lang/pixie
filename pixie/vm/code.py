@@ -23,7 +23,6 @@ BYTECODES = ["LOAD_CONST",
              "POP",
              "DEREF_VAR",
              "INSTALL",
-             "RECUR",
              "LOOP_RECUR",
              "ARG",
              "PUSH_SELF",
@@ -92,6 +91,7 @@ def slice_from_start(from_list, count, extra=r_uint(0)):
 class BaseCode(object.Object):
     def __init__(self):
         assert isinstance(self, BaseCode)
+        self._name = u"unknown"
         self._is_macro = False
         self._meta = nil
 
@@ -105,6 +105,7 @@ class BaseCode(object.Object):
         self._is_macro = True
 
     def is_macro(self):
+        assert isinstance(self, BaseCode)
         return self._is_macro
 
     def get_consts(self):
@@ -293,7 +294,9 @@ class Closure(BaseCode):
         try:
             return interpret(self, args, self_obj=self_fn)
         except object.WrappedException as ex:
-            ex._ex._trace.append(object.PixieCodeInfo(self._code._name))
+            code = self._code
+            assert isinstance(code, Code)
+            ex._ex._trace.append(object.PixieCodeInfo(code._name))
             raise
 
     def get_closed_over(self, idx):
@@ -354,6 +357,7 @@ class Var(BaseCode):
         return Var._type
 
     def __init__(self, ns, name):
+        BaseCode.__init__(self)
         self._ns = ns
         self._name = name
         self._rev = 0
@@ -460,7 +464,7 @@ class Namespace(object.Object):
         name = rt.name(sym)
         prev_binding = self._registry.get(name, None)
         if prev_binding is not None:
-            print rt.str(rt.wrap(u"Warning: "), sym, rt.wrap(u" already refers to "), prev_binding)._str
+            print rt.name(rt.str(rt.wrap(u"Warning: "), sym, rt.wrap(u" already refers to "), prev_binding))
 
         self._registry[name] = var
         return var
@@ -486,6 +490,8 @@ class Namespace(object.Object):
                 affirm(False, u"Unable to resolve namespace: " + ns + u" inside namespace " + self._name)
         else:
             resolved_ns = self
+
+        assert isinstance(resolved_ns, Namespace)
 
         var = resolved_ns._registry.get(name, None)
         if var is None and use_refers:
@@ -537,11 +543,21 @@ def get_var_if_defined(ns, name, els=None):
 
 class DefaultProtocolFn(NativeFn):
     def __init__(self, pfn):
+        BaseCode.__init__(self)
         self._pfn = pfn
 
     def invoke(self, args):
-        tp = args[0].type()._name
-        affirm(False, u"No override for " + tp + u" on " + self._pfn._name + u" in protocol " + self._pfn._protocol._name)
+        tp = args[0].type()
+        assert isinstance(tp, object.Type)
+        pfn = self._pfn
+        if isinstance(pfn, PolymorphicFn):
+            protocol = pfn._protocol
+        elif isinstance(pfn, DoublePolymorphicFn):
+            protocol = pfn._protocol
+        else:
+            assert False
+        assert isinstance(protocol, Protocol)
+        affirm(False, u"No override for " + tp._name + u" on " + self._pfn._name + u" in protocol " + protocol._name)
 
 
 class Protocol(object.Object):

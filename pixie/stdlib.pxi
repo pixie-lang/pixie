@@ -83,6 +83,20 @@
                       ([coll item & items]
                          (reduce -disj! (-disj! coll item) items)))))
 
+(def pop!
+  (fn ^{:doc "Pops elements off a transient stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    pop!
+    ([coll] (-pop! coll))))
+
+(def push!
+  (fn ^{:doc "Push an element on to a transient stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    push!
+    ([coll x] (-push! coll x))))
+
 (def transient (fn [coll] (-transient coll)))
 
 (def persistent! (fn [coll] (-persistent! coll)))
@@ -152,8 +166,8 @@
 
 
 (def preserving-reduced
-  (fn [rf]
-    (fn [a b]
+  (fn preserving-reduced [rf]
+    (fn pr-inner [a b]
       (let [ret (rf a b)]
         (if (reduced? ret)
           (reduced ret)
@@ -805,10 +819,9 @@ Stops if it finds such an element."
    :else (recur pred (next coll))))
 
 (extend -count MapEntry (fn [self] 2))
-(extend -nth MapEntry (fn [self idx not-found]
+(extend -nth MapEntry (fn map-entry-nth [self idx]
                           (cond (= idx 0) (-key self)
-                                (= idx 1) (-val self)
-                                :else not-found)))
+                                (= idx 1) (-val self))))
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -1618,7 +1631,8 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
     (let [iter (iterator coll)]
       (loop []
         (when (not (at-end? iter))
-          (yield (current iter))
+          (if (f (current iter))
+            (yield (current iter)))
           (move-next! iter)
           (recur))))))
 

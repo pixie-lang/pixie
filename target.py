@@ -177,7 +177,7 @@ def run_load_stdlib():
         return
     import pixie.vm.compiler as compiler
     import pixie.vm.reader as reader
-    f = open(rpath.rjoin(str(load_path.deref()._str), "pixie/stdlib.pxi"))
+    f = open(rpath.rjoin(str(rt.name(load_path.deref())), "pixie/stdlib.pxi"))
     data = f.read()
     f.close()
     rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pxi")

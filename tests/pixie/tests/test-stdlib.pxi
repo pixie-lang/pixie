@@ -224,6 +224,22 @@
   (t/assert= (some even? []) false)
   (t/assert= (some odd? [2]) false))
 
+(t/deftest test-filter
+  (t/assert= (vec (filter (fn [x] true) [])) [])
+  (t/assert= (vec (filter (fn [x] false) [])) [])
+  (t/assert= (vec (filter (fn [x] true) [1 2 3 4])) [1 2 3 4])
+  (t/assert= (vec (filter (fn [x] false) [1 2 3 4])) [])
+  (t/assert= (vec (filter (fn [x] true))
+                  [1 2 3 4])
+              [1 2 3 4])
+  (t/assert= (vec (filter (fn [x] false))
+                  [1 2 3 4])
+              [])
+  (t/assert= (seq (filter (fn [x] true) [])) nil)
+  (t/assert= (seq (filter (fn [x] false) [])) nil)
+  (t/assert= (seq (filter (fn [x] true) [1 2 3 4])) '(1 2 3 4))
+  (t/assert= (seq (filter (fn [x] false) [1 2 3 4])) nil))
+
 (t/deftest test-distinct
   (t/assert= (seq (distinct [1 2 3 2 1])) '(1 2 3))
   (t/assert= (vec (distinct) [1 1 2 2 3 3]) [1 2 3])

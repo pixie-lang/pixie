@@ -81,7 +81,9 @@ def _hash(self):
 
 @as_var("symbol")
 def _symbol(s):
-    affirm(isinstance(s, String), u"Symbol name must be a string")
+    if not isinstance(s, String):
+        from pixie.vm.object import runtime_error
+        runtime_error(u"Symbol name must be a string")
     return symbol(s._str)
 
 
