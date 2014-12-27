@@ -1792,13 +1792,13 @@ The params can be destructuring bindings, see `(doc let)` for details."}
 
 (deftype MultiMethod [dispatch-fn default-val methods]
   IFn
-  (-invoke [self dispatch-arg & args]
-    (let [dispatch-val (dispatch-fn dispatch-arg)
+  (-invoke [self & args]
+    (let [dispatch-val (apply dispatch-fn args)
           method (if (contains? @methods dispatch-val)
                    (get @methods dispatch-val)
                    (get @methods default-val))
           _ (assert method (str "no method defined for " dispatch-val))]
-      (apply method dispatch-arg args))))
+      (apply method args))))
 
 (defmacro defmulti
   {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
