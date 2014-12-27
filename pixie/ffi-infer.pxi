@@ -25,44 +25,42 @@
        member-name
        ") << \"}\" << std::endl; \n"))
 
+(defmethod emit-infer-code :struct-member-type
+  [{:keys [struct-name member-name]}]
+  (str "std::cout << \"{:name " (keyword member-name)" :type \" << WeakTypeOf((new struct " struct-name ")->"
+       member-name
+       ") << \"}\" << std::endl; \n"))
+
 (defmethod emit-infer-code :group
   [{:keys [ops]}]
   (str "std::cout << \"[\" << std::endl; "
        (apply str (map emit-infer-code ops))
        "std::cout << \"]\" << std::endl; "))
 
+(defmethod emit-infer-code :function
+  [{:keys [name]}]
+  (str "PixieChecker::DumpType<typeof(" + name + ")>);"))
+
 (defn start-string []
-  " #include <stdio.h>
-    #include <stdlib.h>
-    #include <sys/stat.h>
-      #include <iostream>
+  " #include \"pixie/PixieChecker.hpp\"
 
-    template <typename T>
-    std::string TypeOf(T v)
-    {
-      return \":unknown\";
-    }
 
-    template<>
-    std::string TypeOf<size_t>(size_t v)
-    {
-      return \":CSizeT\";
-    }
-
-    template<>
-    std::string TypeOf<int>(int v)
-    {
-      return \":CIntT\";
-    }
 
       int main() {
-      std::cout << \"[\";
+        std::cout << \"[\";
 ")
 
 (defn end-string []
   " std::cout << \"]\" << std::endl;
-    return 0;
+return 0;
       }")
+
+(do (require pixie.io :as io )
+    (io/run-command "cat /tmp/tmp.cpp"))
+
+{:op :struct
+ :name "stat"
+ :interesting-fields #{:st_size}}
 
 
 (io/spit "/tmp/tmp.cpp" (str (start-string)
@@ -80,9 +78,9 @@
                                                {:op :sizeof :name "int"}
                                                {:op :group
                                                 :ops [ {:op :sizeof-struct :name "stat"}
-                                                       {:op :offsetof-struct :struct-name "stat" :member-name "st_size"}]}]))
+                                                       {:op :struct-member-type :struct-name "stat" :member-name "st_size"}]}]))
                                  (end-string)))
-    (read-string (io/run-command "c++ /tmp/tmp.cpp && ./a.out")))
+    (io/run-command "c++ /tmp/tmp.cpp -o /tmp/a.out && /tmp/a.out"))
 
 (spit )
 (io/run-command "ls")

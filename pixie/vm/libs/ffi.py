@@ -1,6 +1,7 @@
 py_object = object
 import rpython.rlib.rdynload as dynload
 import pixie.vm.object as object
+from pixie.vm.object import runtime_error
 import pixie.vm.code as code
 import pixie.vm.stdlib  as proto
 from pixie.vm.code import as_var, affirm, extend
@@ -516,8 +517,7 @@ class CifDescrBuilder(py_object):
         # call libffi's ffi_prep_cif() function
         res = jit_libffi.jit_ffi_prep_cif(rawmem)
         if res != clibffi.FFI_OK:
-            raise OperationError(space.w_SystemError,
-                space.wrap("libffi failed to build this function type"))
+            runtime_error(u"libffi failed to build function type")
 
     def get_item(self, nm):
         (tp, offset) = self._type.get_desc(nm)
