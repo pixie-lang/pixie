@@ -134,7 +134,25 @@
                     nil
                     (do (yield (f (current i)))
                         (move-next! i)
-                        (recur))))))))
+                        (recur))))))
+           ([f & colls]
+              (let [its (vec (map iterator colls))]
+                (loop []
+                  (let [args (if (at-end? (first its))
+                               nil
+                               (reduce
+                                (fn [acc i]
+                                  (if (at-end? i)
+                                    (reduced nil)
+                                    (let [new-acc (conj acc (current i))]
+                                      (move-next! i)
+                                      new-acc)))
+                                []
+                                its))]
+
+                    (if args
+                      (do (yield (apply f args))
+                          (recur)))))))))
 
 
 (def reduce (fn [rf init col]
