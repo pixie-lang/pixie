@@ -3,11 +3,10 @@
 
 (defmulti emit-infer-code :op)
 
-(defmethod emit-infer-code :constant
+(defmethod emit-infer-code :const
   [{:keys [name]}]
-  (str "std::cout << \"{:name " (keyword name)" :value \" << " name
-       "<< \" :type \" << TypeOf( " name ") "
-       "<< \"}\" << std::endl; \n"))
+  (str "std::cout << \"{:value \" << " name " << \" :type \" "
+       ";\n PixieChecker::DumpValue(" name "); \n std::cout << \"}\" << std::endl;  "))
 
 (defmethod emit-infer-code :sizeof-struct
   [{:keys [name]}]
@@ -39,11 +38,13 @@
 
 (defmethod emit-infer-code :function
   [{:keys [name]}]
-  (str "PixieChecker::DumpType<typeof(" + name + ")>);"))
+  (str "PixieChecker::DumpType<typeof(" name ")>(); \n"))
+
+
 
 (defn start-string []
   " #include \"pixie/PixieChecker.hpp\"
-
+#include \"stdlib.h\"
 
 
       int main() {
@@ -55,32 +56,79 @@
 return 0;
       }")
 
-(do (require pixie.io :as io )
-    (io/run-command "cat /tmp/tmp.cpp"))
+;; To Ctype conversion
 
-{:op :struct
- :name "stat"
- :interesting-fields #{:st_size}}
+(defmulti edn-to-ctype :type)
+
+(defmethod edn-to-ctype :pointer
+  [{:keys [of-type] :as ptr}]
+  (cond
+   (= of-type {:signed? true :size 1 :type :int}) 'pixie.stdlib/CCharP))
+
+(defmethod edn-to-ctype :float
+  [{:keys [size]}]
+  (cond
+   (= size 8) 'pixie.stdlib/CDouble
+   :else (assert False "unknown type")))
+
+;; Code Generation
+(defmulti generate-code (fn [input output]
+                          (:op input)))
+
+(defmethod generate-code :const
+  [{:keys [name]} {:keys [value type]}]
+  `(def ~(symbol name) ~value))
+
+(defmethod generate-code :function
+  [{:keys [name]} {:keys [type arguments returns]}]
+  (assert (= type :function) (str name " is not infered to be a function"))
+  `(def ~(symbol name) (ffi-fn libc ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
+
 
 
 (io/spit "/tmp/tmp.cpp" (str (start-string)
                              (apply str (map emit-infer-code
-                                             [ {:op :constant :name "RAND_MAX"}
-                                               {:op :sizeof :name "int"}
-                                               {:op :group
-                                                :ops [ {:op :sizeof-struct :name "stat"}
-                                                       {:op :offsetof-struct :struct-name "stat" :member-name "st_size"}]}]))
+                                             [{:op :const :name "RAND_MAX"}]))
                                  (end-string)))
 
 (do (io/spit "/tmp/tmp.cpp" (str (start-string)
                              (apply str (map emit-infer-code
-                                             [ {:op :constant :name "RAND_MAX"}
-                                               {:op :sizeof :name "int"}
-                                               {:op :group
-                                                :ops [ {:op :sizeof-struct :name "stat"}
-                                                       {:op :struct-member-type :struct-name "stat" :member-name "st_size"}]}]))
+                                             [ {:op :const :name "RAND_MAX"}]))
                                  (end-string)))
-    (io/run-command "c++ /tmp/tmp.cpp -o /tmp/a.out && /tmp/a.out"))
+    (io/run-command (str "c++ /tmp/tmp.cpp -I" (first @load-paths) " -o /tmp/a.out && /tmp/a.out"))
 
-(spit )
-(io/run-command "ls")
+    )
+
+(do (io/spit "/tmp/tmp.cpp" (str (start-string)
+                             (apply str (map emit-infer-code
+                                             [ {:op :const :name "RAND_MAX"}]))
+                                 (end-string)))
+    (read-string (io/run-command (str "c++ /tmp/tmp.cpp -I" (first @load-paths) " -o /tmp/a.out && /tmp/a.out")))
+
+    )
+
+(defn run-infer [cmd]
+  (io/spit "/tmp/tmp.cpp" (str (start-string)
+                               (apply str (map emit-infer-code
+                                               [ cmd]))
+                               (end-string)))
+  (let [result (first (read-string (io/run-command (str "c++ /tmp/tmp.cpp -I"
+                                                        (first @load-paths)
+                                                        " -o /tmp/a.out && /tmp/a.out"))))]
+    (println result)
+    (generate-code cmd result)))
+
+(run-infer {:op :function :name "atof"})
+
+
+(defmacro defcglobal [nm]
+  (run-infer {:op :const :name (name nm)}))
+
+(defmacro deflibcfn [nm]
+  (run-infer {:op :function :name (name nm)}))
+
+(defcglobal RAND_MAX)
+
+(deflibcfn "atof")
+
+RAND_MAX
