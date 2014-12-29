@@ -1,6 +1,14 @@
 (ns pixie.ffi-infer
   (require pixie.io :as io))
 
+(def *config* nil)
+(set-dynamic! (var *config*))
+(def *bodies* nil)
+(set-dynamic! (var *bodies*))
+(def *library* nil)
+(set-dynamic! (var *library*))
+
+
 (defmulti emit-infer-code :op)
 
 (defmethod emit-infer-code :const
@@ -21,13 +29,16 @@
 
 
 (defn start-string []
-  " #include \"pixie/PixieChecker.hpp\"
-#include \"stdlib.h\"
+  (str (apply str (map (fn [i]
+                         (str "#include \"" i "\"\n"))
+                       (:includes *config*)))
+       "#include \"pixie/PixieChecker.hpp\"
+   #include \"stdlib.h\"
 
 
-      int main() {
+      int main(int argc, char* argv[]) {
         std::cout << \"[\";
-")
+"))
 
 (defn end-string []
   " std::cout << \"]\" << std::endl;
@@ -49,6 +60,12 @@ return 0;
    (= size 8) 'pixie.stdlib/CDouble
    :else (assert False "unknown type")))
 
+(defmethod edn-to-ctype :int
+  [{:keys [size]}]
+  (cond
+   (= size 4) 'pixie.stdlib/CInt
+   :else (assert False "unknown type")))
+
 ;; Code Generation
 (defmulti generate-code (fn [input output]
                           (:op input)))
@@ -60,7 +77,7 @@ return 0;
 (defmethod generate-code :function
   [{:keys [name]} {:keys [type arguments returns]}]
   (assert (= type :function) (str name " is not infered to be a function"))
-  `(def ~(symbol name) (ffi-fn libc ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
+  `(def ~(symbol name) (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
 
 
 (defn run-infer [config cmds]
@@ -68,21 +85,21 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
-  (let [result (read-string (io/run-command (str "c++ /tmp/tmp.cpp -I"
+  (let [cmd-str (str "c++ /tmp/tmp.cpp -I"
                                                  (first @load-paths)
-                                                 " -o /tmp/a.out && /tmp/a.out")))]
+                                                 (apply str " " (interpose " " (:cxx-flags *config*)))
+                                                 " -o /tmp/a.out && /tmp/a.out")
+        _ (print cmd-str)
+        result (read-string (io/run-command cmd-str))]
     `(do ~@(map generate-code cmds result))))
 
 
-(def *config* nil)
-(set-dynamic! (var *config*))
-(def *bodies* nil)
-(set-dynamic! (var *bodies*))
 
 
 (defmacro with-config [config & body]
   `(binding [*config* ~config
-             *bodies* (atom [])]
+             *bodies* (atom [])
+             *library* (ffi-library ~(str "lib" (:library config) "." pixie.platform/so-ext))]
      ~@body
      (eval (run-infer *config* @*bodies*))))
 
@@ -95,11 +112,18 @@ return 0;
     `(swap! *bodies* conj (assoc {:op :const} :name ~name-str)))  )
 
 
+
 (comment
 
-  (with-config {}
-    (defconst RAND_MAX)
-    (defcfn atof))
+(with-config {:library "SDL"
+              :cxx-flags ["`sdl2-config --cflags --libs`"]
+              :includes ["SDL.h"]
+              }
+  (defconst SDL_INIT_EVERYTHING)
+  (defcfn SDL_Init)
+  (defcfn SDL_CreateWindow)
+  (defconst SDL_WINDOW_SHOWN))
+
 
 
   )
