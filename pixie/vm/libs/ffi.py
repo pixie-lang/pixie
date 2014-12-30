@@ -74,8 +74,8 @@ class ExternalLib(object.Object):
 
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
-    __immutable_fields__ = ["_is_inited?", "_lib", "_name", "_arg_types[*]", "_ret_type", \
-                            "_transfer_size?", "_arg0_offset?", "_ret_offset?", "_cd?"]
+    _immutable_fields_ = ["_is_inited", "_lib", "_name", "_arg_types[*]", "_ret_type", \
+                            "_transfer_size", "_arg0_offset", "_ret_offset", "_cd"]
 
     def type(self):
         return FFIFn._type
@@ -86,14 +86,14 @@ class FFIFn(object.Object):
         self._lib = lib
         self._arg_types = arg_types
         self._ret_type = ret_type
-        self._is_inited = False
+        #self._is_inited = False
+        self.thaw()
 
 
     def thaw(self):
-        if not self._is_inited:
-            self._f_ptr = self._lib.get_fn_ptr(self._name)
-            CifDescrBuilder(self._arg_types, self._ret_type).rawallocate(self)
-            self._is_inited = True
+        #if not self._is_inited:
+        self._f_ptr = self._lib.get_fn_ptr(self._name)
+        CifDescrBuilder(self._arg_types, self._ret_type).rawallocate(self)
 
     def _cleanup_(self):
         self._rev += 1
@@ -103,20 +103,18 @@ class FFIFn(object.Object):
 
     @jit.unroll_safe
     def prep_exb(self, args):
-        if not self._is_inited:
-            self.thaw()
-        size = self._cd.exchange_size
+        size = jit.promote(self._cd.exchange_size)
         exb = lltype.malloc(rffi.CCHARP.TO, size, flavor="raw")
         tokens = [None] * len(args)
 
         for i, tp in enumerate(self._arg_types):
-            offset_p = rffi.ptradd(exb, self._cd.exchange_args[i])
+            offset_p = rffi.ptradd(exb, jit.promote(self._cd.exchange_args[i]))
             tokens[i] = tp.ffi_set_value(offset_p, args[i])
 
         return exb, tokens
 
     def get_ret_val_from_buffer(self, exb):
-        offset_p = rffi.ptradd(exb, self._cd.exchange_result_libffi)
+        offset_p = rffi.ptradd(exb, jit.promote(self._cd.exchange_result_libffi))
         ret_val = self._ret_type.ffi_get_value(offset_p)
         return ret_val
 
@@ -124,7 +122,11 @@ class FFIFn(object.Object):
     def _invoke(self, args):
 
         exb, tokens = self.prep_exb(args)
-        jit_ffi_call(self._cd, self._f_ptr, exb)
+        cd = jit.promote(self._cd)
+        #fp = jit.promote(self._f_ptr)
+        jit_ffi_call(cd,
+                     self._f_ptr,
+                     exb)
         ret_val = self.get_ret_val_from_buffer(exb)
 
         for x in range(len(args)):
