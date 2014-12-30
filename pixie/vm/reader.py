@@ -1,6 +1,6 @@
 py_object = object
 import pixie.vm.object as object
-from pixie.vm.object import affirm
+from pixie.vm.object import affirm, runtime_error
 import pixie.vm.code as code
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.numbers as numbers
@@ -717,7 +717,7 @@ def read(rdr, error_on_eof):
         eat_whitespace(rdr)
     except EOFError as ex:
         if error_on_eof:
-            raise ex
+            runtime_error("Unexpected EOF while reading")
         return eof
 
 
