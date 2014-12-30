@@ -717,7 +717,7 @@ def read(rdr, error_on_eof):
         eat_whitespace(rdr)
     except EOFError as ex:
         if error_on_eof:
-            runtime_error("Unexpected EOF while reading")
+            runtime_error(u"Unexpected EOF while reading")
         return eof
 
 
