@@ -18,4 +18,4 @@ before_install:
   - sudo apt-get install libffi-dev libedit-dev
 
 notifications:
-  	irc: "chat.freenode.net#pixie-lang"
+  irc: "chat.freenode.net#pixie-lang"
