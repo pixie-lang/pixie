@@ -1,17 +1,21 @@
 py_object = object
 import rpython.rlib.rdynload as dynload
 import pixie.vm.object as object
+from pixie.vm.object import runtime_error
 import pixie.vm.code as code
 import pixie.vm.stdlib  as proto
 from pixie.vm.code import as_var, affirm, extend
 import pixie.vm.rt as rt
-from rpython.rtyper.lltypesystem import rffi, lltype
+from rpython.rtyper.lltypesystem import rffi, lltype, llmemory
 from pixie.vm.primitives import nil
 from pixie.vm.numbers import Integer, Float
 from pixie.vm.string import String
 from pixie.vm.util import unicode_to_utf8
 from rpython.rlib import clibffi
-from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION
+from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION, CIF_DESCRIPTION_P, \
+    FFI_TYPE, FFI_TYPE_P, FFI_TYPE_PP, SIZE_OF_FFI_ARG
+import rpython.rlib.jit_libffi as jit_libffi
+from rpython.rlib.objectmodel import keepalive_until_here, we_are_translated
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import intmask, r_uint
 
@@ -88,43 +92,8 @@ class FFIFn(object.Object):
     def thaw(self):
         if not self._is_inited:
             self._f_ptr = self._lib.get_fn_ptr(self._name)
-            nargs = len(self._arg_types)
-
-            exchange_buffer_size = nargs * rffi.sizeof(rffi.CCHARP)
-
-            cd = lltype.malloc(CIF_DESCRIPTION, nargs, flavor="raw")
-            cd.abi = clibffi.FFI_DEFAULT_ABI
-            cd.nargs = nargs
-            cd.rtype = self._ret_type.ffi_type()
-
-            atypes = lltype.malloc(clibffi.FFI_TYPE_PP.TO, nargs, flavor="raw")
-            arg0_offset = exchange_buffer_size
-            for idx in range(nargs):
-                cd.exchange_args[idx] = exchange_buffer_size
-                tp = self._arg_types[idx]
-                native_size = tp.ffi_size()
-                atypes[idx] = tp.ffi_type()
-                exchange_buffer_size += native_size
-
-            ret_offset = exchange_buffer_size
-            exchange_buffer_size += self._ret_type.ffi_size()
-
-
-
-            cd.atypes = atypes
-            cd.exchange_size = exchange_buffer_size
-            cd.exchange_result = ret_offset
-            cd.exchange_result_libffi = ret_offset
-
-            jit_ffi_prep_cif(cd)
-            self._cd = cd
-            self._transfer_size = exchange_buffer_size
-            self._arg0_offset = arg0_offset
-            self._ret_offset = ret_offset
-
+            CifDescrBuilder(self._arg_types, self._ret_type).rawallocate(self)
             self._is_inited = True
-
-        return self
 
     def _cleanup_(self):
         self._rev += 1
@@ -136,13 +105,13 @@ class FFIFn(object.Object):
     def prep_exb(self, args):
         if not self._is_inited:
             self.thaw()
-        exb = lltype.malloc(rffi.CCHARP.TO, self._transfer_size, flavor="raw")
-        offset_p = rffi.ptradd(exb, self._arg0_offset)
+        size = self._cd.exchange_size
+        exb = lltype.malloc(rffi.CCHARP.TO, size, flavor="raw")
         tokens = [None] * len(args)
 
-        for x in range(len(self._arg_types)):
-            tokens[x] = self._arg_types[x].ffi_set_value(offset_p, args[x])
-            offset_p = rffi.ptradd(offset_p, self._arg_types[x].ffi_size())
+        for i, tp in enumerate(self._arg_types):
+            offset_p = rffi.ptradd(exb, self._cd.exchange_args[i])
+            tokens[i] = tp.ffi_set_value(offset_p, args[i])
 
         return exb, tokens
 
@@ -164,6 +133,7 @@ class FFIFn(object.Object):
                 t.finalize_token()
 
         lltype.free(exb, flavor="raw")
+        keepalive_until_here(args)
         return ret_val
 
     def invoke(self, args):
@@ -211,7 +181,8 @@ class Buffer(object.Object):
 
 
     def __del__(self):
-        lltype.free(self._buffer, flavor="raw")
+        #lltype.free(self._buffer, flavor="raw")
+        pass
 
     def set_used_size(self, size):
         self._used_size = size
@@ -378,6 +349,8 @@ class CVoidP(CType):
             pnt[0] = val.buffer()
         elif isinstance(val, VoidP):
             pnt[0] = val.raw_data()
+        elif val is nil:
+            pnt[0] = rffi.cast(rffi.VOIDP, 0)
         else:
             print val
             affirm(False, u"Cannot encode this type")
@@ -409,7 +382,148 @@ class CStruct(object.Object):
     def type(self):
         return self._type
 
+import sys
+
+BIG_ENDIAN = sys.byteorder == 'big'
+USE_C_LIBFFI_MSVC = getattr(clibffi, 'USE_C_LIBFFI_MSVC', False)
+
+
+
+class CifDescrBuilder(py_object):
+    rawmem = lltype.nullptr(rffi.CCHARP.TO)
+
+    def __init__(self, fargs, fresult):
+        self.fargs = fargs
+        self.fresult = fresult
+
+    def fb_alloc(self, size):
+        size = llmemory.raw_malloc_usage(size)
+        if not self.bufferp:
+            self.nb_bytes += size
+            return lltype.nullptr(rffi.CCHARP.TO)
+        else:
+            result = self.bufferp
+            self.bufferp = rffi.ptradd(result, size)
+            return result
+
+    def fb_fill_type(self, ctype, is_result_type):
+        return ctype.ffi_type()
+
+
+    def fb_build(self):
+        # Build a CIF_DESCRIPTION.  Actually this computes the size and
+        # allocates a larger amount of data.  It starts with a
+        # CIF_DESCRIPTION and continues with data needed for the CIF:
+        #
+        #  - the argument types, as an array of 'ffi_type *'.
+        #
+        #  - optionally, the result's and the arguments' ffi type data
+        #    (this is used only for 'struct' ffi types; in other cases the
+        #    'ffi_type *' just points to static data like 'ffi_type_sint32').
+        #
+        nargs = len(self.fargs)
+
+        # start with a cif_description (cif and exchange_* fields)
+        self.fb_alloc(llmemory.sizeof(CIF_DESCRIPTION, nargs))
+
+        # next comes an array of 'ffi_type*', one per argument
+        atypes = self.fb_alloc(rffi.sizeof(FFI_TYPE_P) * nargs)
+        self.atypes = rffi.cast(FFI_TYPE_PP, atypes)
+
+        # next comes the result type data
+        self.rtype = self.fb_fill_type(self.fresult, True)
+
+        # next comes each argument's type data
+        for i, farg in enumerate(self.fargs):
+            atype = self.fb_fill_type(farg, False)
+            if self.atypes:
+                self.atypes[i] = atype
+
+    def align_arg(self, n):
+        return (n + 7) & ~7
+
+    def fb_build_exchange(self, cif_descr):
+        nargs = len(self.fargs)
+
+        # first, enough room for an array of 'nargs' pointers
+        exchange_offset = rffi.sizeof(rffi.CCHARP) * nargs
+        exchange_offset = self.align_arg(exchange_offset)
+        cif_descr.exchange_result = exchange_offset
+        cif_descr.exchange_result_libffi = exchange_offset
+
+        if BIG_ENDIAN and self.fresult.is_primitive_integer:
+            # For results of precisely these types, libffi has a
+            # strange rule that they will be returned as a whole
+            # 'ffi_arg' if they are smaller.  The difference
+            # only matters on big-endian.
+            if self.fresult.size < SIZE_OF_FFI_ARG:
+                diff = SIZE_OF_FFI_ARG - self.fresult.size
+                cif_descr.exchange_result += diff
+
+        # then enough room for the result, rounded up to sizeof(ffi_arg)
+        exchange_offset += max(rffi.getintfield(self.rtype, 'c_size'),
+                               SIZE_OF_FFI_ARG)
+
+        # loop over args
+        for i, farg in enumerate(self.fargs):
+            #if isinstance(farg, W_CTypePointer):
+            #    exchange_offset += 1   # for the "must free" flag
+            exchange_offset = self.align_arg(exchange_offset)
+            cif_descr.exchange_args[i] = exchange_offset
+            exchange_offset += rffi.getintfield(self.atypes[i], 'c_size')
+
+        # store the exchange data size
+        cif_descr.exchange_size = exchange_offset
+
+    def fb_extra_fields(self, cif_descr):
+        cif_descr.abi = clibffi.FFI_DEFAULT_ABI    # XXX
+        cif_descr.nargs = len(self.fargs)
+        cif_descr.rtype = self.rtype
+        cif_descr.atypes = self.atypes
+
+    @jit.dont_look_inside
+    def rawallocate(self, ctypefunc):
+
+        # compute the total size needed in the CIF_DESCRIPTION buffer
+        self.nb_bytes = 0
+        self.bufferp = lltype.nullptr(rffi.CCHARP.TO)
+        self.fb_build()
+
+        # allocate the buffer
+        if we_are_translated():
+            rawmem = lltype.malloc(rffi.CCHARP.TO, self.nb_bytes,
+                                   flavor='raw')
+            rawmem = rffi.cast(CIF_DESCRIPTION_P, rawmem)
+        else:
+            # gross overestimation of the length below, but too bad
+            rawmem = lltype.malloc(CIF_DESCRIPTION_P.TO, self.nb_bytes,
+                                   flavor='raw')
+
+        # the buffer is automatically managed from the W_CTypeFunc instance
+        ctypefunc._cd = rawmem
+
+        # call again fb_build() to really build the libffi data structures
+        self.bufferp = rffi.cast(rffi.CCHARP, rawmem)
+        self.fb_build()
+        assert self.bufferp == rffi.ptradd(rffi.cast(rffi.CCHARP, rawmem),
+                                           self.nb_bytes)
+
+        # fill in the 'exchange_*' fields
+        self.fb_build_exchange(rawmem)
+
+        # fill in the extra fields
+        self.fb_extra_fields(rawmem)
+
+        # call libffi's ffi_prep_cif() function
+        res = jit_libffi.jit_ffi_prep_cif(rawmem)
+        if res != clibffi.FFI_OK:
+            runtime_error(u"libffi failed to build function type")
+
     def get_item(self, nm):
         (tp, offset) = self._type.get_desc(nm)
         ptr = rffi.ptradd(self._buffer, offset)
         return tp.ffi_load_from(ptr)
+
+
+# Taken from PyPy
+

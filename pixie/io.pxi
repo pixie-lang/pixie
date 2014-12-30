@@ -104,7 +104,7 @@
       (set-buffer-count! buffer read-count)
       read-count))
   (read-byte [this]
-    (fgetc buffer))
+    (fgetc fp))
   IClosable
   (close [this]
     (pclose fp))

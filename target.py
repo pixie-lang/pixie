@@ -38,7 +38,7 @@ PROGRAM_ARGUMENTS.set_root(nil)
 
 LOAD_PATHS = intern_var(u"pixie.stdlib", u"load-paths")
 LOAD_PATHS.set_root(nil)
-load_path = Var(u"", u"internal-load-path")
+load_path = Var(u"pixie.stdlib", u"internal-load-path")
 
 STAR_1 = intern_var(u"pixie.stdlib", u"*1")
 STAR_1.set_root(nil)

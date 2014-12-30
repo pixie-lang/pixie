@@ -625,7 +625,7 @@ def compile_quote(form, ctx):
 
 def compile_recur(form, ctx):
     form = form.next()
-    affirm(ctx.can_tail_call, u"Can't recur in non-tail position")
+    #affirm(ctx.can_tail_call, u"Can't recur in non-tail position")
     ctc = ctx.can_tail_call
     ctx.disable_tail_call()
     args = 0
