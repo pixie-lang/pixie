@@ -21,8 +21,6 @@
  (def floor (ffi-fn libm "floor" [CDouble] CDouble))
  (def lround (ffi-fn libm "lround" [CDouble] CInt))
 
- (puts "testing ffi....")
-
 
 (def reset! -reset!)
 
