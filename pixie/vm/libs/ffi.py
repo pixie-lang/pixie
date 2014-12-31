@@ -3,6 +3,7 @@ import rpython.rlib.rdynload as dynload
 import pixie.vm.object as object
 from pixie.vm.object import runtime_error
 import pixie.vm.code as code
+from pixie.vm.keyword import Keyword
 import pixie.vm.stdlib  as proto
 from pixie.vm.code import as_var, affirm, extend
 import pixie.vm.rt as rt
@@ -226,29 +227,7 @@ def set_buffer_size(self, size):
 
 
 
-class CStructType(object.Type):
-    def __init__(self, name, size, desc):
-        object.Type.__init__(self, name)
-        self._desc = desc
-        self._size = size
-        #offsets is a dict of {nm, (type, offset)}
 
-    def get_offset(self, nm):
-        (tp, offset) = self._desc.get(nm, (None, 0))
-
-        assert tp is not None
-
-        return offset
-
-    def get_type(self, nm):
-        (tp, offset) = self._desc.get(nm, (None, 0))
-
-        assert tp is not None
-
-        return tp
-
-    def get_desc(self, nm):
-        return self._desc[nm]
 
 class Token(py_object):
     """ Tokens are returned by ffi_set_value and are called when ffi is ready to clean up resources
@@ -375,6 +354,33 @@ class VoidP(object.Object):
         return self._raw_data
 
 
+class CStructType(object.Type):
+    def __init__(self, name, size, desc):
+        object.Type.__init__(self, name)
+        self._desc = desc
+        self._size = size
+        #offsets is a dict of {nm, (type, offset)}
+
+    def get_offset(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return offset
+
+    def get_type(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return tp
+
+    def get_desc(self, nm):
+        return self._desc[nm]
+
+    def invoke(self, args):
+        return CStruct(self, lltype.malloc(rffi.CCHARP.TO, self._size, flavor="raw"))
+
 
 class CStruct(object.Object):
     def __init__(self, tp, buffer):
@@ -383,6 +389,22 @@ class CStruct(object.Object):
 
     def type(self):
         return self._type
+
+@as_var("pixie.ffi", "c-struct")
+def c_struct(name, size, spec):
+    d = {}
+    for x in range(rt.count(spec)):
+        row = rt.nth(spec, rt.wrap(x))
+        nm = rt.nth(row, rt.wrap(0))
+        tp = rt.nth(row, rt.wrap(1))
+        offset = rt.nth(row, rt.wrap(2))
+
+        affirm(isinstance(nm, Keyword), u"c-struct field names must be keywords")
+        affirm(isinstance(tp, CType), u"c-struct field types must be c types")
+
+        d[nm] = (tp, offset.int_val())
+
+    return CStructType(rt.name(name), size.int_val(), d)
 
 import sys
 
