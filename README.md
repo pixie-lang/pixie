@@ -13,14 +13,12 @@ Some planned and implemented features:
 * Immutable datastructures
 * Protocols first implementation
 * Transducers at-the-bottom (most primitives are based off of reduce)
-* Coroutines for transducer inversion of control (transducer to lazy-seq conversion)
 * A "good enough" JIT (implemented, tuning still a WIP, but not bad performance today)
-* Easy FFI (TODO)
+* Easy FFI
 * Pattern matching (TODO)
 
 ## Dependencies
 
-*  [libuv-dev](https://github.com/libuv/libuv)
 *  [libffi-dev](https://sourceware.org/libffi/)
 *  [libedit-dev](http://thrysoee.dk/editline/)
 
@@ -90,39 +88,6 @@ However there are a few features of pixie that although may not be uncommon, are
 ```
   
   
-* Inversion of control via stacklets. Most of Pixie makes heavy use of transducers. However there are times when transducers need to be converted into a cons style lazy sequence. For this we make use of stacklets to invert control of the loops. Because of this, any data collection need only define a method for the -reduce protocol and most collections functions will "just work"
-
-```clojure
-
-(def stacklet->lazy-seq
-  (fn [f]
-    (let [val (f nil)]
-      (if (identical? val :end)
-        nil
-        (cons val (lazy-seq* (fn [] (stacklet->lazy-seq f))))))))
-
-(def sequence
-  (fn
-    ([data]
-       (let [f (create-stacklet
-                 (fn [h]
-                   (reduce (fn ([h item] (h item) h)) h data)
-                   (h :end)))]
-          (stacklet->lazy-seq f)))
-    ([xform data]
-        (let [f (create-stacklet
-                 (fn [h]
-                   (transduce xform
-                              (fn ([] h)
-                                ([h item] (h item) h)
-                                ([h] (h :end)))
-                              data)))]
-          (stacklet->lazy-seq f)))))
-
-(comment
-  (sequence [1 2 3 4]) now produces '(1 2 3 4))
-
-```
 
 * Math system is fully polymorphic. Math primitives (+,-, etc.) are built off of polymorphic functions that dispatch on the types of the first two arguments. This allows the math system to be extended to complex numbers, matricies, etc. The performance penalty of such a polymorphic call is completely removed by the RPython generated JIT. 
 
