@@ -332,6 +332,8 @@ class CVoidP(CType):
             pnt[0] = val.raw_data()
         elif val is nil:
             pnt[0] = rffi.cast(rffi.VOIDP, 0)
+        elif isinstance(val, CStruct):
+            pnt[0] = rffi.cast(rffi.VOIDP, val.raw_data())
         else:
             print val
             affirm(False, u"Cannot encode this type")
@@ -355,8 +357,11 @@ class VoidP(object.Object):
 
 
 class CStructType(object.Type):
+    base_type = object.Type(u"pixie.ffi.CStruct")
+    _immutable_fields_ = ["_desc", "_size"]
+
     def __init__(self, name, size, desc):
-        object.Type.__init__(self, name)
+        object.Type.__init__(self, name, CStructType.base_type)
         self._desc = desc
         self._size = size
         #offsets is a dict of {nm, (type, offset)}
@@ -375,11 +380,13 @@ class CStructType(object.Type):
 
         return tp
 
+    @jit.elidable_promote()
     def get_desc(self, nm):
-        return self._desc[nm]
+        return self._desc.get(nm, (None, 0))
 
     def invoke(self, args):
         return CStruct(self, lltype.malloc(rffi.CCHARP.TO, self._size, flavor="raw"))
+
 
 
 class CStruct(object.Object):
@@ -389,6 +396,30 @@ class CStruct(object.Object):
 
     def type(self):
         return self._type
+
+    def raw_data(self):
+        return self._buffer
+
+    def val_at(self, k, not_found):
+        (tp, offset) = self._type.get_desc(k)
+
+        if tp is None:
+            return not_found
+
+        offset = rffi.ptradd(self._buffer, offset)
+        return tp.ffi_get_value(offset)
+
+    def set_val(self, k, v):
+        (tp, offset) = self._type.get_desc(k)
+
+        if tp is None:
+            runtime_error(u"Invalid field name: " + rt.name(rt.str(tp)))
+
+        offset = rffi.ptradd(self._buffer, offset)
+        tp.ffi_set_value(offset, v)
+
+        return nil
+
 
 @as_var("pixie.ffi", "c-struct")
 def c_struct(name, size, spec):
@@ -405,6 +436,14 @@ def c_struct(name, size, spec):
         d[nm] = (tp, offset.int_val())
 
     return CStructType(rt.name(name), size.int_val(), d)
+
+@extend(proto._val_at, CStructType.base_type)
+def val_at(self, k, not_found):
+    return self.val_at(k, not_found)
+
+@as_var("pixie.ffi", "set!")
+def set_(self, k, val):
+    return self.set_val(k, val)
 
 import sys
 

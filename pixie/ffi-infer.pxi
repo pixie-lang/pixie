@@ -26,6 +26,16 @@
   [{:keys [name]}]
   (str "PixieChecker::DumpType<typeof(" name ")>(); \n"))
 
+(defmethod emit-infer-code :struct
+  [{:keys [name members]}]
+  (str "std::cout << \"{:size \" << sizeof(struct " name ")"
+       " << \" :infered-members [\" << "
+       (apply str
+              (map (fn [member]
+                     (str "\"{:type  \"; PixieChecker::DumpValue((new (struct " name "))->" member "); "
+                          " std::cout << \":offset \" << offsetof(struct " name ", " member ") << \" }\" << \n "))
+                   members))
+       "\"]}\" << std::endl;"))
 
 
 (defn start-string []
@@ -52,7 +62,8 @@ return 0;
 (defmethod edn-to-ctype :pointer
   [{:keys [of-type] :as ptr}]
   (cond
-   (= of-type {:signed? true :size 1 :type :int}) 'pixie.stdlib/CCharP))
+   (= of-type {:signed? true :size 1 :type :int}) 'pixie.stdlib/CCharP
+   :else 'pixie.stdlib/CVoidP))
 
 (defmethod edn-to-ctype :float
   [{:keys [size]}]
@@ -64,6 +75,7 @@ return 0;
   [{:keys [size]}]
   (cond
    (= size 4) 'pixie.stdlib/CInt
+   (= size 8) 'pixie.stdlib/CInt
    :else (assert False "unknown type")))
 
 ;; Code Generation
@@ -78,6 +90,14 @@ return 0;
   [{:keys [name]} {:keys [type arguments returns]}]
   (assert (= type :function) (str name " is not infered to be a function"))
   `(def ~(symbol name) (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
+
+(defmethod generate-code :struct
+  [{:keys [name members]} {:keys [size infered-members]}]
+  `(def ~(symbol name)
+     (pixie.ffi/c-struct ~name ~size [~@(map (fn [name {:keys [type offset]}]
+                                               `[~(keyword name) ~(edn-to-ctype type) ~offset])
+                                             members infered-members)])))
+
 
 
 (defn run-infer [config cmds]
@@ -94,6 +114,10 @@ return 0;
     `(do ~@(map generate-code cmds result))))
 
 
+(binding [*config* {:includes ["sys/stat.h"]}]
+          (run-infer nil
+                     [{:op :struct :name "stat"
+                       :members ["st_size"]}]))
 
 
 (defmacro with-config [config & body]
@@ -109,12 +133,25 @@ return 0;
 
 (defmacro defconst [nm]
   (let [name-str (name nm)]
-    `(swap! *bodies* conj (assoc {:op :const} :name ~name-str)))  )
+    `(swap! *bodies* conj (assoc {:op :const} :name ~name-str))))
 
+(defmacro defcstruct [nm members]
+  `(swap! *bodies* conj (assoc {:op :struct}
+                          :name ~(name nm)
+                          :members ~(vec (map name members))) ))
 
+(with-config {:library "c"
+              :cxx-flags ["-lc"]
+              :includes ["sys/stat.h"]
+              }
+  (defcstruct stat [:st_size])
+  (defcfn lstat))
+
+(let [s (stat)]
+  (lstat "/tmp/a.out" s)
+  (println "filesize " (:st_size s)))
 
 (comment
-
 (with-config {:library "SDL"
               :cxx-flags ["`sdl2-config --cflags --libs`"]
               :includes ["SDL.h"]
@@ -123,6 +160,7 @@ return 0;
   (defcfn SDL_Init)
   (defcfn SDL_CreateWindow)
   (defconst SDL_WINDOW_SHOWN))
+
 
 
 
