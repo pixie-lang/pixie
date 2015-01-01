@@ -10,7 +10,7 @@
 
  (def libedit (ffi-library (str "libedit." pixie.platform/so-ext)))
  (def readline (ffi-fn libedit "readline" [CCharP] CCharP))
- (def rand (ffi-fn libc "rand" [CInt] CInt))
+ (def rand (ffi-fn libc "rand" [] CInt))
  (def srand (ffi-fn libc "srand" [CInt] CInt))
  (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
  (def fread (ffi-fn libc "fread" [CVoidP CInt CInt CVoidP] CInt))
