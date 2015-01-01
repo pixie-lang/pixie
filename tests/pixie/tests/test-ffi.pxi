@@ -8,3 +8,9 @@
         b (buffer 1024)]
     (t/assert= 10 (fread b 1 10 fp))
     (t/assert= 91 (nth b 0))))
+
+(t/deftest test-arity-check
+  (try
+    (puts)
+    (t/assert false)
+    (catch ex (t/assert= (type ex) RuntimeException))))

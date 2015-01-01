@@ -74,7 +74,7 @@ class ExternalLib(object.Object):
 
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
-    _immutable_fields_ = ["_is_inited", "_lib", "_name", "_arg_types[*]", "_ret_type", \
+    _immutable_fields_ = ["_is_inited", "_lib", "_name", "_arg_types[*]", "_arity", "_ret_type", \
                             "_transfer_size", "_arg0_offset", "_ret_offset", "_cd"]
 
     def type(self):
@@ -85,6 +85,7 @@ class FFIFn(object.Object):
         self._name = name
         self._lib = lib
         self._arg_types = arg_types
+        self._arity = len(arg_types)
         self._ret_type = ret_type
         #self._is_inited = False
         self.thaw()
@@ -120,6 +121,10 @@ class FFIFn(object.Object):
 
     @jit.unroll_safe
     def _invoke(self, args):
+        arity = len(args)
+        if arity < self._arity:
+            runtime_error(u"Wrong number of args to fn: got " + unicode(str(arity)) +
+                u", expected at least " + unicode(str(self._arity)))
 
         exb, tokens = self.prep_exb(args)
         cd = jit.promote(self._cd)
