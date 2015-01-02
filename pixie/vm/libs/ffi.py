@@ -7,9 +7,10 @@ import pixie.vm.stdlib  as proto
 from pixie.vm.code import as_var, affirm, extend
 import pixie.vm.rt as rt
 from rpython.rtyper.lltypesystem import rffi, lltype, llmemory
-from pixie.vm.primitives import nil
+from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer, Float
 from pixie.vm.string import String
+from pixie.vm.keyword import Keyword, keyword
 from pixie.vm.util import unicode_to_utf8
 from rpython.rlib import clibffi
 from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION, CIF_DESCRIPTION_P, \
@@ -74,19 +75,20 @@ class ExternalLib(object.Object):
 
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
-    _immutable_fields_ = ["_is_inited", "_lib", "_name", "_arg_types[*]", "_arity", "_ret_type", \
+    _immutable_fields_ = ["_is_inited", "_lib", "_name", "_arg_types[*]", "_arity", "_ret_type", "_is_variadic", \
                             "_transfer_size", "_arg0_offset", "_ret_offset", "_cd"]
 
     def type(self):
         return FFIFn._type
 
-    def __init__(self, lib, name, arg_types, ret_type):
+    def __init__(self, lib, name, arg_types, ret_type, is_variadic):
         self._rev = 0
         self._name = name
         self._lib = lib
         self._arg_types = arg_types
         self._arity = len(arg_types)
         self._ret_type = ret_type
+        self._is_variadic = is_variadic
         #self._is_inited = False
         self.thaw()
 
@@ -122,9 +124,14 @@ class FFIFn(object.Object):
     @jit.unroll_safe
     def _invoke(self, args):
         arity = len(args)
-        if arity < self._arity:
-            runtime_error(u"Wrong number of args to fn: got " + unicode(str(arity)) +
-                u", expected at least " + unicode(str(self._arity)))
+        if self._is_variadic:
+            if arity < self._arity:
+                runtime_error(u"Wrong number of args to fn: got " + unicode(str(arity)) +
+                    u", expected at least " + unicode(str(self._arity)))
+        else:
+            if arity != self._arity:
+                runtime_error(u"Wrong number of args to fn: got " + unicode(str(arity)) +
+                    u", expected " + unicode(str(self._arity)))
 
         exb, tokens = self.prep_exb(args)
         cd = jit.promote(self._cd)
@@ -153,19 +160,39 @@ def _ffi_library(ns):
     return ExternalLib(nm)
 
 @as_var("ffi-fn")
-def _ffi_fn(lib, nm, args, ret_type):
+def _ffi_fn__args(args):
+    affirm(len(args) >= 4, u"ffi-fn requires at least 4 arguments")
+    lib, nm, arg_types, ret_type = args[:4]
+
     affirm(isinstance(lib, ExternalLib), u"First argument must be an ExternalLib")
     affirm(isinstance(ret_type, object.Type), u"Ret type must be a type")
     affirm(rt.namespace(nm) is None, u"Name must not be namespaced")
 
-    cnt = rt.count(args)
+    cnt = rt.count(arg_types)
     new_args = [None] * cnt
     for x in range(cnt):
-        t = rt.nth(args, rt.wrap(x))
+        t = rt.nth(arg_types, rt.wrap(x))
         affirm(isinstance(t, object.Type), u"Arg defs must be types")
         new_args[x] = t
 
-    f = FFIFn(lib, rt.name(nm), new_args, ret_type)
+    kwargs = args[4:]
+    affirm(len(kwargs) & 0x1 == 0, u"ffi-fn requires even number of options")
+
+    is_variadic = False
+    for i in range(0, len(kwargs)/2, 2):
+        key = kwargs[i]
+        val = kwargs[i+1]
+        
+        affirm(isinstance(key, Keyword), u"ffi-fn options should be keyword/bool pairs")
+        affirm(val is true or val is false, u"ffi-fn options should be keyword/bool pairs")
+
+        k = rt.name(key)
+        if k == u"variadic?":
+            is_variadic = True if val is true else False
+        else:
+            affirm(False, u"unknown ffi-fn option: :" + k)
+
+    f = FFIFn(lib, rt.name(nm), new_args, ret_type, is_variadic)
     return f
 
 

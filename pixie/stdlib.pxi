@@ -5,7 +5,7 @@
  (def puts (ffi-fn libc "puts" [CCharP] CInt))
 
  (def sh (ffi-fn libc "system" [CCharP] CInt))
- (def printf (ffi-fn libc "printf" [CCharP] CInt))
+ (def printf (ffi-fn libc "printf" [CCharP] CInt :variadic? true))
  (def getenv (ffi-fn libc "getenv" [CCharP] CCharP))
 
  (def libedit (ffi-library (str "libedit." pixie.platform/so-ext)))

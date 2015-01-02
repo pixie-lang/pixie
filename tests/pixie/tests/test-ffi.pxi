@@ -10,7 +10,24 @@
     (t/assert= 91 (nth b 0))))
 
 (t/deftest test-arity-check
-  (try
-    (puts)
-    (t/assert false)
-    (catch ex (t/assert= (type ex) RuntimeException))))
+  (let [sscanf-2 (ffi-fn libc "sscanf" [CCharP CCharP] CInt)
+        sscanf-* (ffi-fn libc "sscanf" [CCharP CCharP] CInt :variadic? true)]
+    (try
+      (sscanf-2 "too few arguments")
+      (t/assert false)
+      (catch ex (t/assert= (type ex) RuntimeException)))
+
+    (try
+      (sscanf-2 "too" "many" "arguments")
+      (t/assert false)
+      (catch ex (t/assert= (type ex) RuntimeException)))
+
+    (try
+      (sscanf-* "too few arguments")
+      (t/assert false)
+      (catch ex (t/assert= (type ex) RuntimeException)))
+
+    (sscanf-2 "string" "fmt")
+    (sscanf-* "string" "fmt")
+    (sscanf-* "string" "fmt" "optional arg1" "optional arg2")
+    (t/assert true)))
