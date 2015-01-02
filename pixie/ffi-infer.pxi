@@ -71,12 +71,21 @@ return 0;
    (= size 8) 'pixie.stdlib/CDouble
    :else (assert False "unknown type")))
 
+
+(def int-types {[8 true] 'pixie.stdlib/CInt8
+                [8 false] 'pixie.stdlib/CUInt8
+                [16 true] 'pixie.stdlib/CInt16
+                [16 false] 'pixie.stdlib/CUInt16
+                [32 true] 'pixie.stdlib/CInt32
+                [32 false] 'pixie.stdlib/CUInt32
+                [64 true] 'pixie.stdlib/CInt64
+                [64 false] 'pixie.stdlib/CUInt64})
+
 (defmethod edn-to-ctype :int
-  [{:keys [size]}]
-  (cond
-   (= size 4) 'pixie.stdlib/CInt
-   (= size 8) 'pixie.stdlib/CInt
-   :else (assert False "unknown type")))
+  [{:keys [size signed?] :as tp}]
+  (let [tp-found (get int-types [(* 8 size) signed?])]
+    (assert tp-found (str "No type found for " tp))
+    tp-found))
 
 ;; Code Generation
 (defmulti generate-code (fn [input output]
@@ -105,7 +114,7 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
-  (let [cmd-str (str "c++ /tmp/tmp.cpp -I"
+  (let [cmd-str (str "c++ -arch x86_64 /tmp/tmp.cpp -I"
                                                  (first @load-paths)
                                                  (apply str " " (interpose " " (:cxx-flags *config*)))
                                                  " -o /tmp/a.out && /tmp/a.out")
@@ -144,12 +153,18 @@ return 0;
               :cxx-flags ["-lc"]
               :includes ["sys/stat.h"]
               }
-  (defcstruct stat [:st_size])
+  (defcstruct stat [:st_dev
+                    :st_ino
+                    :st_mode
+                    :st_nlink
+                    :st_uid
+                    :st_gid
+                    :st_size])
   (defcfn lstat))
 
 (let [s (stat)]
-  (lstat "/tmp/a.out" s)
-  (println "filesize " (:st_size s)))
+  (println (str "\n" (lstat "/tmp/a.out" s)))
+  (println "filesize " (:st_size s) " " (:st_uid s)))
 
 (comment
 (with-config {:library "SDL"

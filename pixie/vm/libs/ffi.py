@@ -34,6 +34,12 @@ functions inside of the stdlib (and other places) allowing for fast interpreter 
 
 """
 
+
+class CType(object.Type):
+    def __init__(self, name):
+        object.Type.__init__(self, name)
+
+
 class ExternalLib(object.Object):
     _type = object.Type(u"pixie.stdlib.ExternalLib")
 
@@ -225,6 +231,38 @@ def set_buffer_size(self, size):
     self.set_used_size(size.int_val())
     return self
 
+def make_itype(name, ctype, llt):
+    lltp = lltype.Ptr(lltype.Array(llt, hints={'nolength': True}))
+    class GenericCInt(CType):
+        def __init__(self):
+            CType.__init__(self, name)
+
+        def ffi_get_value(self, ptr):
+            casted = rffi.cast(lltp, ptr)
+            return Integer(rffi.cast(rffi.LONG, casted[0]))
+
+        def ffi_set_value(self, ptr, val):
+            casted = rffi.cast(lltp, ptr)
+            casted[0] = rffi.cast(llt, val.int_val())
+
+        def ffi_size(self):
+            return rffi.sizeof(llt)
+
+        def ffi_type(self):
+            return ctype
+
+    return GenericCInt()
+
+from rpython.rlib.rarithmetic import build_int
+for x in [8, 16, 32, 64]:
+    for s in [True, False]:
+        nm = "C" + ("" if s else "U") + "Int" + str(x)
+        int_tp = lltype.build_number(None, build_int(nm, s, x))
+        ctype = clibffi.cast_type_to_ffitype(int_tp)
+        make_itype(unicode("pixie.stdlib." + nm), ctype, int_tp)
+
+
+
 
 
 
@@ -235,10 +273,6 @@ class Token(py_object):
     def finalize_token(self):
         pass
 
-
-class CType(object.Type):
-    def __init__(self, name):
-        object.Type.__init__(self, name)
 
 
 class CInt(CType):
@@ -431,7 +465,8 @@ def c_struct(name, size, spec):
         offset = rt.nth(row, rt.wrap(2))
 
         affirm(isinstance(nm, Keyword), u"c-struct field names must be keywords")
-        affirm(isinstance(tp, CType), u"c-struct field types must be c types")
+        if not isinstance(tp, CType):
+            runtime_error(u"c-struct field types must be c types, got: " + rt.name(rt.str(tp)))
 
         d[nm] = (tp, offset.int_val())
 
