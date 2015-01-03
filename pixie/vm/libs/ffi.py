@@ -3,6 +3,7 @@ import rpython.rlib.rdynload as dynload
 import pixie.vm.object as object
 from pixie.vm.object import runtime_error
 import pixie.vm.code as code
+from pixie.vm.keyword import Keyword
 import pixie.vm.stdlib  as proto
 from pixie.vm.code import as_var, affirm, extend
 import pixie.vm.rt as rt
@@ -33,6 +34,12 @@ functions inside of the stdlib (and other places) allowing for fast interpreter 
 
 
 """
+
+
+class CType(object.Type):
+    def __init__(self, name):
+        object.Type.__init__(self, name)
+
 
 class ExternalLib(object.Object):
     _type = object.Type(u"pixie.stdlib.ExternalLib")
@@ -256,31 +263,41 @@ def set_buffer_size(self, size):
     self.set_used_size(size.int_val())
     return self
 
+def make_itype(name, ctype, llt):
+    lltp = lltype.Ptr(lltype.Array(llt, hints={'nolength': True}))
+    class GenericCInt(CType):
+        def __init__(self):
+            CType.__init__(self, name)
+
+        def ffi_get_value(self, ptr):
+            casted = rffi.cast(lltp, ptr)
+            return Integer(rffi.cast(rffi.LONG, casted[0]))
+
+        def ffi_set_value(self, ptr, val):
+            casted = rffi.cast(lltp, ptr)
+            casted[0] = rffi.cast(llt, val.int_val())
+
+        def ffi_size(self):
+            return rffi.sizeof(llt)
+
+        def ffi_type(self):
+            return ctype
+
+    return GenericCInt()
+
+from rpython.rlib.rarithmetic import build_int
+for x in [8, 16, 32, 64]:
+    for s in [True, False]:
+        nm = "C" + ("" if s else "U") + "Int" + str(x)
+        int_tp = lltype.build_number(None, build_int(nm, s, x))
+        ctype = clibffi.cast_type_to_ffitype(int_tp)
+        make_itype(unicode("pixie.stdlib." + nm), ctype, int_tp)
 
 
-class CStructType(object.Type):
-    def __init__(self, name, size, desc):
-        object.Type.__init__(self, name)
-        self._desc = desc
-        self._size = size
-        #offsets is a dict of {nm, (type, offset)}
 
-    def get_offset(self, nm):
-        (tp, offset) = self._desc.get(nm, (None, 0))
 
-        assert tp is not None
 
-        return offset
 
-    def get_type(self, nm):
-        (tp, offset) = self._desc.get(nm, (None, 0))
-
-        assert tp is not None
-
-        return tp
-
-    def get_desc(self, nm):
-        return self._desc[nm]
 
 class Token(py_object):
     """ Tokens are returned by ffi_set_value and are called when ffi is ready to clean up resources
@@ -288,10 +305,6 @@ class Token(py_object):
     def finalize_token(self):
         pass
 
-
-class CType(object.Type):
-    def __init__(self, name):
-        object.Type.__init__(self, name)
 
 
 class CInt(CType):
@@ -385,6 +398,8 @@ class CVoidP(CType):
             pnt[0] = val.raw_data()
         elif val is nil:
             pnt[0] = rffi.cast(rffi.VOIDP, 0)
+        elif isinstance(val, CStruct):
+            pnt[0] = rffi.cast(rffi.VOIDP, val.raw_data())
         else:
             print val
             affirm(False, u"Cannot encode this type")
@@ -407,14 +422,118 @@ class VoidP(object.Object):
         return self._raw_data
 
 
+class CStructType(object.Type):
+    base_type = object.Type(u"pixie.ffi.CStruct")
+    _immutable_fields_ = ["_desc", "_size"]
+
+    def __init__(self, name, size, desc):
+        object.Type.__init__(self, name, CStructType.base_type)
+        self._desc = desc
+        self._size = size
+        #offsets is a dict of {nm, (type, offset)}
+
+    def get_offset(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return offset
+
+    def get_type(self, nm):
+        (tp, offset) = self._desc.get(nm, (None, 0))
+
+        assert tp is not None
+
+        return tp
+
+    def cast_to(self, frm):
+        return CStruct(self, frm.raw_data())
+
+    @jit.elidable_promote()
+    def get_desc(self, nm):
+        return self._desc.get(nm, (None, 0))
+
+    def invoke(self, args):
+        return CStruct(self, rffi.cast(rffi.VOIDP, lltype.malloc(rffi.CCHARP.TO, self._size, flavor="raw")))
+
+
 
 class CStruct(object.Object):
+    _immutable_fields_ = ["_type", "_buffer"]
     def __init__(self, tp, buffer):
         self._type = tp
         self._buffer = buffer
 
     def type(self):
         return self._type
+
+    def raw_data(self):
+        return self._buffer
+
+    def val_at(self, k, not_found):
+        (tp, offset) = self._type.get_desc(k)
+
+        if tp is None:
+            return not_found
+
+        offset = rffi.ptradd(self._buffer, offset)
+        return tp.ffi_get_value(rffi.cast(rffi.CCHARP, offset))
+
+    def set_val(self, k, v):
+        (tp, offset) = self._type.get_desc(k)
+
+        if tp is None:
+            runtime_error(u"Invalid field name: " + rt.name(rt.str(tp)))
+
+        offset = rffi.ptradd(self._buffer, offset)
+        tp.ffi_set_value(rffi.cast(rffi.CCHARP, offset), v)
+
+        return nil
+
+
+@as_var("pixie.ffi", "c-struct")
+def c_struct(name, size, spec):
+    d = {}
+    for x in range(rt.count(spec)):
+        row = rt.nth(spec, rt.wrap(x))
+        nm = rt.nth(row, rt.wrap(0))
+        tp = rt.nth(row, rt.wrap(1))
+        offset = rt.nth(row, rt.wrap(2))
+
+        affirm(isinstance(nm, Keyword), u"c-struct field names must be keywords")
+        if not isinstance(tp, CType):
+            runtime_error(u"c-struct field types must be c types, got: " + rt.name(rt.str(tp)))
+
+        d[nm] = (tp, offset.int_val())
+
+    return CStructType(rt.name(name), size.int_val(), d)
+
+@as_var("pixie.ffi", "cast")
+def c_cast(frm, to):
+    if not isinstance(to, CStructType):
+        runtime_error(u"Expected a CStruct type to cast to, got " + rt.name(rt.str(to)))
+
+    if not isinstance(frm, CStruct) and not isinstance(frm, VoidP):
+        runtime_error(u"From must be a CVoidP or a CStruct, got " + rt.name(rt.str(frm)))
+
+    return to.cast_to(frm)
+
+@as_var("pixie.ffi", "free")
+def c_free(frm):
+    if not isinstance(frm, CStruct) and not isinstance(frm, VoidP):
+        runtime_error(u"Can only free CStructs or CVoidP")
+
+    lltype.free(frm.raw_data(), flavor="raw")
+
+    return nil
+
+@extend(proto._val_at, CStructType.base_type)
+def val_at(self, k, not_found):
+    return self.val_at(k, not_found)
+
+@as_var("pixie.ffi", "set!")
+def set_(self, k, val):
+    return self.set_val(k, val)
 
 import sys
 

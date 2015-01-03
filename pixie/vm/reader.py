@@ -712,6 +712,7 @@ def throw_syntax_error_with_data(rdr, txt):
     raise object.WrappedException(err)
 
 
+
 def read(rdr, error_on_eof):
     try:
         eat_whitespace(rdr)
