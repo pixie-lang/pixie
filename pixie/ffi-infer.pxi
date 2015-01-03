@@ -206,13 +206,15 @@ return 0;
                     :tm_isdst])
   (f/defcfn localtime))
 
-(let [t (time_t)
-      tmi (pixie.ffi/cast (localtime t) tm)]
 
-  (println (:tm_sec tmi)))
 
 (type (pixie.ffi/cast (localtime (time_t)) tm))
 
 
+(let [t (time_t)
+      _ (time t)
+      tmi (pixie.ffi/cast (localtime t) tm)]
+
+  (println (- (:tm_hour tmi) 12) " " (:tm_min tmi)))
 
   )
