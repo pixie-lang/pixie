@@ -149,22 +149,6 @@ return 0;
                           :name ~(name nm)
                           :members ~(vec (map name members))) ))
 
-(with-config {:library "c"
-              :cxx-flags ["-lc"]
-              :includes ["sys/stat.h"]
-              }
-  (defcstruct stat [:st_dev
-                    :st_ino
-                    :st_mode
-                    :st_nlink
-                    :st_uid
-                    :st_gid
-                    :st_size])
-  (defcfn lstat))
-
-(let [s (stat)]
-  (println (str "\n" (lstat "/tmp/a.out" s)))
-  (println "filesize " (:st_size s) " " (:st_uid s)))
 
 (comment
 (with-config {:library "SDL"
@@ -176,6 +160,58 @@ return 0;
   (defcfn SDL_CreateWindow)
   (defconst SDL_WINDOW_SHOWN))
 
+
+(f/with-config {:library "c"
+              :cxx-flags ["-lc"]
+              :includes ["sys/stat.h"]
+              }
+  (f/defcstruct stat [:st_dev
+                    :st_ino
+                    :st_mode
+                    :st_nlink
+                    :st_uid
+                    :st_gid
+                      :st_size])
+  (f/defcfn lstat64))
+
+
+
+
+
+(let [s (stat)]
+  (pixie.ffi/set! s :st_size 42)
+  (println (str "\n" (:st_size s)))
+  (println (str "\n" (lstat64 "/tmp/tmp.cpp" s)))
+  (println "filesize " (:st_size s) " " (:st_uid s) " " (:st_gid s)))
+
+(with-config {:library "c"
+              :cxx-flags ["-lc"]
+              :includes ["ctime.h"]})
+
+
+(f/with-config {:library "c"
+                :cxx-flags ["-lc"]
+                :includes ["time.h"]
+                }
+  (def time_t (pixie.ffi/c-struct :time_t 8 [[:val CInt 0 ]]))
+  (f/defcfn time)
+  (f/defcstruct tm [:tm_sec
+                    :tm_min
+                    :tm_hour
+                    :tm_mday
+                    :tm_mon
+                    :tm_year
+                    :tm_wday
+                    :tm_yday
+                    :tm_isdst])
+  (f/defcfn localtime))
+
+(let [t (time_t)
+      tmi (pixie.ffi/cast (localtime t) tm)]
+
+  (println (:tm_sec tmi)))
+
+(type (pixie.ffi/cast (localtime (time_t)) tm))
 
 
 

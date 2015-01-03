@@ -414,16 +414,20 @@ class CStructType(object.Type):
 
         return tp
 
+    def cast_to(self, frm):
+        return CStruct(self, frm.raw_data())
+
     @jit.elidable_promote()
     def get_desc(self, nm):
         return self._desc.get(nm, (None, 0))
 
     def invoke(self, args):
-        return CStruct(self, lltype.malloc(rffi.CCHARP.TO, self._size, flavor="raw"))
+        return CStruct(self, rffi.cast(rffi.VOIDP, lltype.malloc(rffi.CCHARP.TO, self._size, flavor="raw")))
 
 
 
 class CStruct(object.Object):
+    _immutable_fields_ = ["_type", "_buffer"]
     def __init__(self, tp, buffer):
         self._type = tp
         self._buffer = buffer
@@ -441,7 +445,7 @@ class CStruct(object.Object):
             return not_found
 
         offset = rffi.ptradd(self._buffer, offset)
-        return tp.ffi_get_value(offset)
+        return tp.ffi_get_value(rffi.cast(rffi.CCHARP, offset))
 
     def set_val(self, k, v):
         (tp, offset) = self._type.get_desc(k)
@@ -450,7 +454,7 @@ class CStruct(object.Object):
             runtime_error(u"Invalid field name: " + rt.name(rt.str(tp)))
 
         offset = rffi.ptradd(self._buffer, offset)
-        tp.ffi_set_value(offset, v)
+        tp.ffi_set_value(rffi.cast(rffi.CCHARP, offset), v)
 
         return nil
 
@@ -471,6 +475,25 @@ def c_struct(name, size, spec):
         d[nm] = (tp, offset.int_val())
 
     return CStructType(rt.name(name), size.int_val(), d)
+
+@as_var("pixie.ffi", "cast")
+def c_cast(frm, to):
+    if not isinstance(to, CStructType):
+        runtime_error(u"Expected a CStruct type to cast to, got " + rt.name(rt.str(to)))
+
+    if not isinstance(frm, CStruct) and not isinstance(frm, VoidP):
+        runtime_error(u"From must be a CVoidP or a CStruct, got " + rt.name(rt.str(frm)))
+
+    return to.cast_to(frm)
+
+@as_var("pixie.ffi", "free")
+def c_free(frm):
+    if not isinstance(frm, CStruct) and not isinstance(frm, VoidP):
+        runtime_error(u"Can only free CStructs or CVoidP")
+
+    lltype.free(frm.raw_data(), flavor="raw")
+
+    return nil
 
 @extend(proto._val_at, CStructType.base_type)
 def val_at(self, k, not_found):
