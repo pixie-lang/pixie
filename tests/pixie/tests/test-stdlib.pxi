@@ -27,8 +27,8 @@
   (t/assert= (str {}) "{}")
   (t/assert= (str {:a 1}) "{:a 1}")
   (t/assert= (str (type 3)) "<type pixie.stdlib.Integer>")
-
-  (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]"))
+  (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]")
+  (t/assert= (seq (map identity "iterable")) '(\i \t \e \r \a \b \l \e)))
 
 (t/deftest test-repr
   (t/assert= (-repr nil) "nil")
