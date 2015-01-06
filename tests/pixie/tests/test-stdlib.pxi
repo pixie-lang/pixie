@@ -277,3 +277,9 @@
              [[1 :a] [1 :b] [1 :c]
               [2 :a] [2 :b] [2 :c]
               [3 :a] [3 :b] [3 :c]]))
+
+(t/deftest test-ex-msg
+  (try
+     (throw "This is an exception")
+     (catch e
+       (t/assert= (ex-msg e) "This is an exception"))))
