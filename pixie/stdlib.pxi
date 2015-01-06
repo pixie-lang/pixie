@@ -1335,6 +1335,11 @@ The new value is thus `(apply f current-value-of-atom args)`."
           (dotimes [x (count v)]
             (yield (nth v x)))))
 
+(extend -iterator String
+        (fn [v]
+          (dotimes [x (count v)]
+            (yield (nth v x)))))
+
 (defmacro and
   {:doc "Check if the given expressions return truthy values, returning the last, or false."
    :examples [["(and true false)" nil false]
