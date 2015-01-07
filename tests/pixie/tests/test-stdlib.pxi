@@ -283,3 +283,11 @@
      (throw "This is an exception")
      (catch e
        (t/assert= (ex-msg e) "This is an exception"))))
+
+(t/deftest test-range
+  (t/assert= (= (-seq (range 10))
+                (-seq (-iterator (range 10))
+                (reduce conj nil (range 10))
+                '(0 1 2 3 4 5 6 7 8 9)))
+             true))
+             
