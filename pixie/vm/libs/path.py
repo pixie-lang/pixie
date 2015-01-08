@@ -1,44 +1,90 @@
 import pixie.vm.rt as rt
+import pixie.vm.util as util
 from pixie.vm.string import String
-from pixie.vm.code import as_var, extend
-from pixie.vm.object import Object, Type
+from pixie.vm.code import as_var, extend, defprotocol
+from pixie.vm.object import Object, Type, affirm
 import pixie.vm.stdlib as proto
 from pixie.vm.keyword import keyword
+from pixie.vm.primitives import true, false, nil
 from rpython.rlib.clibffi import get_libc_name
+from rpython.rlib.rarithmetic import intmask, r_uint
 import os
-import pixie.vm.rt as rt
 
-class FileList(Object):
-    _type = Type(u"pixie.path.FileList")
+class Path(Object):
+    _type = Type(u"pixie.path.Path")
 
     def type(self):
-        return FileList._type
+        return Path._type
 
     def __init__(self, top):
-        self._top = rt.name(top)
+        self._path = rt.name(top)
 
-KW_DIR = keyword(u"dir")
-KW_FILE = keyword(u"file")
+    # keyword args don't seem to work nicely.
+    #def rel_path(self, other):
+    #    "Returns the path relative to other path"
+    #    return rt.wrap(str(os.path.relpath(self._path, start=other._path)))
+    
+    def abs_path(self):
+        "Returns the absolute path"
+        return rt.wrap(os.path.abspath(str(self._path)))
 
-@extend(proto._reduce, FileList)
+    # Basename doesn't play well with pypy...
+    #def basename(self):
+    #    return rt.wrap(rt.name(os.path.basename("a")))
+
+    def exists(self):
+        return true if os.path.exists(str(self._path)) else false 
+    
+    def is_file(self):
+        return true if os.path.isfile(str(self._path)) else false
+
+    def is_dir(self):
+        return true if os.path.isdir(str(self._path)) else false
+
+@extend(proto._reduce, Path)
 def _reduce(self, f, init):
-    assert isinstance(self, FileList)
-    for dirpath, dirnames, filenames in os.walk(str(self._top)):
+    assert isinstance(self, Path)
+    for dirpath, dirnames, filenames in os.walk(str(self._path)):
         for dirname in dirnames:
-            init = f.invoke([init, rt.vector(rt.wrap(dirpath), KW_DIR, rt.wrap(dirname))])
+            init = f.invoke([init, Path(rt.wrap(dirpath + "/" + dirname))])
             if rt.reduced_QMARK_(init):
                 return rt.deref(init)
 
         for filename in filenames:
-            init = f.invoke([init, rt.vector(rt.wrap(dirpath), KW_FILE, rt.wrap(filename))])
+            init = f.invoke([init, Path(rt.wrap(dirpath + "/" + filename))])
             if rt.reduced_QMARK_(init):
                 return rt.deref(init)
 
-
-
     return init
 
+# I have named prefixed all names with '-' to deal with the
+# a namespace issue I was having.
+# TODO: remove '-' and update calling functions when issue is fixed.
 
-@as_var("pixie.path", "file-list")
-def file_list(path):
-    return FileList(path)
+@as_var("pixie.path", "-path")
+def path(path):
+    return Path(path)
+
+# TODO: Implement this
+#@as_var("pixie.path", "list-dir")
+#def list_dir(path):
+    
+@as_var("pixie.path", "-abs")
+def _abs(self):
+    assert isinstance(self, Path)
+    return self.abs_path()
+
+@as_var("pixie.path", "-exists?")
+def exists_QMARK_(self):
+    assert isinstance(self, Path)
+    return self.exists()
+
+@as_var("pixie.path", "-file?")
+def file_QMARK_(self):
+    assert isinstance(self, Path)
+    return self.is_file()
+
+@as_var("pixie.path", "-dir?")
+def dir_QMARK_(self):
+    assert isinstance(self, Path)
+    return self.is_dir()

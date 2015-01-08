@@ -1,8 +1,8 @@
 (ns pixie.test
-  (require pixie.string :as s))
+  (require pixie.string :as s)
+  (require pixie.fs :as fs))
 
 (def tests (atom {}))
-
 
 (def ^:dynamic *stats*)
 
@@ -35,7 +35,6 @@
                          conj
                          @tests)]
     (println "Running:" (count tests) "tests")
-
     (foreach [test tests]
              (test)))
 
@@ -44,18 +43,17 @@
     (pop-binding-frame!)
     stats))
 
-
 (defn load-all-tests []
   (println "Looking for tests...")
-  (foreach [path @load-paths]
-           (println "Looking for tests in:" path)
-           (foreach [[dir desc filename] (pixie.path/file-list path)]
-                    (if (= desc :file)
-                      (if (pixie.string/starts-with filename "test-")
-                        (if (pixie.string/ends-with filename ".pxi")
-                          (let [fullpath (str dir "/" filename)]
-                            (println "Loading" fullpath)
-                            (load-file fullpath))))))))
+  (let [dirs      (distinct (map fs/dir @load-paths))
+        pxi-files (->> dirs
+                       (mapcat fs/walk-files)
+                       (filter #(fs/extension? % "pxi"))
+                       (filter #(s/starts-with (fs/basename %) "test-"))
+                       (distinct))]
+    (foreach [file pxi-files]
+             (println "Loading " file)
+             (load-file (fs/abs file)))))
 
 
 (defmacro assert= [x y]
