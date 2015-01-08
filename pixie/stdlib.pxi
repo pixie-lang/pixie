@@ -1529,7 +1529,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
     (* -1 x)
     x))
 
-(deftype Range [:start :stop :step]
+(deftype Range [start stop step]
   IReduce
   (-reduce [self f init]
     (loop [i start
@@ -1563,10 +1563,12 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
           val (+ start (* idx step))]
       (if (cmp val stop)
         val
-        nil))))
-
-
-
+        nil)))
+  ISeqable
+  (-seq [self]
+    (when (or (and (> step 0) (< start stop))
+              (and (< step 0) (> start stop)))
+      (cons start (lazy-seq* #(range (+ start step) stop step))))))
 
 (defn range
   {:doc "Returns a range of numbers."
