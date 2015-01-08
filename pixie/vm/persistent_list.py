@@ -70,13 +70,16 @@ def count(self):
 
 @as_var("list")
 def list__args(args):
-    if len(args) == 0:
+    return create_from_list(args)
+
+def create_from_list(lst):
+    if len(lst) == 0:
         return EmptyList()
 
-    i = r_uint(len(args))
+    i = r_uint(len(lst))
     acc = nil
     while i > 0:
-        acc = PersistentList(args[i - 1], acc, len(args) - i + 1, nil)
+        acc = PersistentList(lst[i - 1], acc, len(lst) - i + 1, nil)
         i -= 1
     return acc
 

@@ -190,9 +190,11 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
                                   frame=frame,
                                   is_continuation=frame._is_continuation)
         inst = frame.get_inst()
+        #print code.BYTECODES[inst], frame.consts, frame.ip
 
         if inst == code.LOAD_CONST:
             arg = frame.get_inst()
+            #print "load const", arg
             frame.push_const(arg)
             continue
 

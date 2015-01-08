@@ -177,27 +177,35 @@ def run_load_stdlib():
         return
     import pixie.vm.compiler as compiler
     import pixie.vm.reader as reader
-    f = open(rpath.rjoin(str(rt.name(load_path.deref())), "pixie/stdlib.pxi"))
-    data = f.read()
-    f.close()
-    rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pxi")
-    result = nil
 
-    if not we_are_translated():
-        print "Loading stdlib while interpreted, this will take some time..."
+    rt.load_file(rt.wrap(u"pixie/stdlib.pxi"))
 
-    with compiler.with_ns(u"pixie.stdlib"):
-        while True:
-            if not we_are_translated():
-                sys.stdout.write(".")
-                sys.stdout.flush()
-            form = reader.read(rdr, False)
-            if form is reader.eof:
-                break
-            result = compiler.compile(form).invoke([])
-
-    if not we_are_translated():
-        print "done"
+    #f = open(rpath.rjoin(str(rt.name(load_path.deref())), "pixie/stdlib.pxi"))
+    #data = f.read()
+    #f.close()
+    # rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pxi")
+    # result = nil
+    #
+    # if not we_are_translated():
+    #     print "Loading stdlib while interpreted, this will take some time..."
+    #
+    # wf = open("stdlib.pxic", "wb")
+    # from pixie.vm.libs.pxic.writer import write_object, Writer
+    #
+    # with compiler.with_ns(u"pixie.stdlib"):
+    #     while True:
+    #         if not we_are_translated():
+    #             sys.stdout.write(".")
+    #             sys.stdout.flush()
+    #         form = reader.read(rdr, False)
+    #         if form is reader.eof:
+    #             break
+    #         result = compiler.compile(form)
+    #         write_object(result, Writer(wf))
+    #         result.invoke([])
+    #
+    # if not we_are_translated():
+    #     print "done"
 
     stdlib_loaded.set_true()
 

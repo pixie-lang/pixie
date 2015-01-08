@@ -389,40 +389,98 @@ def load_ns(filename):
         rt.load_file(rt.wrap(f))
     return nil
 
+PXIC_WRITER = intern_var(u"pixie.stdlib", u"*pxic-writer*")
+PXIC_WRITER.set_root(nil)
+PXIC_WRITER.set_dynamic()
+
+
 @as_var("load-file")
 def load_file(filename):
     from pixie.vm.string import String
     from pixie.vm.util import unicode_from_utf8
     import pixie.vm.reader as reader
+    import pixie.vm.libs.pxic.writer as pxic_writer
     import os.path as path
+
 
     affirm(isinstance(filename, String), u"filename must be a string")
     filename = str(rt.name(filename))
     affirm(path.isfile(filename), unicode(filename) + u" does not exist")
 
+    if path.isfile(filename + u"c"):
+        load_pxic_file(filename + u"c")
+        return nil
+
     f = open(filename)
     data = f.read()
     f.close()
+
+
 
     if data.startswith("#!"):
         newline_pos = data.find("\n")
         if newline_pos > 0:
             data = data[newline_pos:]
 
-    rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
+    pxic_f = open(filename + "c", "wb")
+    wtr = pxic_writer.Writer(pxic_f)
+    with code.bindings(PXIC_WRITER, wtr):
+        rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
+    wtr.finish()
+    pxic_f.close()
+
     return nil
+
+def load_pxic_file(filename):
+    f = open(filename)
+    from pixie.vm.libs.pxic.reader import Reader, read_obj
+    from pixie.vm.reader import eof
+    import sys
+
+    if not we_are_translated():
+        print "Loading precompiled file while interpreted, this may take time"
+    while True:
+        if not we_are_translated():
+            sys.stdout.write(".")
+            sys.stdout.flush()
+        o = read_obj(Reader(f))
+        if o is eof:
+            break
+        o.invoke([])
+
+    if not we_are_translated():
+        print "done"
+
 
 @as_var("load-reader")
 def load_reader(rdr):
     import pixie.vm.reader as reader
     import pixie.vm.compiler as compiler
+    import sys
+
+    if not we_are_translated():
+        print "Loading file while interpreted, this may take time"
+
+    pxic_writer = PXIC_WRITER.deref()
 
     with compiler.with_ns(u"user"):
         while True:
+            if not we_are_translated():
+                sys.stdout.write(".")
+                sys.stdout.flush()
             form = reader.read(rdr, False)
             if form is reader.eof:
                 return nil
-            compiler.compile(form).invoke([])
+            compiled = compiler.compile(form)
+
+            if pxic_writer is not nil:
+                pxic_writer.write_object(compiled)
+
+            compiled.invoke([])
+
+    if not we_are_translated():
+        print "done"
+
     return nil
 
 @as_var("the-ns")
