@@ -100,8 +100,9 @@ class Frame(object):
 
     def push_arg(self, idx):
         if not 0 <= idx < len(self.args):
-            runtime_error(u"Invalid argument " + unicode(str(idx)) + u" function takes "
-                          + unicode(str(len(self.args))) + u" args")
+            runtime_error(u"Invalid number of arguments " + unicode(str(idx)) 
+                          + u" for function '" + unicode(str(self.code_obj._name)) + u"'. Expected "
+                          + unicode(str(self.code_obj.get_arity())))
 
         self.push(self.args[r_uint(idx)])
 
