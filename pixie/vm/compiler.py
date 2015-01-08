@@ -73,7 +73,7 @@ class Context(object):
                 locals[x] = Closure(locals[x], parent_ctx)
         else:
             locals = {}
-
+        self.argc = argc
         self.bytecode = []
         self.consts = []
         self.locals = [locals]
@@ -110,7 +110,7 @@ class Context(object):
         self.recur_points.pop()
 
     def to_code(self, required_args=-1):
-        return code.Code(self.name, self.bytecode, clone(self.consts), self._max_sp + 1, self.debug_points)
+        return code.Code(self.name, self.argc, self.bytecode, clone(self.consts), self._max_sp + 1, self.debug_points)
 
     def push_arg(self, idx):
         self.bytecode.append(code.ARG)
@@ -497,8 +497,7 @@ def compile_fn(form, ctx):
         ctx.sub_sp(len(arities))
 
     else:
-        compile_fn_body(name, rt.first(form), rt.next(form), ctx)
-
+        res = compile_fn_body(name, rt.first(form), rt.next(form), ctx)
     if rt.meta(name) is not nil:
         compile_meta(rt.meta(name), ctx)
 
@@ -534,7 +533,6 @@ def compile_fn_body(name, args, body, ctx):
             body = rt.next(body)
             if body is not nil:
                 new_ctx.pop()
-
     new_ctx.bytecode.append(code.RETURN)
     closed_overs = new_ctx.closed_overs
     if len(closed_overs) == 0:

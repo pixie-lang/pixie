@@ -187,13 +187,14 @@ class NativeFn(BaseCode):
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
     _type = object.Type(u"pixie.stdlib.Code")
-    __immutable_fields__ = ["_consts[*]", "_bytecode", "_stack_size", "_meta"]
+    __immutable_fields__ = ["_arity", "_consts[*]", "_bytecode", "_stack_size", "_meta"]
 
     def type(self):
         return Code._type
 
-    def __init__(self, name, bytecode, consts, stack_size, debug_points, meta=nil):
+    def __init__(self, name, arity, bytecode, consts, stack_size, debug_points, meta=nil):
         BaseCode.__init__(self)
+        self._arity = arity
         self._bytecode = bytecode
         self._consts = consts
         self._name = name
@@ -202,7 +203,7 @@ class Code(BaseCode):
         self._meta = meta
 
     def with_meta(self, meta):
-        return Code(self._name, self._bytecode, self._consts, self._stack_size, self._debug_points, meta)
+        return Code(self._name, self._arity, self._bytecode, self._consts, self._stack_size, self._debug_points, meta=meta)
 
     def get_debug_points(self):
         return self._debug_points
@@ -217,6 +218,10 @@ class Code(BaseCode):
             ex._ex._trace.append(object.PixieCodeInfo(self._name))
             raise
 
+    @elidable_promote()
+    def get_arity(self):
+        return self._arity
+            
     @elidable_promote()
     def get_consts(self):
         return self._consts
