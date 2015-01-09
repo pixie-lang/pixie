@@ -1,4 +1,4 @@
-(__ns__ pixie.stdlib)
+(in-ns :pixie.stdlib)
 
  (def libc (ffi-library pixie.platform/lib-c-name))
  (def exit (ffi-fn libc "exit" [CInt] CInt))
@@ -1039,7 +1039,7 @@ Creates new maps if the keys are not present."
        (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
 
 (defmacro ns [nm & body]
-  `(do (__ns__ ~nm)
+  `(do (in-ns ~(keyword (name nm)))
        ~@body))
 
 

@@ -435,18 +435,21 @@ def load_pxic_file(filename):
     f = open(filename)
     from pixie.vm.libs.pxic.reader import Reader, read_obj
     from pixie.vm.reader import eof
+    import pixie.vm.compiler as compiler
     import sys
 
     if not we_are_translated():
         print "Loading precompiled file while interpreted, this may take time"
-    while True:
-        if not we_are_translated():
-            sys.stdout.write(".")
-            sys.stdout.flush()
-        o = read_obj(Reader(f))
-        if o is eof:
-            break
-        o.invoke([])
+    with compiler.with_ns(u"user"):
+        compiler.NS_VAR.deref().include_stdlib()
+        while True:
+            if not we_are_translated():
+                sys.stdout.write(".")
+                sys.stdout.flush()
+            o = read_obj(Reader(f))
+            if o is eof:
+                break
+            o.invoke([])
 
     if not we_are_translated():
         print "done"
@@ -464,6 +467,7 @@ def load_reader(rdr):
     pxic_writer = PXIC_WRITER.deref().get_pxic_writer()
 
     with compiler.with_ns(u"user"):
+        compiler.NS_VAR.deref().include_stdlib()
         while True:
             if not we_are_translated():
                 sys.stdout.write(".")
@@ -488,6 +492,14 @@ def the_ns(ns_name):
     affirm(rt.namespace(ns_name) is None, u"the-ns takes a un-namespaced symbol")
 
     return code._ns_registry.get(rt.name(ns_name), nil)
+
+@as_var("in-ns")
+def the_ns(ns_name):
+    from pixie.vm.compiler import NS_VAR
+    NS_VAR.set_value(code._ns_registry.find_or_make(rt.name(ns_name)))
+    NS_VAR.deref().include_stdlib()
+
+    return nil
 
 @as_var("ns-map")
 def ns_map(ns):
