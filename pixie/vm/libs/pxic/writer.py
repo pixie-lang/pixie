@@ -1,6 +1,6 @@
 from pixie.vm.libs.pxic.tags import INT, STRING, INT_STRING, CODE, NIL, VAR, MAP, KEYWORD, CACHED_OBJ, NEW_CACHED_OBJ, \
     LINE_PROMISE, TRUE, FALSE, SYMBOL, VECTOR, SEQ, FLOAT, NAMESPACE, SMALL_INT_END, SMALL_INT_MAX, SMALL_INT_START, EOF
-from pixie.vm.object import runtime_error
+from pixie.vm.object import runtime_error, Object, Type
 from rpython.rlib.runicode import unicode_encode_utf_8
 from pixie.vm.string import String
 from pixie.vm.keyword import Keyword
@@ -9,9 +9,11 @@ from pixie.vm.numbers import Integer, Float
 from pixie.vm.code import Code, Var, NativeFn, Namespace
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.reader import LinePromise
+from rpython.rlib.objectmodel import specialize
+from rpython.rlib.rarithmetic import r_uint
 import pixie.vm.rt as rt
 
-MAX_INT32 = 2 << 32
+MAX_INT32 = r_uint(1 << 32)
 
 class Writer(object):
     def __init__(self, wtr, with_cache=False):
@@ -20,6 +22,7 @@ class Writer(object):
         self._with_cache = with_cache
 
     def write(self, s):
+        assert isinstance(s, str)
         self._wtr.write(s)
 
     def flush(self):
@@ -46,7 +49,16 @@ class Writer(object):
         write_tag(EOF, self)
         self._wtr.flush()
 
+class WriterBox(Object):
+    _type = Type(u"pixie.stdlib.WriterBox")
+    def type(self):
+        return WriterBox._type
 
+    def __init__(self, wtr):
+        self._pxic_writer = wtr
+
+    def get_pxic_writer(self):
+        return self._pxic_writer
 
 def write_tag(tag, wtr):
     assert tag <= 0xFF
@@ -63,7 +75,9 @@ def write_int_raw(i, wtr):
     else:
         runtime_error(u"Raw int must be less than MAX_INT32, got: " + unicode(str(i)))
 
-def write_string_raw(s, wtr):
+def write_string_raw(si, wtr):
+    assert isinstance(si, unicode)
+    s = str(si)
     assert len(s) <= MAX_INT32
     write_int_raw(len(s), wtr)
     wtr.write(s)
@@ -78,7 +92,7 @@ def write_int(i, wtr):
 
 def write_float(f, wtr):
     write_tag(FLOAT, wtr)
-    write_string_raw(str(f), wtr)
+    write_string_raw(unicode(str(f)), wtr)
 
 def write_string(s, wtr):
     write_tag(STRING, wtr)
@@ -179,6 +193,7 @@ def write_symbol(sym, wtr):
     write_string_raw(sym._str, wtr)
 
 def write_line_promise(o, wtr):
+    assert isinstance(o, LinePromise)
     write_tag(LINE_PROMISE, wtr)
     o.finalize()
     write_string_raw(o._str, wtr)

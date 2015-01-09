@@ -12,6 +12,7 @@ from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.persistent_list import create_from_list
 from pixie.vm.reader import LinePromise
+from rpython.rlib.rarithmetic import r_uint, intmask
 import pixie.vm.rt as rt
 
 
@@ -20,8 +21,8 @@ class Reader(object):
         self._rdr = rdr
         self._obj_cache = {}
 
-    def read(self, num=1):
-        return self._rdr.read(num)
+    def read(self, num=r_uint(1)):
+        return self._rdr.read(intmask(num))
 
     def read_cached(self):
         obj = read_obj(self)
@@ -35,10 +36,10 @@ class Reader(object):
 
 def read_tag(rdr):
     tag = rdr.read()
-    return ord(tag)
+    return ord(tag[0])
 
 def read_raw_integer(rdr):
-    return ord(rdr.read()) | (ord(rdr.read()) << 8) | (ord(rdr.read()) << 16) | (ord(rdr.read()) << 24)
+    return r_uint(ord(rdr.read()[0]) | (ord(rdr.read()[0]) << 8) | (ord(rdr.read()[0]) << 16) | (ord(rdr.read()[0]) << 24))
 
 def read_raw_string(rdr):
     sz = read_raw_integer(rdr)
@@ -46,7 +47,7 @@ def read_raw_string(rdr):
 
 def read_code(rdr):
     sz = read_raw_integer(rdr)
-    bytecode = [0] * sz
+    bytecode = [r_uint(0)] * sz
     for x in range(sz):
         bytecode[x] = read_raw_integer(rdr)
 
@@ -92,7 +93,7 @@ def read_seq(rdr):
     return create_from_list(lst)
 
 def read_float(rdr):
-    return Float(float(read_raw_string(rdr)))
+    return Float(float(str(read_raw_string(rdr))))
 
 def read_namespace(rdr):
     nm = read_raw_string(rdr)
@@ -102,7 +103,7 @@ def read_obj(rdr):
     tag = read_tag(rdr)
 
     if tag == INT:
-        return Integer(read_raw_integer(rdr))
+        return Integer(intmask(read_raw_integer(rdr)))
     elif tag == CODE:
         return read_code(rdr)
     elif tag == NIL:
@@ -118,7 +119,7 @@ def read_obj(rdr):
     elif tag == LINE_PROMISE:
         lp = LinePromise()
         lp._str = read_raw_string(rdr)
-        return rdr
+        return lp
     elif tag == MAP:
         return read_map(rdr)
     elif tag == TRUE:
@@ -149,3 +150,5 @@ def read_obj(rdr):
         return eof
     else:
         runtime_error(u"No dispatch for bytecode: " + unicode(tag_name[tag]))
+
+    return nil

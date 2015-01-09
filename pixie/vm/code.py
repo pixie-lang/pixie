@@ -407,10 +407,6 @@ class Var(BaseCode):
     def invoke(self, args):
         return self.deref().invoke(args)
 
-    def __repr__(self):
-        return "<Var " + self._ns + "/" + self._name + ">"
-
-
 class bindings(py_object):
     def __init__(self, *args):
         self._args = list(args)

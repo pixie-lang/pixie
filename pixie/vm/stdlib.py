@@ -407,8 +407,8 @@ def load_file(filename):
     filename = str(rt.name(filename))
     affirm(path.isfile(filename), unicode(filename) + u" does not exist")
 
-    if path.isfile(filename + u"c"):
-        load_pxic_file(filename + u"c")
+    if path.isfile(filename + "c"):
+        load_pxic_file(filename + "c")
         return nil
 
     f = open(filename)
@@ -424,7 +424,7 @@ def load_file(filename):
 
     pxic_f = open(filename + "c", "wb")
     wtr = pxic_writer.Writer(pxic_f)
-    with code.bindings(PXIC_WRITER, wtr):
+    with code.bindings(PXIC_WRITER, pxic_writer.WriterBox(wtr)):
         rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
     wtr.finish()
     pxic_f.close()
@@ -461,7 +461,7 @@ def load_reader(rdr):
     if not we_are_translated():
         print "Loading file while interpreted, this may take time"
 
-    pxic_writer = PXIC_WRITER.deref()
+    pxic_writer = PXIC_WRITER.deref().get_pxic_writer()
 
     with compiler.with_ns(u"user"):
         while True:
