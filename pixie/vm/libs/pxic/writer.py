@@ -1,5 +1,4 @@
-from pixie.vm.libs.pxic.tags import INT, STRING, INT_STRING, CODE, NIL, VAR, MAP, KEYWORD, CACHED_OBJ, NEW_CACHED_OBJ, \
-    LINE_PROMISE, TRUE, FALSE, SYMBOL, VECTOR, SEQ, FLOAT, NAMESPACE, SMALL_INT_END, SMALL_INT_MAX, SMALL_INT_START, EOF
+from pixie.vm.libs.pxic.tags import *
 from pixie.vm.object import runtime_error, Object, Type
 from rpython.rlib.runicode import unicode_encode_utf_8
 from pixie.vm.string import String
@@ -77,7 +76,8 @@ def write_int_raw(i, wtr):
 
 def write_string_raw(si, wtr):
     assert isinstance(si, unicode)
-    s = str(si)
+    errors = []
+    s = unicode_encode_utf_8(si, len(si), errors)
     assert len(s) <= MAX_INT32
     write_int_raw(len(s), wtr)
     wtr.write(s)
@@ -140,7 +140,7 @@ class WriteItem(NativeFn):
         self._wtr = wtr
 
     def invoke(self, args):
-        itm = args[0]
+        itm = args[1]
 
         write_object(itm, self._wtr)
 
@@ -180,6 +180,7 @@ def write_var(var, wtr):
     write_tag(VAR, wtr)
     write_string_raw(var._ns, wtr)
     write_string_raw(var._name, wtr)
+    write_tag(TRUE if var.is_dynamic() else FALSE, wtr)
 
 
 def write_keyword(kw, wtr):
@@ -238,5 +239,12 @@ def write_object(obj, wtr):
     elif isinstance(obj, Namespace):
         wtr.write_cached_obj(obj, write_namespace)
     else:
-        runtime_error(u"Object is not supported by pxic writer: " + rt.name(rt.str(obj.type())))
+        from pixie.vm.libs.pxic.util import write_handlers
+        handler = write_handlers.get(obj.type(), None)
+        if handler is None:
+            runtime_error(u"Object is not supported by pxic writer: " + rt.name(rt.str(obj.type())))
+        else:
+            write_tag(TAGGED, wtr)
+            write_string_raw(obj.type().name(), wtr)
+            write_object(handler.invoke([obj]), wtr)
 

@@ -464,7 +464,11 @@ def load_reader(rdr):
     if not we_are_translated():
         print "Loading file while interpreted, this may take time"
 
-    pxic_writer = PXIC_WRITER.deref().get_pxic_writer()
+    val = PXIC_WRITER.deref()
+    if val is nil:
+        pxic_writer = None
+    else:
+        pxic_writer = val.get_pxic_writer()
 
     with compiler.with_ns(u"user"):
         compiler.NS_VAR.deref().include_stdlib()
@@ -477,7 +481,7 @@ def load_reader(rdr):
                 return nil
             compiled = compiler.compile(form)
 
-            if pxic_writer is not nil:
+            if pxic_writer is not None:
                 pxic_writer.write_object(compiled)
 
             compiled.invoke([])
@@ -577,6 +581,11 @@ def type_by_name(nm):
         runtime_error(u"type name must be string")
     return _type_registry.get_by_name(nm._str, nil)
 
+@as_var("add-marshall-handlers")
+def _add_marshall_handlers(tp, write, read):
+    from pixie.vm.libs.pxic.util import add_marshall_handlers
+    add_marshall_handlers(tp, write, read)
+    return nil
 
 
 @as_var("deref")

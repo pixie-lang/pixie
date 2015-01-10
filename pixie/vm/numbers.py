@@ -5,6 +5,7 @@ from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
 from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
+from pixie.vm.libs.pxic.util import add_marshall_handlers
 import pixie.vm.rt as rt
 
 import math
@@ -68,6 +69,7 @@ class Ratio(Number):
     _immutable_fields_ = ["_numerator", "_denominator"]
 
     def __init__(self, numerator, denominator):
+        assert numerator is not None and denominator is not None
         self._numerator = numerator
         self._denominator = denominator
 
@@ -79,6 +81,17 @@ class Ratio(Number):
 
     def type(self):
         return Ratio._type
+
+@wrap_fn
+def ratio_write(obj):
+    assert isinstance(obj, Ratio)
+    return rt.vector(rt.wrap(obj.numerator()), rt.wrap(obj.denominator()))
+
+@wrap_fn
+def ratio_read(obj):
+    return Ratio(rt.nth(obj, rt.wrap(0)).int_val(), rt.nth(obj, rt.wrap(1)).int_val())
+
+add_marshall_handlers(Ratio._type, ratio_write, ratio_read)
 
 IMath = as_var("IMath")(Protocol(u"IMath"))
 _add = as_var("-add")(DoublePolymorphicFn(u"-add", IMath))

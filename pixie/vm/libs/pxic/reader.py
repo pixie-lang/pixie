@@ -1,6 +1,6 @@
 from pixie.vm.libs.pxic.tags import *
-from pixie.vm.object import runtime_error
-from rpython.rlib.runicode import unicode_encode_utf_8, str_decode_utf_8
+from pixie.vm.object import runtime_error, get_type_by_name
+from rpython.rlib.runicode import str_decode_utf_8
 from pixie.vm.string import String
 from pixie.vm.keyword import Keyword, keyword
 from pixie.vm.symbol import Symbol, symbol
@@ -13,6 +13,7 @@ from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.persistent_list import create_from_list
 from pixie.vm.reader import LinePromise
 from rpython.rlib.rarithmetic import r_uint, intmask
+from pixie.vm.libs.pxic.util import read_handlers
 import pixie.vm.rt as rt
 
 
@@ -43,7 +44,9 @@ def read_raw_integer(rdr):
 
 def read_raw_string(rdr):
     sz = read_raw_integer(rdr)
-    return unicode(rdr.read(sz))
+    errors = []
+    s, pos = str_decode_utf_8(rdr.read(sz), sz, errors)
+    return s
 
 def read_code(rdr):
     sz = read_raw_integer(rdr)
@@ -66,7 +69,11 @@ def read_code(rdr):
 def read_var(rdr):
     ns = read_raw_string(rdr)
     nm = read_raw_string(rdr)
-    return intern_var(ns, nm)
+    is_dynamic = read_tag(rdr)
+    var = intern_var(ns, nm)
+    if is_dynamic is TRUE:
+        var.set_dynamic()
+    return var
 
 def read_map(rdr):
     cnt = read_raw_integer(rdr)
@@ -148,6 +155,16 @@ def read_obj(rdr):
     elif tag == EOF:
         from pixie.vm.reader import eof
         return eof
+
+    elif tag == TAGGED:
+        tp_name = read_raw_string(rdr)
+        tp = get_type_by_name(tp_name)
+        handler = read_handlers.get(tp, None)
+        if handler is None:
+            runtime_error(u"No type handler for " + tp_name)
+
+        obj = read_obj(rdr)
+        return handler.invoke([obj])
     else:
         runtime_error(u"No dispatch for bytecode: " + unicode(tag_name[tag]))
 

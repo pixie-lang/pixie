@@ -14,11 +14,11 @@ class Object(object):
         return stdlib.invoke_other(self, args)
 
     def int_val(self):
-        affirm(False, u"Expected Number")
+        affirm(False,  u"Expected Number, not " + self.type().name())
         return 0
 
     def r_uint_val(self):
-        affirm(False, u"Expected Number")
+        affirm(False, u"Expected Number, not " + self.type().name())
         return 0
 
     def promote(self):
@@ -57,6 +57,9 @@ class TypeRegistry(object):
         return self._types.get(nm, default)
 
 _type_registry = TypeRegistry()
+
+def get_type_by_name(nm):
+    return _type_registry.get_by_name(nm)
 
 class Type(Object):
     def __init__(self, name, parent = None):

@@ -379,19 +379,25 @@ class Var(BaseCode):
         self._dynamic = True
         self._rev += 1
 
+
     def get_dynamic_value(self):
         return _dynamic_vars.get_var_value(self, self._root)
 
+
+
     @elidable_promote()
-    def is_dynamic(self, rev):
+    def _is_dynamic(self, rev):
         return self._dynamic
+
+    def is_dynamic(self):
+        return self._is_dynamic(self._rev)
 
     @elidable_promote()
     def get_root(self, rev):
         return self._root
 
     def deref(self):
-        if self.is_dynamic(self._rev):
+        if self.is_dynamic():
             return self.get_dynamic_value()
         else:
             val = self.get_root(self._rev)

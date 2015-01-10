@@ -17,6 +17,7 @@ tag_name = ["INT",
             "NEW_CACHED_OBJ",
             "LINE_PROMISE",
             "NAMESPACE",
+            "TAGGED",
             "EOF"]
 
 tags = {}
