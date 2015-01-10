@@ -44,7 +44,7 @@ def read_raw_integer(rdr):
 
 def read_raw_string(rdr):
     sz = read_raw_integer(rdr)
-    errors = []
+    errors = "?"
     s, pos = str_decode_utf_8(rdr.read(sz), sz, errors)
     return s
 

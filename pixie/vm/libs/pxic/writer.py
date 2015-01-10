@@ -76,7 +76,7 @@ def write_int_raw(i, wtr):
 
 def write_string_raw(si, wtr):
     assert isinstance(si, unicode)
-    errors = []
+    errors = "?"
     s = unicode_encode_utf_8(si, len(si), errors)
     assert len(s) <= MAX_INT32
     write_int_raw(len(s), wtr)
