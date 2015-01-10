@@ -535,8 +535,6 @@ def _reduce(self, f, init):
 
 @as_var("vector")
 def vector__args(args):
-    if len(args) < 32:
-        return PersistentVector(nil, r_uint(len(args)), r_uint(5), EMPTY_NODE, args)
     acc = rt._transient(EMPTY)
     for x in range(len(args)):
         acc = rt._conj_BANG_(acc, args[x])
