@@ -393,23 +393,32 @@ PXIC_WRITER = intern_var(u"pixie.stdlib", u"*pxic-writer*")
 PXIC_WRITER.set_root(nil)
 PXIC_WRITER.set_dynamic()
 
-
 @as_var("load-file")
 def load_file(filename):
+    return _load_file(filename, False)
+
+@as_var("compile-file")
+def compile_file(filename):
+    return _load_file(filename, True)
+
+def _load_file(filename, compile=False):
     from pixie.vm.string import String
     from pixie.vm.util import unicode_from_utf8
     import pixie.vm.reader as reader
     import pixie.vm.libs.pxic.writer as pxic_writer
     import os.path as path
+    from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
+    import os
 
 
     affirm(isinstance(filename, String), u"filename must be a string")
     filename = str(rt.name(filename))
-    affirm(path.isfile(filename), unicode(filename) + u" does not exist")
 
-    if path.isfile(filename + "c"):
+    if path.isfile(filename + "c") and not compile:
         load_pxic_file(filename + "c")
         return nil
+
+    affirm(path.isfile(filename), unicode(filename) + u" does not exist")
 
     f = open(filename)
     data = f.read()
@@ -422,12 +431,17 @@ def load_file(filename):
         if newline_pos > 0:
             data = data[newline_pos:]
 
-    pxic_f = open(filename + "c", "wb")
-    wtr = pxic_writer.Writer(pxic_f)
-    with code.bindings(PXIC_WRITER, pxic_writer.WriterBox(wtr)):
-        rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
-    wtr.finish()
-    pxic_f.close()
+    if compile:
+        pxic_f = open(filename + "c", "wb")
+        wtr = pxic_writer.Writer(pxic_f)
+        with code.bindings(PXIC_WRITER, pxic_writer.WriterBox(wtr)):
+            rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
+        wtr.finish()
+        pxic_f.close()
+    else:
+        with code.bindings(PXIC_WRITER, nil):
+            rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
+
 
     return nil
 

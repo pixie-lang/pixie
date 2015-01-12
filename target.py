@@ -175,37 +175,8 @@ def run_load_stdlib():
     global stdlib_loaded
     if stdlib_loaded.is_true():
         return
-    import pixie.vm.compiler as compiler
-    import pixie.vm.reader as reader
 
     rt.load_file(rt.wrap(u"pixie/stdlib.pxi"))
-
-    #f = open(rpath.rjoin(str(rt.name(load_path.deref())), "pixie/stdlib.pxi"))
-    #data = f.read()
-    #f.close()
-    # rdr = reader.MetaDataReader(reader.StringReader(unicode(data)), u"pixie/stdlib.pxi")
-    # result = nil
-    #
-    # if not we_are_translated():
-    #     print "Loading stdlib while interpreted, this will take some time..."
-    #
-    # wf = open("stdlib.pxic", "wb")
-    # from pixie.vm.libs.pxic.writer import write_object, Writer
-    #
-    # with compiler.with_ns(u"pixie.stdlib"):
-    #     while True:
-    #         if not we_are_translated():
-    #             sys.stdout.write(".")
-    #             sys.stdout.flush()
-    #         form = reader.read(rdr, False)
-    #         if form is reader.eof:
-    #             break
-    #         result = compiler.compile(form)
-    #         write_object(result, Writer(wf))
-    #         result.invoke([])
-    #
-    # if not we_are_translated():
-    #     print "done"
 
     stdlib_loaded.set_true()
 
@@ -214,6 +185,7 @@ def load_stdlib():
 
 def entry_point(args):
     interactive = True
+    exit = False
     script_args = []
 
     init_load_path(args[0])
@@ -234,6 +206,7 @@ def entry_point(args):
                 print "  -v, --version          print the version number"
                 print "  -e, --eval=<expr>      evaluate the given expression"
                 print "  -l, --load-path=<path> add <path> to pixie.stdlib/load-paths"
+                print "  -c, --compile=<file>   compile <path> to a .pxic file"
                 return 0
             elif arg == '-e' or arg == '--eval':
                 i += 1
@@ -252,6 +225,17 @@ def entry_point(args):
                 else:
                     print "Expected argument for " + arg
                     return 1
+
+            elif arg == "-c" or arg == "--compile":
+                i += 1
+                if i < len(args):
+                    path = args[i]
+                    print "Compiling ", path
+                    rt.compile_file(rt.wrap(path))
+                    exit = True
+                else:
+                    print "Expected argument for " + arg
+                    return 1
             else:
                 print "Unknown option " + arg
                 return 1
@@ -262,10 +246,11 @@ def entry_point(args):
 
         i += 1
 
-    if interactive:
-        ReplFn(args).invoke([])
-    else:
-        BatchModeFn(script_args).invoke([])
+    if not exit:
+        if interactive:
+            ReplFn(args).invoke([])
+        else:
+            BatchModeFn(script_args).invoke([])
 
     return 0
 
