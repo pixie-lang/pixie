@@ -173,6 +173,9 @@ class InterpreterCodeInfo(ErrorInfo):
                + self._line.__repr__() + u"\n" \
                + self.pad_chars() + u"^"
 
+    def interpreter_code_info_state(self):
+        return self._line, self._line_number, self._column_number, self._file
+
 class NativeCodeInfo(ErrorInfo):
     def __init__(self, name):
         self._name = name

@@ -25,9 +25,11 @@ class Reader(object):
     def read(self, num=r_uint(1)):
         return self._rdr.read(intmask(num))
 
-    def read_cached(self):
+    def read_and_cache(self):
+        idx = len(self._obj_cache)
+        self._obj_cache[idx] = None # To match cache size growth of writer
         obj = read_obj(self)
-        self._obj_cache[len(self._obj_cache)] = obj
+        self._obj_cache[idx] = obj
         return obj
 
     def read_cached_obj(self):
@@ -63,7 +65,15 @@ def read_code(rdr):
 
     nm = read_raw_string(rdr)
 
-    return Code(nm, bytecode, consts, stack_size, {})
+    arity = read_raw_integer(rdr)
+
+    dps = read_raw_integer(rdr)
+    debug_points = {}
+    for x in range(dps):
+        idx = read_raw_integer(rdr)
+        debug_points[idx] = read_obj(rdr)
+
+    return Code(nm, arity, bytecode, consts, stack_size, debug_points)
 
 
 def read_var(rdr):
@@ -105,6 +115,15 @@ def read_float(rdr):
 def read_namespace(rdr):
     nm = read_raw_string(rdr)
     return code._ns_registry.find_or_make(nm)
+
+def read_interpreter_code_info(rdr):
+    from pixie.vm.object import InterpreterCodeInfo
+    line = read_obj(rdr)
+    line_number = read_raw_integer(rdr)
+    column_number = read_raw_integer(rdr)
+    file = read_raw_string(rdr)
+
+    return InterpreterCodeInfo(line, intmask(line_number), intmask(column_number), file)
 
 def read_obj(rdr):
     tag = read_tag(rdr)
@@ -148,13 +167,16 @@ def read_obj(rdr):
 
 
     elif tag == NEW_CACHED_OBJ:
-        return rdr.read_cached()
+        return rdr.read_and_cache()
     elif tag == CACHED_OBJ:
         return rdr.read_cached_obj()
 
     elif tag == EOF:
         from pixie.vm.reader import eof
         return eof
+
+    elif tag == CODE_INFO:
+        return read_interpreter_code_info(rdr)
 
     elif tag == TAGGED:
         tp_name = read_raw_string(rdr)

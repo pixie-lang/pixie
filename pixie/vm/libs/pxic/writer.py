@@ -1,5 +1,5 @@
 from pixie.vm.libs.pxic.tags import *
-from pixie.vm.object import runtime_error, Object, Type
+from pixie.vm.object import runtime_error, Object, Type, InterpreterCodeInfo
 from rpython.rlib.runicode import unicode_encode_utf_8
 from pixie.vm.string import String
 from pixie.vm.keyword import Keyword
@@ -37,7 +37,7 @@ class Writer(object):
                 wfn(o, self)
             else:
                 write_tag(CACHED_OBJ, self)
-                write_int_raw(idx, self)
+                write_int_raw(r_uint(idx), self)
         else:
             return wfn(o, self)
 
@@ -114,6 +114,14 @@ def write_code(c, wtr):
 
 
     write_string_raw(c._name, wtr)
+
+    write_int_raw(c._arity, wtr)
+
+    write_int_raw(len(c._debug_points), wtr)
+    for k, v in c._debug_points.iteritems():
+        write_int_raw(k, wtr)
+        write_object(v, wtr)
+
 
 
 class WriteParirFn(NativeFn):
@@ -204,6 +212,16 @@ def write_namespace(o, wtr):
     write_tag(NAMESPACE, wtr)
     write_string_raw(o._name, wtr)
 
+def write_interpreter_code_info(obj, wtr):
+    line, line_number, column_number, file = obj.interpreter_code_info_state()
+
+    write_tag(CODE_INFO, wtr)
+
+    write_object(line, wtr)
+    write_int_raw(r_uint(line_number), wtr)
+    write_int_raw(r_uint(column_number), wtr)
+    write_string_raw(file, wtr)
+
 
 def write_object(obj, wtr):
     wtr.flush()
@@ -238,6 +256,8 @@ def write_object(obj, wtr):
         write_symbol(obj, wtr)
     elif isinstance(obj, Namespace):
         wtr.write_cached_obj(obj, write_namespace)
+    elif isinstance(obj, InterpreterCodeInfo):
+        wtr.write_cached_obj(obj, write_interpreter_code_info)
     else:
         from pixie.vm.libs.pxic.util import write_handlers
         handler = write_handlers.get(obj.type(), None)

@@ -433,7 +433,7 @@ def _load_file(filename, compile=False):
 
     if compile:
         pxic_f = open(filename + "c", "wb")
-        wtr = pxic_writer.Writer(pxic_f)
+        wtr = pxic_writer.Writer(pxic_f, True)
         with code.bindings(PXIC_WRITER, pxic_writer.WriterBox(wtr)):
             rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
         wtr.finish()
@@ -456,11 +456,12 @@ def load_pxic_file(filename):
         print "Loading precompiled file while interpreted, this may take time"
     with compiler.with_ns(u"user"):
         compiler.NS_VAR.deref().include_stdlib()
+        rdr = Reader(f)
         while True:
             if not we_are_translated():
                 sys.stdout.write(".")
                 sys.stdout.flush()
-            o = read_obj(Reader(f))
+            o = read_obj(rdr)
             if o is eof:
                 break
             o.invoke([])
@@ -723,6 +724,29 @@ def _ici(meta):
                                line_number.int_val() if line_number is not nil else 0,
                                col_number.int_val() if col_number is not nil else 0,
                                rt.name(file) if file is not nil else u"<unknown")
+
+
+# @wrap_fn
+# def interpreter_code_info_reader(obj):
+#     line, line_number, column_number, file = obj.interpreter_code_info_state()
+#     return rt.vector(line, rt.wrap(line_number), rt.wrap(column_number), rt.wrap(file))
+#
+#
+# @wrap_fn
+# def interpreter_code_info_writer(obj):
+#     line = rt.nth(obj, rt.wrap(0))
+#     line_number = rt.nth(obj, rt.wrap(1)).int_val()
+#     column_number = rt.nth(obj, rt.wrap(2)).int_val()
+#     file = rt.name(rt.nth(obj, rt.wrap(3)))
+#     return InterpreterCodeInfo(line, line_number, column_number, file)
+#
+# from pixie.vm.libs.pxic.util import add_marshall_handlers
+# add_marshall_handlers(InterpreterCodeInfo._type, interpreter_code_info_writer, interpreter_code_info_reader)
+
+
+
+
+
 
 @wrap_fn
 def merge_fn(acc, x):

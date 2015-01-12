@@ -18,6 +18,7 @@ tag_name = ["INT",
             "LINE_PROMISE",
             "NAMESPACE",
             "TAGGED",
+            "CODE_INFO",
             "EOF"]
 
 tags = {}
