@@ -27,8 +27,8 @@
   (t/assert= (str {}) "{}")
   (t/assert= (str {:a 1}) "{:a 1}")
   (t/assert= (str (type 3)) "<type pixie.stdlib.Integer>")
-
-  (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]"))
+  (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]")
+  (t/assert= (seq (map identity "iterable")) '(\i \t \e \r \a \b \l \e)))
 
 (t/deftest test-repr
   (t/assert= (-repr nil) "nil")
@@ -277,3 +277,17 @@
              [[1 :a] [1 :b] [1 :c]
               [2 :a] [2 :b] [2 :c]
               [3 :a] [3 :b] [3 :c]]))
+
+(t/deftest test-ex-msg
+  (try
+     (throw "This is an exception")
+     (catch e
+       (t/assert= (ex-msg e) "This is an exception"))))
+
+(t/deftest test-range
+  (t/assert= (= (-seq (range 10))
+                (-seq (-iterator (range 10))
+                (reduce conj nil (range 10))
+                '(0 1 2 3 4 5 6 7 8 9)))
+             true))
+             

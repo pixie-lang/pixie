@@ -744,3 +744,9 @@ def _merge__args(args):
 def _str(self):
     assert isinstance(self, RuntimeException)
     return rt.wrap(self.__repr__())
+
+@as_var("ex-msg")
+def ex_msg(e):
+    assert isinstance(e, RuntimeException)
+    return e._data
+
