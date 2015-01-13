@@ -384,19 +384,25 @@ class Var(BaseCode):
         self._dynamic = True
         self._rev += 1
 
+
     def get_dynamic_value(self):
         return _dynamic_vars.get_var_value(self, self._root)
 
+
+
     @elidable_promote()
-    def is_dynamic(self, rev):
+    def _is_dynamic(self, rev):
         return self._dynamic
+
+    def is_dynamic(self):
+        return self._is_dynamic(self._rev)
 
     @elidable_promote()
     def get_root(self, rev):
         return self._root
 
     def deref(self):
-        if self.is_dynamic(self._rev):
+        if self.is_dynamic():
             return self.get_dynamic_value()
         else:
             val = self.get_root(self._rev)
@@ -411,7 +417,6 @@ class Var(BaseCode):
 
     def invoke(self, args):
         return self.deref().invoke(args)
-
 
 class bindings(py_object):
     def __init__(self, *args):
@@ -901,3 +906,17 @@ def returns(type):
         fn._returns = type
         return fn
     return with_fn
+
+
+
+class bindings(py_object):
+    def __init__(self, *args):
+        self._args = list(args)
+
+    def __enter__(self):
+        _dynamic_vars.push_binding_frame()
+        for x in range(0, len(self._args), 2):
+            self._args[x].set_value(self._args[x + 1])
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _dynamic_vars.pop_binding_frame()

@@ -5,11 +5,12 @@ from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer
 import pixie.vm.persistent_hash_map as persistent_hash_map
 import pixie.vm.stdlib as proto
-from  pixie.vm.code import extend, as_var, intern_var
+from  pixie.vm.code import extend, as_var, intern_var, wrap_fn
 from rpython.rlib.rarithmetic import r_uint, intmask
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 from pixie.vm.iterator import MapIterator
+from pixie.vm.libs.pxic.util import add_marshall_handlers
 
 
 VAR_KEY = intern_var(u"pixie.stdlib", u"key")
@@ -38,9 +39,6 @@ class PersistentHashSet(object.Object):
 
     def iter(self):
         return MapIterator(VAR_KEY.deref(), self._map.iter())
-
-
-
 
 EMPTY = PersistentHashSet(nil, persistent_hash_map.EMPTY)
 

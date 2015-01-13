@@ -389,40 +389,121 @@ def load_ns(filename):
         rt.load_file(rt.wrap(f))
     return nil
 
+PXIC_WRITER = intern_var(u"pixie.stdlib", u"*pxic-writer*")
+PXIC_WRITER.set_root(nil)
+PXIC_WRITER.set_dynamic()
+
 @as_var("load-file")
 def load_file(filename):
+    return _load_file(filename, False)
+
+@as_var("compile-file")
+def compile_file(filename):
+    return _load_file(filename, True)
+
+def _load_file(filename, compile=False):
     from pixie.vm.string import String
     from pixie.vm.util import unicode_from_utf8
     import pixie.vm.reader as reader
+    import pixie.vm.libs.pxic.writer as pxic_writer
     import os.path as path
+    from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
+    import os
+
 
     affirm(isinstance(filename, String), u"filename must be a string")
     filename = str(rt.name(filename))
+
+    if path.isfile(filename + "c") and not compile:
+        load_pxic_file(filename + "c")
+        return nil
+
     affirm(path.isfile(filename), unicode(filename) + u" does not exist")
 
     f = open(filename)
     data = f.read()
     f.close()
 
+
+
     if data.startswith("#!"):
         newline_pos = data.find("\n")
         if newline_pos > 0:
             data = data[newline_pos:]
 
-    rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
+    if compile:
+        pxic_f = open(filename + "c", "wb")
+        wtr = pxic_writer.Writer(pxic_f, True)
+        with code.bindings(PXIC_WRITER, pxic_writer.WriterBox(wtr)):
+            rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
+        wtr.finish()
+        pxic_f.close()
+    else:
+        with code.bindings(PXIC_WRITER, nil):
+            rt.load_reader(reader.MetaDataReader(reader.StringReader(unicode_from_utf8(data)), unicode(filename)))
+
+
     return nil
+
+def load_pxic_file(filename):
+    f = open(filename)
+    from pixie.vm.libs.pxic.reader import Reader, read_obj
+    from pixie.vm.reader import eof
+    import pixie.vm.compiler as compiler
+    import sys
+
+    if not we_are_translated():
+        print "Loading precompiled file while interpreted, this may take time"
+    with compiler.with_ns(u"user"):
+        compiler.NS_VAR.deref().include_stdlib()
+        rdr = Reader(f)
+        while True:
+            if not we_are_translated():
+                sys.stdout.write(".")
+                sys.stdout.flush()
+            o = read_obj(rdr)
+            if o is eof:
+                break
+            o.invoke([])
+
+    if not we_are_translated():
+        print "done"
+
 
 @as_var("load-reader")
 def load_reader(rdr):
     import pixie.vm.reader as reader
     import pixie.vm.compiler as compiler
+    import sys
+
+    if not we_are_translated():
+        print "Loading file while interpreted, this may take time"
+
+    val = PXIC_WRITER.deref()
+    if val is nil:
+        pxic_writer = None
+    else:
+        pxic_writer = val.get_pxic_writer()
 
     with compiler.with_ns(u"user"):
+        compiler.NS_VAR.deref().include_stdlib()
         while True:
+            if not we_are_translated():
+                sys.stdout.write(".")
+                sys.stdout.flush()
             form = reader.read(rdr, False)
             if form is reader.eof:
                 return nil
-            compiler.compile(form).invoke([])
+            compiled = compiler.compile(form)
+
+            if pxic_writer is not None:
+                pxic_writer.write_object(compiled)
+
+            compiled.invoke([])
+
+    if not we_are_translated():
+        print "done"
+
     return nil
 
 @as_var("the-ns")
@@ -430,6 +511,14 @@ def the_ns(ns_name):
     affirm(rt.namespace(ns_name) is None, u"the-ns takes a un-namespaced symbol")
 
     return code._ns_registry.get(rt.name(ns_name), nil)
+
+@as_var("in-ns")
+def the_ns(ns_name):
+    from pixie.vm.compiler import NS_VAR
+    NS_VAR.set_value(code._ns_registry.find_or_make(rt.name(ns_name)))
+    NS_VAR.deref().include_stdlib()
+
+    return nil
 
 @as_var("ns-map")
 def ns_map(ns):
@@ -507,6 +596,11 @@ def type_by_name(nm):
         runtime_error(u"type name must be string")
     return _type_registry.get_by_name(nm._str, nil)
 
+@as_var("add-marshall-handlers")
+def _add_marshall_handlers(tp, write, read):
+    from pixie.vm.libs.pxic.util import add_marshall_handlers
+    add_marshall_handlers(tp, write, read)
+    return nil
 
 
 @as_var("deref")
@@ -630,6 +724,29 @@ def _ici(meta):
                                line_number.int_val() if line_number is not nil else 0,
                                col_number.int_val() if col_number is not nil else 0,
                                rt.name(file) if file is not nil else u"<unknown")
+
+
+# @wrap_fn
+# def interpreter_code_info_reader(obj):
+#     line, line_number, column_number, file = obj.interpreter_code_info_state()
+#     return rt.vector(line, rt.wrap(line_number), rt.wrap(column_number), rt.wrap(file))
+#
+#
+# @wrap_fn
+# def interpreter_code_info_writer(obj):
+#     line = rt.nth(obj, rt.wrap(0))
+#     line_number = rt.nth(obj, rt.wrap(1)).int_val()
+#     column_number = rt.nth(obj, rt.wrap(2)).int_val()
+#     file = rt.name(rt.nth(obj, rt.wrap(3)))
+#     return InterpreterCodeInfo(line, line_number, column_number, file)
+#
+# from pixie.vm.libs.pxic.util import add_marshall_handlers
+# add_marshall_handlers(InterpreterCodeInfo._type, interpreter_code_info_writer, interpreter_code_info_reader)
+
+
+
+
+
 
 @wrap_fn
 def merge_fn(acc, x):

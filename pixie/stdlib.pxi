@@ -1,4 +1,4 @@
-(__ns__ pixie.stdlib)
+(in-ns :pixie.stdlib)
 
  (def libc (ffi-library pixie.platform/lib-c-name))
  (def exit (ffi-fn libc "exit" [CInt] CInt))
@@ -334,9 +334,17 @@
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
 
+
+
+(add-marshall-handlers PersistentHashSet
+  (fn [obj] (vec obj))
+  (fn [obj] (apply hash-set obj)))
+
 (extend -hash PersistentHashMap
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+
 
 (extend -hash EmptyList (fn [v] 5555555))
 
@@ -676,6 +684,11 @@ there's a value associated with the key. Use `some` for checking for values."
    :added "0.1"}
   [coll key]
   (-contains-key coll key))
+
+(defn hash-set [& args]
+  {:doc "Creates a hash-set from the arguments of the function"
+   :added "0.1"}
+  (set args))
 
 (defn vec
   {:doc "Converts a reducable collection into a vector using the (optional) transducer."
@@ -1039,7 +1052,7 @@ Creates new maps if the keys are not present."
        (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
 
 (defmacro ns [nm & body]
-  `(do (__ns__ ~nm)
+  `(do (in-ns ~(keyword (name nm)))
        ~@body))
 
 

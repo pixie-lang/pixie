@@ -1,11 +1,12 @@
 import pixie.vm.rt as rt
 from pixie.vm.object import Object, Type, affirm
-from pixie.vm.code import extend, as_var
+from pixie.vm.code import extend, as_var, wrap_fn
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer, _add
 import pixie.vm.stdlib as proto
 import pixie.vm.util as util
 from rpython.rlib.rarithmetic import intmask, r_uint
+from pixie.vm.libs.pxic.util import add_marshall_handlers
 
 class String(Object):
     _type = Type(u"pixie.stdlib.String")
@@ -77,7 +78,16 @@ class Character(Object):
     def char_val(self):
         return self._char_val
 
+@wrap_fn
+def write_char(obj):
+    assert isinstance(obj, Character)
+    return rt.wrap(obj._char_val)
 
+@wrap_fn
+def read_char(obj):
+    return Character(obj.int_val())
+
+add_marshall_handlers(Character._type, write_char, read_char)
 
 @extend(proto._str, Character)
 def _str(self):

@@ -122,19 +122,14 @@ return 0;
         result (read-string (io/run-command cmd-str))]
     `(do ~@(map generate-code cmds result))))
 
-
-(binding [*config* {:includes ["sys/stat.h"]}]
-          (run-infer nil
-                     [{:op :struct :name "stat"
-                       :members ["st_size"]}]))
-
-
 (defmacro with-config [config & body]
-  `(binding [*config* ~config
-             *bodies* (atom [])
-             *library* (ffi-library ~(str "lib" (:library config) "." pixie.platform/so-ext))]
-     ~@body
-     (eval (run-infer *config* @*bodies*))))
+  (binding [*config* config
+            *bodies* (atom [])
+            *library* (ffi-library (str "lib" (:library config) "." pixie.platform/so-ext))]
+     (doseq [b body]
+       (eval b))
+     `(let [*library* (ffi-library ~(str "lib" (:library config) "." pixie.platform/so-ext))]
+                ~(run-infer *config* @*bodies*))))
 
 (defmacro defcfn [nm]
   (let [name-str (name nm)]
@@ -150,16 +145,18 @@ return 0;
                           :members ~(vec (map name members))) ))
 
 
+
+
 (comment
+
 (with-config {:library "SDL"
               :cxx-flags ["`sdl2-config --cflags --libs`"]
               :includes ["SDL.h"]
               }
   (defconst SDL_INIT_EVERYTHING)
   (defcfn SDL_Init)
-  (defcfn SDL_CreateWindow)
-  (defconst SDL_WINDOW_SHOWN))
 
+  (defconst SDL_WINDOW_SHOWN))
 
 (f/with-config {:library "c"
               :cxx-flags ["-lc"]

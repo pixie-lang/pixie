@@ -441,18 +441,6 @@ def compile_platform_plus(form, ctx):
         ctx.enable_tail_call()
     return ctx
 
-def compile_platform_eq(form, ctx):
-    form = form.next()
-
-    affirm(rt.count(form) == 2, u"TODO: REMOVE")
-    while form is not nil:
-        compile_form(form.first(), ctx)
-        form = form.next()
-
-    ctx.bytecode.append(code.EQ)
-    ctx.sub_sp(1)
-    return ctx
-
 def add_args(name, args, ctx):
     required_args = -1
     local_idx = 0
@@ -722,19 +710,6 @@ def compile_loop(form, ctx):
 def compile_comment(form, ctx):
     ctx.push_const(nil)
 
-def compile_ns(form, ctx):
-    affirm(rt.count(form) == 2, u"ns only takes one argument, a symbol")
-
-    nm = rt.first(rt.next(form))
-
-    affirm(isinstance(nm, symbol.Symbol), u"Namespace name must be a symbol")
-
-    str_name = rt.name(nm)
-
-    NS_VAR.set_value(code._ns_registry.find_or_make(str_name))
-    NS_VAR.deref().include_stdlib()
-    ctx.push_const(nil)
-
 def compile_this_ns(form, ctx):
     ctx.push_const(NS_VAR.deref())
 
@@ -760,9 +735,15 @@ def compile_yield(form, ctx):
     compile_form(arg, ctx)
     ctx.bytecode.append(code.YIELD)
 
+def compile_in_ns(form, ctx):
+    affirm(rt.count(form) == 2, u"in-ns requires an argument")
+    arg = rt.first(rt.next(form))
+    NS_VAR.set_value(code._ns_registry.find_or_make(rt.name(arg)))
+    NS_VAR.deref().include_stdlib()
+    compile_fn_call(form, ctx)
+
 builtins = {u"fn*": compile_fn,
             u"if": compile_if,
-            u"platform=": compile_platform_eq,
             u"def": compile_def,
             u"do": compile_do,
             u"quote": compile_quote,
@@ -771,9 +752,9 @@ builtins = {u"fn*": compile_fn,
             u"loop": compile_loop,
             u"comment": compile_comment,
             u"var": compile_var,
-            u"__ns__": compile_ns,
             u"catch": compile_catch,
             u"this-ns-name": compile_this_ns,
+            u"in-ns": compile_in_ns, # yes, this is both a function and a compiler special form.
             u"yield": compile_yield}
 
 def compiler_special(s):
@@ -797,6 +778,9 @@ def compile_cons(form, ctx):
         if special is not None:
             return special(form, ctx)
 
+    return compile_fn_call(form, ctx)
+
+def compile_fn_call(form, ctx):
     macro = is_macro_call(form, ctx)
     if macro:
         return compile_form(call_macro(macro, form, ctx), ctx)
