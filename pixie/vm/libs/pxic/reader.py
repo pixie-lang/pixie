@@ -21,6 +21,7 @@ class Reader(object):
     def __init__(self, rdr):
         self._rdr = rdr
         self._obj_cache = {}
+        self._str_cache = {}
 
     def read(self, num=r_uint(1)):
         return self._rdr.read(intmask(num))
@@ -31,6 +32,15 @@ class Reader(object):
         obj = read_obj(self)
         self._obj_cache[idx] = obj
         return obj
+
+    def read_cached_string(self):
+        sz = read_raw_integer(self)
+        if sz >= MAX_STRING_SIZE:
+            return self._str_cache[sz - MAX_STRING_SIZE]
+        else:
+            s, pos = str_decode_utf_8(self.read(sz), sz, "?")
+            self._str_cache[len(self._str_cache)] = s
+            return s
 
     def read_cached_obj(self):
         idx = read_raw_integer(self)
@@ -45,10 +55,7 @@ def read_raw_integer(rdr):
     return r_uint(ord(rdr.read()[0]) | (ord(rdr.read()[0]) << 8) | (ord(rdr.read()[0]) << 16) | (ord(rdr.read()[0]) << 24))
 
 def read_raw_string(rdr):
-    sz = read_raw_integer(rdr)
-    errors = "?"
-    s, pos = str_decode_utf_8(rdr.read(sz), sz, errors)
-    return s
+    return rdr.read_cached_string()
 
 def read_code(rdr):
     sz = read_raw_integer(rdr)

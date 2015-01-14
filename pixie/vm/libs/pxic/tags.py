@@ -28,6 +28,8 @@ SMALL_INT_START = 128
 SMALL_INT_END = 255
 SMALL_INT_MAX = SMALL_INT_END - SMALL_INT_END
 
+MAX_STRING_SIZE = 1 << 30
+
 for idx, nm in enumerate(tag_name):
     globals()[nm] = idx
     tags[nm] = idx

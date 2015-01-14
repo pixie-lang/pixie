@@ -56,3 +56,9 @@ run_built_tests: pixie-vm
 
 run_interpreted_tests: target.py
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.pxi
+
+compile_tests:
+	find "tests" -name "*.pxi" | xargs -L1 ./pixie-vm -l "tests" -c
+
+clean_pxic:
+	find * -name "*.pxic" | xargs rm
