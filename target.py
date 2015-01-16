@@ -176,7 +176,7 @@ def run_load_stdlib():
     if stdlib_loaded.is_true():
         return
 
-    rt.load_file(rt.wrap(u"pixie/stdlib.pxi"))
+    rt.load_ns(rt.wrap(u"pixie/stdlib.pxi"))
 
     stdlib_loaded.set_true()
 
@@ -184,73 +184,76 @@ def load_stdlib():
     run_load_stdlib.invoke([])
 
 def entry_point(args):
-    interactive = True
-    exit = False
-    script_args = []
+    try:
+        interactive = True
+        exit = False
+        script_args = []
 
-    init_load_path(args[0])
-    load_stdlib()
-    add_to_load_paths(".")
+        init_load_path(args[0])
+        load_stdlib()
+        add_to_load_paths(".")
 
-    i = 1
-    while i < len(args):
-        arg = args[i]
+        i = 1
+        while i < len(args):
+            arg = args[i]
 
-        if arg.startswith('-') and arg != '-':
-            if arg == '-v' or arg == '--version':
-                print "Pixie 0.1"
-                return 0
-            elif arg == '-h' or arg == '--help':
-                print args[0] + " [<options>] [<file>]"
-                print "  -h, --help             print this help"
-                print "  -v, --version          print the version number"
-                print "  -e, --eval=<expr>      evaluate the given expression"
-                print "  -l, --load-path=<path> add <path> to pixie.stdlib/load-paths"
-                print "  -c, --compile=<file>   compile <path> to a .pxic file"
-                return 0
-            elif arg == '-e' or arg == '--eval':
-                i += 1
-                if i < len(args):
-                    expr = args[i]
-                    EvalFn(expr).invoke([])
+            if arg.startswith('-') and arg != '-':
+                if arg == '-v' or arg == '--version':
+                    print "Pixie 0.1"
                     return 0
-                else:
-                    print "Expected argument for " + arg
-                    return 1
-            elif arg == '-l' or arg == '--load-path':
-                i += 1
-                if i < len(args):
-                    path = args[i]
-                    add_to_load_paths(path)
-                else:
-                    print "Expected argument for " + arg
-                    return 1
+                elif arg == '-h' or arg == '--help':
+                    print args[0] + " [<options>] [<file>]"
+                    print "  -h, --help             print this help"
+                    print "  -v, --version          print the version number"
+                    print "  -e, --eval=<expr>      evaluate the given expression"
+                    print "  -l, --load-path=<path> add <path> to pixie.stdlib/load-paths"
+                    print "  -c, --compile=<file>   compile <path> to a .pxic file"
+                    return 0
+                elif arg == '-e' or arg == '--eval':
+                    i += 1
+                    if i < len(args):
+                        expr = args[i]
+                        EvalFn(expr).invoke([])
+                        return 0
+                    else:
+                        print "Expected argument for " + arg
+                        return 1
+                elif arg == '-l' or arg == '--load-path':
+                    i += 1
+                    if i < len(args):
+                        path = args[i]
+                        add_to_load_paths(path)
+                    else:
+                        print "Expected argument for " + arg
+                        return 1
 
-            elif arg == "-c" or arg == "--compile":
-                i += 1
-                if i < len(args):
-                    path = args[i]
-                    print "Compiling ", path
-                    rt.compile_file(rt.wrap(path))
-                    exit = True
+                elif arg == "-c" or arg == "--compile":
+                    i += 1
+                    if i < len(args):
+                        path = args[i]
+                        print "Compiling ", path
+                        rt.compile_file(rt.wrap(path))
+                        exit = True
+                    else:
+                        print "Expected argument for " + arg
+                        return 1
                 else:
-                    print "Expected argument for " + arg
+                    print "Unknown option " + arg
                     return 1
             else:
-                print "Unknown option " + arg
-                return 1
-        else:
-            interactive = False
-            script_args = args[i:]
-            break
+                interactive = False
+                script_args = args[i:]
+                break
 
-        i += 1
+            i += 1
 
-    if not exit:
-        if interactive:
-            ReplFn(args).invoke([])
-        else:
-            BatchModeFn(script_args).invoke([])
+        if not exit:
+            if interactive:
+                ReplFn(args).invoke([])
+            else:
+                BatchModeFn(script_args).invoke([])
+    except WrappedException as we:
+        print we._ex.__repr__()
 
     return 0
 
