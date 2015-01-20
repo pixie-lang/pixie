@@ -103,7 +103,7 @@ class FFIFn(object.Object):
     def thaw(self):
         #if not self._is_inited:
         self._f_ptr = self._lib.get_fn_ptr(self._name)
-        CifDescrBuilder(self._arg_types, self._ret_type).rawallocate(self)
+        self._cd = CifDescrBuilder(self._arg_types, self._ret_type).rawallocate()
 
     def _cleanup_(self):
         self._rev += 1
@@ -114,7 +114,7 @@ class FFIFn(object.Object):
     @jit.unroll_safe
     def prep_exb(self, args):
         size = jit.promote(self._cd.exchange_size)
-        exb = lltype.malloc(rffi.CCHARP.TO, size, flavor="raw")
+        exb = rffi.cast(rffi.VOIDP, lltype.malloc(rffi.CCHARP.TO, size, flavor="raw"))
         tokens = [None] * len(args)
 
         for i, tp in enumerate(self._arg_types):
@@ -230,6 +230,9 @@ class Buffer(object.Object):
 
     def buffer(self):
         return self._buffer
+
+    def raw_data(self):
+        return rffi.cast(rffi.VOIDP, self._buffer)
 
     def count(self):
         return self._used_size
@@ -419,7 +422,22 @@ class VoidP(object.Object):
         self._raw_data = raw_data
 
     def raw_data(self):
-        return self._raw_data
+        return rffi.cast(rffi.VOIDP, self._raw_data)
+
+@as_var(u"pixie.ffi", u"unpack")
+def unpack(ptr, offset, tp):
+    affirm(isinstance(ptr, VoidP) or isinstance(ptr, Buffer) or isinstance(ptr, CStruct), u"Type is not unpackable")
+    affirm(isinstance(tp, CType), u"Packing type must be a CType")
+    ptr = rffi.ptradd(ptr.raw_data(), offset.int_val())
+    return tp.ffi_get_value(ptr)
+
+@as_var(u"pixie.ffi", u"pack!")
+def pack(ptr, offset, tp, val):
+    affirm(isinstance(ptr, VoidP) or isinstance(ptr, Buffer) or isinstance(ptr, CStruct), u"Type is not unpackable")
+    affirm(isinstance(tp, CType), u"Packing type must be a CType")
+    ptr = rffi.ptradd(ptr.raw_data(), offset.int_val())
+    tp.ffi_set_value(ptr, val)
+    return nil
 
 
 class CStructType(object.Type):
@@ -457,6 +475,130 @@ class CStructType(object.Type):
         return CStruct(self, rffi.cast(rffi.VOIDP, lltype.malloc(rffi.CCHARP.TO, self._size, flavor="raw")))
 
 
+registered_callbacks = {}
+
+class CCallback(object.Object):
+    _type = object.Type(u"pixie.ffi.CCallback")
+
+    def __init__(self, cft, raw_closure, id, fn):
+        self._fn = fn
+        self._cft = cft
+        self._raw_closure = raw_closure
+        self._is_invoked = False
+        self._unique_id = id
+        self._auto_delete = False
+
+    def ll_invoke(self, llargs, llres):
+        cft = self._cft
+        assert isinstance(cft, CFunctionType)
+
+        args = [None] * len(cft._arg_types)
+        for i, tp in enumerate(cft._arg_types):
+            args[i] = tp.ffi_get_value(llargs[i])
+
+        self._is_invoked = True
+        retval = self._fn.invoke(args)
+        cft._ret_type.ffi_set_value(llres, retval)
+        if self._auto_delete:
+            self.cleanup()
+
+    def cleanup(self):
+        del registered_callbacks[self._unique_id]
+        clibffi.closureHeap.free(self._raw_closure)
+
+    def set_auto_delete(self):
+        self._auto_delete = True
+
+
+@as_var(u"ffi-callback")
+def ffi_callback(args, ret_type):
+    args_w = [None] * rt.count(args)
+
+    for x in range(rt.count(args)):
+        arg = rt.nth(args, rt.wrap(x))
+        if not isinstance(arg, object.Type):
+            runtime_error(u"Expected type, got " + rt.name(rt.str(arg)))
+        args_w[x] = arg
+
+    if not isinstance(ret_type, object.Type):
+        runtime_error(u"Expected type, got " + rt.name(rt.str(ret_type)))
+
+    return CFunctionType(args_w, ret_type)
+
+# Callback Code
+
+@jit.jit_callback("CFFI")
+def invoke_callback(ffi_cif, ll_res, ll_args, ll_userdata):
+    ""
+    cb = registered_callbacks[rffi.cast(rffi.INT_real, ll_userdata)]
+    print "HEY GOT IT", cb.ll_invoke(ll_args, ll_res)
+    print "..."
+
+class FunctionTypeNameGenerator(py_object):
+    def __init__(self):
+        self._idx = 0
+    def next(self):
+        self._idx += 1
+        return unicode("CFunctionType" + str(self._idx))
+
+name_gen = FunctionTypeNameGenerator()
+
+class CFunctionType(object.Type):
+    base_type = object.Type(u"pixie.ffi.CType")
+    _immutable_fields_ = ["arg_types", "ret-type"]
+
+    def __init__(self, arg_types, ret_type):
+        object.Type.__init__(self, name_gen.next(), CStructType.base_type)
+        self._arg_types = arg_types
+        self._ret_type = ret_type
+        self._cd = CifDescrBuilder(self._arg_types, self._ret_type).rawallocate()
+
+    def ffi_get_value(self, ptr):
+        runtime_error(u"Cannot get a callback value via FFI")
+
+    def ffi_set_value(self, ptr, val):
+        print "Setting callback"
+        raw_closure = rffi.cast(rffi.VOIDP, clibffi.closureHeap.alloc())
+
+        unique_id = len(registered_callbacks)
+
+        cb = CCallback(self, raw_closure, unique_id, val)
+        registered_callbacks[unique_id] = cb
+
+        res = clibffi.c_ffi_prep_closure(rffi.cast(clibffi.FFI_CLOSUREP, raw_closure), self._cd.cif,
+                                 invoke_callback,
+                                 rffi.cast(rffi.VOIDP, unique_id))
+
+        casted = rffi.cast(rffi.VOIDPP, ptr)
+        casted[0] = raw_closure
+
+        if rffi.cast(lltype.Signed, res) != clibffi.FFI_OK:
+            registered_callbacks[unique_id] = None
+            runtime_error(u"libffi failed to build this callback")
+
+        return CCallbackToken(cb)
+
+
+    def ffi_size(self):
+        return rffi.sizeof(rffi.VOIDP)
+
+    def ffi_type(self):
+        return clibffi.ffi_type_pointer
+
+
+class CCallbackToken(Token):
+    def __init__(self, cb):
+        self._cb = cb
+
+    def finalize_token(self):
+        cb = self._cb
+        assert isinstance(cb, CCallback)
+        if cb._is_invoked:
+            cb.cleanup()
+        else:
+            cb.set_auto_delete()
+
+
 
 class CStruct(object.Object):
     _immutable_fields_ = ["_type", "_buffer"]
@@ -468,7 +610,7 @@ class CStruct(object.Object):
         return self._type
 
     def raw_data(self):
-        return self._buffer
+        return rffi.cast(rffi.VOIDP, self._buffer)
 
     def val_at(self, k, not_found):
         (tp, offset) = self._type.get_desc(k)
@@ -477,7 +619,7 @@ class CStruct(object.Object):
             return not_found
 
         offset = rffi.ptradd(self._buffer, offset)
-        return tp.ffi_get_value(rffi.cast(rffi.CCHARP, offset))
+        return tp.ffi_get_value(rffi.cast(rffi.VOIDP, offset))
 
     def set_val(self, k, v):
         (tp, offset) = self._type.get_desc(k)
@@ -486,7 +628,7 @@ class CStruct(object.Object):
             runtime_error(u"Invalid field name: " + rt.name(rt.str(tp)))
 
         offset = rffi.ptradd(self._buffer, offset)
-        tp.ffi_set_value(rffi.cast(rffi.CCHARP, offset), v)
+        tp.ffi_set_value(rffi.cast(rffi.VOIDP, offset), v)
 
         return nil
 
@@ -534,6 +676,9 @@ def val_at(self, k, not_found):
 @as_var("pixie.ffi", "set!")
 def set_(self, k, val):
     return self.set_val(k, val)
+
+
+
 
 import sys
 
@@ -599,7 +744,7 @@ class CifDescrBuilder(py_object):
         nargs = len(self.fargs)
 
         # first, enough room for an array of 'nargs' pointers
-        exchange_offset = rffi.sizeof(rffi.CCHARP) * nargs
+        exchange_offset = rffi.sizeof(rffi.VOIDP) * nargs
         exchange_offset = self.align_arg(exchange_offset)
         cif_descr.exchange_result = exchange_offset
         cif_descr.exchange_result_libffi = exchange_offset
@@ -635,7 +780,7 @@ class CifDescrBuilder(py_object):
         cif_descr.atypes = self.atypes
 
     @jit.dont_look_inside
-    def rawallocate(self, ctypefunc):
+    def rawallocate(self):
 
         # compute the total size needed in the CIF_DESCRIPTION buffer
         self.nb_bytes = 0
@@ -653,7 +798,7 @@ class CifDescrBuilder(py_object):
                                    flavor='raw')
 
         # the buffer is automatically managed from the W_CTypeFunc instance
-        ctypefunc._cd = rawmem
+        # ctypefunc._cd = rawmem
 
         # call again fb_build() to really build the libffi data structures
         self.bufferp = rffi.cast(rffi.CCHARP, rawmem)
@@ -671,6 +816,8 @@ class CifDescrBuilder(py_object):
         res = jit_libffi.jit_ffi_prep_cif(rawmem)
         if res != clibffi.FFI_OK:
             runtime_error(u"libffi failed to build function type")
+
+        return rawmem
 
     def get_item(self, nm):
         (tp, offset) = self._type.get_desc(nm)

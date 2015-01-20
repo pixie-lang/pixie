@@ -1,8 +1,23 @@
 (in-ns :pixie.stdlib)
 
  (def libc (ffi-library pixie.platform/lib-c-name))
+
+
  (def exit (ffi-fn libc "exit" [CInt] CInt))
  (def puts (ffi-fn libc "puts" [CCharP] CInt))
+
+
+ (def qsort-cb (ffi-callback [CVoidP CVoidP] CInt))
+ (def qsort (ffi-fn libc "qsort" [CVoidP CInt CInt qsort-cb] CInt))
+
+ (def buf (buffer 3))
+ (pixie.ffi/pack! buf 0 CUInt8 2)
+ (pixie.ffi/pack! buf 1 CUInt8 1)
+ (pixie.ffi/pack! buf 2 CUInt8 0)
+ (qsort buf 3 1 (fn* [x y] (puts (str (pixie.ffi/unpack x 0 CUInt8) (pixie.ffi/unpack y 0 CUInt8)))
+                           1))
+
+ (puts (str "DONE " (pixie.ffi/unpack buf 0 CUInt8)))
 
  (def sh (ffi-fn libc "system" [CCharP] CInt))
  (def printf (ffi-fn libc "printf" [CCharP] CInt :variadic? true))

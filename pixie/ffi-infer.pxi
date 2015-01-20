@@ -107,7 +107,12 @@ return 0;
                                                `[~(keyword name) ~(edn-to-ctype type) ~offset])
                                              members infered-members)])))
 
-
+(defmethod generate-code :type
+  [{:keys [name members]} {:keys [size infered-members]}]
+  `(def ~(symbol name)
+     (pixie.ffi/c-struct ~name ~size [~@(map (fn [name {:keys [type offset]}]
+                                               `[~(keyword name) ~(edn-to-ctype type) ~offset])
+                                             members infered-members)])))
 
 (defn run-infer [config cmds]
   (io/spit "/tmp/tmp.cpp" (str (start-string)
@@ -141,6 +146,11 @@ return 0;
 
 (defmacro defcstruct [nm members]
   `(swap! *bodies* conj (assoc {:op :struct}
+                          :name ~(name nm)
+                          :members ~(vec (map name members))) ))
+
+(defmacro defctype [nm members]
+  `(swap! *bodies* conj (assoc {:op :type}
                           :name ~(name nm)
                           :members ~(vec (map name members))) ))
 
