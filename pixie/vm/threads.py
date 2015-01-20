@@ -4,7 +4,7 @@ import rpython.rlib.rgil as rgil
 from pixie.vm.code import wrap_fn, as_var
 
 from rpython.rlib.objectmodel import invoke_around_extcall
-from rpython.rlib.rposix import get_errno, set_errno
+from rpython.rlib.rposix import get_saved_errno, set_saved_errno
 
 
 class Bootstrapper(object):
@@ -72,11 +72,11 @@ before_external_call._gctransformer_hint_cannot_collect_ = True
 before_external_call._dont_reach_me_in_del_ = True
 
 def after_external_call():
-    e = get_errno()
+    e = get_saved_errno()
     rgil.gil_acquire()
     rthread.gc_thread_run()
     after_thread_switch()
-    set_errno(e)
+    set_saved_errno(e)
 after_external_call._gctransformer_hint_cannot_collect_ = True
 after_external_call._dont_reach_me_in_del_ = True
 
