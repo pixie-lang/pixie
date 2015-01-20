@@ -15,10 +15,7 @@ help:
 	@echo "make run_interactive        - run without compiling (slow)"
 	@echo "make build_with_jit         - build with jit enabled"
 	@echo "make build_no_jit           - build without jit"
-	@echo "make build_preload_with_jit - build with jit enabled and preload the stdlib"
-	@echo "                              (this means that pixie-vm will run as a standalone binary,"
-	@echo "                               without having to load 'stdlib.pxi' and friends.)"
-	@echo "make build_preload_no_jit   - build without jit and preload the stdlib"
+	@echo "make fetch_externals	   - download and unpack external deps"
 
 build_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target.py
@@ -56,3 +53,9 @@ run_built_tests: pixie-vm
 
 run_interpreted_tests: target.py
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.pxi
+
+compile_tests:
+	find "tests" -name "*.pxi" | xargs -L1 ./pixie-vm -l "tests" -c
+
+clean_pxic:
+	find * -name "*.pxic" | xargs rm

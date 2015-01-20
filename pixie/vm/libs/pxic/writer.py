@@ -18,6 +18,7 @@ class Writer(object):
     def __init__(self, wtr, with_cache=False):
         self._wtr = wtr
         self._obj_cache = {}
+        self._string_cache = {}
         self._with_cache = with_cache
 
     def write(self, s):
@@ -40,6 +41,27 @@ class Writer(object):
                 write_int_raw(r_uint(idx), self)
         else:
             return wfn(o, self)
+
+    def write_raw_cached_string(self, si):
+        assert isinstance(si, unicode)
+        if self._with_cache:
+            idx = self._string_cache.get(si, -1)
+            if idx == -1:
+                idx = len(self._string_cache)
+                self._string_cache[si] = idx
+                s = unicode_encode_utf_8(si, len(si), "?")
+                write_int_raw(len(s), self)
+                assert len(s) <= MAX_STRING_SIZE
+                self.write(s)
+            else:
+                write_int_raw(r_uint(MAX_STRING_SIZE + idx), self)
+        else:
+            errors = "?"
+            s = unicode_encode_utf_8(si, len(si), errors)
+            assert len(s) <= MAX_INT32
+            write_int_raw(len(s), self)
+            self.write(s)
+
 
     def write_object(self, o):
         write_object(o, self)
@@ -75,12 +97,7 @@ def write_int_raw(i, wtr):
         runtime_error(u"Raw int must be less than MAX_INT32, got: " + unicode(str(i)))
 
 def write_string_raw(si, wtr):
-    assert isinstance(si, unicode)
-    errors = "?"
-    s = unicode_encode_utf_8(si, len(si), errors)
-    assert len(s) <= MAX_INT32
-    write_int_raw(len(s), wtr)
-    wtr.write(s)
+    wtr.write_raw_cached_string(si)
 
 def write_int(i, wtr):
     if 0 <= i <= MAX_INT32:
