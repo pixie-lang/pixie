@@ -5,7 +5,7 @@ EXTERNALS=../externals
 PYTHON ?= pypy
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
-COMMON_BUILD_OPTS?=--thread --no-shared
+COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack
 JIT_OPTS?=--opt=jit
 TARGET_OPTS?=target.py
 
