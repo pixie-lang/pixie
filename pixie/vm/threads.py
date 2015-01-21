@@ -32,7 +32,7 @@ class Bootstrapper(object):
         self._lock.release()
 
 
-    def __cleanup__(self):
+    def _cleanup_(self):
         self._lock = None
         self._is_inited = False
 
@@ -72,11 +72,9 @@ before_external_call._gctransformer_hint_cannot_collect_ = True
 before_external_call._dont_reach_me_in_del_ = True
 
 def after_external_call():
-    e = get_saved_errno()
     rgil.gil_acquire()
     rthread.gc_thread_run()
     after_thread_switch()
-    set_saved_errno(e)
 after_external_call._gctransformer_hint_cannot_collect_ = True
 after_external_call._dont_reach_me_in_del_ = True
 
