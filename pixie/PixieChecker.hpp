@@ -12,9 +12,10 @@
 
 namespace PixieChecker {
 
-template<class T>
-struct GenericChecker;
-
+    
+    
+template<typename T>
+std::string GetType();
 
 
 // Function Checker
@@ -33,9 +34,9 @@ struct FunctionTyper<0, T>
     static std::string getType()
     {
         return "{:type :function :arity 0 :returns " +
-        GenericChecker<typename boost::function_traits<T>::result_type>::getType() +
+        GetType<typename boost::function_traits<T>::result_type>() +
         " :arguments []}";
-        
+
     }
 };
 
@@ -46,46 +47,94 @@ struct FunctionTyper<0, T>
         static std::string getType()
         {
             return "{:type :function :arity 1 :returns " +
-            GenericChecker<typename boost::function_traits<T>::result_type>::getType() +
+            GetType<typename boost::function_traits<T>::result_type>() +
             " :arguments [" +
-            GenericChecker<typename boost::function_traits<T>::arg1_type>::getType() + " " +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
             " ]}";
         }
     };
-    
+
     template<class T>
     struct FunctionTyper<2, T>
     {
         static std::string getType()
         {
             return "{:type :function :arity 2 :returns " +
-            GenericChecker<typename boost::function_traits<T>::result_type>::getType() +
+            GetType<typename boost::function_traits<T>::result_type>() +
             " :arguments [" +
-            GenericChecker<typename boost::function_traits<T>::arg1_type>::getType() + " " +
-            GenericChecker<typename boost::function_traits<T>::arg2_type>::getType() + " " +
-            
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+
             " ]}";
         }
     };
-    
-    
+
+
     template<class T>
     struct FunctionTyper<3, T>
     {
         static std::string getType()
         {
             return "{:type :function :arity 3 :returns " +
-            GenericChecker<typename boost::function_traits<T>::result_type>::getType() +
+            GetType<typename boost::function_traits<T>::result_type>() +
             " :arguments [" +
-            GenericChecker<typename boost::function_traits<T>::arg1_type>::getType() + " " +
-            GenericChecker<typename boost::function_traits<T>::arg2_type>::getType() + " " +
-            GenericChecker<typename boost::function_traits<T>::arg3_type>::getType() + " " +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
             " ]}";
         }
     };
+    
+    template<class T>
+    struct FunctionTyper<4, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :function :arity 4 :returns " +
+            GetType<typename boost::function_traits<T>::result_type>() +
+            " :arguments [" +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg4_type>() + " " +
+            " ]}";
+        }
+    };
+    
 
 // End Function Typer
-    
+
+// Is Enum
+    template<class P, class T>
+    struct GenericCheckerIsEnum
+    {
+        static std::string getType()
+        {
+            return "Shouldn't happen in enum checker";
+        }
+    };
+
+    template<class T>
+    struct GenericCheckerIsEnum<boost::true_type, T>
+    {
+        static std::string getType()
+        {
+          return GetType<int>();
+        }
+    };
+
+    template<class T>
+    struct GenericCheckerIsEnum<boost::false_type, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :unknown}";
+        }
+    };
+// End Is Enum
+
+
+
 // Is Void
     template<class P, class T>
     struct GenericCheckerIsVoid
@@ -95,7 +144,7 @@ struct FunctionTyper<0, T>
             return "Shouldn't happen in void checker";
         }
     };
-    
+
     template<class T>
     struct GenericCheckerIsVoid<boost::true_type, T>
     {
@@ -104,13 +153,13 @@ struct FunctionTyper<0, T>
             return "{:type :void}";
         }
     };
-    
+
     template<class T>
     struct GenericCheckerIsVoid<boost::false_type, T>
     {
         static std::string getType()
         {
-            return "{:type :unknown}";
+            return  GenericCheckerIsEnum<typename boost::is_enum<T>::type, T>::getType();
         }
     };
 // End Is Void
@@ -131,7 +180,7 @@ struct GenericCheckerIsPointer<boost::true_type, T>
 {
     static std::string getType()
     {
-        return "{:type :pointer :of-type " + GenericChecker<typename boost::remove_pointer<T>::type>::getType() + "}";
+        return "{:type :pointer :of-type " + GetType<typename boost::remove_pointer<T>::type>() + "}";
     }
 };
 
@@ -245,31 +294,25 @@ struct GenericCheckerIsInt<boost::false_type, T>
 
 // End is Int
 
-
 // Generic Typer
-template<class T>
-struct GenericChecker
+template<typename T>
+std::string GetType()
 {
-    static std::string getType()
-    {
-        return GenericCheckerIsInt<typename boost::is_integral<T>::type, T>::getType();
-    }
-};
+    return GenericCheckerIsInt<typename boost::is_integral<T>::type, T>::getType();
+}
 
 // End Generic Typer
-    
+
 template<typename T>
 void DumpValue(T t)
 {
-    std::cout << GenericChecker<T>::getType() << std::endl;
+  std::cout << GetType<T>() << std::endl;
 }
-    
+
 template<typename T>
 void DumpType()
 {
-    std::cout << GenericChecker<T>::getType() << std::endl;
+  std::cout << GetType<T>() << std::endl;
 }
 
 }
-
-

@@ -529,10 +529,8 @@ def ffi_callback(args, ret_type):
 
 @jit.jit_callback("CFFI")
 def invoke_callback(ffi_cif, ll_res, ll_args, ll_userdata):
-    ""
     cb = registered_callbacks[rffi.cast(rffi.INT_real, ll_userdata)]
-    print "HEY GOT IT", cb.ll_invoke(ll_args, ll_res)
-    print "..."
+    cb.ll_invoke(ll_args, ll_res)
 
 class FunctionTypeNameGenerator(py_object):
     def __init__(self):
