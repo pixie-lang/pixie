@@ -513,7 +513,7 @@ def the_ns(ns_name):
     return code._ns_registry.get(rt.name(ns_name), nil)
 
 @as_var("in-ns")
-def the_ns(ns_name):
+def in_ns(ns_name):
     from pixie.vm.compiler import NS_VAR
     NS_VAR.set_value(code._ns_registry.find_or_make(rt.name(ns_name)))
     NS_VAR.deref().include_stdlib()
