@@ -284,7 +284,7 @@ class LiteralStringReader(ReaderHandler):
             try:
                 v = rdr.read()
             except EOFError:
-                raise Exception("unmatched quote")
+                return throw_syntax_error_with_data(rdr, u"umatched quote")
             
             if v == "\"":
                 return rt.wrap(u"".join(acc))
@@ -303,9 +303,9 @@ class LiteralStringReader(ReaderHandler):
                     elif v == "t":
                         acc.append("\t")
                     else:
-                        raise Exception("unhandled escape character")
+                        throw_syntax_error_with_data(rdr, u"unhandled escape character: " + v)
                 except EOFError:
-                    raise Exception("eof after escape character")
+                    throw_syntax_error_with_data(rdr, u"eof after escape character")
             else:
                 acc.append(v)
 
@@ -416,7 +416,7 @@ class SyntaxQuoteReader(ReaderHandler):
         elif is_unquote(form):
             ret = rt.first(rt.next(form))
         elif is_unquote_splicing(form):
-            raise Exception("Unquote splicing not used inside list")
+            return runtime_error(u"Unquote splicing not used inside list")
         elif rt.vector_QMARK_(form) is true:
             ret = rt.list(APPLY, CONCAT, SyntaxQuoteReader.expand_list(form))
         elif form is not nil and rt.seq_QMARK_(form) is true:
@@ -555,9 +555,9 @@ dispatch_handlers = {
 class DispatchReader(ReaderHandler):
     def invoke(self, rdr, ch):
         ch = rdr.read()
-        handler = dispatch_handlers[ch]
+        handler = dispatch_handlers.get(ch, None)
         if handler is None:
-            raise Exception("unknown dispatch #" + ch)
+            return throw_syntax_error_with_data(rdr, u"unknown dispatch #" + ch)
         return handler.invoke(rdr, ch)
 
 class LineCommentReader(ReaderHandler):
