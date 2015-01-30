@@ -44,6 +44,19 @@
   (t/assert= [1 2] (persistent! (conj! (transient [1]) 2)))
   (t/assert= [1 2 3] (persistent! (conj! (transient [1]) 2 3))))
 
+(t/deftest vector-push
+  (t/assert= [1] (push [] 1))
+  (t/assert= [1 2] (push [1] 2))
+  (t/assert= [0 1 2 3 4] (reduce push [] (range 5))))
+
+(t/deftest vector-pop
+  (t/assert= [] (pop [1]))
+  (t/assert= [1] (pop [1 2]))
+  (t/assert= [1 2] (pop [1 2 3]))
+  (try (pop [])
+    (catch e
+      (t/assert= "Can't pop an empty vector" (ex-msg e)))))
+
 (t/deftest vector-push!
   (t/assert= [1] (persistent! (push! (transient []) 1)))
   (t/assert= [1 2] (persistent! (push! (transient [1]) 2))))
