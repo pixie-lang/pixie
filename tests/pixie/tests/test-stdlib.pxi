@@ -290,4 +290,13 @@
                 (reduce conj nil (range 10))
                 '(0 1 2 3 4 5 6 7 8 9)))
              true))
-             
+
+(t/deftest test-ns
+  ;; Create a namespace called foo
+  (in-ns :foo)
+  (def bar :humbug)
+  (defn baz [x y] (+ x y))
+  ;; Back into the text namespace
+  (in-ns :pixie.tests.test-stdlib)
+  (t/assert= (set (keys (ns-map 'foo))) 
+             #{'bar 'baz}))
