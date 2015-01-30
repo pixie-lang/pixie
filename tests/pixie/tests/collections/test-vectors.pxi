@@ -64,7 +64,10 @@
 (t/deftest vector-pop!
   (t/assert= [] (persistent! (pop! (transient [1]))))
   (t/assert= [1] (persistent! (pop! (transient [1 2]))))
-  (t/assert= [1 2] (persistent! (pop! (transient [1 2 3])))))
+  (t/assert= [1 2] (persistent! (pop! (transient [1 2 3]))))
+  (try (persistent! (pop! (transient [])))
+    (catch e
+      (t/assert= "Can't pop an empty vector" (ex-msg e)))))
 
 (t/deftest transient-vector-count
   (t/assert= 0 (count (transient [])))
