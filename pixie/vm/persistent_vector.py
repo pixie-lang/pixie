@@ -350,11 +350,7 @@ class TransientVector(object.Object):
 
     def pop(self):
         self.ensure_editable()
-        affirm(self._cnt != 0, u"Can't pop and empty vector")
-
-        if self._cnt == 0:
-            self._cnt = 0
-            return self
+        affirm(self._cnt != 0, u"Can't pop an empty vector")
 
         i = self._cnt - 1
 
