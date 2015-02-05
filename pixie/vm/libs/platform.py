@@ -1,5 +1,4 @@
 from rpython.translator.platform import platform
-import pixie.vm.rt as rt
 from pixie.vm.string import String
 from pixie.vm.code import as_var
 from rpython.rlib.clibffi import get_libc_name

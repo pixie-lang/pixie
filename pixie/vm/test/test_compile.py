@@ -1,17 +1,12 @@
 from pixie.vm.reader import read, StringReader, eof
-from pixie.vm.object import Object, Type
+from pixie.vm.object import Type
 from pixie.vm.cons import Cons
 from pixie.vm.numbers import Integer
-from pixie.vm.symbol import symbol, Symbol
-from pixie.vm.keyword import Keyword
-from pixie.vm.compiler import compile_form, compile, with_ns
+from pixie.vm.symbol import Symbol
+from pixie.vm.compiler import compile, with_ns
 from pixie.vm.interpreter import interpret
 from pixie.vm.code import Code, Var
 from pixie.vm.primitives import nil, true, false
-from pixie.vm.custom_types import CustomTypeInstance
-import unittest
-
-import pixie.vm.libs.libedit
 
 def read_code(s):
     with with_ns(u"user"):

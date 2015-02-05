@@ -1,4 +1,3 @@
-import unittest
 from pixie.vm.code import intern_var, get_var_if_defined
 
 

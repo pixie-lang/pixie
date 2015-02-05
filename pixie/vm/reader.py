@@ -10,12 +10,11 @@ from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.libedit import _readline
-from pixie.vm.string import Character, String
-from pixie.vm.code import wrap_fn, extend
+from pixie.vm.string import Character
+from pixie.vm.code import wrap_fn
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
 from pixie.vm.persistent_list import EmptyList
-import pixie.vm.stdlib as proto
 import pixie.vm.compiler as compiler
 
 from rpython.rlib.rbigint import rbigint

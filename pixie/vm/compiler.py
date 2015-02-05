@@ -1,20 +1,17 @@
-from pixie.vm.object import Object, _type_registry, affirm, InterpreterCodeInfo
-from pixie.vm.primitives import nil, true, false, Bool
+from pixie.vm.object import affirm 
+from pixie.vm.primitives import nil, true, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
 from pixie.vm.persistent_hash_set import PersistentHashSet
 import pixie.vm.numbers as numbers
-from pixie.vm.cons import cons, Cons
 import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword, keyword
 from pixie.vm.string import Character, String
 from pixie.vm.atom import Atom
-import pixie.vm.stdlib as proto
-from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.rarithmetic import r_uint, intmask
 from pixie.vm.persistent_list import EmptyList
 
 import pixie.vm.rt as rt
-from pixie.vm.util import *
 
 NS_VAR = code.intern_var(u"pixie.stdlib", u"*ns*")
 NS_VAR.set_dynamic()

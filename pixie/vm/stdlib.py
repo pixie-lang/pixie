@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
+from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
     runtime_error
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
-                          resize_list, list_copy, returns, get_var_if_defined, intern_var
+                          list_copy, returns, intern_var
 import pixie.vm.code as code
-from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit

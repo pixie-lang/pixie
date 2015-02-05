@@ -3,7 +3,6 @@ import py
 from pixie.vm.util import unicode_from_utf8
 
 from rpython.rtyper.lltypesystem import lltype, rffi
-from rpython.rtyper.lltypesystem.lloperation import llop
 from rpython.translator import cdir
 from rpython.translator.tool.cbuild import ExternalCompilationInfo
 
