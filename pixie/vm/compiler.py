@@ -364,22 +364,30 @@ def compile_form(form, ctx):
 
     if isinstance(form, symbol.Symbol):
         name = rt.name(form)
+        ns = rt.namespace(form)
+
         loc = resolve_local(ctx, name)
-        if loc is None:
-            var = resolve_var(ctx, form)
+        var = resolve_var(ctx, form)
 
-            if var is None:
-                var = NS_VAR.deref().intern_or_make(name)
-
-            ctx.push_const(var)
-
-            meta = rt.meta(form)
-            if meta is not nil:
-                ctx.debug_points[len(ctx.bytecode)] = rt.interpreter_code_info(meta)
-
-            ctx.bytecode.append(code.DEREF_VAR)
+        if var is None and loc:
+            loc.emit(ctx)
             return
-        loc.emit(ctx)
+
+        if var and loc and ns is None:
+            loc.emit(ctx)
+            return
+        
+        if var is None:
+            name = rt.name(form)
+            var = NS_VAR.deref().intern_or_make(name)
+
+        ctx.push_const(var)
+
+        meta = rt.meta(form)
+        if meta is not nil:
+            ctx.debug_points[len(ctx.bytecode)] = rt.interpreter_code_info(meta)
+
+        ctx.bytecode.append(code.DEREF_VAR)
         return
 
     if isinstance(form, Bool) or form is nil:
