@@ -1,14 +1,7 @@
 py_object = object
 import pixie.vm.object as object
-from pixie.vm.object import affirm
-from pixie.vm.primitives import nil, true, false
-from pixie.vm.numbers import Integer
 import pixie.vm.stdlib as proto
 from  pixie.vm.code import extend, as_var
-from rpython.rlib.rarithmetic import r_uint, intmask
-import rpython.rlib.jit as jit
-import pixie.vm.rt as rt
-
 
 class MapEntry(object.Object):
     _type = object.Type(u"pixie.stdlib.MapEntry")

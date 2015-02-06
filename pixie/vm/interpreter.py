@@ -1,12 +1,11 @@
 from pixie.vm.object import Object, affirm, WrappedException, Type, runtime_error
 import pixie.vm.code as code
 import pixie.vm.numbers as numbers
-from pixie.vm.primitives import nil, true, false
-from rpython.rlib.rarithmetic import r_uint, intmask
-from rpython.rlib.jit import JitDriver, promote, elidable, elidable_promote, hint, unroll_safe
+from pixie.vm.primitives import nil, false
+from rpython.rlib.rarithmetic import r_uint 
+from rpython.rlib.jit import JitDriver, promote, elidable, hint, unroll_safe
 import rpython.rlib.jit as jit
 import rpython.rlib.debug as debug
-import pixie.vm.rt as rt
 
 def get_location(ip, sp, is_continuation, bc, base_code):
     return code.BYTECODES[bc[ip]] + " in " + str(base_code._name)

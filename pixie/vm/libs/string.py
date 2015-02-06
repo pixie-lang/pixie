@@ -1,14 +1,10 @@
 import pixie.vm.rt as rt
 from pixie.vm.string import String
-from pixie.vm.code import as_var, extend, intern_var, wrap_fn, MultiArityFn
-from pixie.vm.object import affirm, runtime_error, Object, Type
-import pixie.vm.stdlib as proto
-from pixie.vm.keyword import keyword
+from pixie.vm.code import as_var, intern_var, wrap_fn, MultiArityFn
+from pixie.vm.object import affirm, runtime_error 
 from pixie.vm.numbers import Integer
-from rpython.rlib.clibffi import get_libc_name
 from rpython.rlib.unicodedata import unicodedb_6_2_0 as unicodedb
 import rpython.rlib.rstring as rstring
-import os
 import pixie.vm.rt as rt
 
 

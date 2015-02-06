@@ -1,5 +1,4 @@
-import unittest
-from pixie.vm.persistent_vector import PersistentVector, EMPTY
+from pixie.vm.persistent_vector import EMPTY
 
 
 def test_vector_conj():

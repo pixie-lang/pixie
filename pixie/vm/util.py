@@ -1,4 +1,4 @@
-from rpython.rlib.rarithmetic import r_uint, LONG_BIT, intmask, LONG_MASK
+from rpython.rlib.rarithmetic import r_uint, LONG_BIT, intmask
 from rpython.rlib.runicode import str_decode_utf_8, unicode_encode_utf_8
 from pixie.vm.object import affirm
 
@@ -72,10 +72,8 @@ def mix_coll_hash(hash, count):
 
 
 from pixie.vm.object import Object, Type
-import pixie.vm.code as code
 from pixie.vm.code import as_var
 import pixie.vm.rt as rt
-import pixie.vm.numbers as numbers
 
 class HashingState(Object):
     _type = Type(u"pixie.stdlib.HashingState")

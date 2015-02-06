@@ -2,7 +2,6 @@ py_object = object
 import rpython.rlib.rdynload as dynload
 import pixie.vm.object as object
 from pixie.vm.object import runtime_error
-import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
 import pixie.vm.stdlib  as proto
 from pixie.vm.code import as_var, affirm, extend
@@ -11,15 +10,15 @@ from rpython.rtyper.lltypesystem import rffi, lltype, llmemory
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer, Float
 from pixie.vm.string import String
-from pixie.vm.keyword import Keyword, keyword
+from pixie.vm.keyword import Keyword
 from pixie.vm.util import unicode_to_utf8
 from rpython.rlib import clibffi
-from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION, CIF_DESCRIPTION_P, \
-    FFI_TYPE, FFI_TYPE_P, FFI_TYPE_PP, SIZE_OF_FFI_ARG
+from rpython.rlib.jit_libffi import jit_ffi_call, CIF_DESCRIPTION, CIF_DESCRIPTION_P, \
+    FFI_TYPE_P, FFI_TYPE_PP, SIZE_OF_FFI_ARG
 import rpython.rlib.jit_libffi as jit_libffi
 from rpython.rlib.objectmodel import keepalive_until_here, we_are_translated
 import rpython.rlib.jit as jit
-from rpython.rlib.rarithmetic import intmask, r_uint
+from rpython.rlib.rarithmetic import intmask
 
 
 """

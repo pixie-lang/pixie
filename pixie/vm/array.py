@@ -6,9 +6,8 @@ from pixie.vm.numbers import Integer
 from pixie.vm.primitives import nil
 import pixie.vm.stdlib as proto
 import rpython.rlib.jit as jit
-from rpython.rtyper.lltypesystem import lltype, rffi
+from rpython.rtyper.lltypesystem import lltype
 from rpython.rlib.rarithmetic import intmask
-from rpython.rlib.rarithmetic import build_int
 
 UNROLL_IF_SMALLER_THAN = 8
 

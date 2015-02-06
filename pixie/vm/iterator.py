@@ -1,6 +1,6 @@
 from pixie.vm.object import Object, Type, runtime_error
-from pixie.vm.code import extend, as_var
-from pixie.vm.primitives import true, false, nil
+from pixie.vm.code import extend
+from pixie.vm.primitives import true, nil
 import pixie.vm.stdlib as proto
 import pixie.vm.rt as rt
 
