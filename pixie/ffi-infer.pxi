@@ -24,7 +24,7 @@
 
 (defmethod emit-infer-code :function
   [{:keys [name]}]
-  (str "PixieChecker::DumpType<typeof(" name ")>(); \n"))
+  (str "PixieChecker::DumpType<__typeof__(" name ")>(); \n"))
 
 (defmethod emit-infer-code :struct
   [{:keys [name members]}]
@@ -114,7 +114,7 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
-  (let [cmd-str (str "c++ -arch x86_64 /tmp/tmp.cpp -I"
+  (let [cmd-str (str "c++ -m64 -std=c++11 /tmp/tmp.cpp -I"
                                                  (first @load-paths)
                                                  (apply str " " (interpose " " (:cxx-flags *config*)))
                                                  " -o /tmp/a.out && /tmp/a.out")
