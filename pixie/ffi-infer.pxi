@@ -122,13 +122,18 @@ return 0;
         result (read-string (io/run-command cmd-str))]
     `(do ~@(map generate-code cmds result))))
 
+(defn full-lib-name [library-name]
+  (if (= library-name "c")
+    pixie.platform/lib-c-name
+    (str "lib" library-name "." pixie.platform/so-ext)))
+
 (defmacro with-config [config & body]
   (binding [*config* config
             *bodies* (atom [])
-            *library* (ffi-library (str "lib" (:library config) "." pixie.platform/so-ext))]
+            *library* (ffi-library (full-lib-name (:library config)))]
      (doseq [b body]
        (eval b))
-     `(let [*library* (ffi-library ~(str "lib" (:library config) "." pixie.platform/so-ext))]
+     `(let [*library* (ffi-library ~(full-lib-name (:library config)))]
                 ~(run-infer *config* @*bodies*))))
 
 (defmacro defcfn [nm]
