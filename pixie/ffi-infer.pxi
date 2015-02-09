@@ -118,7 +118,7 @@ return 0;
                                                  (first @load-paths)
                                                  (apply str " " (interpose " " (:cxx-flags *config*)))
                                                  " -o /tmp/a.out && /tmp/a.out")
-        _ (print cmd-str)
+        _ (println cmd-str)
         result (read-string (io/run-command cmd-str))]
     `(do ~@(map generate-code cmds result))))
 
