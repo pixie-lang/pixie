@@ -82,6 +82,20 @@
                       ([coll item & items]
                          (reduce -disj! (-disj! coll item) items)))))
 
+(def pop
+  (fn ^{:doc "Pops elements off a stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    pop
+    ([coll] (-pop coll))))
+
+(def push
+  (fn ^{:doc "Push an element on to a stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    push
+    ([coll x] (-push coll x))))
+
 (def pop!
   (fn ^{:doc "Pops elements off a transient stack."
         :signatures [[] [coll] [coll item] [coll item & args]]
