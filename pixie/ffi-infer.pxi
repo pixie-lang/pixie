@@ -24,7 +24,7 @@
 
 (defmethod emit-infer-code :function
   [{:keys [name]}]
-  (str "PixieChecker::DumpType<typeof(" name ")>(); \n"))
+  (str "PixieChecker::DumpType<__typeof__(" name ")>(); \n"))
 
 (defmethod emit-infer-code :struct
   [{:keys [name members]}]
@@ -114,21 +114,26 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
-  (let [cmd-str (str "c++ -arch x86_64 /tmp/tmp.cpp -I"
+  (let [cmd-str (str "c++ -m64 -std=c++11 /tmp/tmp.cpp -I"
                                                  (first @load-paths)
                                                  (apply str " " (interpose " " (:cxx-flags *config*)))
                                                  " -o /tmp/a.out && /tmp/a.out")
-        _ (print cmd-str)
+        _ (println cmd-str)
         result (read-string (io/run-command cmd-str))]
     `(do ~@(map generate-code cmds result))))
+
+(defn full-lib-name [library-name]
+  (if (= library-name "c")
+    pixie.platform/lib-c-name
+    (str "lib" library-name "." pixie.platform/so-ext)))
 
 (defmacro with-config [config & body]
   (binding [*config* config
             *bodies* (atom [])
-            *library* (ffi-library (str "lib" (:library config) "." pixie.platform/so-ext))]
+            *library* (ffi-library (full-lib-name (:library config)))]
      (doseq [b body]
        (eval b))
-     `(let [*library* (ffi-library ~(str "lib" (:library config) "." pixie.platform/so-ext))]
+     `(let [*library* (ffi-library ~(full-lib-name (:library config)))]
                 ~(run-infer *config* @*bodies*))))
 
 (defmacro defcfn [nm]
