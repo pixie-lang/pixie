@@ -838,6 +838,13 @@ If further arguments are passed, invokes the method named by symbol, passing the
       (recur (conj res (first coll)) (next coll))
       (seq res))))
 
+(defn penultimate
+  {:doc "Returns the second to last element of the collection, or nil if none."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (last (butlast coll) ))
+
 (defn complement
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
