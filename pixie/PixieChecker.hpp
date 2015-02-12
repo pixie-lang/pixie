@@ -15,7 +15,13 @@ namespace PixieChecker {
 template<class T>
 struct GenericChecker;
 
-
+template < typename T > std::string to_string( const T& n )
+{
+    std::ostringstream stm ;
+    stm << n ;
+    return stm.str() ;
+}
+    
 
 // Function Checker
 template <int Arity, class T>
@@ -197,7 +203,7 @@ struct GenericCheckerIsFloat<boost::true_type, T>
 {
     static std::string getType()
     {
-        return "{:type :float :size " + std::to_string(sizeof(T)) + "}";
+        return "{:type :float :size " + to_string(sizeof(T)) + "}";
     }
 };
 
@@ -228,7 +234,7 @@ struct GenericCheckerIsInt<boost::true_type, T>
 {
     static std::string getType()
     {
-        return "{:type :int :size " + std::to_string(sizeof(T)) +
+        return "{:type :int :size " + to_string(sizeof(T)) +
         " :signed? " + (boost::is_signed<T>::value ? "true" : "false") +
         "}";
     }
@@ -271,5 +277,4 @@ void DumpType()
 }
 
 }
-
 

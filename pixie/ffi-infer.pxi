@@ -98,7 +98,8 @@ return 0;
 (defmethod generate-code :function
   [{:keys [name]} {:keys [type arguments returns]}]
   (assert (= type :function) (str name " is not infered to be a function"))
-  `(def ~(symbol name) (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
+  `(def ~(symbol name)
+     (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
 
 (defmethod generate-code :struct
   [{:keys [name members]} {:keys [size infered-members]}]
@@ -114,10 +115,12 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
-  (let [cmd-str (str "c++ -m64 -std=c++11 /tmp/tmp.cpp -I"
-                                                 (first @load-paths)
-                                                 (apply str " " (interpose " " (:cxx-flags *config*)))
-                                                 " -o /tmp/a.out && /tmp/a.out")
+  (let [cmd-str (str "c++ "
+                     (apply str (interpose " " pixie.platform/c-flags))
+                     " -std=c++11 /tmp/tmp.cpp -I"
+                     (first @load-paths)
+                     (apply str " " (interpose " " (:cxx-flags *config*)))
+                     " -o /tmp/a.out && /tmp/a.out")
         _ (println cmd-str)
         result (read-string (io/run-command cmd-str))]
     `(do ~@(map generate-code cmds result))))
@@ -133,8 +136,9 @@ return 0;
             *library* (ffi-library (full-lib-name (:library config)))]
      (doseq [b body]
        (eval b))
-     `(let [*library* (ffi-library ~(full-lib-name (:library config)))]
-                ~(run-infer *config* @*bodies*))))
+     `(binding [*library* (ffi-library ~(full-lib-name (:library config)))]
+        (println "ll  " *library*)
+        ~(run-infer *config* @*bodies*))))
 
 (defmacro defcfn [nm]
   (let [name-str (name nm)]

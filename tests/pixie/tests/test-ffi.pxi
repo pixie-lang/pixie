@@ -1,5 +1,6 @@
 (ns pixie.tests.test-ffi
-  (require pixie.test :as t))
+  (require pixie.test :as t)
+  (require pixie.math :as m))
 
 
 
@@ -31,3 +32,6 @@
     (sscanf-* "string" "fmt")
     (sscanf-* "string" "fmt" "optional arg1" "optional arg2")
     (t/assert true)))
+
+(t/deftest test-ffi-infer
+  (t/assert= 0.5 (m/asin (m/sin 0.5))))
