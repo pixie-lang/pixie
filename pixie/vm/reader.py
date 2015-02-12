@@ -223,7 +223,7 @@ class ListReader(ReaderHandler):
             rdr.unread(ch)
             lst.append(read(rdr, True))
 
-class UnmachedListReader(ReaderHandler):
+class UnmatchedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
         throw_syntax_error_with_data(rdr, u"Unmatched list close ')'")
 
@@ -239,7 +239,7 @@ class VectorReader(ReaderHandler):
             rdr.unread(ch)
             acc = rt.conj(acc, read(rdr, True))
 
-class UnmachedVectorReader(ReaderHandler):
+class UnmatchedVectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
         throw_syntax_error_with_data(rdr, u"Unmatched vector close ']'")
 
@@ -258,7 +258,7 @@ class MapReader(ReaderHandler):
             acc = rt._assoc(acc, k, v)
         return acc
 
-class UnmachedMapReader(ReaderHandler):
+class UnmatchedMapReader(ReaderHandler):
     def invoke(self, rdr, ch):
         affirm(False, u"Unmatched Map brace ")
 
@@ -284,7 +284,7 @@ class LiteralStringReader(ReaderHandler):
                 v = rdr.read()
             except EOFError:
                 return throw_syntax_error_with_data(rdr, u"umatched quote")
-            
+
             if v == "\"":
                 return rt.wrap(u"".join(acc))
             elif v == "\\":
@@ -575,11 +575,11 @@ class LineCommentReader(ReaderHandler):
                     return
 
 handlers = {u"(": ListReader(),
-            u")": UnmachedListReader(),
+            u")": UnmatchedListReader(),
             u"[": VectorReader(),
-            u"]": UnmachedVectorReader(),
+            u"]": UnmatchedVectorReader(),
             u"{": MapReader(),
-            u"}": UnmachedMapReader(),
+            u"}": UnmatchedMapReader(),
             u"'": QuoteReader(),
             u":": KeywordReader(),
             u"\"": LiteralStringReader(),
