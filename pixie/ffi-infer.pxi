@@ -117,7 +117,7 @@ return 0;
                                (end-string)))
   (let [cmd-str (str "c++ "
                      (apply str (interpose " " pixie.platform/c-flags))
-                     " -std=gnu++11 /tmp/tmp.cpp -I"
+                     "  /tmp/tmp.cpp -I"
                      (first @load-paths)
                      (apply str " " (interpose " " (:cxx-flags *config*)))
                      " -o /tmp/a.out && /tmp/a.out")
@@ -137,7 +137,6 @@ return 0;
      (doseq [b body]
        (eval b))
      `(binding [*library* (ffi-library ~(full-lib-name (:library config)))]
-        (println "ll  " *library*)
         ~(run-infer *config* @*bodies*))))
 
 (defmacro defcfn [nm]
