@@ -117,7 +117,7 @@ return 0;
                                (end-string)))
   (let [cmd-str (str "c++ "
                      (apply str (interpose " " pixie.platform/c-flags))
-                     " -std=c++11 /tmp/tmp.cpp -I"
+                     " -std=gnu++11 /tmp/tmp.cpp -I"
                      (first @load-paths)
                      (apply str " " (interpose " " (:cxx-flags *config*)))
                      " -o /tmp/a.out && /tmp/a.out")
