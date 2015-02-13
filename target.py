@@ -154,7 +154,7 @@ class EvalFn(NativeFn):
         with with_ns(u"user"):
             NS_VAR.deref().include_stdlib()
 
-            interpret(compile(read(StringReader(unicode_from_utf8(self._expr)), True)))
+            rt.load_reader(StringReader(unicode_from_utf8(self._expr)))
 
 
 class IsPreloadFlag(object):
