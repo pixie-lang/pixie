@@ -1455,6 +1455,65 @@ The new value is thus `(apply f current-value-of-atom args)`."
       (recur (dec n) (next s))
       s)))
 
+(defmacro while
+  {:doc "Repeatedly executes body while test expression is true. Presumes
+  some side-effect will cause test to become false/nil. Returns nil"
+  :added "0.1"}
+  [test & body]
+    `(loop []
+      (when ~test
+        ~@body
+        (recur))))
+
+(defn take-while
+  {:doc "Returns a lazy sequence of successive items from coll while
+        (pred item) returns true. pred must be free of side-effects.
+        Returns a transducer when no collection is provided."
+  :added "0.1"}
+  ([pred]
+     (fn [rf]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+            (if (pred input)
+              (rf result input)
+              (reduced result))))))
+  ([pred coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (when (pred (first s))
+          (cons (first s) (take-while pred (rest s))))))))
+
+
+(defn drop-while
+  {:doc "Returns a lazy sequence of the items in coll starting from the
+        first item for which (pred item) returns logical false.  Returns a
+        stateful transducer when no collection is provided."
+   :added "0.1"}
+   ([pred]
+     (fn [rf]
+       (let [dv (atom true)]
+         (fn
+           ([] (rf))
+           ([result] (rf result))
+           ([result input]
+              (let [drop? @dv]
+                (if drop? 
+                  (if (pred input) 
+                    result 
+                    (do 
+                      (reset! dv nil) 
+                      (rf result input))) 
+                  (rf result input))))))))
+  ([pred coll]
+     (let [step (fn [pred coll]
+                  (let [s (seq coll)]
+                    (if (and s (pred (first s)))
+                      (recur pred (rest s))
+                      s)))]
+       (lazy-seq (step pred coll)))))
+
 (defn partition
   {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
 

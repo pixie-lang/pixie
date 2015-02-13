@@ -312,3 +312,33 @@
   (in-ns :pixie.tests.test-stdlib)
   (t/assert= (set (keys (ns-map 'foo))) 
              #{'bar 'baz}))
+
+(t/deftest test-while
+  (t/assert=  (while (pos? 0) true ) nil)
+  (t/assert=  (while (pos? 0) false) nil)
+  (t/assert=  0 (let [x (atom 10)
+                  cnt (atom 0)] 
+                 (while (pos? @x)
+                   (do (swap! x dec)
+                       (swap! cnt inc)))
+                    @x))
+  (t/assert=  10 (let [x (atom 10)
+                  cnt (atom 0)] 
+                 (while (pos? @x)
+                   (do (swap! x dec)
+                       (swap! cnt inc)))
+                    @cnt)))
+
+(t/deftest test-take-while
+  (t/assert= (take-while pos? [1 2 3 -1]) [1 2 3])
+  (t/assert= (take-while pos? [-1 2]) ())
+  (t/assert= (transduce (take-while even?) conj [2 4 6 7 8]) [2 4 6])
+  (t/assert= (transduce (take-while even?) conj [0 2] [1 4 6]) [0 2])
+  (t/assert= (transduce (take-while even?) conj [1 3] [2 4 6 7 8]) [1 3 2 4 6]))
+
+(t/deftest test-drop-while
+  (t/assert= (drop-while pos? [1 2 3 -1]) [-1])
+  (t/assert= (drop-while pos? [-1 2]) [-1 2])
+  (t/assert= (transduce (drop-while even?) conj [2 4 6 7 8]) [7 8])
+  (t/assert= (transduce (drop-while even?) conj [0 2] [1 4 6]) [0 2 1 4 6])
+  (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))
