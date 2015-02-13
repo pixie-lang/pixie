@@ -1499,11 +1499,13 @@ The new value is thus `(apply f current-value-of-atom args)`."
            ([result] (rf result))
            ([result input]
               (let [drop? @dv]
-                (if (and drop? (pred input))
-                  result
-                  (do
-                    (reset! dv nil)
-                    (rf result input)))))))))
+                (if drop? 
+                  (if (pred input) 
+                    result 
+                    (do 
+                      (reset! dv nil) 
+                      (rf result input))) 
+                  (rf result input))))))))
   ([pred coll]
      (let [step (fn [pred coll]
                   (let [s (seq coll)]
