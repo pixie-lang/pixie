@@ -845,6 +845,32 @@ If further arguments are passed, invokes the method named by symbol, passing the
   [coll]
   (last (butlast coll) ))
 
+(defn ith
+  {:doc "Returns the ith element of the collection, negative values count from the end."
+   :signatures [[coll i]]
+   :added "0.1"}
+  [coll i]
+  (if (nil? coll)
+    nil
+    (let [len (count coll)]
+      (if (and (< i len) (>= i (- len)))
+        (ith-safe coll i)
+        (throw "Index out of bounds")
+        )
+      )
+    )
+  )
+
+(comment "No bounds checking on this one")
+(defn ith-safe
+  {:doc "Returns the ith element of the collection, negative values count from the end."
+   :signatures [[coll i]]
+   :added "0.1"}
+  [coll i]
+  (if (neg? i)
+    (let [len (count coll)] (nth coll (+ i len)))
+    (nth coll i)))
+
 (defn complement
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
