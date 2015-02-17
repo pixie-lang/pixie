@@ -64,12 +64,15 @@ class PersistentVector(object.Object):
 
         affirm(False, u"Index out of Range")
 
-    def nth(self, i, not_found=nil):
+    def nth(self, i, not_found=None):
         if 0 <= i < self._cnt:
             node = self.array_for(r_uint(i))
             return node[i & 0x01f]
 
-        return not_found
+        if not_found is None:
+            affirm(False, u"Index out of Range")
+        else:
+            return not_found
 
     def conj(self, val):
         assert self._cnt < r_uint(0xFFFFFFFF)

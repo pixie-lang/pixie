@@ -48,7 +48,7 @@ def _nth(self, idx):
     if ival < len(self._list):
         return self._list[ival]
     else:
-        return nil
+        affirm(False, u"Index out of Range")
 
 @extend(proto._nth_not_found, Array)
 def _nth_not_found(self, idx, not_found):
@@ -220,7 +220,7 @@ def _nth(self, idx):
     if 0 <= ival < self._cnt:
         return rt.wrap(ord(self._buffer[ival]))
 
-    return nil
+    return affirm(False, u"Index out of Range")
 
 @extend(proto._nth_not_found, ByteArray)
 def _nth_not_found(self, idx, not_found):

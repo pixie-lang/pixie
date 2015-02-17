@@ -55,7 +55,7 @@ def _nth(self, idx):
     i = idx.int_val()
     if 0 <= i < len(self._str):
         return Character(ord(self._str[i]))
-    raise IndexError()
+    affirm(False, u"Index out of Range")
 
 @extend(proto._nth_not_found, String)
 def _nth_not_found(self, idx, not_found):
