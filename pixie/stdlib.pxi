@@ -624,6 +624,14 @@ returns true"
   [n]
   (= (rem n 2) 1))
 
+(defn nth
+  {:doc "Returns the element at the idx.  If the index is not found it will return an error.
+         However, if you specify a not-found parameter, it will substitue that instead"
+   :signatures [[coll idx] [coll idx not-found]]
+   :added "0.1"}
+  ([coll idx] (-nth coll idx))
+  ([coll idx not-found] (-nth-not-found coll idx not-found)))
+
 (defn first
   {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
          the item from the collection."
