@@ -883,7 +883,8 @@ Stops if it finds such an element."
                                 (= idx 1) (-val self))))
 (extend -nth-not-found MapEntry (fn map-entry-nth [self idx not-found]
                                   (cond (= idx 0) (-key self)
-                                        (= idx 1) (-val self))))
+                                        (= idx 1) (-val self)
+                                        :else not-found)))
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -1626,7 +1627,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
 (extend -nth-not-found ISeq (fn [s n not-found]
                               (if (and (pos? n) s)
                                 (recur (next s) (dec n) not-found)
-                                (first s))))
+                                (or (first s) not-found))))
 
 (defn abs
   {:doc "Returns the absolute value of x."
