@@ -1,20 +1,17 @@
-from pixie.vm.object import Object, _type_registry, affirm, InterpreterCodeInfo
-from pixie.vm.primitives import nil, true, false, Bool
+from pixie.vm.object import affirm 
+from pixie.vm.primitives import nil, true, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
 from pixie.vm.persistent_hash_set import PersistentHashSet
 import pixie.vm.numbers as numbers
-from pixie.vm.cons import cons, Cons
 import pixie.vm.symbol as symbol
 import pixie.vm.code as code
 from pixie.vm.keyword import Keyword, keyword
 from pixie.vm.string import Character, String
 from pixie.vm.atom import Atom
-import pixie.vm.stdlib as proto
-from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.rarithmetic import r_uint, intmask
 from pixie.vm.persistent_list import EmptyList
 
 import pixie.vm.rt as rt
-from pixie.vm.util import *
 
 NS_VAR = code.intern_var(u"pixie.stdlib", u"*ns*")
 NS_VAR.set_dynamic()
@@ -367,22 +364,30 @@ def compile_form(form, ctx):
 
     if isinstance(form, symbol.Symbol):
         name = rt.name(form)
+        ns = rt.namespace(form)
+
         loc = resolve_local(ctx, name)
-        if loc is None:
-            var = resolve_var(ctx, form)
+        var = resolve_var(ctx, form)
 
-            if var is None:
-                var = NS_VAR.deref().intern_or_make(name)
-
-            ctx.push_const(var)
-
-            meta = rt.meta(form)
-            if meta is not nil:
-                ctx.debug_points[len(ctx.bytecode)] = rt.interpreter_code_info(meta)
-
-            ctx.bytecode.append(code.DEREF_VAR)
+        if var is None and loc:
+            loc.emit(ctx)
             return
-        loc.emit(ctx)
+
+        if var and loc and ns is None:
+            loc.emit(ctx)
+            return
+        
+        if var is None:
+            name = rt.name(form)
+            var = NS_VAR.deref().intern_or_make(name)
+
+        ctx.push_const(var)
+
+        meta = rt.meta(form)
+        if meta is not nil:
+            ctx.debug_points[len(ctx.bytecode)] = rt.interpreter_code_info(meta)
+
+        ctx.bytecode.append(code.DEREF_VAR)
         return
 
     if isinstance(form, Bool) or form is nil:

@@ -1,6 +1,6 @@
 import pixie.vm.object as object
 from pixie.vm.object import affirm
-from pixie.vm.primitives import nil, true, false
+from pixie.vm.primitives import true, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit

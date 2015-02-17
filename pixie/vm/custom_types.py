@@ -1,11 +1,7 @@
 from pixie.vm.object import Object, Type, affirm
-from pixie.vm.primitives import nil, true, false
 import rpython.rlib.jit as jit
-from pixie.vm.numbers import Integer
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.code import as_var
-from pixie.vm.symbol import Symbol
-from pixie.vm.string import String
 from pixie.vm.keyword import Keyword
 import pixie.vm.rt as rt
 

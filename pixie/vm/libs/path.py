@@ -1,13 +1,8 @@
 import pixie.vm.rt as rt
-import pixie.vm.util as util
-from pixie.vm.string import String
-from pixie.vm.code import as_var, extend, defprotocol
-from pixie.vm.object import Object, Type, affirm
+from pixie.vm.code import as_var, extend
+from pixie.vm.object import Object, Type
 import pixie.vm.stdlib as proto
-from pixie.vm.keyword import keyword
-from pixie.vm.primitives import true, false, nil
-from rpython.rlib.clibffi import get_libc_name
-from rpython.rlib.rarithmetic import intmask, r_uint
+from pixie.vm.primitives import true, false
 import os
 
 class Path(Object):

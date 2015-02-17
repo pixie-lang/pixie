@@ -19,8 +19,10 @@ Some planned and implemented features:
 
 ## Dependencies
 
+*  python or pypy to build
 *  [libffi-dev](https://sourceware.org/libffi/)
 *  [libedit-dev](http://thrysoee.dk/editline/)
+*  [libboost-all-dev](http://www.boost.org/) (`brew install boost` for Mac)
 
 ## Building
 

@@ -1,40 +1,29 @@
 (in-ns :pixie.stdlib)
 
- (def libc (ffi-library pixie.platform/lib-c-name))
+
+(def libc (ffi-library pixie.platform/lib-c-name))
 
 
- (def exit (ffi-fn libc "exit" [CInt] CInt))
- (def puts (ffi-fn libc "puts" [CCharP] CInt))
+(def exit (ffi-fn libc "exit" [CInt] CInt))
+(def puts (ffi-fn libc "puts" [CCharP] CInt))
 
 
- (def qsort-cb (ffi-callback [CVoidP CVoidP] CInt))
- (def qsort (ffi-fn libc "qsort" [CVoidP CInt CInt qsort-cb] CInt))
-
- (def buf (buffer 3))
- (pixie.ffi/pack! buf 0 CUInt8 2)
- (pixie.ffi/pack! buf 1 CUInt8 1)
- (pixie.ffi/pack! buf 2 CUInt8 0)
- (qsort buf 3 1 (fn* [x y] (puts (str (pixie.ffi/unpack x 0 CUInt8) (pixie.ffi/unpack y 0 CUInt8)))
-                           1))
-
- (puts (str "DONE " (pixie.ffi/unpack buf 0 CUInt8)))
-
- (def sh (ffi-fn libc "system" [CCharP] CInt))
- (def printf (ffi-fn libc "printf" [CCharP] CInt :variadic? true))
- (def getenv (ffi-fn libc "getenv" [CCharP] CCharP))
-
- (def libedit (ffi-library (str "libedit." pixie.platform/so-ext)))
- (def readline (ffi-fn libedit "readline" [CCharP] CCharP))
- (def rand (ffi-fn libc "rand" [] CInt))
- (def srand (ffi-fn libc "srand" [CInt] CInt))
- (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
- (def fread (ffi-fn libc "fread" [CVoidP CInt CInt CVoidP] CInt))
+(def sh (ffi-fn libc "system" [CCharP] CInt))
+(def printf (ffi-fn libc "printf" [CCharP] CInt :variadic? true))
+(def getenv (ffi-fn libc "getenv" [CCharP] CCharP))
 
 
- (def libm (ffi-library (str "libm." pixie.platform/so-ext)))
- (def atan2 (ffi-fn libm "atan2" [CDouble CDouble] CDouble))
- (def floor (ffi-fn libm "floor" [CDouble] CDouble))
- (def lround (ffi-fn libm "lround" [CDouble] CInt))
+(def libedit (ffi-library (str "libedit." pixie.platform/so-ext)))
+(def readline (ffi-fn libedit "readline" [CCharP] CCharP))
+(def rand (ffi-fn libc "rand" [] CInt))
+(def srand (ffi-fn libc "srand" [CInt] CInt))
+(def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
+(def fread (ffi-fn libc "fread" [CVoidP CInt CInt CVoidP] CInt))
+
+(def libm (ffi-library (str "libm." pixie.platform/so-ext)))
+(def atan2 (ffi-fn libm "atan2" [CDouble CDouble] CDouble))
+(def floor (ffi-fn libm "floor" [CDouble] CDouble))
+(def lround (ffi-fn libm "lround" [CDouble] CInt))
 
 
 (def reset! -reset!)
@@ -97,6 +86,20 @@
                       ([result item] (-disj! result item))
                       ([coll item & items]
                          (reduce -disj! (-disj! coll item) items)))))
+
+(def pop
+  (fn ^{:doc "Pops elements off a stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    pop
+    ([coll] (-pop coll))))
+
+(def push
+  (fn ^{:doc "Push an element on to a stack."
+        :signatures [[] [coll] [coll item] [coll item & args]]
+        :added "0.1"}
+    push
+    ([coll x] (-push coll x))))
 
 (def pop!
   (fn ^{:doc "Pops elements off a transient stack."
@@ -840,6 +843,13 @@ If further arguments are passed, invokes the method named by symbol, passing the
       (recur (conj res (first coll)) (next coll))
       (seq res))))
 
+(defn penultimate
+  {:doc "Returns the second to last element of the collection, or nil if none."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (last (butlast coll) ))
+
 (defn complement
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
@@ -1450,6 +1460,65 @@ The new value is thus `(apply f current-value-of-atom args)`."
       (recur (dec n) (next s))
       s)))
 
+(defmacro while
+  {:doc "Repeatedly executes body while test expression is true. Presumes
+  some side-effect will cause test to become false/nil. Returns nil"
+  :added "0.1"}
+  [test & body]
+    `(loop []
+      (when ~test
+        ~@body
+        (recur))))
+
+(defn take-while
+  {:doc "Returns a lazy sequence of successive items from coll while
+        (pred item) returns true. pred must be free of side-effects.
+        Returns a transducer when no collection is provided."
+  :added "0.1"}
+  ([pred]
+     (fn [rf]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+            (if (pred input)
+              (rf result input)
+              (reduced result))))))
+  ([pred coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (when (pred (first s))
+          (cons (first s) (take-while pred (rest s))))))))
+
+
+(defn drop-while
+  {:doc "Returns a lazy sequence of the items in coll starting from the
+        first item for which (pred item) returns logical false.  Returns a
+        stateful transducer when no collection is provided."
+   :added "0.1"}
+   ([pred]
+     (fn [rf]
+       (let [dv (atom true)]
+         (fn
+           ([] (rf))
+           ([result] (rf result))
+           ([result input]
+              (let [drop? @dv]
+                (if drop?
+                  (if (pred input)
+                    result
+                    (do
+                      (reset! dv nil)
+                      (rf result input)))
+                  (rf result input))))))))
+  ([pred coll]
+     (let [step (fn [pred coll]
+                  (let [s (seq coll)]
+                    (if (and s (pred (first s)))
+                      (recur pred (rest s))
+                      s)))]
+       (lazy-seq (step pred coll)))))
+
 (defn partition
   {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
 
@@ -1994,3 +2063,14 @@ Expands to calls to `extend-type`."
   ([] (-string-builder))
   ([sb] (str sb))
   ([sb item] (conj! sb item)))
+
+
+(defmacro using [bindings & body]
+  (let [pairs (partition 2 bindings)
+        names (map first pairs)]
+    `(let [~@bindings
+           result# (do ~@body)]
+       ~@(map (fn [nm]
+                `(-dispose! ~nm))
+              names)
+       result#)))

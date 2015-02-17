@@ -1,11 +1,9 @@
 import rpython.rlib.rthread as rthread
 from pixie.vm.primitives import nil
 import rpython.rlib.rgil as rgil
-from pixie.vm.code import wrap_fn, as_var
+from pixie.vm.code import as_var
 
 from rpython.rlib.objectmodel import invoke_around_extcall
-from rpython.rlib.rposix import get_saved_errno, set_saved_errno
-
 
 class Bootstrapper(object):
     def __init__(self):

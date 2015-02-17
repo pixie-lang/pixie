@@ -1,6 +1,4 @@
-import unittest
 import pixie.vm.rt as rt
-from pixie.vm.numbers import Integer
 from pixie.vm.primitives import nil
 
 rt.init()

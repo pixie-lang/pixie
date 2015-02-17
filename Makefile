@@ -2,7 +2,7 @@ all: help
 
 EXTERNALS=../externals
 
-PYTHON ?= pypy
+PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack

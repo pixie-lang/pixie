@@ -1,5 +1,5 @@
-from pixie.vm.object import Object, Type, affirm
-from pixie.vm.primitives import nil, true, false
+from pixie.vm.object import Object, Type
+from pixie.vm.primitives import nil
 from pixie.vm.string import String
 import pixie.vm.stdlib as proto
 from pixie.vm.code import extend, as_var

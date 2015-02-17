@@ -90,6 +90,18 @@
     (t/assert= (butlast l) res)
     (t/assert= (butlast r) res)))
 
+(t/deftest test-penultimate
+  (let [v [1 2 3 4 5]
+        l '(1 2 3 4 5)
+        r (range 1 6)]
+    (t/assert= (penultimate nil) nil)
+    (t/assert= (penultimate []) nil)
+    (t/assert= (penultimate (range 0 0)) nil)
+    (t/assert= (penultimate v) 4)
+    (t/assert= (penultimate l) 4)
+    (t/assert= (penultimate r) 4)
+    (t/assert= (penultimate [2]) nil)))
+
 (t/deftest test-empty?
   (t/assert= (empty? []) true)
   (t/assert= (empty? '()) true)
@@ -290,4 +302,43 @@
                 (reduce conj nil (range 10))
                 '(0 1 2 3 4 5 6 7 8 9)))
              true))
-             
+
+(t/deftest test-ns
+  ;; Create a namespace called foo
+  (in-ns :foo)
+  (def bar :humbug)
+  (defn baz [x y] (+ x y))
+  ;; Back into the text namespace
+  (in-ns :pixie.tests.test-stdlib)
+  (t/assert= (set (keys (ns-map 'foo))) 
+             #{'bar 'baz}))
+
+(t/deftest test-while
+  (t/assert=  (while (pos? 0) true ) nil)
+  (t/assert=  (while (pos? 0) false) nil)
+  (t/assert=  0 (let [x (atom 10)
+                  cnt (atom 0)] 
+                 (while (pos? @x)
+                   (do (swap! x dec)
+                       (swap! cnt inc)))
+                    @x))
+  (t/assert=  10 (let [x (atom 10)
+                  cnt (atom 0)] 
+                 (while (pos? @x)
+                   (do (swap! x dec)
+                       (swap! cnt inc)))
+                    @cnt)))
+
+(t/deftest test-take-while
+  (t/assert= (take-while pos? [1 2 3 -1]) [1 2 3])
+  (t/assert= (take-while pos? [-1 2]) ())
+  (t/assert= (transduce (take-while even?) conj [2 4 6 7 8]) [2 4 6])
+  (t/assert= (transduce (take-while even?) conj [0 2] [1 4 6]) [0 2])
+  (t/assert= (transduce (take-while even?) conj [1 3] [2 4 6 7 8]) [1 3 2 4 6]))
+
+(t/deftest test-drop-while
+  (t/assert= (drop-while pos? [1 2 3 -1]) [-1])
+  (t/assert= (drop-while pos? [-1 2]) [-1 2])
+  (t/assert= (transduce (drop-while even?) conj [2 4 6 7 8]) [7 8])
+  (t/assert= (transduce (drop-while even?) conj [0 2] [1 4 6]) [0 2 1 4 6])
+  (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))

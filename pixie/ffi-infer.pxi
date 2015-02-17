@@ -24,7 +24,7 @@
 
 (defmethod emit-infer-code :function
   [{:keys [name]}]
-  (str "PixieChecker::DumpType<typeof(" name ")>(); \n"))
+  (str "PixieChecker::DumpType<__typeof__(" name ")>(); \n"))
 
 (defmethod emit-infer-code :raw-struct
   [{:keys [name members]}]
@@ -118,7 +118,8 @@ return 0;
 (defmethod generate-code :function
   [{:keys [name]} {:keys [type arguments returns]}]
   (assert (= type :function) (str name " is not infered to be a function"))
-  `(def ~(symbol name) (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
+  `(def ~(symbol name)
+     (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
 
 (defmethod generate-code :raw-struct
   [{:keys [name members]} {:keys [size infered-members]}]
@@ -146,24 +147,29 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
-  (let [cmd-str (str "c++ -arch x86_64 /tmp/tmp.cpp -I"
-                                                 (first @load-paths)
-                                                 (apply str " " (interpose " " (:cxx-flags *config*)))
-                                                 " -o /tmp/a.out && /tmp/a.out")
-        _ (print cmd-str)
+  (let [cmd-str (str "c++ "
+                     (apply str (interpose " " pixie.platform/c-flags))
+                     "  /tmp/tmp.cpp -I"
+                     (first @load-paths)
+                     (apply str " " (interpose " " (:cxx-flags *config*)))
+                     " -o /tmp/a.out && /tmp/a.out")
+        _ (println cmd-str)
         result (read-string (io/run-command cmd-str))]
     `(do ~@(map generate-code cmds result))))
+
+(defn full-lib-name [library-name]
+  (if (= library-name "c")
+    pixie.platform/lib-c-name
+    (str "lib" library-name "." pixie.platform/so-ext)))
 
 (defmacro with-config [config & body]
   (binding [*config* config
             *bodies* (atom [])
-            *library* (ffi-library (str "lib" (:library config) "." pixie.platform/so-ext))]
+            *library* (ffi-library (full-lib-name (:library config)))]
      (doseq [b body]
        (eval b))
-     (let [result `(let [*library* (ffi-library ~(str "lib" (:library config) "." pixie.platform/so-ext))]
-                     ~(run-infer *config* @*bodies*))]
-       (println result)
-       result)))
+     `(binding [*library* (ffi-library ~(full-lib-name (:library config)))]
+        ~(run-infer *config* @*bodies*))))
 
 (defmacro defcfn [nm]
   (let [name-str (name nm)]

@@ -2,7 +2,6 @@ py_object = object
 import rpython.rlib.rdynload as dynload
 import pixie.vm.object as object
 from pixie.vm.object import runtime_error
-import pixie.vm.code as code
 from pixie.vm.keyword import Keyword
 import pixie.vm.stdlib  as proto
 from pixie.vm.code import as_var, affirm, extend
@@ -11,15 +10,15 @@ from rpython.rtyper.lltypesystem import rffi, lltype, llmemory
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.numbers import Integer, Float
 from pixie.vm.string import String
-from pixie.vm.keyword import Keyword, keyword
+from pixie.vm.keyword import Keyword
 from pixie.vm.util import unicode_to_utf8
 from rpython.rlib import clibffi
-from rpython.rlib.jit_libffi import jit_ffi_prep_cif, jit_ffi_call, CIF_DESCRIPTION, CIF_DESCRIPTION_P, \
-    FFI_TYPE, FFI_TYPE_P, FFI_TYPE_PP, SIZE_OF_FFI_ARG
+from rpython.rlib.jit_libffi import jit_ffi_call, CIF_DESCRIPTION, CIF_DESCRIPTION_P, \
+    FFI_TYPE_P, FFI_TYPE_PP, SIZE_OF_FFI_ARG
 import rpython.rlib.jit_libffi as jit_libffi
 from rpython.rlib.objectmodel import keepalive_until_here, we_are_translated
 import rpython.rlib.jit as jit
-from rpython.rlib.rarithmetic import intmask, r_uint
+from rpython.rlib.rarithmetic import intmask
 
 
 """
@@ -69,16 +68,10 @@ class ExternalLib(object.Object):
 
     def get_fn_ptr(self, nm):
         assert isinstance(nm, unicode)
-        self.thaw()
         s = rffi.str2charp(str(nm))
         sym = dynload.dlsym(self._dyn_lib, s)
         rffi.free_charp(s)
         return sym
-
-    def _cleanup_(self):
-        self._dyn_lib = lltype.nullptr(rffi.VOIDP.TO)
-        self._is_inited = False
-
 
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
@@ -96,20 +89,8 @@ class FFIFn(object.Object):
         self._arity = len(arg_types)
         self._ret_type = ret_type
         self._is_variadic = is_variadic
-        #self._is_inited = False
-        self.thaw()
-
-
-    def thaw(self):
-        #if not self._is_inited:
         self._f_ptr = self._lib.get_fn_ptr(self._name)
         self._cd = CifDescrBuilder(self._arg_types, self._ret_type).rawallocate()
-
-    def _cleanup_(self):
-        self._rev += 1
-        self._f_ptr = lltype.nullptr(rffi.VOIDP.TO)
-        self._cd = lltype.nullptr(CIF_DESCRIPTION)
-        self._is_inited = False
 
     @jit.unroll_safe
     def prep_exb(self, args):
@@ -486,7 +467,12 @@ class CCallback(object.Object):
         self._raw_closure = raw_closure
         self._is_invoked = False
         self._unique_id = id
-        self._auto_delete = False
+
+    def type(self):
+        return CCallback._type
+
+    def get_raw_closure(self):
+        return self._raw_closure
 
     def ll_invoke(self, llargs, llres):
         cft = self._cft
@@ -499,15 +485,16 @@ class CCallback(object.Object):
         self._is_invoked = True
         retval = self._fn.invoke(args)
         cft._ret_type.ffi_set_value(llres, retval)
-        if self._auto_delete:
-            self.cleanup()
+
 
     def cleanup(self):
         del registered_callbacks[self._unique_id]
         clibffi.closureHeap.free(self._raw_closure)
 
-    def set_auto_delete(self):
-        self._auto_delete = True
+@extend(proto._dispose_BANG_, CCallback)
+def _dispose(self):
+    self.cleanup()
+
 
 
 @as_var(u"ffi-callback")
@@ -524,6 +511,27 @@ def ffi_callback(args, ret_type):
         runtime_error(u"Expected type, got " + rt.name(rt.str(ret_type)))
 
     return CFunctionType(args_w, ret_type)
+
+@as_var(u"ffi-prep-callback")
+def ffi_prep_callback(tp, f):
+    affirm(isinstance(tp, CFunctionType), u"First argument to ffi-prep-callback must be a CFunctionType")
+    raw_closure = rffi.cast(rffi.VOIDP, clibffi.closureHeap.alloc())
+
+    unique_id = len(registered_callbacks)
+
+    res = clibffi.c_ffi_prep_closure(rffi.cast(clibffi.FFI_CLOSUREP, raw_closure), tp.get_cd().cif,
+                             invoke_callback,
+                             rffi.cast(rffi.VOIDP, unique_id))
+
+
+    if rffi.cast(lltype.Signed, res) != clibffi.FFI_OK:
+        registered_callbacks[unique_id] = None
+        runtime_error(u"libffi failed to build this callback")
+
+    cb = CCallback(tp, raw_closure, unique_id, f)
+    registered_callbacks[unique_id] = cb
+
+    return cb
 
 # Callback Code
 
@@ -543,7 +551,7 @@ name_gen = FunctionTypeNameGenerator()
 
 class CFunctionType(object.Type):
     base_type = object.Type(u"pixie.ffi.CType")
-    _immutable_fields_ = ["arg_types", "ret-type"]
+    _immutable_fields_ = ["_arg_types", "_ret-type", "_cd"]
 
     def __init__(self, arg_types, ret_type):
         object.Type.__init__(self, name_gen.next(), CStructType.base_type)
@@ -555,48 +563,22 @@ class CFunctionType(object.Type):
         runtime_error(u"Cannot get a callback value via FFI")
 
     def ffi_set_value(self, ptr, val):
-        print "Setting callback"
-        raw_closure = rffi.cast(rffi.VOIDP, clibffi.closureHeap.alloc())
+        affirm(isinstance(val, CCallback), u"Can only encode CCallbacks as function pointers")
 
-        unique_id = len(registered_callbacks)
-
-        cb = CCallback(self, raw_closure, unique_id, val)
-        registered_callbacks[unique_id] = cb
-
-        res = clibffi.c_ffi_prep_closure(rffi.cast(clibffi.FFI_CLOSUREP, raw_closure), self._cd.cif,
-                                 invoke_callback,
-                                 rffi.cast(rffi.VOIDP, unique_id))
 
         casted = rffi.cast(rffi.VOIDPP, ptr)
-        casted[0] = raw_closure
+        casted[0] = val.get_raw_closure()
 
-        if rffi.cast(lltype.Signed, res) != clibffi.FFI_OK:
-            registered_callbacks[unique_id] = None
-            runtime_error(u"libffi failed to build this callback")
+        return None
 
-        return CCallbackToken(cb)
-
+    def get_cd(self):
+        return self._cd
 
     def ffi_size(self):
         return rffi.sizeof(rffi.VOIDP)
 
     def ffi_type(self):
         return clibffi.ffi_type_pointer
-
-
-class CCallbackToken(Token):
-    def __init__(self, cb):
-        self._cb = cb
-
-    def finalize_token(self):
-        cb = self._cb
-        assert isinstance(cb, CCallback)
-        if cb._is_invoked:
-            cb.cleanup()
-        else:
-            cb.set_auto_delete()
-
-
 
 class CStruct(object.Object):
     _immutable_fields_ = ["_type", "_buffer"]

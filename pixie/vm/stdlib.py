@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
+from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
     runtime_error
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
-                          resize_list, list_copy, returns, get_var_if_defined, intern_var
+                          list_copy, returns, intern_var
 import pixie.vm.code as code
-from types import MethodType
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
@@ -58,6 +57,8 @@ defprotocol("pixie.stdlib", "ITransientStack", ["-push!", "-pop!"])
 
 defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
 defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
+
+defprotocol("pixie.stdlib", "IDisposable", ["-dispose!"])
 
 @as_var("pixie.stdlib.internal", "-defprotocol")
 def _defprotocol(name, methods):
@@ -513,7 +514,7 @@ def the_ns(ns_name):
     return code._ns_registry.get(rt.name(ns_name), nil)
 
 @as_var("in-ns")
-def the_ns(ns_name):
+def in_ns(ns_name):
     from pixie.vm.compiler import NS_VAR
     NS_VAR.set_value(code._ns_registry.find_or_make(rt.name(ns_name)))
     NS_VAR.deref().include_stdlib()
@@ -523,22 +524,22 @@ def the_ns(ns_name):
 @as_var("ns-map")
 def ns_map(ns):
     from pixie.vm.code import Namespace
-    assert isinstance(ns, Namespace)
     from pixie.vm.symbol import Symbol
-
-    affirm(isinstance(ns, code.Namespace) or isinstance(ns, Symbol), u"ns must be a symbol or a namespace")
+    affirm(isinstance(ns, Namespace) or isinstance(ns, Symbol), u"ns must be a symbol or a namespace")
 
     if isinstance(ns, Symbol):
         ns = rt.the_ns(ns)
         if ns is nil:
             return nil
 
-    m = rt.hashmap()
-    for name in ns._registry:
-        var = ns._registry.get(name, nil)
-        m = rt.assoc(m, rt.symbol(rt.wrap(name)), var)
+    if isinstance(ns, Namespace):
+        m = rt.hashmap()
+        for name in ns._registry:
+            var = ns._registry.get(name, nil)
+            m = rt.assoc(m, rt.symbol(rt.wrap(name)), var)
+        return m
 
-    return m
+    return nil
 
 @as_var("refer-ns")
 def refer(ns, refer, alias):

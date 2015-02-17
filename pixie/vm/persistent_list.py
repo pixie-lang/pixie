@@ -1,8 +1,7 @@
 import pixie.vm.object as object
-from pixie.vm.primitives import nil, true, false
+from pixie.vm.primitives import nil
 import pixie.vm.stdlib as proto
 from  pixie.vm.code import extend, as_var
-from pixie.vm.numbers import Integer
 from rpython.rlib.rarithmetic import r_uint, intmask
 import pixie.vm.rt as rt
 

@@ -10,12 +10,11 @@ from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.libs.libedit import _readline
-from pixie.vm.string import Character, String
-from pixie.vm.code import wrap_fn, extend
+from pixie.vm.string import Character
+from pixie.vm.code import wrap_fn
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
 from pixie.vm.persistent_list import EmptyList
-import pixie.vm.stdlib as proto
 import pixie.vm.compiler as compiler
 
 from rpython.rlib.rbigint import rbigint
@@ -224,7 +223,7 @@ class ListReader(ReaderHandler):
             rdr.unread(ch)
             lst.append(read(rdr, True))
 
-class UnmachedListReader(ReaderHandler):
+class UnmatchedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
         throw_syntax_error_with_data(rdr, u"Unmatched list close ')'")
 
@@ -240,7 +239,7 @@ class VectorReader(ReaderHandler):
             rdr.unread(ch)
             acc = rt.conj(acc, read(rdr, True))
 
-class UnmachedVectorReader(ReaderHandler):
+class UnmatchedVectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
         throw_syntax_error_with_data(rdr, u"Unmatched vector close ']'")
 
@@ -259,7 +258,7 @@ class MapReader(ReaderHandler):
             acc = rt._assoc(acc, k, v)
         return acc
 
-class UnmachedMapReader(ReaderHandler):
+class UnmatchedMapReader(ReaderHandler):
     def invoke(self, rdr, ch):
         affirm(False, u"Unmatched Map brace ")
 
@@ -284,8 +283,8 @@ class LiteralStringReader(ReaderHandler):
             try:
                 v = rdr.read()
             except EOFError:
-                raise Exception("unmatched quote")
-            
+                return throw_syntax_error_with_data(rdr, u"umatched quote")
+
             if v == "\"":
                 return rt.wrap(u"".join(acc))
             elif v == "\\":
@@ -303,9 +302,9 @@ class LiteralStringReader(ReaderHandler):
                     elif v == "t":
                         acc.append("\t")
                     else:
-                        raise Exception("unhandled escape character")
+                        throw_syntax_error_with_data(rdr, u"unhandled escape character: " + v)
                 except EOFError:
-                    raise Exception("eof after escape character")
+                    throw_syntax_error_with_data(rdr, u"eof after escape character")
             else:
                 acc.append(v)
 
@@ -416,7 +415,7 @@ class SyntaxQuoteReader(ReaderHandler):
         elif is_unquote(form):
             ret = rt.first(rt.next(form))
         elif is_unquote_splicing(form):
-            raise Exception("Unquote splicing not used inside list")
+            return runtime_error(u"Unquote splicing not used inside list")
         elif rt.vector_QMARK_(form) is true:
             ret = rt.list(APPLY, CONCAT, SyntaxQuoteReader.expand_list(form))
         elif form is not nil and rt.seq_QMARK_(form) is true:
@@ -555,9 +554,9 @@ dispatch_handlers = {
 class DispatchReader(ReaderHandler):
     def invoke(self, rdr, ch):
         ch = rdr.read()
-        handler = dispatch_handlers[ch]
+        handler = dispatch_handlers.get(ch, None)
         if handler is None:
-            raise Exception("unknown dispatch #" + ch)
+            return throw_syntax_error_with_data(rdr, u"unknown dispatch #" + ch)
         return handler.invoke(rdr, ch)
 
 class LineCommentReader(ReaderHandler):
@@ -576,11 +575,11 @@ class LineCommentReader(ReaderHandler):
                     return
 
 handlers = {u"(": ListReader(),
-            u")": UnmachedListReader(),
+            u")": UnmatchedListReader(),
             u"[": VectorReader(),
-            u"]": UnmachedVectorReader(),
+            u"]": UnmatchedVectorReader(),
             u"{": MapReader(),
-            u"}": UnmachedMapReader(),
+            u"}": UnmatchedMapReader(),
             u"'": QuoteReader(),
             u":": KeywordReader(),
             u"\"": LiteralStringReader(),
