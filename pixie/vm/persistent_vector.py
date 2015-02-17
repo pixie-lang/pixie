@@ -425,6 +425,11 @@ def _nth(self, idx):
     assert isinstance(self, PersistentVector)
     return self.nth(idx.int_val())
 
+@extend(proto._nth_not_found, PersistentVector)
+def _nth_not_found(self, idx, not_found):
+    assert isinstance(self, PersistentVector)
+    return self.nth(idx.int_val(), not_found)
+
 
 @extend(proto._val_at, PersistentVector)
 def _val_at(self, key, not_found):

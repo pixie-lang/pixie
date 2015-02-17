@@ -245,6 +245,11 @@ class Buffer(object.Object):
 def _nth(self, idx):
     return rt.wrap(ord(self.nth_char(idx.int_val())))
 
+@extend(proto._nth_not_found, Buffer)
+def _nth_not_found(self, idx, not_found):
+    return rt.wrap(ord(self.nth_char(idx.int_val())))
+
+
 @extend(proto._count, Buffer)
 def _count(self):
     return rt.wrap(intmask(self.count()))

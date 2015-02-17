@@ -57,6 +57,14 @@ def _nth(self, idx):
         return Character(ord(self._str[i]))
     raise IndexError()
 
+@extend(proto._nth_not_found, String)
+def _nth_not_found(self, idx, not_found):
+    assert isinstance(self, String)
+    i = idx.int_val()
+    if 0 <= i < len(self._str):
+        return Character(ord(self._str[i]))
+    return not_found
+
 @extend(proto._eq, String)
 def _eq(self, v):
     assert isinstance(self, String)
