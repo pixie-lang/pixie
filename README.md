@@ -22,6 +22,7 @@ Some planned and implemented features:
 *  python or pypy to build
 *  [libffi-dev](https://sourceware.org/libffi/)
 *  [libedit-dev](http://thrysoee.dk/editline/)
+*  [libuv-dev](https://github.com/joyent/libuv) Version 1.0 or higher
 *  [libboost-all-dev](http://www.boost.org/) (`brew install boost` for Mac)
 
 ## Building
