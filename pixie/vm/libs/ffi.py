@@ -363,6 +363,24 @@ class CCharPToken(Token):
 
 
 
+class CVoid(CType):
+    def __init__(self):
+        CType.__init__(self, u"pixie.stdlib.CVoid")
+
+    def ffi_get_value(self, ptr):
+        return nil
+
+    def ffi_set_value(self, ptr, val):
+        runtime_error(u"Can't encode a Void")
+
+    def ffi_size(self):
+        return rffi.sizeof(rffi.VOIDP)
+
+    def ffi_type(self):
+        return clibffi.ffi_type_pointer
+
+cvoid = CVoid()
+
 class CVoidP(CType):
     def __init__(self):
         CType.__init__(self, u"pixie.stdlib.CVoidP")
@@ -484,7 +502,8 @@ class CCallback(object.Object):
 
         self._is_invoked = True
         retval = self._fn.invoke(args)
-        cft._ret_type.ffi_set_value(llres, retval)
+        if cft._ret_type is not cvoid:
+            cft._ret_type.ffi_set_value(llres, retval)
 
 
     def cleanup(self):

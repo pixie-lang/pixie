@@ -48,6 +48,10 @@
                    members))
        "\"]}\" << std::endl;"))
 
+(defmethod emit-infer-code :callback
+  [{:keys [name]}]
+  (str "PixieChecker::DumpType<__typeof__(" name ")>();"))
+
 
 (defn start-string []
   (str (apply str (map (fn [i]
@@ -71,7 +75,7 @@ return 0;
 (defmulti edn-to-ctype :type)
 
 (defn callback-type [{:keys [arguments returns]}]
-  `(ffi-callback ~@(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns)))
+  `(ffi-callback ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns)))
 
 (defmethod edn-to-ctype :pointer
   [{:keys [of-type] :as ptr}]
@@ -142,6 +146,12 @@ return 0;
                                                `[~(keyword name) ~(edn-to-ctype type) ~offset])
                                              members infered-members)])))
 
+(defmethod generate-code :callback
+  [{:keys [name]} {:keys [of-type]}]
+  `(def ~(symbol name)
+     ~(callback-type of-type)))
+
+
 (defn run-infer [config cmds]
   (io/spit "/tmp/tmp.cpp" (str (start-string)
                                (apply str (map emit-infer-code
@@ -193,6 +203,10 @@ return 0;
   `(swap! *bodies* conj (assoc {:op :type}
                           :name ~(name nm)
                           :members ~(vec (map name members))) ))
+
+(defmacro defccallback [nm]
+  `(swap! *bodies* conj (assoc {:op :callback}
+                          :name ~(name nm))))
 
 
 
