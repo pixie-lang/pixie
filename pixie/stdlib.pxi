@@ -838,39 +838,6 @@ If further arguments are passed, invokes the method named by symbol, passing the
       (recur (conj res (first coll)) (next coll))
       (seq res))))
 
-(defn penultimate
-  {:doc "Returns the second to last element of the collection, or nil if none."
-   :signatures [[coll]]
-   :added "0.1"}
-  [coll]
-  (last (butlast coll) ))
-
-(defn ith
-  {:doc "Returns the ith element of the collection, negative values count from the end."
-   :signatures [[coll i]]
-   :added "0.1"}
-  [coll i]
-  (if (nil? coll)
-    nil
-    (let [len (count coll)]
-      (if (and (< i len) (>= i (- len)))
-        (ith-safe coll i)
-        (throw "Index out of bounds")
-        )
-      )
-    )
-  )
-
-(comment "No bounds checking on this one")
-(defn ith-safe
-  {:doc "Returns the ith element of the collection, negative values count from the end."
-   :signatures [[coll i]]
-   :added "0.1"}
-  [coll i]
-  (if (neg? i)
-    (let [len (count coll)] (nth coll (+ i len)))
-    (nth coll i)))
-
 (defn complement
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
@@ -1463,6 +1430,20 @@ The new value is thus `(apply f current-value-of-atom args)`."
     (if (and xs (pos? n))
       (recur (dec n) (next xs))
       xs)))
+
+(defn ith
+  {:doc "Returns the ith element of the collection, negative values count from the end.
+         If an index is out of bounds, will throw an Index out of bounds exception"
+   :signatures [[coll i]]
+   :added "0.1"}
+  [coll i]
+  (if coll
+    (let [len (count coll)
+          idx (if (neg? i) (+ i len) i)
+          in-bounds? (and (< idx len) (>= idx 0))]
+      (if in-bounds?
+        (nth coll idx)
+        (throw "Index out of bounds")))))
 
 (defn take
   {:doc "Takes n elements from the collection, or fewer, if not enough."

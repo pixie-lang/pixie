@@ -90,18 +90,6 @@
     (t/assert= (butlast l) res)
     (t/assert= (butlast r) res)))
 
-(t/deftest test-penultimate
-  (let [v [1 2 3 4 5]
-        l '(1 2 3 4 5)
-        r (range 1 6)]
-    (t/assert= (penultimate nil) nil)
-    (t/assert= (penultimate []) nil)
-    (t/assert= (penultimate (range 0 0)) nil)
-    (t/assert= (penultimate v) 4)
-    (t/assert= (penultimate l) 4)
-    (t/assert= (penultimate r) 4)
-    (t/assert= (penultimate [2]) nil)))
-
 (t/deftest test-empty?
   (t/assert= (empty? []) true)
   (t/assert= (empty? '()) true)
