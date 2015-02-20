@@ -157,10 +157,12 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
+  (println @load-paths)
   (let [cmd-str (str "c++ "
                      (apply str (interpose " " pixie.platform/c-flags))
-                     "  /tmp/tmp.cpp -I"
-                     (first @load-paths)
+                     "  /tmp/tmp.cpp "
+                     (apply str (map (fn [x] ( str " -I " x " "))
+                                     @load-paths))
                      (apply str " " (interpose " " (:cxx-flags *config*)))
                      " -o /tmp/a.out && /tmp/a.out")
         _ (println cmd-str)

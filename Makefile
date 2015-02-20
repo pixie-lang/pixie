@@ -2,7 +2,7 @@ all: help
 
 EXTERNALS=../externals
 
-PYTHON ?= python
+PYTHON ?= pypy
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack
@@ -16,6 +16,9 @@ help:
 	@echo "make build_with_jit         - build with jit enabled"
 	@echo "make build_no_jit           - build without jit"
 	@echo "make fetch_externals	   - download and unpack external deps"
+
+find_externals_name:
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) find_externals_name.py
 
 build_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target.py
@@ -32,7 +35,13 @@ build_preload_no_jit: fetch_externals
 build: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS) 
 
-fetch_externals: $(EXTERNALS)/pypy
+fetch_externals: $(EXTERNALS)/pypy $(EXTERNALS)/binaries
+
+$(EXTERNALS)/binaries:
+	mkdir $(EXTERNALS); \
+	curl -L `make find_externals_name` > $(EXTERNALS)/externals.tar.bz2
+	cd $(EXTERNALS) && tar -jxf externals.tar.bz2 
+
 
 $(EXTERNALS)/pypy:
 	mkdir $(EXTERNALS); \
@@ -46,10 +55,10 @@ run:
 	./pixie-vm
 
 run_interactive:
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py -l ../externals/externals/lib
 
 run_built_tests: pixie-vm
-	./pixie-vm run-tests.pxi
+	./pixie-vm -l ../externals/externals/lib -l ../externals/externals/include run-tests.pxi
 
 run_interpreted_tests: target.py
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.pxi

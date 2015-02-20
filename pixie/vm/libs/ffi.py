@@ -27,11 +27,6 @@ FFI interface for pixie.
 This code gets a bit interesting. We use the RPython rlib module jit_libffi to do the interfacing, you can find
 good docs in that module.
 
-The problem is we can't serialize/translate function pointers (makes sense), so we make use of the _cleanup_ method
-hook to clean out all unsupported fields. We then lazy re-load these values as needed. This allows us to specifiy FFI
-functions inside of the stdlib (and other places) allowing for fast interpreter boot times.
-
-
 """
 
 
@@ -50,20 +45,38 @@ class ExternalLib(object.Object):
         assert isinstance(nm, unicode)
         self._name = nm
         self._is_inited = False
-        self.thaw()
+        self.load_lib()
 
-    def thaw(self):
+    def load_lib(self):
         if not self._is_inited:
-            s = rffi.str2charp(str(self._name))
+            load_paths = rt.deref(rt.deref(rt.load_paths))
 
-            try:
-                self._dyn_lib = dynload.dlopen(s)
-            except dynload.DLOpenError as ex:
-                raise object.WrappedException(object.RuntimeException(rt.wrap(ex.msg)))
-            finally:
-                rffi.free_charp(s)
+            for x in range(rt.count(load_paths)):
+                s = rffi.str2charp(str(rt.name(rt.nth(load_paths, rt.wrap(x)))) + "/" + str(self._name))
+                try:
+                    self._dyn_lib = dynload.dlopen(s)
+                    self._is_inited = True
+                except dynload.DLOpenError as ex:
+                    continue
+                finally:
+                    rffi.free_charp(s)
+                break
 
-            self._is_inited = True
+            if not self._is_inited:
+                s = rffi.str2charp(str(self._name))
+                try:
+                    self._dyn_lib = dynload.dlopen(s)
+                    self._is_inited = True
+                except dynload.DLOpenError as ex:
+                    raise object.WrappedException(object.RuntimeException(rt.wrap(u"Couldn't Load Library: " + self._name)))
+                finally:
+                    rffi.free_charp(s)
+
+
+
+
+
+
 
 
     def get_fn_ptr(self, nm):
