@@ -39,7 +39,8 @@ fetch_externals: $(EXTERNALS)/pypy $(EXTERNALS)/binaries
 
 $(EXTERNALS)/binaries:
 	mkdir $(EXTERNALS); \
-	curl -L `make find_externals_name` > $(EXTERNALS)/externals.tar.bz2
+	echo https://github.com/pixie-lang/external-deps/releases/download/1.0/`uname -s`-`uname -m`.tar.bz2
+	curl -L https://github.com/pixie-lang/external-deps/releases/download/1.0/`uname -s`-`uname -m`.tar.bz2 > $(EXTERNALS)/externals.tar.bz2
 	cd $(EXTERNALS) && tar -jxf externals.tar.bz2 
 
 
