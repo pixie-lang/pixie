@@ -52,6 +52,44 @@
 
   (t/assert= (-repr [1 {:a 1} "hey"]) "[1 {:a 1} \"hey\"]"))
 
+(t/deftest test-nth
+  ;; works if the index is found
+  (t/assert= (nth [1 2 3] 1) 2)
+  (t/assert= (nth '(1 2 3) 1) 2)
+  (t/assert= (nth (make-array 3) 2) nil)
+  (t/assert= (nth (range 4) 1) 1)
+  (t/assert= (nth "hithere" 1) \i)
+
+  ;; throws error for bad index
+  (try
+    (nth [1 2 3] 99)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
+    (nth '(1 2 3) 99)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
+    (nth (make-array 3) 99)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
+    (nth (range 4) 99)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
+    (nth "hithere" 99)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+
+  ;; if not-found is specified, uses that for out of range
+  (t/assert= (nth [1 2 3] 99 :default) :default)
+  (t/assert= (nth '(1 2 3) 99 :default) :default)
+  (t/assert= (nth (make-array 3) 99 :default) :default)
+  (t/assert= (nth (range 4) 99 :default) :default)
+  (t/assert= (nth "hithere" 99 :default) :default)
+
+  (t/assert= (nth [1 2 3] 1 :default) 2)
+  (t/assert= (nth '(1 2 3) 1 :default) 2)
+  (t/assert= (nth (make-array 3) 2 :default) nil)
+  (t/assert= (nth (range 4) 1 :default) 1)
+  (t/assert= (nth "hithere" 1 :deafult) \i))
+
 (t/deftest test-first
   (t/assert= (first []) nil)
   (t/assert= (first '()) nil)
@@ -89,18 +127,6 @@
     (t/assert= (butlast v) res)
     (t/assert= (butlast l) res)
     (t/assert= (butlast r) res)))
-
-(t/deftest test-penultimate
-  (let [v [1 2 3 4 5]
-        l '(1 2 3 4 5)
-        r (range 1 6)]
-    (t/assert= (penultimate nil) nil)
-    (t/assert= (penultimate []) nil)
-    (t/assert= (penultimate (range 0 0)) nil)
-    (t/assert= (penultimate v) 4)
-    (t/assert= (penultimate l) 4)
-    (t/assert= (penultimate r) 4)
-    (t/assert= (penultimate [2]) nil)))
 
 (t/deftest test-empty?
   (t/assert= (empty? []) true)

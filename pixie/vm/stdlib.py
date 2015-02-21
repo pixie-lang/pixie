@@ -16,7 +16,7 @@ defprotocol("pixie.stdlib", "ISeqable", ["-seq"])
 
 defprotocol("pixie.stdlib", "ICounted", ["-count"])
 
-defprotocol("pixie.stdlib", "IIndexed", ["-nth"])
+defprotocol("pixie.stdlib", "IIndexed", ["-nth", "-nth-not-found"])
 
 defprotocol("pixie.stdlib", "IPersistentCollection", ["-conj", "-disj"])
 
@@ -291,6 +291,10 @@ def conj(a, b):
 @as_var("nth")
 def nth(a, b):
     return rt._nth(a, b)
+
+@as_var("nth-not-found")
+def nth_not_found(a, b, c):
+    return rt._nth_not_found(a, b, c)
 
 
 @as_var("str")

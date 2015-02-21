@@ -250,7 +250,7 @@
                           @init
                           (if (-eq i max)
                             init
-                            (recur (f init (nth coll i)) (+ i 1))))))))
+                            (recur (f init (nth coll i nil)) (+ i 1))))))))
 
 (def rest (fn ^{:doc "Returns the elements after the first element, or () if there are no more elements."
                 :signatures [[coll]]
@@ -629,6 +629,14 @@ returns true"
   [n]
   (= (rem n 2) 1))
 
+(defn nth
+  {:doc "Returns the element at the idx.  If the index is not found it will return an error.
+         However, if you specify a not-found parameter, it will substitue that instead"
+   :signatures [[coll idx] [coll idx not-found]]
+   :added "0.1"}
+  ([coll idx] (-nth coll idx))
+  ([coll idx not-found] (-nth-not-found coll idx not-found)))
+
 (defn first
   {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
          the item from the collection."
@@ -636,7 +644,7 @@ returns true"
    :added "0.1"}
   [coll]
   (if (satisfies? IIndexed coll)
-    (nth coll 0)
+    (nth coll 0 nil)
     (-first coll)))
 
 (defn second
@@ -646,7 +654,7 @@ returns true"
    :added "0.1"}
   [coll]
   (if (satisfies? IIndexed coll)
-    (nth coll 1)
+    (nth coll 1 nil)
     (first (next coll))))
 
 (defn third
@@ -656,7 +664,7 @@ returns true"
    :added "0.1"}
   [coll]
   (if (satisfies? IIndexed coll)
-    (nth coll 2)
+    (nth coll 2 nil)
     (first (next (next coll)))))
 
 (defn fourth
@@ -666,7 +674,7 @@ returns true"
    :added "0.1"}
   [coll]
   (if (satisfies? IIndexed coll)
-    (nth coll 3)
+    (nth coll 3 nil)
     (first (next (next (next coll))))))
 
 (defn assoc
@@ -843,13 +851,6 @@ If further arguments are passed, invokes the method named by symbol, passing the
       (recur (conj res (first coll)) (next coll))
       (seq res))))
 
-(defn penultimate
-  {:doc "Returns the second to last element of the collection, or nil if none."
-   :signatures [[coll]]
-   :added "0.1"}
-  [coll]
-  (last (butlast coll) ))
-
 (defn complement
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
@@ -878,6 +879,10 @@ Stops if it finds such an element."
 (extend -nth MapEntry (fn map-entry-nth [self idx]
                           (cond (= idx 0) (-key self)
                                 (= idx 1) (-val self))))
+(extend -nth-not-found MapEntry (fn map-entry-nth [self idx not-found]
+                                  (cond (= idx 0) (-key self)
+                                        (= idx 1) (-val self)
+                                        :else not-found)))
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -953,7 +958,7 @@ Stops if it finds such an element."
 
              (instance? PersistentVector x)
              (if (= (count x) 2)
-                 (assoc coll (nth x 0) (nth x 1))
+                 (assoc coll (nth x 0 nil) (nth x 1 nil))
                  (throw "Vector arg to map conj must be a pair"))
 
              (satisfies? ISeqable x)
@@ -1331,11 +1336,11 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defmacro foreach [binding & body]
   (assert (= 2 (count binding)) "binding and collection required")
   `(reduce
-    (fn [_ ~(nth binding 0)]
+    (fn [_ ~(nth binding 0 nil)]
         ~@body
         nil)
     nil
-    ~(nth binding 1)))
+    ~(nth binding 1 nil)))
 
 (defmacro iterate [binding & body]
   (assert (= 2 (count binding)) "binding and collection required")
@@ -1355,8 +1360,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
    :signatures [[[i n] & body]]
    :added "0.1"}
   [bind & body]
-  (let [b (nth bind 0)]
-    `(let [max# ~(nth bind 1)]
+  (let [b (nth bind 0 nil)]
+    `(let [max# ~(nth bind 1 nil)]
        (loop [~b 0]
          (if (= ~b max#)
            nil
@@ -1366,17 +1371,17 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (extend -iterator PersistentVector
         (fn [v]
           (dotimes [x (count v)]
-            (yield (nth v x)))))
+            (yield (nth v x nil)))))
 
 (extend -iterator Array
         (fn [v]
           (dotimes [x (count v)]
-            (yield (nth v x)))))
+            (yield (nth v x nil)))))
 
 (extend -iterator String
         (fn [v]
           (dotimes [x (count v)]
-            (yield (nth v x)))))
+            (yield (nth v x nil)))))
 
 (defmacro and
   {:doc "Check if the given expressions return truthy values, returning the last, or false."
@@ -1407,8 +1412,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
   `(if (not ~test) (do ~@body)))
 
 (defmacro when-let [binding & body]
-  (let [bind (nth binding 0)
-        test (nth binding 1)]
+  (let [bind (nth binding 0 nil)
+        test (nth binding 1 nil)]
     `(let [tmp# ~test]
        (when tmp#
          (let [~bind tmp#]
@@ -1417,8 +1422,8 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defmacro if-let
   ([binding then] `(if-let ~binding ~then nil))
   ([binding then else]
-     (let [bind (nth binding 0)
-           test (nth binding 1)]
+     (let [bind (nth binding 0 nil)
+           test (nth binding 1 nil)]
        `(let [tmp# ~test]
           (if tmp#
             (let [~bind tmp#]
@@ -1442,6 +1447,20 @@ The new value is thus `(apply f current-value-of-atom args)`."
     (if (and xs (pos? n))
       (recur (dec n) (next xs))
       xs)))
+
+(defn ith
+  {:doc "Returns the ith element of the collection, negative values count from the end.
+         If an index is out of bounds, will throw an Index out of bounds exception"
+   :signatures [[coll i]]
+   :added "0.1"}
+  [coll i]
+  (if coll
+    (let [len (count coll)
+          idx (if (neg? i) (+ i len) i)
+          in-bounds? (and (< idx len) (>= idx 0))]
+      (if in-bounds?
+        (nth coll idx)
+        (throw "Index out of bounds")))))
 
 (defn take
   {:doc "Takes n elements from the collection, or fewer, if not enough."
@@ -1558,7 +1577,7 @@ not enough elements were present."
          (= binding :as) (reduce conj res (destructure (second bindings) expr))
          :else (recur (next bindings)
                       (inc i)
-                      (reduce conj res (destructure (first bindings) `(nth ~expr ~i))))))
+                      (reduce conj res (destructure (first bindings) `(nth ~expr ~i nil))))))
       res)))
 
 (defn destructure-map [binding-map expr]
@@ -1617,6 +1636,10 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                     (if (and (pos? n) s)
                       (recur (next s) (dec n))
                       (first s))))
+(extend -nth-not-found ISeq (fn [s n not-found]
+                              (if (and (pos? n) s)
+                                (recur (next s) (dec n) not-found)
+                                (or (first s) not-found))))
 
 (defn abs
   {:doc "Returns the absolute value of x."
@@ -1661,6 +1684,12 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
       (if (cmp val stop)
         val
         nil)))
+  (-nth-not-found [self idx not-found]
+    (let [cmp (if (< start stop) < >)
+          val (+ start (* idx step))]
+      (if (cmp val stop)
+        val
+       not-found)))
   ISeqable
   (-seq [self]
     (when (or (and (> step 0) (< start stop))
