@@ -48,7 +48,16 @@ def _nth(self, idx):
     if ival < len(self._list):
         return self._list[ival]
     else:
-        return nil
+        affirm(False, u"Index out of Range")
+
+@extend(proto._nth_not_found, Array)
+def _nth_not_found(self, idx, not_found):
+    assert isinstance(self, Array)
+    ival = idx.int_val()
+    if ival < len(self._list):
+        return self._list[ival]
+    else:
+        return not_found
 
 @extend(proto._reduce, Array)
 def reduce(self, f, init):
@@ -211,7 +220,17 @@ def _nth(self, idx):
     if 0 <= ival < self._cnt:
         return rt.wrap(ord(self._buffer[ival]))
 
-    return nil
+    return affirm(False, u"Index out of Range")
+
+@extend(proto._nth_not_found, ByteArray)
+def _nth_not_found(self, idx, not_found):
+    assert isinstance(self, ByteArray)
+    affirm(isinstance(idx, Integer), u"Index must be an integer")
+    ival = idx.r_uint_val()
+    if 0 <= ival < self._cnt:
+        return rt.wrap(ord(self._buffer[ival]))
+
+    return not_found
 
 @extend(proto._count, ByteArray)
 def _count(self):
