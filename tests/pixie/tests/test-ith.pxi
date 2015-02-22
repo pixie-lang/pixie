@@ -15,26 +15,26 @@
   (t/assert= (ith nil -1) nil))
 
 (t/deftest test-ith-empty-always-oob
-  (t/assert= "Index out of bounds" (try (ith [] 0)           (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith [] 1)           (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith [] -1)          (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith '() 0)          (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith '() 1)          (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith '() -1)         (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith (range 0 0) 0)  (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith (range 0 0) 1)  (catch e (ex-msg e))))
-  (t/assert= "Index out of bounds" (try (ith (range 0 0) -1) (catch e (ex-msg e)))))
+  (t/assert= "Index out of Range" (try (ith [] 0)           (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith [] 1)           (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith [] -1)          (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith '() 0)          (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith '() 1)          (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith '() -1)         (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith (range 0 0) 0)  (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith (range 0 0) 1)  (catch e (ex-msg e))))
+  (t/assert= "Index out of Range" (try (ith (range 0 0) -1) (catch e (ex-msg e)))))
 
 (t/deftest test-ith-out-of-bounds
   (let [v [1 2 3 4 5]
         l '(1 2 3 4 5)
         r (range 1 6)]
-    (t/assert= "Index out of bounds" (try (ith v  5) (catch e (ex-msg e))))
-    (t/assert= "Index out of bounds" (try (ith l  5) (catch e (ex-msg e))))
-    (t/assert= "Index out of bounds" (try (ith r  5) (catch e (ex-msg e))))
-    (t/assert= "Index out of bounds" (try (ith v -6) (catch e (ex-msg e))))
-    (t/assert= "Index out of bounds" (try (ith l -6) (catch e (ex-msg e))))
-    (t/assert= "Index out of bounds" (try (ith r -6) (catch e (ex-msg e))))))
+    (t/assert= "Index out of Range" (try (ith v  5) (catch e (ex-msg e))))
+    (t/assert= "Index out of Range" (try (ith l  5) (catch e (ex-msg e))))
+    (t/assert= "Index out of Range" (try (ith r  5) (catch e (ex-msg e))))
+    (t/assert= "Index out of Range" (try (ith v -6) (catch e (ex-msg e))))
+    (t/assert= "Index out of Range" (try (ith l -6) (catch e (ex-msg e))))
+    (t/assert= "Index out of Range" (try (ith r -6) (catch e (ex-msg e))))))
 
 (t/deftest test-ith-doseq
   (let [v [1 2 3 4 5]
