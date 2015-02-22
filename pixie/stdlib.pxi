@@ -1450,14 +1450,12 @@ The new value is thus `(apply f current-value-of-atom args)`."
    :signatures [[coll i] [coll idx not-found]]
    :added "0.1"}
   ([coll i]
-     (if coll
-       (let [len (count coll)
-             idx (if (neg? i) (+ i len) i)]
+     (when coll
+       (let [idx (if (neg? i) (+ i (count coll)) i)]
          (nth coll idx))))
   ([coll i not-found]
-     (if coll
-       (let [len (count coll)
-             idx (if (neg? i) (+ i len) i)]
+     (when coll
+       (let [idx (if (neg? i) (+ i (count coll)) i)]
          (nth coll idx not-found)))))
 
 (defn take
