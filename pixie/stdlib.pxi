@@ -1445,17 +1445,20 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 (defn ith
   {:doc "Returns the ith element of the collection, negative values count from the end.
-         If an index is out of bounds, will throw an Index out of bounds exception"
-   :signatures [[coll i]]
+         If an index is out of bounds, will throw an Index out of Range exception.
+         However, if you specify a not-found parameter, it will substitute that instead"
+   :signatures [[coll i] [coll idx not-found]]
    :added "0.1"}
-  [coll i]
-  (if coll
-    (let [len (count coll)
-          idx (if (neg? i) (+ i len) i)
-          in-bounds? (and (< idx len) (>= idx 0))]
-      (if in-bounds?
-        (nth coll idx)
-        (throw "Index out of bounds")))))
+  ([coll i]
+     (if coll
+       (let [len (count coll)
+             idx (if (neg? i) (+ i len) i)]
+         (nth coll idx))))
+  ([coll i not-found]
+     (if coll
+       (let [len (count coll)
+             idx (if (neg? i) (+ i len) i)]
+         (nth coll idx not-found)))))
 
 (defn take
   {:doc "Takes n elements from the collection, or fewer, if not enough."
@@ -1628,9 +1631,13 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                ~@body)))
 
 (extend -nth ISeq (fn [s n]
+                    (when (empty? s)
+                      (throw "Index out of Range"))
                     (if (and (pos? n) s)
                       (recur (next s) (dec n))
-                      (first s))))
+                      (if (zero? n)
+                        (first s)
+                        (throw "Index out of Range")))))
 (extend -nth-not-found ISeq (fn [s n not-found]
                               (if (and (pos? n) s)
                                 (recur (next s) (dec n) not-found)
@@ -1674,11 +1681,13 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
       (abs (quot (- start stop) step))))
   IIndexed
   (-nth [self idx]
+    (when (or (= start stop 0) (neg? idx))
+      (throw "Index out of Range"))
     (let [cmp (if (< start stop) < >)
           val (+ start (* idx step))]
       (if (cmp val stop)
         val
-        nil)))
+        (throw "Index out of Range"))))
   (-nth-not-found [self idx not-found]
     (let [cmp (if (< start stop) < >)
           val (+ start (* idx step))]

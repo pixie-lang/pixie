@@ -76,6 +76,15 @@
   (try
     (nth "hithere" 99)
     (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
+    (nth [] 0)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
+    (nth '() 0)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
+    (nth (range 0 0) 0)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
 
   ;; if not-found is specified, uses that for out of range
   (t/assert= (nth [1 2 3] 99 :default) :default)
