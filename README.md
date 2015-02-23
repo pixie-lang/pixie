@@ -30,16 +30,6 @@ Some planned and implemented features:
     make build_with_jit
     ./pixie-vm
 
-## Special Note for Macs
-
-If you are having trouble building or running the interpreter on Mac, check out this issue
-[https://github.com/pixie-lang/pixie/issues/49](https://github.com/pixie-lang/pixie/issues/49).
-In particular, try this:
-
-```
-PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' make build_with_jit
-PKG_CONFIG_PATH='/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig' make run_interactive
-```
 
 ## Running the tests
 
