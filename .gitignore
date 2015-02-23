@@ -2,3 +2,5 @@
 externals
 pixie-vm
 .idea
+lib
+include

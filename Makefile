@@ -5,6 +5,7 @@ EXTERNALS=../externals
 PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
+
 COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack
 JIT_OPTS?=--opt=jit
 TARGET_OPTS?=target.py
@@ -16,9 +17,6 @@ help:
 	@echo "make build_with_jit         - build with jit enabled"
 	@echo "make build_no_jit           - build without jit"
 	@echo "make fetch_externals	   - download and unpack external deps"
-
-find_externals_name:
-	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) find_externals_name.py
 
 build_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target.py
@@ -35,13 +33,12 @@ build_preload_no_jit: fetch_externals
 build: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS) 
 
-fetch_externals: $(EXTERNALS)/pypy $(EXTERNALS)/binaries
+fetch_externals: $(EXTERNALS)/pypy libs
 
-$(EXTERNALS)/binaries:
-	mkdir $(EXTERNALS); \
+libs:
 	echo https://github.com/pixie-lang/external-deps/releases/download/1.0/`uname -s`-`uname -m`.tar.bz2
-	curl -L https://github.com/pixie-lang/external-deps/releases/download/1.0/`uname -s`-`uname -m`.tar.bz2 > $(EXTERNALS)/externals.tar.bz2
-	cd $(EXTERNALS) && tar -jxf externals.tar.bz2 
+	curl -L https://github.com/pixie-lang/external-deps/releases/download/1.0/`uname -s`-`uname -m`.tar.bz2 > /tmp/externals.tar.bz2
+	tar -jxf /tmp/externals.tar.bz2 --strip-components=2
 
 
 $(EXTERNALS)/pypy:
@@ -56,16 +53,19 @@ run:
 	./pixie-vm
 
 run_interactive:
-	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py -l ../externals/externals/lib
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py
 
 run_built_tests: pixie-vm
-	./pixie-vm -l ../externals/externals/lib -l ../externals/externals/include run-tests.pxi
+	./pixie-vm run-tests.pxi
 
 run_interpreted_tests: target.py
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py run-tests.pxi
 
 compile_tests:
 	find "tests" -name "*.pxi" | xargs -L1 ./pixie-vm -l "tests" -c
+
+compile_src:
+	find * -name "*.pxi" | grep "^pixie/" | xargs -L1 ./pixie-vm $(EXTERNALS_FLAGS) -c
 
 clean_pxic:
 	find * -name "*.pxic" | xargs rm

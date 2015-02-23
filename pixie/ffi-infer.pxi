@@ -1,6 +1,14 @@
 (ns pixie.ffi-infer
   (require pixie.io :as io))
 
+(defn -add-rel-path [rel]
+  (println (first @load-paths) "/" rel)
+  (swap! load-paths conj (str (first @load-paths) "/" rel)))
+
+(-add-rel-path "lib")
+(-add-rel-path "include")
+
+
 (def *config* nil)
 (set-dynamic! (var *config*))
 (def *bodies* nil)

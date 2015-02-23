@@ -12,7 +12,7 @@ from rpython.rlib.objectmodel import specialize
 from rpython.rlib.rarithmetic import r_uint
 import pixie.vm.rt as rt
 
-MAX_INT32 = r_uint(1 << 32)
+MAX_INT32 = r_uint(1 << 31)
 
 class Writer(object):
     def __init__(self, wtr, with_cache=False):
