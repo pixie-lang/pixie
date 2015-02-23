@@ -33,9 +33,9 @@ build_preload_no_jit: fetch_externals
 build: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS) 
 
-fetch_externals: $(EXTERNALS)/pypy libs
+fetch_externals: $(EXTERNALS)/pypy ./lib
 
-libs:
+lib:
 	echo https://github.com/pixie-lang/external-deps/releases/download/1.0/`uname -s`-`uname -m`.tar.bz2
 	curl -L https://github.com/pixie-lang/external-deps/releases/download/1.0/`uname -s`-`uname -m`.tar.bz2 > /tmp/externals.tar.bz2
 	tar -jxf /tmp/externals.tar.bz2 --strip-components=2
