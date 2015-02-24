@@ -12,6 +12,7 @@
 
 (defprotocol IInputStream
   (read-byte [this] "Read a single character")
+  (read-line [this] "Read a single line")
   (read [this buffer len] "Reads multiple bytes into a buffer, returns the number of bytes read"))
 
 (defprotocol IOutputStream
@@ -33,6 +34,18 @@
       read-count))
   (read-byte [this]
     (fgetc buffer))
+  (read-line [this]
+    (let [line-feed (into #{} (map int [\newline \return]))
+          buf (buffer 1)]
+      (loop [acc []]
+        (let [len (read this buf 1)]
+          (cond
+            (and (pos? len) (not (line-feed (first buf))))
+            (recur (conj acc (first buf)))
+
+            (zero? len) nil
+
+            :else (apply str (map char acc)))))))
   IClosable
   (close [this]
     (fclose fp))
@@ -57,6 +70,13 @@
   [filename]
   (assert (string? filename) "Filename must be a string")
   (->FileStream (fopen filename "r")))
+
+(defn line-seq
+  "Returns the lines of text from file-stream as a lazy sequence of strings.
+   file-stream must implement IInputStream - specifically read-line."
+  [file-stream]
+  (when-let [line (read-line file-stream)]
+    (cons line (lazy-seq (line-seq file-stream)))))
 
 (deftype FileOutputStream [fp]
   IOutputStream
