@@ -134,3 +134,10 @@
 
 (t/deftest test-unicode
   (t/assert= "hâllo" "hâllo"))
+
+(t/deftest test-blank?
+  (t/assert= (s/blank? nil) true)
+  (t/assert= (s/blank? "") true)
+  (t/assert= (s/blank? " ") true)
+  (t/assert= (s/blank? " \t \n  \r ") true)
+  (t/assert= (s/blank? "  foo  ") false))

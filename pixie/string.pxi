@@ -49,3 +49,17 @@
         (nil? s) res
         (nil? (next s)) (str res (first s))
         :else (recur (next s) (str res (first s) seperator))))))
+
+(defn blank?
+  "True if s is nil, empty, or contains only whitespace."
+  [s]
+  (if s
+    (let [white #{\space \newline \tab \backspace \formfeed \return}
+          length (count s)]
+      (loop [index 0]
+        (if (= length index)
+          true
+          (if (white (nth s index))
+            (recur (inc index))
+            false))))
+    true))
