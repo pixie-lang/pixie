@@ -49,14 +49,35 @@
                 @result))
             acc))))))
 
-
-
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
    :added "0.1"}
   [filename]
   (assert (string? filename) "Filename must be a string")
   (->FileStream (fopen filename "r")))
+
+(defn read-line
+  "Read one line from input-stream for each invocation.
+   nil when all lines have been read"
+  [input-stream]
+  (let [line-feed (into #{} (map int [\newline \return]))
+        buf (buffer 1)]
+    (loop [acc []]
+      (let [len (read input-stream buf 1)]
+        (cond
+          (and (pos? len) (not (line-feed (first buf))))
+          (recur (conj acc (first buf)))
+
+          (and (zero? len) (empty? acc)) nil
+
+          :else (apply str (map char acc)))))))
+
+(defn line-seq
+  "Returns the lines of text from input-stream as a lazy sequence of strings.
+   input-stream must implement IInputStream"
+  [input-stream]
+  (when-let [line (read-line input-stream)]
+    (cons line (lazy-seq (line-seq input-stream)))))
 
 (deftype FileOutputStream [fp]
   IOutputStream

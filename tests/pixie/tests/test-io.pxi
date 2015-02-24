@@ -7,11 +7,22 @@
     (t/assert= (transduce (map identity)
                           count-rf
                           f)
-               78)))
+               91)))
 
 (t/deftest test-process-reduction
   (let [f (io/run-command "ls tests/pixie/tests/test-io.txt")]
     (t/assert= f "tests/pixie/tests/test-io.txt\n")))
+
+(t/deftest test-read-line
+  (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
+    (io/read-line f)
+    (t/assert= (io/read-line f) "Second line.")
+    (t/assert= (io/read-line f) nil)))
+
+(t/deftest test-line-seq
+  (let [f (io/open-read "tests/pixie/tests/test-io.txt")
+        s (io/line-seq f)]
+    (t/assert= (last s) "Second line.")))
 
 (comment
 (t/deftest test-slurp-spit
