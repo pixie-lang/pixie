@@ -6,8 +6,8 @@
 (def index-of si/index-of)
 (def split si/split)
 
-(def ends-with si/ends-with)
-(def starts-with si/starts-with)
+(def ends-with? si/ends-with)
+(def starts-with? si/starts-with)
 
 (def trim si/trim)
 (def triml si/triml)
@@ -49,3 +49,17 @@
         (nil? s) res
         (nil? (next s)) (str res (first s))
         :else (recur (next s) (str res (first s) seperator))))))
+
+(defn blank?
+  "True if s is nil, empty, or contains only whitespace."
+  [s]
+  (if s
+    (let [white #{\space \newline \tab \backspace \formfeed \return}
+          length (count s)]
+      (loop [index 0]
+        (if (= length index)
+          true
+          (if (white (nth s index))
+            (recur (inc index))
+            false))))
+    true))
