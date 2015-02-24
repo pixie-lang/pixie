@@ -377,3 +377,11 @@
   (t/assert= (transduce (drop-while even?) conj [2 4 6 7 8]) [7 8])
   (t/assert= (transduce (drop-while even?) conj [0 2] [1 4 6]) [0 2 1 4 6])
   (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))
+
+
+(t/deftest test-trace
+  (try
+    (/ 0 0)
+    (catch e
+        (t/assert= (first (trace e)) "Divide by zero")
+        (t/assert= (second (trace e)) "in internal function _div\n"))))
