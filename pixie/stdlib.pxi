@@ -1,12 +1,17 @@
 (in-ns :pixie.stdlib)
 
+
 (def libc (ffi-library pixie.platform/lib-c-name))
+
+
 (def exit (ffi-fn libc "exit" [CInt] CInt))
 (def puts (ffi-fn libc "puts" [CCharP] CInt))
+
 
 (def sh (ffi-fn libc "system" [CCharP] CInt))
 (def printf (ffi-fn libc "printf" [CCharP] CInt :variadic? true))
 (def getenv (ffi-fn libc "getenv" [CCharP] CCharP))
+
 
 (def libedit (ffi-library (str "libedit." pixie.platform/so-ext)))
 (def readline (ffi-fn libedit "readline" [CCharP] CCharP))
@@ -1519,12 +1524,12 @@ The new value is thus `(apply f current-value-of-atom args)`."
            ([result] (rf result))
            ([result input]
               (let [drop? @dv]
-                (if drop? 
-                  (if (pred input) 
-                    result 
-                    (do 
-                      (reset! dv nil) 
-                      (rf result input))) 
+                (if drop?
+                  (if (pred input)
+                    result
+                    (do
+                      (reset! dv nil)
+                      (rf result input)))
                   (rf result input))))))))
   ([pred coll]
      (let [step (fn [pred coll]
@@ -2094,3 +2099,14 @@ Expands to calls to `extend-type`."
   ([] (-string-builder))
   ([sb] (str sb))
   ([sb item] (conj! sb item)))
+
+
+(defmacro using [bindings & body]
+  (let [pairs (partition 2 bindings)
+        names (map first pairs)]
+    `(let [~@bindings
+           result# (do ~@body)]
+       ~@(map (fn [nm]
+                `(-dispose! ~nm))
+              names)
+       result#)))

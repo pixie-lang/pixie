@@ -1,6 +1,15 @@
 (ns pixie.ffi-infer
   (require pixie.io :as io))
 
+(defn -add-rel-path [rel]
+  (swap! load-paths conj (str (first @load-paths) "/" rel)))
+
+(-add-rel-path "lib")
+(-add-rel-path "include")
+(-add-rel-path "../lib")
+(-add-rel-path "../include")
+
+
 (def *config* nil)
 (set-dynamic! (var *config*))
 (def *bodies* nil)
@@ -26,7 +35,7 @@
   [{:keys [name]}]
   (str "PixieChecker::DumpType<__typeof__(" name ")>(); \n"))
 
-(defmethod emit-infer-code :struct
+(defmethod emit-infer-code :raw-struct
   [{:keys [name members]}]
   (str "std::cout << \"{:size \" << sizeof(struct " name ")"
        " << \" :infered-members [\" << "
@@ -36,6 +45,21 @@
                           " std::cout << \":offset \" << offsetof(struct " name ", " member ") << \" }\" << \n "))
                    members))
        "\"]}\" << std::endl;"))
+
+(defmethod emit-infer-code :struct
+  [{:keys [name members]}]
+  (str "std::cout << \"{:size \" << sizeof(" name ")"
+       " << \" :infered-members [\" << "
+       (apply str
+              (map (fn [member]
+                     (str "\"{:type  \"; PixieChecker::DumpValue((new (" name "))->" member "); "
+                          " std::cout << \":offset \" << offsetof(" name ", " member ") << \" }\" << \n "))
+                   members))
+       "\"]}\" << std::endl;"))
+
+(defmethod emit-infer-code :callback
+  [{:keys [name]}]
+  (str "PixieChecker::DumpType<__typeof__(" name ")>();"))
 
 
 (defn start-string []
@@ -59,10 +83,14 @@ return 0;
 
 (defmulti edn-to-ctype :type)
 
+(defn callback-type [{:keys [arguments returns]}]
+  `(ffi-callback ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns)))
+
 (defmethod edn-to-ctype :pointer
   [{:keys [of-type] :as ptr}]
   (cond
    (= of-type {:signed? true :size 1 :type :int}) 'pixie.stdlib/CCharP
+   (= (:type of-type) :function) (callback-type of-type)
    :else 'pixie.stdlib/CVoidP))
 
 (defmethod edn-to-ctype :float
@@ -71,6 +99,9 @@ return 0;
    (= size 8) 'pixie.stdlib/CDouble
    :else (assert False "unknown type")))
 
+(defmethod edn-to-ctype :void
+  [_]
+  `pixie.stdlib/CVoid)
 
 (def int-types {[8 true] 'pixie.stdlib/CInt8
                 [8 false] 'pixie.stdlib/CUInt8
@@ -95,11 +126,20 @@ return 0;
   [{:keys [name]} {:keys [value type]}]
   `(def ~(symbol name) ~value))
 
+
+
 (defmethod generate-code :function
   [{:keys [name]} {:keys [type arguments returns]}]
   (assert (= type :function) (str name " is not infered to be a function"))
   `(def ~(symbol name)
      (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
+
+(defmethod generate-code :raw-struct
+  [{:keys [name members]} {:keys [size infered-members]}]
+  `(def ~(symbol name)
+     (pixie.ffi/c-struct ~name ~size [~@(map (fn [name {:keys [type offset]}]
+                                               `[~(keyword name) ~(edn-to-ctype type) ~offset])
+                                             members infered-members)])))
 
 (defmethod generate-code :struct
   [{:keys [name members]} {:keys [size infered-members]}]
@@ -108,6 +148,17 @@ return 0;
                                                `[~(keyword name) ~(edn-to-ctype type) ~offset])
                                              members infered-members)])))
 
+(defmethod generate-code :type
+  [{:keys [name members]} {:keys [size infered-members]}]
+  `(def ~(symbol name)
+     (pixie.ffi/c-struct ~name ~size [~@(map (fn [name {:keys [type offset]}]
+                                               `[~(keyword name) ~(edn-to-ctype type) ~offset])
+                                             members infered-members)])))
+
+(defmethod generate-code :callback
+  [{:keys [name]} {:keys [of-type]}]
+  `(def ~(symbol name)
+     ~(callback-type of-type)))
 
 
 (defn run-infer [config cmds]
@@ -115,10 +166,12 @@ return 0;
                                (apply str (map emit-infer-code
                                                cmds))
                                (end-string)))
+  (println @load-paths)
   (let [cmd-str (str "c++ "
                      (apply str (interpose " " pixie.platform/c-flags))
-                     "  /tmp/tmp.cpp -I"
-                     (first @load-paths)
+                     "  /tmp/tmp.cpp "
+                     (apply str (map (fn [x] ( str " -I " x " "))
+                                     @load-paths))
                      (apply str " " (interpose " " (:cxx-flags *config*)))
                      " -o /tmp/a.out && /tmp/a.out")
         _ (println cmd-str)
@@ -151,6 +204,20 @@ return 0;
   `(swap! *bodies* conj (assoc {:op :struct}
                           :name ~(name nm)
                           :members ~(vec (map name members))) ))
+
+(defmacro defc-raw-struct [nm members]
+  `(swap! *bodies* conj (assoc {:op :raw-struct}
+                          :name ~(name nm)
+                          :members ~(vec (map name members))) ))
+
+(defmacro defctype [nm members]
+  `(swap! *bodies* conj (assoc {:op :type}
+                          :name ~(name nm)
+                          :members ~(vec (map name members))) ))
+
+(defmacro defccallback [nm]
+  `(swap! *bodies* conj (assoc {:op :callback}
+                          :name ~(name nm))))
 
 
 

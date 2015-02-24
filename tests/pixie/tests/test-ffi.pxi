@@ -35,3 +35,23 @@
 
 (t/deftest test-ffi-infer
   (t/assert= 0.5 (m/asin (m/sin 0.5))))
+
+
+(t/deftest test-ffi-callbacks
+  (let [MAX 255
+        qsort-cb (ffi-callback [CVoidP CVoidP] CInt)
+        qsort (ffi-fn libc "qsort" [CVoidP CInt CInt qsort-cb] CInt)
+
+        buf (buffer MAX)]
+    (using [cb (ffi-prep-callback qsort-cb (fn [x y]
+                                         (if (> (pixie.ffi/unpack x 0 CUInt8)
+                                                (pixie.ffi/unpack y 0 CUInt8))
+                                           -1
+                                           1)))]
+           (dotimes [x MAX]
+             (pixie.ffi/pack! buf x CUInt8 x))
+           (qsort buf MAX 1 cb)
+
+           (dotimes [x (dec MAX)]
+             (t/assert (> (pixie.ffi/unpack buf x CUInt8)
+                          (pixie.ffi/unpack buf (inc x) CUInt8)))))))

@@ -58,6 +58,8 @@ defprotocol("pixie.stdlib", "ITransientStack", ["-push!", "-pop!"])
 defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
 defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
 
+defprotocol("pixie.stdlib", "IDisposable", ["-dispose!"])
+
 @as_var("pixie.stdlib.internal", "-defprotocol")
 def _defprotocol(name, methods):
     from pixie.vm.compiler import NS_VAR
