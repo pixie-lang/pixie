@@ -2,25 +2,25 @@
   (require pixie.test :as t)
   (require pixie.string :as s))
 
-(t/deftest test-starts-with
+(t/deftest test-starts-with?
   (let [s "heyhohuh"]
-    (t/assert= (s/starts-with s "") true)
-    (t/assert= (s/starts-with s "hey") true)
-    (t/assert= (s/starts-with s "heyho") true)
-    (t/assert= (s/starts-with s s) true)
+    (t/assert= (s/starts-with? s "") true)
+    (t/assert= (s/starts-with? s "hey") true)
+    (t/assert= (s/starts-with? s "heyho") true)
+    (t/assert= (s/starts-with? s s) true)
 
-    (t/assert= (s/starts-with s "ho") false)
-    (t/assert= (s/starts-with s "foo") false)))
+    (t/assert= (s/starts-with? s "ho") false)
+    (t/assert= (s/starts-with? s "foo") false)))
 
-(t/deftest test-ends-with
+(t/deftest test-ends-with?
   (let [s "heyhohuh"]
-    (t/assert= (s/ends-with s "") true)
-    (t/assert= (s/ends-with s "huh") true)
-    (t/assert= (s/ends-with s "hohuh") true)
-    (t/assert= (s/ends-with s s) true)
+    (t/assert= (s/ends-with? s "") true)
+    (t/assert= (s/ends-with? s "huh") true)
+    (t/assert= (s/ends-with? s "hohuh") true)
+    (t/assert= (s/ends-with? s s) true)
 
-    (t/assert= (s/ends-with s "hey") false)
-    (t/assert= (s/ends-with s "foo") false)))
+    (t/assert= (s/ends-with? s "hey") false)
+    (t/assert= (s/ends-with? s "foo") false)))
 
 (t/deftest test-split
   (let [s "hey,ho,huh"]

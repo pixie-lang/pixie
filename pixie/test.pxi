@@ -49,7 +49,7 @@
         pxi-files (->> dirs
                        (mapcat fs/walk-files)
                        (filter #(fs/extension? % "pxi"))
-                       (filter #(s/starts-with (fs/basename %) "test-"))
+                       (filter #(s/starts-with? (fs/basename %) "test-"))
                        (distinct))]
     (foreach [file pxi-files]
              (println "Loading " file)

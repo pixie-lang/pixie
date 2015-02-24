@@ -1850,7 +1850,7 @@ Supported filters:
     :only   same as refer
 
 user => (refer 'pixie.string :refer :all)
-user => (refer 'pixie.string :only '(index-of starts-with ends-with))
+user => (refer 'pixie.string :only '(index-of starts-with? ends-with?))
 user => (refer 'pixie.string :rename '{index-of find})
 user => (refer 'pixie.string :exclude '(substring))"
    :added "0.1"}

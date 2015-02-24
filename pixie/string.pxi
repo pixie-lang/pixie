@@ -6,8 +6,8 @@
 (def index-of si/index-of)
 (def split si/split)
 
-(def ends-with si/ends-with)
-(def starts-with si/starts-with)
+(def ends-with? si/ends-with)
+(def starts-with? si/starts-with)
 
 (def trim si/trim)
 (def triml si/triml)
