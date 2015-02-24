@@ -12,7 +12,6 @@
 
 (defprotocol IInputStream
   (read-byte [this] "Read a single character")
-  (read-line [this] "Read a single line")
   (read [this buffer len] "Reads multiple bytes into a buffer, returns the number of bytes read"))
 
 (defprotocol IOutputStream
@@ -34,18 +33,6 @@
       read-count))
   (read-byte [this]
     (fgetc buffer))
-  (read-line [this]
-    (let [line-feed (into #{} (map int [\newline \return]))
-          buf (buffer 1)]
-      (loop [acc []]
-        (let [len (read this buf 1)]
-          (cond
-            (and (pos? len) (not (line-feed (first buf))))
-            (recur (conj acc (first buf)))
-
-            (zero? len) nil
-
-            :else (apply str (map char acc)))))))
   IClosable
   (close [this]
     (fclose fp))
@@ -62,8 +49,6 @@
                 @result))
             acc))))))
 
-
-
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
    :added "0.1"}
@@ -71,12 +56,28 @@
   (assert (string? filename) "Filename must be a string")
   (->FileStream (fopen filename "r")))
 
+(defn read-line
+  "Read one line from input-stream for each invocation.
+   nil when all lines have been read"
+  [input-stream]
+  (let [line-feed (into #{} (map int [\newline \return]))
+        buf (buffer 1)]
+    (loop [acc []]
+      (let [len (read input-stream buf 1)]
+        (cond
+          (and (pos? len) (not (line-feed (first buf))))
+          (recur (conj acc (first buf)))
+
+          (and (zero? len) (empty? acc)) nil
+
+          :else (apply str (map char acc)))))))
+
 (defn line-seq
-  "Returns the lines of text from file-stream as a lazy sequence of strings.
-   file-stream must implement IInputStream - specifically read-line."
-  [file-stream]
-  (when-let [line (read-line file-stream)]
-    (cons line (lazy-seq (line-seq file-stream)))))
+  "Returns the lines of text from input-stream as a lazy sequence of strings.
+   input-stream must implement IInputStream"
+  [input-stream]
+  (when-let [line (read-line input-stream)]
+    (cons line (lazy-seq (line-seq input-stream)))))
 
 (deftype FileOutputStream [fp]
   IOutputStream
