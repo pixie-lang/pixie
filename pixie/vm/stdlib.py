@@ -774,8 +774,23 @@ def _str(self):
     assert isinstance(self, RuntimeException)
     return rt.wrap(self.__repr__())
 
+@extend(_seq, RuntimeException)
+def _seq(self):
+    import pixie.vm.persistent_vector as vector
+    assert isinstance(self, RuntimeException)
+    trace = vector.EMPTY
+    trace = rt.conj(trace, self._data)
+    for x in self._trace:
+        trace = rt.conj(trace, rt.wrap(x.__repr__()))
+    return rt._seq(trace)
+
 @as_var("ex-msg")
 def ex_msg(e):
     assert isinstance(e, RuntimeException)
     return e._data
 
+@as_var("ex-pr")
+def ex_pr(e):
+    assert isinstance(e, RuntimeException)
+    print e.__repr__()
+    return nil
