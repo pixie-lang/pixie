@@ -1217,13 +1217,15 @@ and implements IAssociative, ILookup and IObject."
   {:doc "Prints the arguments, seperated by spaces."
    :added "0.1"}
   [& args]
-  (printf (transduce (interpose " ") str args)))
+  (printf (transduce (interpose " ") str args))
+  nil)
 
 (defn println
   {:doc "Prints the arguments, separated by spaces, with a newline at the end."
    :added "0.1"}
   [& args]
-  (puts (transduce (interpose " ") str args)))
+  (puts (transduce (interpose " ") str args))
+  nil)
 
 (defn pr-str
   {:doc "Formats the arguments using -repr, separated by spaces, returning a string."
@@ -1235,13 +1237,15 @@ and implements IAssociative, ILookup and IObject."
   {:doc "Prints the arguments using -repr, separated by spaces."
    :added "0.1"}
   [& args]
-  (printf (apply pr-str args)))
+  (printf (apply pr-str args))
+  nil)
 
 (defn prn
   {:doc "Prints the arguments using -repr, separated by spaces, with a newline at the end."
    :added "0.1"}
   [& args]
-  (puts (apply pr-str args)))
+  (puts (apply pr-str args))
+  nil)
 
 (defn repeat
   ([x]
