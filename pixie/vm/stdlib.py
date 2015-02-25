@@ -782,7 +782,7 @@ def _seq(self):
     assert isinstance(self, RuntimeException)
     trace = vector.EMPTY
     trace_element = hmap.EMPTY
-    trace_element = rt.assoc(trace_element, keyword(u"type"), u"runtime")
+    trace_element = rt.assoc(trace_element, keyword(u"type"), rt.wrap(u"runtime"))
     trace_element = rt.assoc(trace_element, keyword(u"data"), rt.wrap(self._data))
     trace = rt.conj(trace, trace_element)
     for x in self._trace:

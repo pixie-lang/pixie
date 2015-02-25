@@ -383,5 +383,5 @@
   (try
     (/ 0 0)
     (catch e
-        (t/assert= (first (trace e)) {:data "Divide by zero", :type :runtime})
+        (t/assert= (first (trace e)) {:data "Divide by zero", :type "runtime"})
         (t/assert= (second (trace e)) {:type "native", :name "_div"} ))))
