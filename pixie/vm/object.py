@@ -206,9 +206,11 @@ class PolymorphicCodeInfo(ErrorInfo):
         return u"in polymorphic function " + self._name + u" dispatching on " + tp._name + u"\n"
 
     def trace_map(self):
+        tp = self._tp
+        assert isinstance(tp, Type)
         tm = {u"type" : u"polymorphic"}
         tm[u"name"] = self._name
-        tm[u"tp"] = self._tp
+        tm[u"tp"] = tp._name
         return tm
 
 class PixieCodeInfo(ErrorInfo):
