@@ -122,7 +122,6 @@ class RuntimeException(Object):
 
         s.extend([u"RuntimeException: " + rt.name(rt.str(self._data)) + u"\n"])
 
-
         return u"".join(s)
 
 class WrappedException(Exception):
@@ -176,12 +175,25 @@ class InterpreterCodeInfo(ErrorInfo):
     def interpreter_code_info_state(self):
         return self._line, self._line_number, self._column_number, self._file
 
+    def trace_map(self):
+        tm = {u"type" : u"interpreter"}
+        tm[u"line"] = self._line.__repr__()
+        tm[u"line_number"] = unicode(str(self._line_number))
+        tm[u"column_number"] = unicode(str(self._column_number))
+        tm[u"file"] = self._file
+        return tm
+
 class NativeCodeInfo(ErrorInfo):
     def __init__(self, name):
         self._name = name
 
     def __repr__(self):
         return u"in internal function " + self._name + u"\n"
+
+    def trace_map(self):
+        tm = {u"type" : u"native"}
+        tm[u"name"] = self._name
+        return tm
 
 class PolymorphicCodeInfo(ErrorInfo):
     def __init__(self, name, tp):
@@ -193,7 +205,11 @@ class PolymorphicCodeInfo(ErrorInfo):
         assert isinstance(tp, Type)
         return u"in polymorphic function " + self._name + u" dispatching on " + tp._name + u"\n"
 
-
+    def trace_map(self):
+        tm = {u"type" : u"polymorphic"}
+        tm[u"name"] = self._name
+        tm[u"tp"] = self._tp
+        return tm
 
 class PixieCodeInfo(ErrorInfo):
     def __init__(self, name):
@@ -201,3 +217,8 @@ class PixieCodeInfo(ErrorInfo):
 
     def __repr__(self):
         return u"in pixie function " + self._name + u"\n"
+
+    def trace_map(self):
+        tm = {u"type" : u"pixie"}
+        tm[u"name"] = self._name
+        return tm

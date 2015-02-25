@@ -777,11 +777,22 @@ def _str(self):
 @extend(_seq, RuntimeException)
 def _seq(self):
     import pixie.vm.persistent_vector as vector
+    import pixie.vm.persistent_hash_map as hmap
+    from pixie.vm.keyword import keyword
     assert isinstance(self, RuntimeException)
     trace = vector.EMPTY
-    trace = rt.conj(trace, self._data)
+    trace_element = hmap.EMPTY
+    trace_element = rt.assoc(trace_element, keyword(u"type"), keyword(u"runtime"))
+    trace_element = rt.assoc(trace_element, keyword(u"data"), rt.wrap(self._data))
+    trace = rt.conj(trace, trace_element)
     for x in self._trace:
-        trace = rt.conj(trace, rt.wrap(x.__repr__()))
+        trace_element = hmap.EMPTY
+        tmap = x.trace_map()
+        for key in tmap:
+            trace_element = rt.assoc(trace_element, keyword(key), rt.wrap(tmap[key]))
+
+        trace = rt.conj(trace, trace_element)
+
     return rt._seq(trace)
 
 @as_var("ex-msg")
