@@ -2,11 +2,11 @@ all: help
 
 EXTERNALS=../externals
 
-PYTHON ?= python
+PYTHON ?= pypy
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 
-COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack
+COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack --continuation
 JIT_OPTS?=--opt=jit
 TARGET_OPTS?=target.py
 

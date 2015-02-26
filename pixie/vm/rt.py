@@ -68,6 +68,7 @@ def init():
     import pixie.vm.libs.string
     import pixie.vm.threads
     import pixie.vm.string_builder
+    import pixie.vm.stacklet
 
     numbers.init()
 

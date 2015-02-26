@@ -185,6 +185,9 @@ def load_stdlib():
 
 def entry_point(args):
     try:
+        import pixie.vm.stacklet
+        pixie.vm.stacklet.init()
+
         interactive = True
         exit = False
         script_args = []

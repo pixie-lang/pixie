@@ -1630,7 +1630,10 @@ All these forms can be combined and nested, in the example below:
 
 For more information, see http://clojure.org/special_forms#binding-forms"}
   [bindings & body]
-  (let* [destructured-bindings (transduce (map #(apply destructure %1))
+  (let* [destructured-bindings (transduce (map (fn [args]
+                                                 (assert (= 2 (count args)) (str "Bindings must be in pairs, not " args
+                                                                                 " " (meta (first args))))
+                                                 (apply destructure args)))
                                           concat
                                           []
                                           (partition 2 bindings))]
