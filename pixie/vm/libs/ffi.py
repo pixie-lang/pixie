@@ -554,7 +554,7 @@ def ffi_prep_callback(tp, f):
     affirm(isinstance(tp, CFunctionType), u"First argument to ffi-prep-callback must be a CFunctionType")
     raw_closure = rffi.cast(rffi.VOIDP, clibffi.closureHeap.alloc())
 
-    unique_id = len(registered_callbacks)
+    unique_id = rffi.cast(lltype.Signed, raw_closure)
 
     res = clibffi.c_ffi_prep_closure(rffi.cast(clibffi.FFI_CLOSUREP, raw_closure), tp.get_cd().cif,
                              invoke_callback,
