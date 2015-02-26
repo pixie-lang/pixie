@@ -2126,3 +2126,16 @@ Expands to calls to `extend-type`."
    :added "0.1"}
   ([] (trace *e))
   ([e] (seq e)))
+
+(defn tree-seq
+  "Returns a lazy sequence of the nodes in a tree via a depth-first walk.
+   branch? - fn of node that should true when node has children
+   children - fn of node that should return a sequence of children (called if branch? true)
+   root - root node of the tree"
+  [branch? children root]
+  (let [walk (fn walk [node]
+               (lazy-seq
+                (cons node
+                  (when (branch? node)
+                    (mapcat walk (children node))))))]
+    (walk root)))

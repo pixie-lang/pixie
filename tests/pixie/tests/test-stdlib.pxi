@@ -378,10 +378,18 @@
   (t/assert= (transduce (drop-while even?) conj [0 2] [1 4 6]) [0 2 1 4 6])
   (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))
 
-
 (t/deftest test-trace
   (try
     (/ 0 0)
     (catch e
         (t/assert= (first (trace e)) {:type :runtime :data "Divide by zero"})
         (t/assert= (second (trace e)) {:type :native :name "_div"} ))))
+
+(t/deftest test-tree-seq
+  (t/assert= (vec (filter string?
+                          (tree-seq map?
+                                    :ch
+                                    {:ch [{:ch ["a" "b"]}
+                                          {:ch ["c" "d"]}
+                                          {:ch [{:ch ["e" {:ch ["f"]}]}]}]})))
+             ["a" "b" "c" "d" "e" "f"]))
