@@ -781,15 +781,15 @@ def _seq(self):
     from pixie.vm.keyword import keyword
     assert isinstance(self, RuntimeException)
     trace = vector.EMPTY
-    trace_element = hmap.EMPTY
-    trace_element = rt.assoc(trace_element, keyword(u"type"), rt.wrap(u"runtime"))
+    trace_element = rt.hashmap(keyword(u"type"), keyword(u"runtime"))
     trace_element = rt.assoc(trace_element, keyword(u"data"), rt.wrap(self._data))
     trace = rt.conj(trace, trace_element)
     for x in self._trace:
-        trace_element = hmap.EMPTY
         tmap = x.trace_map()
+        trace_element = hmap.EMPTY
         for key in tmap:
-            trace_element = rt.assoc(trace_element, keyword(key), rt.wrap(tmap[key]))
+            val = tmap[key]
+            trace_element = rt.assoc(trace_element, key, val)
 
         trace = rt.conj(trace, trace_element)
 
@@ -799,9 +799,3 @@ def _seq(self):
 def ex_msg(e):
     assert isinstance(e, RuntimeException)
     return e._data
-
-@as_var("ex-pr")
-def ex_pr(e):
-    assert isinstance(e, RuntimeException)
-    print e.__repr__()
-    return nil

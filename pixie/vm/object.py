@@ -176,11 +176,15 @@ class InterpreterCodeInfo(ErrorInfo):
         return self._line, self._line_number, self._column_number, self._file
 
     def trace_map(self):
-        tm = {u"type" : u"interpreter"}
-        tm[u"line"] = self._line.__repr__()
-        tm[u"line_number"] = unicode(str(self._line_number))
-        tm[u"column_number"] = unicode(str(self._column_number))
-        tm[u"file"] = self._file
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
+
+        tm = {keyword(u"type") : keyword(u"interpreter")}
+        tm[keyword(u"line")] = String(self._line.__repr__())
+        tm[keyword(u"line-number")] = Integer(self._line_number)
+        tm[keyword(u"column-number")] = Integer(self._column_number)
+        tm[keyword(u"file")] = String(self._file)
         return tm
 
 class NativeCodeInfo(ErrorInfo):
@@ -191,8 +195,12 @@ class NativeCodeInfo(ErrorInfo):
         return u"in internal function " + self._name + u"\n"
 
     def trace_map(self):
-        tm = {u"type" : u"native"}
-        tm[u"name"] = self._name
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
+
+        tm = {keyword(u"type") : keyword(u"native")}
+        tm[keyword(u"name")] = String(self._name)
         return tm
 
 class PolymorphicCodeInfo(ErrorInfo):
@@ -206,11 +214,15 @@ class PolymorphicCodeInfo(ErrorInfo):
         return u"in polymorphic function " + self._name + u" dispatching on " + tp._name + u"\n"
 
     def trace_map(self):
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
+
         tp = self._tp
         assert isinstance(tp, Type)
-        tm = {u"type" : u"polymorphic"}
-        tm[u"name"] = self._name
-        tm[u"tp"] = tp._name
+        tm = {keyword(u"type") : keyword(u"polymorphic")}
+        tm[keyword(u"name")] = String(self._name)
+        tm[keyword(u"tp")] = String(tp._name)
         return tm
 
 class PixieCodeInfo(ErrorInfo):
@@ -221,6 +233,10 @@ class PixieCodeInfo(ErrorInfo):
         return u"in pixie function " + self._name + u"\n"
 
     def trace_map(self):
-        tm = {u"type" : u"pixie"}
-        tm[u"name"] = self._name
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
+
+        tm = {keyword(u"type") : keyword(u"pixie")}
+        tm[keyword(u"name")] = String(self._name)
         return tm
