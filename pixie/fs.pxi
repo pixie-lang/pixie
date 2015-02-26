@@ -106,7 +106,7 @@
     (last (string/split (abs this) ".")))
 
   (extension? [this ext]
-    (string/ends-with (abs this) ext))
+    (string/ends-with? (abs this) ext))
 
   IObject
   (-hash [this]
