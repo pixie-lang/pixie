@@ -2104,7 +2104,6 @@ Expands to calls to `extend-type`."
   ([sb] (str sb))
   ([sb item] (conj! sb item)))
 
-
 (defmacro using [bindings & body]
   (let [pairs (partition 2 bindings)
         names (map first pairs)]
@@ -2114,3 +2113,16 @@ Expands to calls to `extend-type`."
                 `(-dispose! ~nm))
               names)
        result#)))
+(defn pst
+  {:doc "Prints the trace of a Runtime Exception if given, or the last Runtime Exception in *e"
+   :signatures [[] [e]]
+   :added "0.1"}
+  ([] (pst *e))
+  ([e] (when e (print (str e)))))
+
+(defn trace
+  {:doc "Returns a seq of the trace of a Runtime Exception or the last Runtime Exception in *e"
+   :signatures [[] [e]]
+   :added "0.1"}
+  ([] (trace *e))
+  ([e] (seq e)))

@@ -143,7 +143,7 @@ def init():
     # stacklet.with_stacklets(run_load_stdlib)
 
     init_fns = [u"reduce", u"get", u"reset!", u"assoc", u"key", u"val", u"keys", u"vals", u"vec", u"load-file", u"compile-file",
-                u"load-ns"]
+                u"load-ns", u"hashmap"]
     for x in init_fns:
         globals()[py_str(code.munge(x))] = unwrap(code.intern_var(u"pixie.stdlib", x))
 

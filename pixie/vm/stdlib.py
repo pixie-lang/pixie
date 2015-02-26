@@ -774,8 +774,28 @@ def _str(self):
     assert isinstance(self, RuntimeException)
     return rt.wrap(self.__repr__())
 
+@extend(_seq, RuntimeException)
+def _seq(self):
+    import pixie.vm.persistent_vector as vector
+    import pixie.vm.persistent_hash_map as hmap
+    from pixie.vm.keyword import keyword
+    assert isinstance(self, RuntimeException)
+    trace = vector.EMPTY
+    trace_element = rt.hashmap(keyword(u"type"), keyword(u"runtime"))
+    trace_element = rt.assoc(trace_element, keyword(u"data"), rt.wrap(self._data))
+    trace = rt.conj(trace, trace_element)
+    for x in self._trace:
+        tmap = x.trace_map()
+        trace_element = hmap.EMPTY
+        for key in tmap:
+            val = tmap[key]
+            trace_element = rt.assoc(trace_element, key, val)
+
+        trace = rt.conj(trace, trace_element)
+
+    return rt._seq(trace)
+
 @as_var("ex-msg")
 def ex_msg(e):
     assert isinstance(e, RuntimeException)
     return e._data
-
