@@ -24,7 +24,7 @@ template < typename T > std::string to_string( const T& n )
     stm << n ;
     return stm.str() ;
 }
-    
+
 
 // Function Checker
 template <int Arity, class T>
@@ -92,7 +92,7 @@ struct FunctionTyper<0, T>
             " ]}";
         }
     };
-    
+
     template<class T>
     struct FunctionTyper<4, T>
     {
@@ -108,7 +108,124 @@ struct FunctionTyper<0, T>
             " ]}";
         }
     };
-    
+
+    template<class T>
+    struct FunctionTyper<5, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :function :arity 5 :returns " +
+            GetType<typename boost::function_traits<T>::result_type>() +
+            " :arguments [" +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg4_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg5_type>() + " " +
+            " ]}";
+        }
+    };
+
+    template<class T>
+    struct FunctionTyper<6, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :function :arity 6 :returns " +
+            GetType<typename boost::function_traits<T>::result_type>() +
+            " :arguments [" +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg4_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg5_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg6_type>() + " " +
+            " ]}";
+        }
+    };
+
+    template<class T>
+    struct FunctionTyper<7, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :function :arity 7 :returns " +
+            GetType<typename boost::function_traits<T>::result_type>() +
+            " :arguments [" +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg4_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg5_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg6_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg7_type>() + " " +
+            " ]}";
+        }
+    };
+
+    template<class T>
+    struct FunctionTyper<8, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :function :arity 8 :returns " +
+            GetType<typename boost::function_traits<T>::result_type>() +
+            " :arguments [" +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg4_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg5_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg6_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg7_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg8_type>() + " " +
+            " ]}";
+        }
+    };
+
+    template<class T>
+    struct FunctionTyper<9, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :function :arity 9 :returns " +
+            GetType<typename boost::function_traits<T>::result_type>() +
+            " :arguments [" +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg4_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg5_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg6_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg7_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg8_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg9_type>() + " " +
+            " ]}";
+        }
+    };
+
+    template<class T>
+    struct FunctionTyper<10, T>
+    {
+        static std::string getType()
+        {
+            return "{:type :function :arity 10 :returns " +
+            GetType<typename boost::function_traits<T>::result_type>() +
+            " :arguments [" +
+            GetType<typename boost::function_traits<T>::arg1_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg2_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg3_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg4_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg5_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg6_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg7_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg8_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg9_type>() + " " +
+            GetType<typename boost::function_traits<T>::arg10_type>() + " " +
+            " ]}";
+        }
+    };
+
 
 // End Function Typer
 

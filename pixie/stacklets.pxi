@@ -52,11 +52,38 @@
          timer (uv/uv_timer_t)]
      (reset! cb (ffi-prep-callback uv/uv_timer_cb
                                    (fn [handle]
-                                     (enqueue tasks k)
+                                     (enqueue tasks [k nil])
                                      (uv/uv_timer_stop timer)
                                      (-dispose! @cb))))
      (uv/uv_timer_init (uv/uv_default_loop) timer)
      (uv/uv_timer_start timer @cb args 0))))
+
+
+(defmacro defuvfsfn [nm args return]
+  (let [kw (keyword (str "pixie.uv/" (name nm)))]
+    `(do (defn ~nm ~args
+           (let [[h# result#] (@stacklet-loop-h [~kw ~args])]
+             (reset! stacklet-loop-h h#)
+             result#))
+         (defmethod async-fn ~kw
+           [f# ~args k# tasks#]
+           (let [cb# (atom nil)]
+             (reset! cb# (ffi-prep-callback uv/uv_fs_cb
+                                            (fn [req#]
+                                              (enqueue tasks# [k# (~return req#)])
+                                              (uv/uv_fs_req_cleanup req#)
+                                              (-dispose! @cb#))))
+             (~(symbol (str "pixie.uv/uv_fs_" (name nm)))
+              (uv/uv_default_loop)
+              (uv/uv_fs_t)
+              ~@args
+              @cb#))))))
+
+((var defuvfsfn) 'open '[path flags mode] :result)
+
+(defuvfsfn open [path flags mode] :result)
+
+(keyword "foo/bar")
 
 (defn -with-stacklets [fn]
   (let [[h [op arg]] ((new-stacklet fn) nil)
@@ -70,27 +97,26 @@
                                         ;       (= 0 (count tasks)) (uv/uv_run_loop (uv/uv_default_loop))
        (= op :spawn) (let [wh (new-stacklet arg)
                            [h [op arg]] (this_h nil)]
-                       (enqueue tasks wh)
-                       (println @tasks)
+                       (enqueue tasks [wh nil])
                        (recur op arg h))
-       (= op :yield) (let [_ (enqueue tasks this_h)
-                           task (dequeue tasks)
-                           [h [op arg]] (task nil)]
+       (= op :yield) (let [_ (enqueue tasks [this_h nil])
+                           [task val] (dequeue tasks)
+                           [h [op arg]] (task val)]
                        (recur op arg h))
        (= op :spawn-end) (do (when (empty? @tasks)
-                               (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT))
+                               (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_ONCE))
                              (if (empty? @tasks)
                                :done
-                               (let [task (dequeue tasks)
-                                     [h [op arg]] (task nil)]
+                               (let [[task val] (dequeue tasks)
+                                     [h [op arg]] (task val)]
                                  (recur op arg h))))
        :else (do (async-fn op arg this_h tasks)
                  (when (empty? @tasks)
-                   (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT))
+                   (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_ONCE))
                  (if (empty? @tasks)
                    :done
-                   (let [task (dequeue tasks)
-                         [h [op arg]] (task nil)]
+                   (let [[task val] (dequeue tasks)
+                         [h [op arg]] (task val)]
                      (recur op arg h))))
        :else (assert false (str "Unknown command " op " " arg))))))
 
@@ -106,11 +132,4 @@
         (catch e
             (println e))))))
 
-(with-stacklets (spawn (dotimes [x 10]
-                         (sleep 100)
-
-                         (println "<- " x)))
-  (spawn (dotimes [x 10]
-           (sleep 100)
-           (println "-> " x)))
-  (yield-control))
+(with-stacklets (open "/tmp/foo-bar-baz" uv/O_WRONLY uv/O_CREAT))
