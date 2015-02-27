@@ -272,7 +272,7 @@ class KeywordReader(ReaderHandler):
         itm = read(rdr, True)
         affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
 
-        return keyword(rt.name(itm))
+        return keyword(rt.name(itm), rt.namespace(itm))
 
 class LiteralStringReader(ReaderHandler):
     def invoke(self, rdr, ch):
