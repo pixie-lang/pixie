@@ -12,6 +12,7 @@ def init():
     from pixie.vm.primitives import nil, true, false
     from pixie.vm.string import String
     from pixie.vm.object import Object
+    from pixie.vm.compiler import NS_VAR
 
     _type_registry.set_registry(code._ns_registry)
 
@@ -150,6 +151,8 @@ def init():
     init_vars = [u"load-paths"]
     for x in init_vars:
         globals()[py_str(code.munge(x))] = code.intern_var(u"pixie.stdlib", x)
+
+    globals()[py_str(code.munge(u"ns"))] = NS_VAR
 
     globals()["__inited__"] = True
 

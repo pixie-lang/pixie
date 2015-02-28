@@ -11,7 +11,8 @@
 
 (t/deftest keyword-namespace
   (t/assert= (namespace :foo/bar) "foo")
-  (t/assert= (namespace :cat/dog) "cat"))
+  (t/assert= (namespace :cat/dog) "cat")
+  (t/assert= (namespace ::foo) "pixie.tests.test-keywords"))
 
 
 (t/deftest keyword-equality
