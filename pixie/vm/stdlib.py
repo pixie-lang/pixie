@@ -106,8 +106,6 @@ def default_str(x):
     return rt.wrap(u"<inst " + tp._name + u">")
 
 def default_hash(x):
-    tp = x.type()
-    assert isinstance(tp, Type)
     return x.hash()
 
 _str.set_default_fn(wrap_fn(default_str))
