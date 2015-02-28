@@ -1,3 +1,4 @@
+from rpython.rlib.objectmodel import compute_identity_hash
 import rpython.rlib.jit as jit
 
 class Object(object):
@@ -20,6 +21,10 @@ class Object(object):
     def r_uint_val(self):
         affirm(False, u"Expected Number, not " + self.type().name())
         return 0
+
+    def hash(self):
+        import pixie.vm.rt as rt
+        return rt.wrap(compute_identity_hash(self))
 
     def promote(self):
         return self

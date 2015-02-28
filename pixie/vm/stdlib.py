@@ -105,8 +105,14 @@ def default_str(x):
     assert isinstance(tp, Type)
     return rt.wrap(u"<inst " + tp._name + u">")
 
+def default_hash(x):
+    tp = x.type()
+    assert isinstance(tp, Type)
+    return x.hash()
+
 _str.set_default_fn(wrap_fn(default_str))
 _repr.set_default_fn(wrap_fn(default_str))
+_hash.set_default_fn(wrap_fn(default_hash))
 
 _meta.set_default_fn(wrap_fn(lambda x: nil))
 
@@ -247,8 +253,6 @@ def _(self):
 @as_var("hash")
 def __hash(x):
     return rt._hash(x)
-
-
 
 _count_driver = jit.JitDriver(name="pixie.stdlib.count",
                               greens=["tp"],
