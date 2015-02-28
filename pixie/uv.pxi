@@ -7,6 +7,10 @@
   (f/defconst UV_RUN_ONCE)
   (f/defconst UV_RUN_NOWAIT)
 
+  (f/defcfn uv_close)
+  (f/defccallback uv_close_cb)
+
+
   (f/defcstruct uv_loop_t [])
 
   (f/defcfn uv_loop_init)
@@ -23,6 +27,7 @@
   (f/defcfn uv_update_time)
   (f/defcfn uv_walk)
 
+
   (f/defccallback uv_read_cb)
 
 
@@ -36,6 +41,7 @@
   (f/defcfn uv_timer_again)
   (f/defcfn uv_timer_set_repeat)
   (f/defcfn uv_timer_get_repeat)
+
 
   ;; Filesystem
 
@@ -57,7 +63,15 @@
                            :st_blksize
                            :st_blocks
                            :st_flags
-                           :st_gen])
+                           :st_gen
+                           :st_atim.tv_sec
+                           :st_atim.tv_nsec
+                           :st_mtim.tv_sec
+                           :st_mtim.tv_nsec
+                           :st_ctim.tv_sec
+                           :st_ctim.tv_nsec
+                           :st_birthtim.tv_sec
+                           :st_birthtim.tv_nsec])
 
     (f/defconst UV_FS_UNKNOWN)
     (f/defconst UV_FS_CUSTOM)
@@ -142,4 +156,16 @@
     (f/defconst O_ASYNC)
     (f/defconst O_CREAT)
 
-    )
+    (f/defconst S_IRUSR)
+
+
+    ; ERRNO
+    (f/defconst UV_E2BIG)
+    (f/defconst UV_EACCES)
+
+
+    ; async
+    (f/defcstruct uv_async_t [])
+    (f/defccallback uv_async_cb)
+    (f/defcfn uv_async_init)
+    (f/defcfn uv_async_send))
