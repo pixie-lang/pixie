@@ -1562,10 +1562,12 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 ;; TODO: use a transient map in the future
 (defn frequencies [coll]
+  {:doc "Returns a map with distinct elements as keys and the number of occurences as values"
+   :added "0.1"}
   (reduce (fn [res elem]
             (update-in res [elem] (fnil inc 0)))
           {}
-          coll)
+          coll))
 
 (defn partition
   {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
