@@ -273,7 +273,7 @@ class KeywordReader(ReaderHandler):
         ch = rdr.read()
         if ch == u":":
             itm = read(rdr, True)
-            nms = rt.ns.deref().name()
+            nms = rt.name(rt.ns.deref())
         else:
             rdr.unread(ch)
             itm = read(rdr, True)
