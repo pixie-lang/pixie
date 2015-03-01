@@ -12,6 +12,8 @@ matrix:
 
 script:
   - make PYTHON=python build
+  - make compile_src
+  - make compile_tests
   - make run_built_tests
 
 before_install:

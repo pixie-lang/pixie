@@ -337,6 +337,11 @@
   (fn [v]
     (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
 
+(extend -hash PersistentList
+  (fn [v]
+    (transduce ordered-hash-reducing-fn v)))
+
+
 (extend -str LazySeq
   (fn [v]
     (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
