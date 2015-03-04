@@ -1548,6 +1548,27 @@ The new value is thus `(apply f current-value-of-atom args)`."
                       s)))]
        (lazy-seq (step pred coll)))))
 
+;; TODO: use a transient map in the future
+(defn group-by [f coll]
+  {:doc "Groups the collection into a map keyed by the result of applying f on each element. The value at each key is a vector of elements in order of appearance."
+   :examples [["(group-by even? [1 2 3 4 5])" nil {false [1 3 5] true [2 4]}]
+              ["(group-by (partial apply +) [[1 2 3][2 4][1 2]]" nil {6 [[1 2 3] [2 4]] 3 [[1 2]]}]]
+   :signatures [[f coll]]
+   :added "0.1"}
+  (reduce (fn [res elem]
+            (update-in res [(f elem)] (fnil conj []) elem))
+          {}
+          coll))
+
+;; TODO: use a transient map in the future
+(defn frequencies [coll]
+  {:doc "Returns a map with distinct elements as keys and the number of occurences as values"
+   :added "0.1"}
+  (reduce (fn [res elem]
+            (update-in res [elem] (fnil inc 0)))
+          {}
+          coll))
+
 (defn partition
   {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
 

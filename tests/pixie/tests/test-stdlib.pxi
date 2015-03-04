@@ -393,3 +393,19 @@
                                           {:ch ["c" "d"]}
                                           {:ch [{:ch ["e" {:ch ["f"]}]}]}]})))
              ["a" "b" "c" "d" "e" "f"]))
+
+(t/deftest test-group-by
+  (t/assert= (group-by :age [{:name "banjo" :age 3}
+                             {:name "mary"  :age 3}
+                             {:name "boris" :age 7}])
+             {3  [{:name "banjo" :age 3} 
+                  {:name "mary"  :age 3}]
+              7  [{:name "boris" :age 7}]})
+  (t/assert= (group-by even? (range 1 5))
+             {true [2 4]
+              false [1 3]}))
+
+
+(t/deftest test-frequencies
+  (t/assert= (frequencies [1 2 3 4 3 2 1])
+             {1 2, 2 2, 3 2, 4 1}))
