@@ -1,6 +1,6 @@
 py_object = object
 import pixie.vm.object as object
-from pixie.vm.object import affirm
+from pixie.vm.object import affirm, runtime_error
 from pixie.vm.primitives import nil, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.jit import elidable_promote, promote
@@ -209,7 +209,12 @@ class Code(BaseCode):
         return self._debug_points
 
     def invoke(self, args):
-        return self.invoke_with(args, self)
+        if len(args) == self.get_arity():
+            return self.invoke_with(args, self)
+        else:
+            runtime_error(u"Invalid number of arguments " + unicode(len(args)) 
+                          + u" for function '" + unicode(str(self._name)) + u"'. Expected "
+                          + unicode(str(self.get_arity())))
 
     def invoke_with(self, args, this_fn):
         try:

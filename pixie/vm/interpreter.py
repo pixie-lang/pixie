@@ -98,12 +98,8 @@ class Frame(object):
         self.push(self.nth(delta))
 
     def push_arg(self, idx):
-        if not 0 <= idx < len(self.args):
-            runtime_error(u"Invalid number of arguments " + unicode(str(idx)) 
-                          + u" for function '" + unicode(str(self.code_obj._name)) + u"'. Expected "
-                          + unicode(str(self.code_obj.get_arity())))
-
-        self.push(self.args[r_uint(idx)])
+        if 0 <= idx < len(self.args):
+            self.push(self.args[r_uint(idx)])
 
     @unroll_safe
     def push_n(self, args, argc):
