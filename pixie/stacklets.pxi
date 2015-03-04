@@ -58,15 +58,7 @@
 
 (defmethod async-fn :yield
   [_ args k]
-
-  (let [a (uv/uv_async_t)
-        cb (atom nil)]
-    (reset! cb (ffi-prep-callback uv/uv_async_cb
-                                  (fn [handle]
-                                    (uv/uv_close a close_cb)
-                                    (run-and-process k nil))))
-    (uv/uv_async_init (uv/uv_default_loop) a @cb)
-    (uv/uv_async_send a)))
+  (add-item task-queue [k args]))
 
 
 ;;; Sleep
@@ -116,18 +108,53 @@
   (defuvfsfn read [file bufs nbufs offset] :result)
   (defuvfsfn close [file] :result))
 
+
+(defprotocol IBlockingQueue
+  (add-item [this item])
+  (remove-item [this]))
+
+(deftype BlockingQueue [items lock locked]
+  IBlockingQueue
+  (add-item [this item]
+    (enqueue items item)
+    (when @locked
+      (-release-lock lock)
+      (reset! locked false))
+    (-yield-thread))
+  (remove-item [this]
+    (when (empty? @items)
+      (reset! locked true)
+      (-acquire-lock lock true))
+    (dequeue items)))
+
+(defn blocking-queue []
+  (let [l (-create-lock)]
+    (-acquire-lock l true)
+    (->BlockingQueue (atom []) l (atom true))))
+
+(def task-queue (blocking-queue))
+
+
+
+
 (defn -with-stacklets [fn]
   (let [[h [op arg]] ((new-stacklet fn) nil)]
     (swap! thread-count inc)
     (async-fn op arg h)
     (loop []
-      (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT)
-      (let [tks @tasks]
-        (reset! tasks [])
-        (when (not (empty? tks))
-          (doseq [[k args] tks]
-            (-run-and-process k args))
-          (recur))))))
+      (let [[k args] (remove-item task-queue)]
+        (-run-and-process k args)
+        (recur)))))
+
+(defn -with-stacklets [fn]
+  (let [new-s (new-stacklet fn)
+        [h [op arg]] (new-s nil)]
+    (loop [h h
+           op op
+           arg arg]
+      (if (not (= op :spawn-end))
+        (let [[h [op arg]] (h nil)]
+          (recur h op arg))))))
 
 
 (defmacro with-stacklets [& body]
@@ -141,10 +168,16 @@
             (println e))))))
 
 
-
 (with-stacklets  (dotimes [x 10000]
-                   (yield-control)
-                   (println x)))
+                     (yield-control)
+                     (println x)))
+
+(comment
+
+
+  (dotimes [t 33]
+    (-thread (fn [] (dotimes [x 10000]
+                     (println t x))))))
 
 (comment
   (defn run-later [f]

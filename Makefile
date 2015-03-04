@@ -2,7 +2,7 @@ all: help
 
 EXTERNALS=../externals
 
-PYTHON ?= pypy
+PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 
@@ -52,8 +52,13 @@ $(EXTERNALS)/pypy:
 run:
 	./pixie-vm
 
+
 run_interactive:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py
+
+run_interactive_stacklets:
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py pixie/stacklets.pxi
+
 
 run_built_tests: pixie-vm
 	./pixie-vm run-tests.pxi

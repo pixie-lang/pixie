@@ -1,7 +1,10 @@
+from pixie.vm.object import Object, Type
+from pixie.vm.primitives import true
 import rpython.rlib.rthread as rthread
 from pixie.vm.primitives import nil
 import rpython.rlib.rgil as rgil
 from pixie.vm.code import as_var
+import pixie.vm.rt as rt
 
 from rpython.rlib.objectmodel import invoke_around_extcall
 
@@ -54,6 +57,38 @@ def new_thread(fn):
 def yield_thread():
     do_yield_thread()
     return nil
+
+# Locks
+
+class Lock(Object):
+    _type = Type(u"pixie.stdlib.Lock")
+    def __init__(self, ll_lock):
+        self._ll_lock = ll_lock
+
+    def type(self):
+        return Lock._type
+
+
+@as_var("-create-lock")
+def _create_lock():
+    return Lock(rthread.allocate_lock())
+
+@as_var("-acquire-lock")
+def _acquire_lock(self, no_wait):
+    assert isinstance(self, Lock)
+    return rt.wrap(self._ll_lock.acquire(no_wait == true))
+
+@as_var("-acquire-lock-timed")
+def _acquire_lock(self, ms):
+    assert isinstance(self, Lock)
+    return rt.wrap(self._ll_lock.acquire(ms.int_val()))
+
+@as_var("-release-lock")
+def _release_lock(self):
+    assert isinstance(self, Lock)
+    return rt.wrap(self._ll_lock.release())
+
+
 
 ## From PYPY
 
