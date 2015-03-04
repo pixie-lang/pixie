@@ -311,9 +311,9 @@
   (t/assert= (merge-with identity {} {:a 1, :b 2}) {:a 1, :b 2})
   (t/assert= (merge-with identity {:a 1} {:b 2}) {:a 1, :b 2})
 
-  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2}) {:a 1})
-  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2} {:a 3}) {:a 1})
-  (t/assert= (merge-with #(identity %2) {:a 1} {:a 2}) {:a 2})
+  (t/assert= (merge-with (fn [a b] a) {:a 1} {:a 2}) {:a 1})
+  (t/assert= (merge-with (fn [a b] a) {:a 1} {:a 2} {:a 3}) {:a 1})
+  (t/assert= (merge-with (fn [a b] b) {:a 1} {:a 2}) {:a 2})
 
   (t/assert= (merge-with + {:a 21} {:a 21}) {:a 42})
   (t/assert= (merge-with + {:a 21} {:a 21, :b 1}) {:a 42, :b 1}))
@@ -333,9 +333,8 @@
 
 (t/deftest test-range
   (t/assert= (= (-seq (range 10))
-                (-seq (-iterator (range 10))
-                (reduce conj nil (range 10))
-                '(0 1 2 3 4 5 6 7 8 9)))
+                (-seq (-iterator (range 10)))
+                '(0 1 2 3 4 5 6 7 8 9))
              true))
 
 (t/deftest test-ns
