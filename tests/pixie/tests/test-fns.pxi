@@ -18,7 +18,8 @@
 (t/deftest test-code-arity-errors
   (let [arity-0 (fn arity-0 [])
         arity-1 (fn arity-1 [a])
-        arity-2 (fn arity-2 [a b])]
+        arity-2 (fn arity-2 [a b])
+        multi-arity (fn arity-0-or-1)]
     (try
       (arity-0 :foo)
       (catch e

@@ -47,7 +47,7 @@ def index_of4(a, sep, start, end):
         runtime_error(u"Third and fourth argument must be non-negative integers")
 
 index_of = intern_var(u"pixie.string.internal", u"index-of")
-index_of.set_root(MultiArityFn({2: wrap_fn(index_of2), 3: wrap_fn(index_of3), 4: wrap_fn(index_of4)},
+index_of.set_root(MultiArityFn(u"index-of", {2: wrap_fn(index_of2), 3: wrap_fn(index_of3), 4: wrap_fn(index_of4)},
                                required_arity = 2))
 
 def substring2(a, start):
@@ -64,7 +64,7 @@ def substring3(a, start, end):
         runtime_error(u"Second and third argument must be non-negative integers")
 
 substring = intern_var(u"pixie.string.internal", u"substring")
-substring.set_root(MultiArityFn({2: wrap_fn(substring2), 3: wrap_fn(substring3)},
+substring.set_root(MultiArityFn(u"substring", {2: wrap_fn(substring2), 3: wrap_fn(substring3)},
                                 required_arity = 2))
 
 @as_var("pixie.string.internal", "upper-case")

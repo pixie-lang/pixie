@@ -130,15 +130,16 @@ class MultiArityFn(BaseCode):
     def type(self):
         return MultiArityFn._type
 
-    def __init__(self, arities, required_arity=0, rest_fn=None, meta=nil):
+    def __init__(self, name, arities, required_arity=0, rest_fn=None, meta=nil):
         BaseCode.__init__(self)
+        self._name = name
         self._arities = arities
         self._required_arity = required_arity
         self._rest_fn = rest_fn
         self._meta = meta
 
     def with_meta(self, meta):
-        return MultiArityFn(self._arities, self._required_arity, self._rest_fn, meta)
+        return MultiArityFn(self._name, self._arities, self._required_arity, self._rest_fn, meta)
 
     @elidable_promote()
     def get_fn(self, arity):
@@ -155,7 +156,7 @@ class MultiArityFn(BaseCode):
         if self._rest_fn:
             acc.append(u" or more")
 
-        affirm(False, u"Wrong number of args to fn: got " + unicode(str(arity)) + u" expected " + u",".join(acc))
+        runtime_error(u"Wrong number of args to fn " + unicode(self._name) + " got " + unicode(str(arity)) + u" expected " + u",".join(acc))
 
     def invoke(self, args):
         return self.invoke_with(args, self)
@@ -212,7 +213,7 @@ class Code(BaseCode):
         if len(args) == self.get_arity():
             return self.invoke_with(args, self)
         else:
-            runtime_error(u"Invalid number of arguments " + unicode(len(args)) 
+            runtime_error(u"Invalid number of arguments " + unicode(str(len(args))) 
                           + u" for function '" + unicode(str(self._name)) + u"'. Expected "
                           + unicode(str(self.get_arity())))
 
