@@ -136,6 +136,7 @@ def make_multi_arity(frame, argc):
     d = {}
     required_arity = 0
     rest_fn = None
+    fn_name = None
     for i in range(argc):
         a = frame.get_inst()
         if a & 256:
@@ -144,8 +145,9 @@ def make_multi_arity(frame, argc):
             rest_fn = frame.pop()
         else:
             fn = frame.pop()
+            fn_name = fn.name()
             d[a] = fn
-    return code.MultiArityFn(fn._name, d, required_arity, rest_fn)
+    return code.MultiArityFn(fn_name, d, required_arity, rest_fn)
 
 class ShallowContinuation(Object):
     _type = Type(u"pixie.stdlib.ShallowContinuation")

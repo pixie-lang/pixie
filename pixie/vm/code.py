@@ -101,6 +101,9 @@ class BaseCode(object.Object):
     def with_meta(self, meta):
         assert false, "not implemented"
 
+    def name(self):
+        return self._name
+
     def set_macro(self):
         self._is_macro = True
 
@@ -154,9 +157,9 @@ class MultiArityFn(BaseCode):
             acc.append(unicode(str(x)))
 
         if self._rest_fn:
-            acc.append(u" or more")
+            acc.append(unicode(str(self._rest_fn.required_arity())) + u" or more")
 
-        runtime_error(u"Wrong number of args to fn " + unicode(self._name) + " got " + unicode(str(arity)) + u" expected " + u",".join(acc))
+        runtime_error(u"Wrong number of arguments " + unicode(str(arity)) + u" for function '" + unicode(self._name) + u"'. Expected " + u",".join(acc))
 
     def invoke(self, args):
         return self.invoke_with(args, self)
@@ -260,6 +263,12 @@ class VariadicCode(BaseCode):
 
     def with_meta(self, meta):
         return VariadicCode(self._code, self._required_arity, meta)
+    
+    def name(self):
+        return None
+    
+    def required_arity(self):
+        return self._required_arity
 
     def invoke(self, args):
         return self.invoke_with(args, self)
@@ -297,6 +306,10 @@ class Closure(BaseCode):
 
     def with_meta(self, meta):
         return Closure(self._code, self._closed_overs, meta)
+
+    
+    def name(self):
+        return None
 
     def invoke(self, args):
         return self.invoke_with(args, self)
