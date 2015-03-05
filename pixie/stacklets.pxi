@@ -39,15 +39,34 @@
     (let [[h [op args]] (k args)]
       (async-fn op args h)))
 
-(defn run-and-process [k args]
-  (swap! tasks conj [k args]))
+(defn run-and-process [k]
+  (let [[h f] (k nil)]
+    (f h)))
 
 ;; Yield
 
-(defn yield-control []
-  (let [[h] (@stacklet-loop-h [:yield nil])]
+(defn switch-back [f]
+  (let [[h] (@stacklet-loop-h f)]
     (reset! stacklet-loop-h h)
     nil))
+
+(defn -run-later [f]
+  (let [a (uv/uv_async_t)
+        cb (atom nil)]
+    (reset! cb (ffi-prep-callback uv/uv_async_cb
+                                  (fn [handle]
+                                    (try
+                                      (uv/uv_close a close_cb)
+                                      (-dispose! @cb)
+                                      (f)
+                                      (catch ex (println ex))))))
+    (uv/uv_async_init (uv/uv_default_loop) a @cb)
+    (uv/uv_async_send a)))
+
+
+(defn yield-control []
+  (switch-back (fn [k]
+                 (-run-later (partial run-and-process k)))))
 
 (def close_cb (ffi-prep-callback uv/uv_close_cb
                                  (fn [handle]
@@ -67,17 +86,36 @@
     (reset! stacklet-loop-h h)
     nil))
 
-(defmethod async-fn :sleep
-  ([f args k]
-   (let [cb (atom nil)
-         timer (uv/uv_timer_t)]
-     (reset! cb (ffi-prep-callback uv/uv_timer_cb
-                                   (fn [handle]
-                                     (run-and-process k nil)
-                                     (uv/uv_timer_stop timer)
-                                     (-dispose! @cb))))
-     (uv/uv_timer_init (uv/uv_default_loop) timer)
-     (uv/uv_timer_start timer @cb args 0))))
+(defn sleep [ms]
+  (let [f (fn [k]
+            (let [cb (atom nil)
+                  timer (uv/uv_timer_t)]
+              (reset! cb (ffi-prep-callback uv/uv_timer_cb
+                                            (fn [handle]
+                                              (try
+                                                (run-and-process k)
+                                                (uv/uv_timer_stop timer)
+                                                (-dispose! @cb)
+                                                (catch ex
+                                                    (println ex))))))
+              (uv/uv_timer_init (uv/uv_default_loop) timer)
+              (uv/uv_timer_start timer @cb ms 0)))]
+    (switch-back f)))
+
+(defn -spawn [start-fn]
+  (switch-back (fn [k]
+                 (-run-later (fn []
+                              (run-and-process (new-stacklet start-fn))))
+                 (-run-later (partial run-and-process k)))))
+
+(defmacro spawn [& body]
+  `(-spawn (fn [h# _]
+            (try
+              (reset! stacklet-loop-h h#)
+              (let [result# (do ~@body)]
+                (switch-back (fn [_] nil)))
+              (catch e
+                  (println e))))))
 
 
 (defmacro defuvfsfn [nm args return]
@@ -101,61 +139,12 @@
               (uv/uv_fs_t)
               ~@args
               @cb#))))))
-(comment
-  ((var defuvfsfn) 'open '[path flags mode] :result)
-
-  (defuvfsfn open [path flags mode] :result)
-  (defuvfsfn read [file bufs nbufs offset] :result)
-  (defuvfsfn close [file] :result))
-
-
-(defprotocol IBlockingQueue
-  (add-item [this item])
-  (remove-item [this]))
-
-(deftype BlockingQueue [items lock locked]
-  IBlockingQueue
-  (add-item [this item]
-    (enqueue items item)
-    (when @locked
-      (-release-lock lock)
-      (reset! locked false))
-    (-yield-thread))
-  (remove-item [this]
-    (when (empty? @items)
-      (reset! locked true)
-      (-acquire-lock lock true))
-    (dequeue items)))
-
-(defn blocking-queue []
-  (let [l (-create-lock)]
-    (-acquire-lock l true)
-    (->BlockingQueue (atom []) l (atom true))))
-
-(def task-queue (blocking-queue))
-
-
 
 
 (defn -with-stacklets [fn]
-  (let [[h [op arg]] ((new-stacklet fn) nil)]
-    (swap! thread-count inc)
-    (async-fn op arg h)
-    (loop []
-      (let [[k args] (remove-item task-queue)]
-        (-run-and-process k args)
-        (recur)))))
-
-(defn -with-stacklets [fn]
-  (let [new-s (new-stacklet fn)
-        [h [op arg]] (new-s nil)]
-    (loop [h h
-           op op
-           arg arg]
-      (if (not (= op :spawn-end))
-        (let [[h [op arg]] (h nil)]
-          (recur h op arg))))))
-
+  (let [[h f] ((new-stacklet fn) nil)]
+    (f h)
+    (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT)))
 
 (defmacro with-stacklets [& body]
   `(-with-stacklets
@@ -163,14 +152,13 @@
       (try
         (reset! stacklet-loop-h h#)
         (let [result# (do ~@body)]
-          (@stacklet-loop-h [:spawn-end result#]))
+          (switch-back (fn [_] nil)))
         (catch e
             (println e))))))
 
-
-(with-stacklets  (dotimes [x 10000]
-                     (yield-control)
-                     (println x)))
+(with-stacklets
+  (dotimes [x (* 1024 10)]
+    (spawn 1)))
 
 (comment
 
@@ -202,3 +190,43 @@
 
   (do (run-later (cfn 10000))
       (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT)))
+
+
+(comment
+  ((var defuvfsfn) 'open '[path flags mode] :result)
+
+  (defuvfsfn open [path flags mode] :result)
+  (defuvfsfn read [file bufs nbufs offset] :result)
+  (defuvfsfn close [file] :result))
+
+
+(comment
+  (defprotocol IBlockingQueue
+    (add-item [this item])
+    (remove-item [this]))
+
+  (deftype BlockingQueue [items lock locked]
+    IBlockingQueue
+    (add-item [this item]
+      (enqueue items item)
+      (when @locked
+        (-release-lock lock)
+        (reset! locked false))
+      (-yield-thread))
+    (remove-item [this]
+      (when (empty? @items)
+        (reset! locked true)
+        (-acquire-lock lock true))
+      (dequeue items)))
+
+  (defn blocking-queue []
+    (let [l (-create-lock)]
+      (-acquire-lock l true)
+      (->BlockingQueue (atom []) l (atom true))))
+
+  (def task-queue (blocking-queue))
+
+
+
+
+)

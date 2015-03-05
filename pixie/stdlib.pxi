@@ -2117,3 +2117,8 @@ Expands to calls to `extend-type`."
                 `(-dispose! ~nm))
               names)
        result#)))
+
+
+(defn partial [f & args]
+  (fn [& args2]
+    (apply f (-> args vec (into args2)))))
