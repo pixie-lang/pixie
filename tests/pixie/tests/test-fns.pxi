@@ -23,76 +23,36 @@
         arity-1-or-3 (fn arity-1-or-3 ([a]) ([a b c]))
         arity-0-or-1-or-3-or-more 
         (fn arity-0-or-1-or-3-or-more ([]) ([a]) ([a b c & more]))]
-    (try
-      (arity-0 :foo)
-      (catch e
-        (t/assert= 
-         (ex-msg e) 
-         "Invalid number of arguments 1 for function 'arity-0'. Expected 0")))
-    (try
-      (arity-0 :foo :bar)
-      (catch e
-        (t/assert= 
-         (ex-msg e) 
-         "Invalid number of arguments 2 for function 'arity-0'. Expected 0")))
-    (try
-      (arity-1)
-      (catch e
-        (t/assert= 
-         (ex-msg e) 
-         "Invalid number of arguments 0 for function 'arity-1'. Expected 1")))
-    (try
-      (arity-1 :foo :bar)
-      (catch e
-        (t/assert= 
-         (ex-msg e) 
-         "Invalid number of arguments 2 for function 'arity-1'. Expected 1")))
-    (try
-      (arity-2)
-      (catch e
-        (t/assert= 
-         (ex-msg e) 
-         "Invalid number of arguments 0 for function 'arity-2'. Expected 2")))
-    (try
-      (arity-2 :foo)
-      (catch e
-        (t/assert= 
-         (ex-msg e) 
-         "Invalid number of arguments 1 for function 'arity-2'. Expected 2")))
-    
-    (try
-      (arity-0-or-1 :foo :bar)
-      (catch e
-        (t/assert= 
-          (ex-msg e) 
-          "Wrong number of arguments 2 for function 'arity-0-or-1'. Expected 1,0")))
-    
-    (try
-      (arity-0-or-1 :foo :bar :baz)
-      (catch e
-        (t/assert= 
-          (ex-msg e) 
-          "Wrong number of arguments 3 for function 'arity-0-or-1'. Expected 1,0")))
-
-    (try
-      (arity-1-or-3 :foo :bar)
-      (catch e
-        (t/assert= 
-          (ex-msg e) 
-          "Wrong number of arguments 2 for function 'arity-1-or-3'. Expected 3,1")))
-    
-    (try
-      (arity-1-or-3)
-      (catch e
-        (t/assert= 
-          (ex-msg e) 
-          "Wrong number of arguments 0 for function 'arity-1-or-3'. Expected 3,1")))
-
-    (try
-      (arity-0-or-1-or-3-or-more)
-      (catch e
-        (t/assert= 
-          (ex-msg e) 
-          "Wrong number of arguments 0 for function 'arity-0-or-1-or-3-or-more'. Expected 0, 1, 3 or more")))
-    
-    ))
+    (t/assert-throws? RuntimeException 
+      "Invalid number of arguments 1 for function 'arity-0'. Expected 0" 
+      (arity-0 :foo))
+    (t/assert-throws? RuntimeException
+      "Invalid number of arguments 2 for function 'arity-0'. Expected 0"
+      (arity-0 :foo :bar))
+    (t/assert-throws? RuntimeException
+      "Invalid number of arguments 0 for function 'arity-1'. Expected 1"
+      (arity-1))
+    (t/assert-throws? RuntimeException
+      "Invalid number of arguments 2 for function 'arity-1'. Expected 1"
+      (arity-1 :foo :bar))
+    (t/assert-throws? RuntimeException
+      "Invalid number of arguments 0 for function 'arity-2'. Expected 2"
+      (arity-2))
+    (t/assert-throws? RuntimeException
+      "Invalid number of arguments 1 for function 'arity-2'. Expected 2"
+      (arity-2 :foo))
+    (t/assert-throws? RuntimeException
+      "Wrong number of arguments 2 for function 'arity-0-or-1'. Expected 1,0"
+      (arity-0-or-1 :foo :bar))
+    (t/assert-throws? RuntimeException
+      "Wrong number of arguments 3 for function 'arity-0-or-1'. Expected 1,0"
+      (arity-0-or-1 :foo :bar :baz))
+    (t/assert-throws? RuntimeException
+      "Wrong number of arguments 2 for function 'arity-1-or-3'. Expected 3,1"
+      (arity-1-or-3 :foo :bar))
+    (t/assert-throws? RuntimeException
+      "Wrong number of arguments 0 for function 'arity-1-or-3'. Expected 3,1"
+      (arity-1-or-3))
+    (t/assert-throws? RuntimeException
+      "Wrong number of arguments 2 for function 'arity-0-or-1-or-3-or-more'. Expected 1,0,3 or more"
+      (arity-0-or-1-or-3-or-more :foo :bar))))
