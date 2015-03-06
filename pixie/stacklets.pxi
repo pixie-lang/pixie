@@ -39,16 +39,19 @@
     (let [[h [op args]] (k args)]
       (async-fn op args h)))
 
-(defn run-and-process [k]
-  (let [[h f] (k nil)]
-    (f h)))
+(defn run-and-process
+  ([k]
+   (run-and-process k nil))
+  ([k val]
+    (let [[h f] (k val)]
+      (f h))))
 
 ;; Yield
 
 (defn switch-back [f]
-  (let [[h] (@stacklet-loop-h f)]
+  (let [[h val] (@stacklet-loop-h f)]
     (reset! stacklet-loop-h h)
-    nil))
+    val))
 
 (defn -run-later [f]
   (let [a (uv/uv_async_t)
@@ -82,11 +85,6 @@
 
 ;;; Sleep
 (defn sleep [ms]
-  (let [[h] (@stacklet-loop-h [:sleep ms])]
-    (reset! stacklet-loop-h h)
-    nil))
-
-(defn sleep [ms]
   (let [f (fn [k]
             (let [cb (atom nil)
                   timer (uv/uv_timer_t)]
@@ -102,6 +100,7 @@
               (uv/uv_timer_start timer @cb ms 0)))]
     (switch-back f)))
 
+;; Spawn
 (defn -spawn [start-fn]
   (switch-back (fn [k]
                  (-run-later (fn []
@@ -119,26 +118,26 @@
 
 
 (defmacro defuvfsfn [nm args return]
-  (let [kw (keyword (str "pixie.uv/" (name nm)))]
-    `(do (defn ~nm ~args
-           (let [[h# result#] (@stacklet-loop-h [~kw ~args])]
-             (reset! stacklet-loop-h h#)
-             result#))
-         (defmethod async-fn ~kw
-           [f# ~args k# tasks#]
-           (let [cb# (atom nil)]
-             (reset! cb# (ffi-prep-callback uv/uv_fs_cb
-                                            (fn [req#]
-                                              (try
-                                                (enqueue tasks# [k# (~return (pixie.ffi/cast req# uv/uv_fs_t))])
-                                                (uv/uv_fs_req_cleanup req#)
-                                                (-dispose! @cb#)
-                                                (catch e (println e))))))
-             (~(symbol (str "pixie.uv/uv_fs_" (name nm)))
-              (uv/uv_default_loop)
-              (uv/uv_fs_t)
-              ~@args
-              @cb#))))))
+  `(defn ~nm ~args
+     (let [f (fn [k#]
+               (let [cb# (atom nil)]
+                 (reset! cb# (ffi-prep-callback uv/uv_fs_cb
+                                                (fn [req#]
+                                                  (try
+                                                    (run-and-process k# (~return (pixie.ffi/cast req# uv/uv_fs_t)))
+                                                    (uv/uv_fs_req_cleanup req#)
+                                                    (-dispose! @cb#)
+                                                    (catch e (println e))))))
+                 (~(symbol (str "pixie.uv/uv_" (name nm)))
+                  (uv/uv_default_loop)
+                  (uv/uv_fs_t)
+                  ~@args
+                  @cb#)))]
+       (switch-back f))))
+
+(defuvfsfn fs_open [path flags mode] :result)
+(defuvfsfn fs_read [file bufs nbufs offset] :result)
+(defuvfsfn fs_close [file] :result)
 
 
 (defn -with-stacklets [fn]
@@ -157,8 +156,15 @@
             (println e))))))
 
 (with-stacklets
-  (dotimes [x (* 1024 10)]
-    (spawn 1)))
+  (let [f (fs_open "/tmp/foo.txt" uv/O_RDONLY uv/S_IRUSR)
+        b (uv/new-fs-buf 1024)]
+    (println (type (:base b)))
+    (let [err (fs_read f b 1 0)]
+      (println err)
+      (assert (pos? err)))
+    (dotimes [x 100]
+      (puts (str (char (pixie.ffi/unpack (:base b) x CUInt8)))))
+    (println "done")))
 
 (comment
 

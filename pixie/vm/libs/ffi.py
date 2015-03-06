@@ -359,11 +359,28 @@ class CCharP(CType):
             return String(unicode(rffi.charp2str(casted[0])))
 
     def ffi_set_value(self, ptr, val):
-        pnt = rffi.cast(rffi.CCHARPP, ptr)
-        utf8 = unicode_to_utf8(rt.name(val))
-        raw = rffi.str2charp(utf8)
-        pnt[0] = raw
-        return CCharPToken(raw)
+        if isinstance(val, String):
+            pnt = rffi.cast(rffi.CCHARPP, ptr)
+            utf8 = unicode_to_utf8(rt.name(val))
+            raw = rffi.str2charp(utf8)
+            pnt[0] = raw
+            return CCharPToken(raw)
+        elif isinstance(val, Buffer):
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = val.buffer()
+        elif isinstance(val, VoidP):
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = val.raw_data()
+        elif val is nil:
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = rffi.cast(rffi.VOIDP, 0)
+        elif isinstance(val, CStruct):
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = rffi.cast(rffi.VOIDP, val.raw_data())
+        else:
+            print val
+            affirm(False, u"Cannot encode this type")
+
 
     def ffi_size(self):
         return rffi.sizeof(rffi.CCHARP)
@@ -642,7 +659,7 @@ class CStruct(object.Object):
         (tp, offset) = self._type.get_desc(k)
 
         if tp is None:
-            runtime_error(u"Invalid field name: " + rt.name(rt.str(tp)))
+            runtime_error(u"Invalid field name: " + rt.name(rt.str(k)))
 
         offset = rffi.ptradd(self._buffer, offset)
         tp.ffi_set_value(rffi.cast(rffi.VOIDP, offset), v)

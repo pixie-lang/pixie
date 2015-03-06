@@ -1,7 +1,7 @@
 (ns pixie.uv
   (require pixie.ffi-infer :as f))
 
-(f/with-config {:library "uv"
+(f/with-config  {:library "uv"
                 :includes ["uv.h"]}
   (f/defconst UV_RUN_DEFAULT)
   (f/defconst UV_RUN_ONCE)
@@ -115,6 +115,8 @@
     (f/defcstruct uv_dirent_t [:name
                                :type])
 
+    (f/defcstruct uv_buf_t [:base :len])
+
     (f/defcfn uv_fs_req_cleanup)
     (f/defcfn uv_fs_close)
     (f/defcfn uv_fs_open)
@@ -163,9 +165,19 @@
     (f/defconst UV_E2BIG)
     (f/defconst UV_EACCES)
 
+    (f/defcfn uv_err_name)
 
     ; async
     (f/defcstruct uv_async_t [])
     (f/defccallback uv_async_cb)
     (f/defcfn uv_async_init)
-    (f/defcfn uv_async_send))
+    (f/defcfn uv_async_send)
+    )
+
+
+(defn new-fs-buf [size]
+  (let [b (buffer size)
+        bt (uv_buf_t)]
+    (pixie.ffi/set! bt :base b)
+    (pixie.ffi/set! bt :len size)
+    bt))
