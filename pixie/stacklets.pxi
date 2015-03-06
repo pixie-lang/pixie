@@ -7,48 +7,18 @@
 
 (def stacklet-loop-h (atom nil))
 
-(def thread-count (atom 0))
 
-(defmulti async-fn (fn [f args k] f))
 
-(defmethod async-fn :spawn-end
-  [_ _ _]
-  (swap! thread-count dec)
-  (when (= @thread-count 0)
-    (uv/uv_stop (uv/uv_default_loop))))
-
-(def tasks (atom []))
-
-(defn enqueue [q itm]
-  ; TODO: Rewrite this crappy impl
-  (swap! q (fn [q] (vec (conj (seq q) itm)))))
-
-(defn dequeue [q]
-  (let [itm (ith @q -1)]
-    (swap! q pop)
-    itm))
-
-(comment
-  (defn run-and-process [k args]
-
-    (let [[h [op args]] (k args)]
-      (async-fn op args h))))
-
-(defn -run-and-process [k args]
-
-    (let [[h [op args]] (k args)]
-      (async-fn op args h)))
+;; Yield
 
 (defn run-and-process
   ([k]
    (run-and-process k nil))
   ([k val]
-    (let [[h f] (k val)]
-      (f h))))
+   (let [[h f] (k val)]
+     (f h))))
 
-;; Yield
-
-(defn switch-back [f]
+(defn call-cc [f]
   (let [[h val] (@stacklet-loop-h f)]
     (reset! stacklet-loop-h h)
     val))
@@ -68,20 +38,11 @@
 
 
 (defn yield-control []
-  (switch-back (fn [k]
-                 (-run-later (partial run-and-process k)))))
+  (call-cc (fn [k]
+             (-run-later (partial run-and-process k)))))
 
 (def close_cb (ffi-prep-callback uv/uv_close_cb
-                                 (fn [handle]
-                                   (pixie.ffi/free handle)
-                                   )))
-
-(def tasks (atom []))
-
-(defmethod async-fn :yield
-  [_ args k]
-  (add-item task-queue [k args]))
-
+                                 pixie.ffi/free))
 
 ;;; Sleep
 (defn sleep [ms]
@@ -98,21 +59,21 @@
                                                     (println ex))))))
               (uv/uv_timer_init (uv/uv_default_loop) timer)
               (uv/uv_timer_start timer @cb ms 0)))]
-    (switch-back f)))
+    (call-cc f)))
 
 ;; Spawn
 (defn -spawn [start-fn]
-  (switch-back (fn [k]
-                 (-run-later (fn []
-                              (run-and-process (new-stacklet start-fn))))
-                 (-run-later (partial run-and-process k)))))
+  (call-cc (fn [k]
+             (-run-later (fn []
+                           (run-and-process (new-stacklet start-fn))))
+             (-run-later (partial run-and-process k)))))
 
 (defmacro spawn [& body]
   `(-spawn (fn [h# _]
             (try
               (reset! stacklet-loop-h h#)
               (let [result# (do ~@body)]
-                (switch-back (fn [_] nil)))
+                (call-cc (fn [_] nil)))
               (catch e
                   (println e))))))
 
@@ -133,7 +94,7 @@
                   (uv/uv_fs_t)
                   ~@args
                   @cb#)))]
-       (switch-back f))))
+       (call-cc f))))
 
 (defuvfsfn fs_open [path flags mode] :result)
 (defuvfsfn fs_read [file bufs nbufs offset] :result)
@@ -151,20 +112,55 @@
       (try
         (reset! stacklet-loop-h h#)
         (let [result# (do ~@body)]
-          (switch-back (fn [_] nil)))
+          (call-cc (fn [_] nil)))
         (catch e
             (println e))))))
 
+
+
+(deftype Promise [val pending-callbacks delivered?]
+  IDeref
+  (-deref [self]
+    (if delivered?
+      val
+      (do
+        (call-cc (fn [k]
+                   (swap! pending-callbacks conj
+                          (fn [v]
+                            (-run-later (partial run-and-process k v)))))))))
+  IFn
+  (-invoke [self v]
+    (assert (not delivered?) "Can only deliver a promise once")
+    (set-field! self :val v)
+    (println  @pending-callbacks)
+    (doseq [f @pending-callbacks]
+      (f v))
+    (reset! pending-callbacks nil)
+    nil))
+
+(defn promise []
+  (->Promise nil (atom []) false))
+
 (with-stacklets
-  (let [f (fs_open "/tmp/foo.txt" uv/O_RDONLY uv/S_IRUSR)
-        b (uv/new-fs-buf 1024)]
-    (println (type (:base b)))
-    (let [err (fs_read f b 1 0)]
-      (println err)
-      (assert (pos? err)))
-    (dotimes [x 100]
-      (puts (str (char (pixie.ffi/unpack (:base b) x CUInt8)))))
-    (println "done")))
+  (let [p (promise)]
+    (spawn @p)
+    (spawn @p)
+    (spawn (p 42))
+    @p))
+
+(comment
+
+
+  (with-stacklets
+    (let [f (fs_open "/tmp/foo.txt" uv/O_RDONLY uv/S_IRUSR)
+          b (uv/new-fs-buf 1024)]
+      (println (type (:base b)))
+      (let [err (fs_read f b 1 0)]
+        (println err)
+        (assert (pos? err)))
+      (dotimes [x 100]
+        (puts (str (char (pixie.ffi/unpack (:base b) x CUInt8)))))
+      (println "done"))))
 
 (comment
 
