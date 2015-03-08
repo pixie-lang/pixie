@@ -1,6 +1,6 @@
 (ns pixie.tests.test-io
   (require pixie.test :as t)
-  (require pixie.io :as io))
+  (require pixie.io-blocking :as io))
 
 (t/deftest test-file-reduction
   (let [f (io/open-read "tests/pixie/tests/test-io.txt")]

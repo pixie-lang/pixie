@@ -1,5 +1,5 @@
 (ns pixie.ffi-infer
-  (require pixie.io :as io))
+  (require pixie.io-blocking :as io))
 
 (defn -add-rel-path [rel]
   (swap! load-paths conj (str (first @load-paths) "/" rel)))
@@ -184,7 +184,6 @@ return 0;
         _ (println cmd-str)
         result (read-string (io/run-command cmd-str))
         gen (vec (map generate-code cmds result))]
-    (println gen)
     `(do ~@gen)))
 
 (defn full-lib-name [library-name]
