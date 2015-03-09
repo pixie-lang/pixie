@@ -33,7 +33,7 @@ def gensym2(prefix):
     return rt.symbol(rt.str(prefix, i))
 
 gensym = code.intern_var(u"pixie.stdlib", u"gensym")
-gensym.set_root(code.MultiArityFn({0: code.wrap_fn(gensym1), 1: code.wrap_fn(gensym2)}))
+gensym.set_root(code.MultiArityFn(u"gensym", {0: code.wrap_fn(gensym1), 1: code.wrap_fn(gensym2)}))
 
 class with_ns(object):
     def __init__(self, nm, include_stdlib=False):

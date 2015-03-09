@@ -61,9 +61,21 @@
           yr# ~y]
      (assert (= xr# yr#) (str (show '~x xr#) " != " (show '~y yr#)))))
 
+(defmacro assert-throws? [klass msg body]
+     `(try 
+       ~body 
+       (assert false (str "Expected a " ~klass " exception: " ~msg))
+       (catch e#
+         (assert (= (type e#) ~klass) 
+                 (str "Expected exception of class " ~klass " but got " (type e#)))
+         (assert (= (ex-msg e#) ~msg) 
+                 (str "Expected message: " ~msg " but got " (ex-msg e#))))))
+
 (defmacro assert [x]
   `(let [x# ~x]
      (assert x# (str '~x " is " x#))))
+
+
 
 (defn show
   ([orig res]
