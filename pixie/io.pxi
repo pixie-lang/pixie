@@ -23,6 +23,7 @@
 
 (defuvfsfn fs_open [path flags mode] :result)
 (defuvfsfn fs_read [file bufs nbufs offset] :result)
+(defuvfsfn fs_write [file bufs nbufs offset] :result)
 (defuvfsfn fs_close [file] :result)
 
 
@@ -59,12 +60,14 @@
                 @result))
             acc))))))
 
+
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
    :added "0.1"}
   [filename]
   (assert (string? filename) "Filename must be a string")
   (->FileStream (fs_open filename uv/O_RDONLY 0) 0 (uv/uv_buf_t)))
+
 
 (defn read-line
   "Read one line from input-stream for each invocation.
@@ -89,27 +92,65 @@
   (when-let [line (read-line input-stream)]
     (cons line (lazy-seq (line-seq input-stream)))))
 
-(deftype FileOutputStream [fp]
+(deftype FileOutputStream [fp offset uvbuf]
   IOutputStream
   (write-byte [this val]
-    (assert (integer? val) "Value must be a int")
-    (fputc val fp))
+    (assert false))
   (write [this buffer]
-    (fwrite buffer 1 (count buffer) fp))
+    (let [_ (pixie.ffi/set! uvbuf :base buffer)
+          _ (pixie.ffi/set! uvbuf :len (count buffer))
+          write-count (fs_write fp uvbuf 1 offset)]
+      (when (neg? write-count)
+        (throw (uv/uv_err_name read-count)))
+      (assert (= write-count (count buffer)) (str  "Write error!" write-count " " (count buffer)))
+      (set-field! this :offset (+ offset write-count))
+      (set-buffer-count! buffer write-count)
+      write-count))
   IClosable
   (close [this]
     (fclose fp)))
 
+(deftype BufferedOutputStream [downstream idx buffer]
+  IOutputStream
+  (write-byte [this val]
+    (pixie.ffi/pack! buffer idx CUInt8 val)
+    (set-field! this :idx (inc idx))
+    (when (= idx (buffer-capacity buffer))
+      (write downstream buffer)
+      (set-field this :idx 0)))
+  IClosable
+  (close [this]
+    (set-buffer-count! buffer idx)
+    (write downstream buffer)))
+
+(defn buffered-output-stream [downstream size]
+  (->BufferedOutputStream downstream 0 (buffer size)))
+
+
+(defn throw-on-error [result]
+  (when (neg? result)
+    (throw (uv/uv_err_name result)))
+  result)
+
+(defn open-write
+  {:doc "Open a file for reading, returning a IInputStream"
+   :added "0.1"}
+  [filename]
+  (assert (string? filename) "Filename must be a string")
+  (->FileOutputStream (throw-on-error (fs_open filename uv/O_WRONLY 0))
+                      0
+                      (uv/uv_buf_t)))
+
+
 (defn file-output-rf [filename]
-  (let [fp (->FileOutputStream (fopen filename "w"))]
+  (let [fp (buffered-output-stream (open-write filename)
+                                   DEFAULT-BUFFER-SIZE)]
     (fn ([] 0)
-      ([cnt] (close fp) cnt)
-      ([cnt chr]
+      ([_] (close fp) nil)
+      ([_ chr]
        (assert (integer? chr))
-       (let [written (write-byte fp chr)]
-         (if (= written 0)
-           (reduced cnt)
-           (+ cnt written)))))))
+       (write-byte fp chr)
+       nil))))
 
 
 (defn spit [filename val]

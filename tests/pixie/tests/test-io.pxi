@@ -1,6 +1,6 @@
 (ns pixie.tests.test-io
   (require pixie.test :as t)
-  (require pixie.io-blocking :as io))
+  (require pixie.io :as io))
 
 (t/deftest test-file-reduction
   (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
@@ -24,8 +24,7 @@
         s (io/line-seq f)]
     (t/assert= (last s) "Second line.")))
 
-(comment
+
 (t/deftest test-slurp-spit
   (let [val (vec (range 128))]
     (t/assert= val (read-string (io/slurp "test.tmp" (io/spit "test.tmp" val))))))
-)
