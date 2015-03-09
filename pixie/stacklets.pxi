@@ -78,27 +78,6 @@
                   (println e))))))
 
 
-(defmacro defuvfsfn [nm args return]
-  `(defn ~nm ~args
-     (let [f (fn [k#]
-               (let [cb# (atom nil)]
-                 (reset! cb# (ffi-prep-callback uv/uv_fs_cb
-                                                (fn [req#]
-                                                  (try
-                                                    (run-and-process k# (~return (pixie.ffi/cast req# uv/uv_fs_t)))
-                                                    (uv/uv_fs_req_cleanup req#)
-                                                    (-dispose! @cb#)
-                                                    (catch e (println e))))))
-                 (~(symbol (str "pixie.uv/uv_" (name nm)))
-                  (uv/uv_default_loop)
-                  (uv/uv_fs_t)
-                  ~@args
-                  @cb#)))]
-       (call-cc f))))
-
-(defuvfsfn fs_open [path flags mode] :result)
-(defuvfsfn fs_read [file bufs nbufs offset] :result)
-(defuvfsfn fs_close [file] :result)
 
 
 (defn -with-stacklets [fn]
@@ -116,6 +95,9 @@
         (catch e
             (println e))))))
 
+(defn run-with-stacklets [f]
+  (with-stacklets
+    (f)))
 
 
 (deftype Promise [val pending-callbacks delivered?]
@@ -141,12 +123,12 @@
 (defn promise []
   (->Promise nil (atom []) false))
 
-(with-stacklets
-  (let [p (promise)]
-    (spawn @p)
-    (spawn @p)
-    (spawn (p 42))
-    @p))
+(comment (with-stacklets
+           (let [p (promise)]
+             (spawn @p)
+             (spawn @p)
+             (spawn (p 42))
+             @p)))
 
 (comment
 

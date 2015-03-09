@@ -177,11 +177,15 @@ def run_load_stdlib():
         return
 
     rt.load_ns(rt.wrap(u"pixie/stdlib.pxi"))
+    rt.load_ns(rt.wrap(u"pixie/stacklets.pxi"))
 
     stdlib_loaded.set_true()
 
 def load_stdlib():
     run_load_stdlib.invoke([])
+
+from pixie.vm.code import intern_var
+run_with_stacklets = intern_var(u"pixie.stacklets", u"run-with-stacklets")
 
 def entry_point(args):
     try:
@@ -216,7 +220,7 @@ def entry_point(args):
                     i += 1
                     if i < len(args):
                         expr = args[i]
-                        EvalFn(expr).invoke([])
+                        run_with_stacklets.invoke([EvalFn(expr)])
                         return 0
                     else:
                         print "Expected argument for " + arg
@@ -252,9 +256,9 @@ def entry_point(args):
 
         if not exit:
             if interactive:
-                ReplFn(args).invoke([])
+                run_with_stacklets.invoke([ReplFn(args)])
             else:
-                BatchModeFn(script_args).invoke([])
+                run_with_stacklets.invoke([BatchModeFn(script_args)])
     except WrappedException as we:
         print we._ex.__repr__()
 
