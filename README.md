@@ -38,7 +38,7 @@ Some planned and implemented features:
 
 ## Examples
 
-There are example in the /examples directory.
+There are examples in the /examples directory.
 Try out "Hello World" with:
 
     ./examples/hello-world.pxi
