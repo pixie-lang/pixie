@@ -102,10 +102,8 @@
       (let [_ (pixie.ffi/set! uvbuf :base (ffi/ptr-add buffer buffer-offset))
             _ (pixie.ffi/set! uvbuf :len (- (count buffer) buffer-offset))
             write-count (fs_write fp uvbuf 1 offset)]
-        (println "offset " offset write-count buffer-offset (count buffer))
         (when (neg? write-count)
           (throw (uv/uv_err_name read-count)))
-        (assert (= write-count (count buffer)) (str  "Write error!" write-count " " (count buffer)))
         (set-field! this :offset (+ offset write-count))
         (if (< (+ buffer-offset write-count) (count buffer))
           (recur (+ buffer-offset write-count))
