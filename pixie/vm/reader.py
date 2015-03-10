@@ -71,7 +71,7 @@ class PromptReader(PlatformReader):
 
     def read(self):
         if self._string_reader is None:
-            result = _readline(str(rt.name(compiler.NS_VAR.deref())) + " => ")
+            result = _readline(str(rt.name(rt.ns.deref())) + " => ")
             if result == u"":
                 raise EOFError()
             self._string_reader = StringReader(result)
@@ -269,10 +269,21 @@ class QuoteReader(ReaderHandler):
 
 class KeywordReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        itm = read(rdr, True)
-        affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
+        nms = u""
+        ch = rdr.read()
+        if ch == u":":
+            itm = read(rdr, True)
+            nms = rt.name(rt.ns.deref())
+        else:
+            rdr.unread(ch)
+            itm = read(rdr, True)
 
-        return keyword(rt.name(itm))
+        affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
+        if nms:
+            affirm(rt.namespace(itm) is None, u"Kewyword cannot have two namespaces")
+            return keyword(rt.name(itm), nms)
+        else:
+            return keyword(rt.name(itm), rt.namespace(itm))
 
 class LiteralStringReader(ReaderHandler):
     def invoke(self, rdr, ch):

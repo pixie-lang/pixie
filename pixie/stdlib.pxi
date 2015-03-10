@@ -337,6 +337,11 @@
   (fn [v]
     (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
 
+(extend -hash PersistentList
+  (fn [v]
+    (transduce ordered-hash-reducing-fn v)))
+
+
 (extend -str LazySeq
   (fn [v]
     (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
@@ -1117,12 +1122,17 @@ Creates new maps if the keys are not present."
                                       (seq? args)) "protocol override must have arguments")
                         self-arg (first args)
                         _ (assert (symbol? self-arg) "protocol override must have at least one `self' argument")
-                        field-lets (transduce (comp (map (fn [f]
-                                                           [(symbol (name f)) (list 'get-field self-arg f)]))
-                                                    cat)
-                                              conj fields)
-                        rest (next (next body))]
-                    `(fn ~fn-name ~args (let ~field-lets ~@rest))))
+
+                        rest (next (next body))
+                        body (reduce
+                              (fn [body f]
+                                `[(local-macro [~(symbol (name f))
+                                                 (get-field ~self-arg ~(keyword (name f)))]
+                                                ~@body)])
+                              rest
+                              fields)]
+                    (println body)
+                    `(fn ~fn-name ~args ~@body)))
         bodies (reduce
                 (fn [res body]
                   (cond
@@ -1536,6 +1546,27 @@ The new value is thus `(apply f current-value-of-atom args)`."
                       (recur pred (rest s))
                       s)))]
        (lazy-seq (step pred coll)))))
+
+;; TODO: use a transient map in the future
+(defn group-by [f coll]
+  {:doc "Groups the collection into a map keyed by the result of applying f on each element. The value at each key is a vector of elements in order of appearance."
+   :examples [["(group-by even? [1 2 3 4 5])" nil {false [1 3 5] true [2 4]}]
+              ["(group-by (partial apply +) [[1 2 3][2 4][1 2]]" nil {6 [[1 2 3] [2 4]] 3 [[1 2]]}]]
+   :signatures [[f coll]]
+   :added "0.1"}
+  (reduce (fn [res elem]
+            (update-in res [(f elem)] (fnil conj []) elem))
+          {}
+          coll))
+
+;; TODO: use a transient map in the future
+(defn frequencies [coll]
+  {:doc "Returns a map with distinct elements as keys and the number of occurences as values"
+   :added "0.1"}
+  (reduce (fn [res elem]
+            (update-in res [elem] (fnil inc 0)))
+          {}
+          coll))
 
 (defn partition
   {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
@@ -2114,7 +2145,6 @@ Expands to calls to `extend-type`."
   ([sb] (str sb))
   ([sb item] (conj! sb item)))
 
-
 (defmacro using [bindings & body]
   (let [pairs (partition 2 bindings)
         names (map first pairs)]
@@ -2125,7 +2155,33 @@ Expands to calls to `extend-type`."
               names)
        result#)))
 
-
 (defn partial [f & args]
   (fn [& args2]
     (apply f (-> args vec (into args2)))))
+
+(defn pst
+  {:doc "Prints the trace of a Runtime Exception if given, or the last Runtime Exception in *e"
+   :signatures [[] [e]]
+   :added "0.1"}
+  ([] (pst *e))
+  ([e] (when e (print (str e)))))
+
+(defn trace
+  {:doc "Returns a seq of the trace of a Runtime Exception or the last Runtime Exception in *e"
+   :signatures [[] [e]]
+   :added "0.1"}
+  ([] (trace *e))
+  ([e] (seq e)))
+
+(defn tree-seq
+  "Returns a lazy sequence of the nodes in a tree via a depth-first walk.
+   branch? - fn of node that should true when node has children
+   children - fn of node that should return a sequence of children (called if branch? true)
+   root - root node of the tree"
+  [branch? children root]
+  (let [walk (fn walk [node]
+               (lazy-seq
+                (cons node
+                  (when (branch? node)
+                    (mapcat walk (children node))))))]
+    (walk root)))

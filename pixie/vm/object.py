@@ -1,3 +1,4 @@
+from rpython.rlib.objectmodel import compute_identity_hash
 import rpython.rlib.jit as jit
 
 class Object(object):
@@ -20,6 +21,10 @@ class Object(object):
     def r_uint_val(self):
         affirm(False, u"Expected Number, not " + self.type().name())
         return 0
+
+    def hash(self):
+        import pixie.vm.rt as rt
+        return rt.wrap(compute_identity_hash(self))
 
     def promote(self):
         return self
@@ -122,7 +127,6 @@ class RuntimeException(Object):
 
         s.extend([u"RuntimeException: " + rt.name(rt.str(self._data)) + u"\n"])
 
-
         return u"".join(s)
 
 class WrappedException(Exception):
@@ -176,12 +180,33 @@ class InterpreterCodeInfo(ErrorInfo):
     def interpreter_code_info_state(self):
         return self._line, self._line_number, self._column_number, self._file
 
+    def trace_map(self):
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
+
+        tm = {keyword(u"type") : keyword(u"interpreter")}
+        tm[keyword(u"line")] = String(self._line.__repr__())
+        tm[keyword(u"line-number")] = Integer(self._line_number)
+        tm[keyword(u"column-number")] = Integer(self._column_number)
+        tm[keyword(u"file")] = String(self._file)
+        return tm
+
 class NativeCodeInfo(ErrorInfo):
     def __init__(self, name):
         self._name = name
 
     def __repr__(self):
         return u"in internal function " + self._name + u"\n"
+
+    def trace_map(self):
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
+
+        tm = {keyword(u"type") : keyword(u"native")}
+        tm[keyword(u"name")] = String(self._name)
+        return tm
 
 class PolymorphicCodeInfo(ErrorInfo):
     def __init__(self, name, tp):
@@ -193,7 +218,17 @@ class PolymorphicCodeInfo(ErrorInfo):
         assert isinstance(tp, Type)
         return u"in polymorphic function " + self._name + u" dispatching on " + tp._name + u"\n"
 
+    def trace_map(self):
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
 
+        tp = self._tp
+        assert isinstance(tp, Type)
+        tm = {keyword(u"type") : keyword(u"polymorphic")}
+        tm[keyword(u"name")] = String(self._name)
+        tm[keyword(u"tp")] = String(tp._name)
+        return tm
 
 class PixieCodeInfo(ErrorInfo):
     def __init__(self, name):
@@ -201,3 +236,12 @@ class PixieCodeInfo(ErrorInfo):
 
     def __repr__(self):
         return u"in pixie function " + self._name + u"\n"
+
+    def trace_map(self):
+        from pixie.vm.string import String
+        from pixie.vm.numbers import Integer
+        from pixie.vm.keyword import keyword
+
+        tm = {keyword(u"type") : keyword(u"pixie")}
+        tm[keyword(u"name")] = String(self._name)
+        return tm

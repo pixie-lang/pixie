@@ -49,7 +49,9 @@ class KeywordCache(object):
 
 _kw_cache = KeywordCache()
 
-def keyword(nm):
+def keyword(nm, ns=None):
+    if ns:
+        nm = u"/".join([ns, nm])
     return _kw_cache.intern(nm)
 
 

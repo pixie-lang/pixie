@@ -1,6 +1,6 @@
 py_object = object
 import pixie.vm.object as object
-from pixie.vm.object import affirm
+from pixie.vm.object import affirm, runtime_error
 from pixie.vm.primitives import nil, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.jit import elidable_promote, promote
@@ -101,6 +101,9 @@ class BaseCode(object.Object):
     def with_meta(self, meta):
         assert false, "not implemented"
 
+    def name(self):
+        return self._name
+
     def set_macro(self):
         self._is_macro = True
 
@@ -130,15 +133,16 @@ class MultiArityFn(BaseCode):
     def type(self):
         return MultiArityFn._type
 
-    def __init__(self, arities, required_arity=0, rest_fn=None, meta=nil):
+    def __init__(self, name, arities, required_arity=0, rest_fn=None, meta=nil):
         BaseCode.__init__(self)
+        self._name = name
         self._arities = arities
         self._required_arity = required_arity
         self._rest_fn = rest_fn
         self._meta = meta
 
     def with_meta(self, meta):
-        return MultiArityFn(self._arities, self._required_arity, self._rest_fn, meta)
+        return MultiArityFn(self._name, self._arities, self._required_arity, self._rest_fn, meta)
 
     @elidable_promote()
     def get_fn(self, arity):
@@ -153,9 +157,9 @@ class MultiArityFn(BaseCode):
             acc.append(unicode(str(x)))
 
         if self._rest_fn:
-            acc.append(u" or more")
+            acc.append(unicode(str(self._rest_fn.required_arity())) + u" or more")
 
-        affirm(False, u"Wrong number of args to fn: got " + unicode(str(arity)) + u" expected " + u",".join(acc))
+        runtime_error(u"Wrong number of arguments " + unicode(str(arity)) + u" for function '" + unicode(self._name) + u"'. Expected " + u",".join(acc))
 
     def invoke(self, args):
         return self.invoke_with(args, self)
@@ -209,7 +213,12 @@ class Code(BaseCode):
         return self._debug_points
 
     def invoke(self, args):
-        return self.invoke_with(args, self)
+        if len(args) == self.get_arity():
+            return self.invoke_with(args, self)
+        else:
+            runtime_error(u"Invalid number of arguments " + unicode(str(len(args))) 
+                          + u" for function '" + unicode(str(self._name)) + u"'. Expected "
+                          + unicode(str(self.get_arity())))
 
     def invoke_with(self, args, this_fn):
         try:
@@ -254,6 +263,12 @@ class VariadicCode(BaseCode):
 
     def with_meta(self, meta):
         return VariadicCode(self._code, self._required_arity, meta)
+    
+    def name(self):
+        return None
+    
+    def required_arity(self):
+        return self._required_arity
 
     def invoke(self, args):
         return self.invoke_with(args, self)
@@ -291,6 +306,10 @@ class Closure(BaseCode):
 
     def with_meta(self, meta):
         return Closure(self._code, self._closed_overs, meta)
+
+    
+    def name(self):
+        return None
 
     def invoke(self, args):
         return self.invoke_with(args, self)

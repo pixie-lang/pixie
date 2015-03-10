@@ -8,3 +8,18 @@
     (t/assert= (:c m) 3)
 
     (t/assert= (:d m) nil)))
+
+(t/deftest keyword-namespace
+  (t/assert= (namespace :foo/bar) "foo")
+  (t/assert= (namespace :cat/dog) "cat")
+  (t/assert= (namespace ::foo) "pixie.tests.test-keywords"))
+
+
+(t/deftest keyword-equality
+  (t/assert= :foo/bar :foo/bar)
+  (t/assert= (not= :foo/bar :cat/bar) true)
+  (t/assert= (not= :foo/cat :foo/dog) true))
+
+(t/deftest string-to-keyword
+  (t/assert= (keyword "foo") :foo)
+  (t/assert= (keyword "foo/bar") :foo/bar))

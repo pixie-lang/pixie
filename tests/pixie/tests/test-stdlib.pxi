@@ -311,9 +311,9 @@
   (t/assert= (merge-with identity {} {:a 1, :b 2}) {:a 1, :b 2})
   (t/assert= (merge-with identity {:a 1} {:b 2}) {:a 1, :b 2})
 
-  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2}) {:a 1})
-  (t/assert= (merge-with #(identity %1) {:a 1} {:a 2} {:a 3}) {:a 1})
-  (t/assert= (merge-with #(identity %2) {:a 1} {:a 2}) {:a 2})
+  (t/assert= (merge-with (fn [a b] a) {:a 1} {:a 2}) {:a 1})
+  (t/assert= (merge-with (fn [a b] a) {:a 1} {:a 2} {:a 3}) {:a 1})
+  (t/assert= (merge-with (fn [a b] b) {:a 1} {:a 2}) {:a 2})
 
   (t/assert= (merge-with + {:a 21} {:a 21}) {:a 42})
   (t/assert= (merge-with + {:a 21} {:a 21, :b 1}) {:a 42, :b 1}))
@@ -333,9 +333,8 @@
 
 (t/deftest test-range
   (t/assert= (= (-seq (range 10))
-                (-seq (-iterator (range 10))
-                (reduce conj nil (range 10))
-                '(0 1 2 3 4 5 6 7 8 9)))
+                (-seq (-iterator (range 10)))
+                '(0 1 2 3 4 5 6 7 8 9))
              true))
 
 (t/deftest test-ns
@@ -377,3 +376,35 @@
   (t/assert= (transduce (drop-while even?) conj [2 4 6 7 8]) [7 8])
   (t/assert= (transduce (drop-while even?) conj [0 2] [1 4 6]) [0 2 1 4 6])
   (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))
+
+(t/deftest test-trace
+  (try
+    (/ 0 0)
+    (catch e
+        (t/assert= (first (trace e)) {:type :runtime :data "Divide by zero"})
+        (t/assert= (second (trace e)) {:type :native :name "_div"} ))))
+
+(t/deftest test-tree-seq
+  (t/assert= (vec (filter string?
+                          (tree-seq map?
+                                    :ch
+                                    {:ch [{:ch ["a" "b"]}
+                                          {:ch ["c" "d"]}
+                                          {:ch [{:ch ["e" {:ch ["f"]}]}]}]})))
+             ["a" "b" "c" "d" "e" "f"]))
+
+(t/deftest test-group-by
+  (t/assert= (group-by :age [{:name "banjo" :age 3}
+                             {:name "mary"  :age 3}
+                             {:name "boris" :age 7}])
+             {3  [{:name "banjo" :age 3} 
+                  {:name "mary"  :age 3}]
+              7  [{:name "boris" :age 7}]})
+  (t/assert= (group-by even? (range 1 5))
+             {true [2 4]
+              false [1 3]}))
+
+
+(t/deftest test-frequencies
+  (t/assert= (frequencies [1 2 3 4 3 2 1])
+             {1 2, 2 2, 3 2, 4 1}))
