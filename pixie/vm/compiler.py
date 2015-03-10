@@ -245,6 +245,13 @@ class ClosureCell(LocalType):
         ctx.bytecode.append(self.idx)
         ctx.add_sp(1)
 
+class LocalMacro(LocalType):
+    def __init__(self, form):
+        self._from = form
+
+    def emit(self, ctx):
+        compile_form(self._from, ctx)
+
 
 
 
@@ -747,6 +754,27 @@ def compile_in_ns(form, ctx):
     NS_VAR.deref().include_stdlib()
     compile_fn_call(form, ctx)
 
+def compile_local_macro(form, ctx):
+    form = rt.next(form)
+    binding = rt.first(form)
+    body = rt.next(form)
+
+    sym = rt.nth(binding, rt.wrap(0))
+    bind_form = rt.nth(binding, rt.wrap(1))
+
+    ctx.add_local(rt.name(sym), LocalMacro(bind_form))
+
+    while True:
+        compile_form(rt.first(body), ctx)
+        body = rt.next(body)
+
+        if body is nil:
+            break
+        else:
+            ctx.pop()
+
+    ctx.pop_locals()
+
 builtins = {u"fn*": compile_fn,
             u"if": compile_if,
             u"def": compile_def,
@@ -760,7 +788,8 @@ builtins = {u"fn*": compile_fn,
             u"catch": compile_catch,
             u"this-ns-name": compile_this_ns,
             u"in-ns": compile_in_ns, # yes, this is both a function and a compiler special form.
-            u"yield": compile_yield}
+            u"yield": compile_yield,
+            u"local-macro": compile_local_macro}
 
 def compiler_special(s):
     if isinstance(s, symbol.Symbol):
