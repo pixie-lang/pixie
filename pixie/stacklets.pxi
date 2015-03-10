@@ -1,11 +1,11 @@
 (ns pixie.stacklets
   (require pixie.uv :as uv))
 
-;; LibUV seems to act up when we invoke a stacklet from inside a callbac
-;; so we compensate by simply storing the stacklets in a task queue
-;; and calling them later outside of the libuv loop.
+;; If we don't do this, compiling this file doesn't work since the def will clear out
+;; the existing value.
 
-(def stacklet-loop-h (atom nil))
+(if (undefined? (var stacklet-loop-h))
+  (def stacklet-loop-h (atom nil)))
 
 
 

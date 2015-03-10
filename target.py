@@ -156,6 +156,15 @@ class EvalFn(NativeFn):
 
             rt.load_reader(StringReader(unicode_from_utf8(self._expr)))
 
+class CompileFileFn(NativeFn):
+    def __init__(self, filename):
+        self._filename = filename
+
+    def inner_invoke(self, args):
+        import pixie.vm.rt as rt
+
+        rt.compile_file(rt.wrap(self._filename))
+
 
 class IsPreloadFlag(object):
     def __init__(self):
@@ -239,7 +248,7 @@ def entry_point(args):
                     if i < len(args):
                         path = args[i]
                         print "Compiling ", path
-                        rt.compile_file(rt.wrap(path))
+                        run_with_stacklets.invoke([CompileFileFn(path)])
                         exit = True
                     else:
                         print "Expected argument for " + arg

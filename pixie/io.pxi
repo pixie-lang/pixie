@@ -172,8 +172,6 @@
     (close c)
     result))
 
-(println (slurp "/tmp/a.txt"))
-
 (deftype ProcessInputStream [fp]
   IInputStream
   (read [this buffer len]
