@@ -1,7 +1,8 @@
 (ns pixie.io
   (require pixie.streams :as st :refer :all)
   (require pixie.uv :as uv)
-  (require pixie.stacklets :as st))
+  (require pixie.stacklets :as st)
+  (require pixie.ffi :as ffi))
 
 (defmacro defuvfsfn [nm args return]
   `(defn ~nm ~args
@@ -97,15 +98,18 @@
   (write-byte [this val]
     (assert false))
   (write [this buffer]
-    (let [_ (pixie.ffi/set! uvbuf :base buffer)
-          _ (pixie.ffi/set! uvbuf :len (count buffer))
-          write-count (fs_write fp uvbuf 1 offset)]
-      (when (neg? write-count)
-        (throw (uv/uv_err_name read-count)))
-      (assert (= write-count (count buffer)) (str  "Write error!" write-count " " (count buffer)))
-      (set-field! this :offset (+ offset write-count))
-      (set-buffer-count! buffer write-count)
-      write-count))
+    (loop [buffer-offset 0]
+      (let [_ (pixie.ffi/set! uvbuf :base (ffi/ptr-add buffer buffer-offset))
+            _ (pixie.ffi/set! uvbuf :len (- (count buffer) buffer-offset))
+            write-count (fs_write fp uvbuf 1 (get-field this :offset))]
+        (println "offset " offset)
+        (when (neg? write-count)
+          (throw (uv/uv_err_name read-count)))
+        (assert (= write-count (count buffer)) (str  "Write error!" write-count " " (count buffer)))
+        (set-field! this :offset (+ (get-field this :offset) write-count))
+        (if (< (+ buffer-offset write-count) (count buffer))
+          (recur (+ buffer-offset write-count))
+          write-count))))
   IClosable
   (close [this]
     (fclose fp)))
@@ -117,7 +121,7 @@
     (set-field! this :idx (inc idx))
     (when (= idx (buffer-capacity buffer))
       (write downstream buffer)
-      (set-field this :idx 0)))
+      (set-field! this :idx 0)))
   IClosable
   (close [this]
     (set-buffer-count! buffer idx)

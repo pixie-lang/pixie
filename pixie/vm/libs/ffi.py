@@ -473,6 +473,11 @@ def pack(ptr, offset, tp, val):
     tp.ffi_set_value(ptr, val)
     return nil
 
+@as_var(u"pixie.ffi", u"ptr-add")
+def pack(ptr, offset):
+    affirm(isinstance(ptr, VoidP) or isinstance(ptr, Buffer) or isinstance(ptr, CStruct), u"Type is not unpackable")
+    ptr = rffi.ptradd(ptr.raw_data(), offset.int_val())
+    return VoidP(ptr)
 
 class CStructType(object.Type):
     base_type = object.Type(u"pixie.ffi.CStruct")
