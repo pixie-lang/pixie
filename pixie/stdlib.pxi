@@ -1128,12 +1128,17 @@ Creates new maps if the keys are not present."
                                       (seq? args)) "protocol override must have arguments")
                         self-arg (first args)
                         _ (assert (symbol? self-arg) "protocol override must have at least one `self' argument")
-                        field-lets (transduce (comp (map (fn [f]
-                                                           [(symbol (name f)) (list 'get-field self-arg f)]))
-                                                    cat)
-                                              conj fields)
-                        rest (next (next body))]
-                    `(fn ~fn-name ~args (let ~field-lets ~@rest))))
+
+                        rest (next (next body))
+                        body (reduce
+                              (fn [body f]
+                                `[(local-macro [~(symbol (name f))
+                                                 (get-field ~self-arg ~(keyword (name f)))]
+                                                ~@body)])
+                              rest
+                              fields)]
+                    (println body)
+                    `(fn ~fn-name ~args ~@body)))
         bodies (reduce
                 (fn [res body]
                   (cond

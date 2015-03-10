@@ -20,3 +20,18 @@
 (t/deftest test-lists
   (t/assert= (vec '()) [])
   (t/assert= (vec '()) ()))
+
+
+(defprotocol IMutable
+  (mutate! [this]))
+
+(deftype Foo [x]
+  IMutable
+  (mutate! [this]
+    (let [xold x]
+      (set-field! this :x 42)
+      (t/assert (not (= xold x)))
+      (t/assert (= x 42)))))
+
+(t/deftest test-deftype-mutables
+  (mutate! (->Foo 0)))
