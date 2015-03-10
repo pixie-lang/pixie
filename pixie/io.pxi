@@ -101,12 +101,12 @@
     (loop [buffer-offset 0]
       (let [_ (pixie.ffi/set! uvbuf :base (ffi/ptr-add buffer buffer-offset))
             _ (pixie.ffi/set! uvbuf :len (- (count buffer) buffer-offset))
-            write-count (fs_write fp uvbuf 1 (get-field this :offset))]
-        (println "offset " offset)
+            write-count (fs_write fp uvbuf 1 offset)]
+        (println "offset " offset write-count buffer-offset (count buffer))
         (when (neg? write-count)
           (throw (uv/uv_err_name read-count)))
         (assert (= write-count (count buffer)) (str  "Write error!" write-count " " (count buffer)))
-        (set-field! this :offset (+ (get-field this :offset) write-count))
+        (set-field! this :offset (+ offset write-count))
         (if (< (+ buffer-offset write-count) (count buffer))
           (recur (+ buffer-offset write-count))
           write-count))))
@@ -120,6 +120,7 @@
     (pixie.ffi/pack! buffer idx CUInt8 val)
     (set-field! this :idx (inc idx))
     (when (= idx (buffer-capacity buffer))
+      (set-buffer-count! buffer (buffer-capacity buffer))
       (write downstream buffer)
       (set-field! this :idx 0)))
   IClosable
@@ -141,7 +142,9 @@
    :added "0.1"}
   [filename]
   (assert (string? filename) "Filename must be a string")
-  (->FileOutputStream (throw-on-error (fs_open filename uv/O_WRONLY 0))
+  (->FileOutputStream (throw-on-error (fs_open filename
+                                               (bit-or uv/O_WRONLY uv/O_CREAT)
+                                               uv/S_IRWXU))
                       0
                       (uv/uv_buf_t)))
 

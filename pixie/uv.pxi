@@ -159,6 +159,8 @@
     (f/defconst O_CREAT)
 
     (f/defconst S_IRUSR)
+    (f/defconst S_IRWXU)
+    (f/defconst S_IWUSR)
 
 
     ; ERRNO
