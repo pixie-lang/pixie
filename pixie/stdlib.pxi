@@ -1137,7 +1137,6 @@ Creates new maps if the keys are not present."
                                                 ~@body)])
                               rest
                               fields)]
-                    (println body)
                     `(fn ~fn-name ~args ~@body)))
         bodies (reduce
                 (fn [res body]
