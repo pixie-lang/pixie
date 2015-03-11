@@ -6,15 +6,30 @@ from pixie.vm.keyword import Keyword
 import pixie.vm.rt as rt
 
 class CustomType(Type):
-    __immutable_fields__ = ["_slots"]
+    __immutable_fields__ = ["_slots", "_rev?"]
     def __init__(self, name, slots):
         Type.__init__(self, name)
 
         self._slots = slots
+        self._mutable_slots = {}
+        self._rev = 0
 
     @jit.elidable_promote()
     def get_slot_idx(self, nm):
         return self._slots[nm]
+
+    def set_mutable(self, nm):
+        if not self.is_mutable(nm):
+            self._rev += 1
+            self._mutable_slots[nm] = nm
+
+
+    @jit.elidable_promote()
+    def _is_mutable(self, nm, rev):
+        return nm in self._mutable_slots
+
+    def is_mutable(self, nm):
+        return self._is_mutable(nm, self._rev)
 
     @jit.elidable_promote()
     def get_num_slots(self):
@@ -22,22 +37,32 @@ class CustomType(Type):
 
 class CustomTypeInstance(Object):
     __immutable_fields__ = ["_type"]
-    def __init__(self, type):
+    def __init__(self, type, fields):
         affirm(isinstance(type, CustomType), u"Can't create a instance of a non custom type")
         self._custom_type = type
-        self._fields = [None] * self._custom_type.get_num_slots()
+        self._fields = fields
 
     def type(self):
         return self._custom_type
 
     def set_field(self, name, val):
+        self._custom_type.set_mutable(name)
         idx = self._custom_type.get_slot_idx(name)
         self._fields[idx] = val
         return self
 
-    def get_field(self, name):
+    @jit.elidable_promote()
+    def get_field_immutable(self, name):
         idx = self._custom_type.get_slot_idx(name)
         return self._fields[idx]
+
+
+    def get_field(self, name):
+        if self._custom_type.is_mutable(name):
+            idx = self._custom_type.get_slot_idx(name)
+            return self._fields[idx]
+        else:
+            return self.get_field_immutable(name)
 
     def set_field_by_idx(self, idx, val):
         affirm(isinstance(idx, r_uint), u"idx must be a r_uint")
@@ -60,9 +85,16 @@ def create_type(type_name, fields):
     return CustomType(rt.name(type_name), acc)
 
 @as_var("new")
-def _new(tp):
+def _new__args(args):
+    affirm(len(args) >= 1, u"new takes at least one parameter")
+    tp = args[0]
     affirm(isinstance(tp, CustomType), u"Can only create a new instance of a custom type")
-    return CustomTypeInstance(tp)
+    cnt = len(args) - 1
+    affirm(cnt - 1 != tp.get_num_slots(), u"Wrong number of initializer fields to custom type")
+    arr = [None] * cnt
+    for x in range(cnt):
+        arr[x] = args[x + 1]
+    return CustomTypeInstance(tp, arr)
 
 @as_var("set-field!")
 def set_field(inst, field, val):
