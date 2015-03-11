@@ -52,9 +52,9 @@
 (t/deftest test-list
   (let [dir-a "tests/pixie/tests/fs/parent"]
     (t/assert= (set (fs/list (fs/dir dir-a)))
-               #{(fs/file (str dir-a "foo.txt"))
-                 (fs/file (str dir-a "bar.txt"))
-                 (fs/dir  (str dir-a "child"))})))
+               #{(fs/file (str dir-a "/foo.txt"))
+                 (fs/file (str dir-a "/bar.txt"))
+                 (fs/dir  (str dir-a "/child"))})))
 
 (t/deftest test-rel?
   (let [dir-a  (fs/dir  "tests/pixie/tests/fs")
