@@ -1159,18 +1159,12 @@ Creates new maps if the keys are not present."
         type-decl `(def ~nm (create-type ~(keyword (name nm)) ~all-fields))
         inst (gensym)
         ctor `(defn ~ctor-name ~field-syms
-                (let [~inst (new ~nm)]
-                  ~@(transduce
-                     (map (fn [field]
-                            `(set-field! ~inst ~field ~(symbol (name field)))))
-                     conj
-                     fields)
-                  ~@(transduce
-                     (map (fn [type-body]
-                            `(set-field! ~inst ~(keyword (name (first type-body))) ~(mk-body type-body))))
-                     conj
-                     type-bodies)
-                  ~inst))
+                (new ~nm
+                     ~@field-syms
+                     ~@(transduce (map (fn [type-body]
+                                         (mk-body type-body)))
+                                  conj
+                                  type-bodies)))
         proto-bodies (transduce
                       (map (fn [body]
                              (cond
