@@ -42,10 +42,8 @@
       (set-field! this :offset (+ offset read-count))
       (set-buffer-count! buffer read-count)
       read-count))
-  (read-byte [this]
-    (assert false "Does not support read-byte, wrap in a buffering reader"))
-  IClosable
-  (close [this]
+  IDisposable
+  (-dispose! [this]
     (pixie.ffi/free uvbuf)
     (fs_close fp))
   IReduce
@@ -95,8 +93,6 @@
 
 (deftype FileOutputStream [fp offset uvbuf]
   IOutputStream
-  (write-byte [this val]
-    (assert false))
   (write [this buffer]
     (loop [buffer-offset 0]
       (let [_ (pixie.ffi/set! uvbuf :base (ffi/ptr-add buffer buffer-offset))
@@ -108,12 +104,12 @@
         (if (< (+ buffer-offset write-count) (count buffer))
           (recur (+ buffer-offset write-count))
           write-count))))
-  IClosable
-  (close [this]
+  IDisposable
+  (-dispose! [this]
     (fclose fp)))
 
 (deftype BufferedOutputStream [downstream idx buffer]
-  IOutputStream
+  IByteOutputStream
   (write-byte [this val]
     (pixie.ffi/pack! buffer idx CUInt8 val)
     (set-field! this :idx (inc idx))
@@ -121,8 +117,8 @@
       (set-buffer-count! buffer (buffer-capacity buffer))
       (write downstream buffer)
       (set-field! this :idx 0)))
-  IClosable
-  (close [this]
+  IDisposable
+  (-dispose! [this]
     (set-buffer-count! buffer idx)
     (write downstream buffer)))
 
@@ -151,7 +147,7 @@
   (let [fp (buffered-output-stream (open-write filename)
                                    DEFAULT-BUFFER-SIZE)]
     (fn ([] 0)
-      ([_] (close fp) nil)
+      ([_] (dispose! fp))
       ([_ chr]
        (assert (integer? chr))
        (write-byte fp chr)
@@ -169,49 +165,5 @@
                 (map char)
                 string-builder
                 c)]
-    (close c)
-    result))
-
-(deftype ProcessInputStream [fp]
-  IInputStream
-  (read [this buffer len]
-    (assert (<= (buffer-capacity buffer) len)
-            "Not enough capacity in the buffer")
-    (let [read-count (fread buffer 1 len fp)]
-      (set-buffer-count! buffer read-count)
-      read-count))
-  (read-byte [this]
-    (fgetc fp))
-  IClosable
-  (close [this]
-    (pclose fp))
-  IReduce
-  (-reduce [this f init]
-    (let [buf (buffer DEFAULT-BUFFER-SIZE)
-          rrf (preserving-reduced f)]
-      (loop [acc init]
-        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-          (if (> read-count 0)
-            (let [result (reduce rrf acc buf)]
-              (if (not (reduced? result))
-                (recur result)
-                @result))
-            acc))))))
-
-
-(defn popen-read
-  {:doc "Open a file for reading, returning a IInputStream"
-   :added "0.1"}
-  [command]
-  (assert (string? command) "Command must be a string")
-  (->ProcessInputStream (popen command "r")))
-
-
-(defn run-command [command]
-  (let [c (->ProcessInputStream (popen command "r"))
-        result (transduce
-                 (map char)
-                 string-builder
-                 c)]
-    (close c)
+    (dispose! c)
     result))

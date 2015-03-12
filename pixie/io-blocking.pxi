@@ -25,8 +25,8 @@
       read-count))
   (read-byte [this]
     (fgetc buffer))
-  IClosable
-  (close [this]
+  IDisposable
+  (-dispose! [this]
     (fclose fp))
   IReduce
   (-reduce [this f init]
@@ -72,20 +72,21 @@
     (cons line (lazy-seq (line-seq input-stream)))))
 
 (deftype FileOutputStream [fp]
-  IOutputStream
+  IByteOutputStream
   (write-byte [this val]
     (assert (integer? val) "Value must be a int")
     (fputc val fp))
+  IOutputStream
   (write [this buffer]
     (fwrite buffer 1 (count buffer) fp))
-  IClosable
-  (close [this]
+  IDisposable
+  (-dispose! [this]
     (fclose fp)))
 
 (defn file-output-rf [filename]
   (let [fp (->FileOutputStream (fopen filename "w"))]
     (fn ([] 0)
-      ([cnt] (close fp) cnt)
+      ([cnt] (dispose! fp) nil)
       ([cnt chr]
        (assert (integer? chr))
        (let [written (write-byte fp chr)]
@@ -105,7 +106,7 @@
                 (map char)
                 string-builder
                 c)]
-    (close c)
+    (dispose! c)
     result))
 
 (deftype ProcessInputStream [fp]
@@ -116,10 +117,11 @@
     (let [read-count (fread buffer 1 len fp)]
       (set-buffer-count! buffer read-count)
       read-count))
+  IByteInputStream
   (read-byte [this]
     (fgetc fp))
-  IClosable
-  (close [this]
+  IDisposable
+  (-dispose! [this]
     (pclose fp))
   IReduce
   (-reduce [this f init]
@@ -149,5 +151,5 @@
                  (map char)
                  string-builder
                  c)]
-    (close c)
+    (dispose! c)
     result))

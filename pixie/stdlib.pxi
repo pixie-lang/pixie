@@ -2144,6 +2144,12 @@ Expands to calls to `extend-type`."
   ([sb] (str sb))
   ([sb item] (conj! sb item)))
 
+(defn dispose!
+  "Finalizes use of the object by cleaning up resources used by the object"
+  [x]
+  (-dispose! x)
+  nil)
+
 (defmacro using [bindings & body]
   (let [pairs (partition 2 bindings)
         names (map first pairs)]
