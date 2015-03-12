@@ -43,6 +43,8 @@ defprotocol("pixie.stdlib", "IStack", ["-push", "-pop"])
 
 defprotocol("pixie.stdlib", "IFn", ["-invoke"])
 
+defprotocol("pixie.stdlib", "IDoc", ["-doc"])
+
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
 IMap = as_var("pixie.stdlib", "IMap")(Protocol(u"IMap"))
@@ -799,5 +801,11 @@ def _seq(self):
 
 @as_var("ex-msg")
 def ex_msg(e):
+    """Returns the message contained in an exception"""
     assert isinstance(e, RuntimeException)
     return e._data
+
+@extend(_doc, code.NativeFn._type)
+def _doc(self):
+    assert isinstance(self, code.NativeFn)
+    return rt.wrap(self._doc)
