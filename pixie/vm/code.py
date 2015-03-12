@@ -172,7 +172,7 @@ class NativeFn(BaseCode):
     """Wrapper for a native function"""
     _type = object.Type(u"pixie.stdlib.NativeFn")
 
-    def __init__(self):
+    def __init__(self, doc=None):
         BaseCode.__init__(self)
 
     def type(self):
@@ -807,11 +807,12 @@ CO_VARARGS = 0x4
 
 def wrap_fn(fn, tp=object.Object):
     """Converts a native Python function into a pixie function."""
+    docstring = unicode(fn.__doc__) if fn.__doc__ else u""
     def as_native_fn(f):
-        return type("W" + fn.__name__, (NativeFn,), {"inner_invoke": f})()
+        return type("W" + fn.__name__, (NativeFn,), {"inner_invoke": f, "_doc": docstring})()
 
     def as_variadic_fn(f):
-        return type("W" + fn.__name__[:len("__args")], (NativeFn,), {"inner_invoke": f})()
+        return type("W" + fn.__name__[:len("__args")], (NativeFn,), {"inner_invoke": f, "_doc": docstring})()
 
     code = fn.func_code
     if fn.__name__.endswith("__args"):

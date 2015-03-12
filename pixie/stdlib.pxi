@@ -1273,11 +1273,13 @@ and implements IAssociative, ILookup and IObject."
   {:doc "Returns the documentation of the given value."
    :added "0.1"}
   [v]
+
   (let [vr (resolve v)
         x (if vr @vr)
         doc (get (meta x) :doc)
         has-doc? (if doc true (get (meta x) :signatures))]
     (cond
+     (satisfies? IDoc x) (-doc x)
      has-doc? (let [sigs (get (meta x) :signatures)
                     examples (get (meta x) :examples)
                     indent (fn [s]
