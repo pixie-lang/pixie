@@ -1,4 +1,5 @@
 (ns pixie.ffi-infer
+
   (require pixie.io :as io))
 
 (defn -add-rel-path [rel]
@@ -84,7 +85,7 @@ return 0;
 (defmulti edn-to-ctype :type)
 
 (defn callback-type [{:keys [arguments returns]}]
-  `(ffi-callback ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns)))
+  `(pixie.ffi/ffi-callback ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns)))
 
 (defmethod edn-to-ctype :pointer
   [{:keys [of-type] :as ptr}]

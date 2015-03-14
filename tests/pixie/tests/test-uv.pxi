@@ -1,6 +1,7 @@
 (ns pixie.test-uv
   (require pixie.uv :as uv)
-  (require pixie.test :as t))
+  (require pixie.test :as t)
+  (require pixie.ffi :as ffi))
 
 
 (t/deftest timer-tests
@@ -8,7 +9,7 @@
         result (atom false)
         loop (uv/uv_loop_t)
         timer (uv/uv_timer_t)]
-    (reset! cb (ffi-prep-callback uv/uv_timer_cb
+    (reset! cb (ffi/ffi-prep-callback uv/uv_timer_cb
                                   (fn [handle]
                                     (reset! result true)
                                     (uv/uv_timer_stop timer)
