@@ -178,7 +178,7 @@
 
     ; TCP Networking
     (f/defcstruct uv_tcp_t [])
-    (f/defc-raw-struct sockaddr_in)
+    (f/defc-raw-struct sockaddr_in [])
     (f/defcfn uv_tcp_init)
     (f/defcfn uv_ip4_addr)
     (f/defcfn uv_tcp_bind)
@@ -201,5 +201,5 @@
 
 (defn throw-on-error [result]
   (if (neg? result)
-    (throw (str "UV Error: " (uv/uv_err_name result)))
+    (throw (str "UV Error: " (uv_err_name result)))
     result))

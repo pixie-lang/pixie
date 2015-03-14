@@ -2,7 +2,8 @@
   (require pixie.streams :as st :refer :all)
   (require pixie.uv :as uv)
   (require pixie.stacklets :as st)
-  (require pixie.ffi :as ffi))
+  (require pixie.ffi :as ffi)
+  (require pixie.ffi-infer :as ffi-infer))
 
 (defmacro defuvfsfn [nm args return]
   `(defn ~nm ~args
@@ -176,15 +177,25 @@
         bind-addr (uv/sockaddr_in)
         _ (uv/throw-on-error (uv/uv_ip4_addr ip port bind-addr))
         on-new-connetion (atom nil)]
-    (reset! (ffi-prep-callback
+    (reset! on-new-connetion
+            (ffi-prep-callback
              uv/uv_connection_cb
              (fn [server status]
                (when (not (= status -1))
                  (println "Got Client!!!!!!!")))))
     (uv/uv_tcp_init (uv/uv_default_loop) server)
-    (uv/uv_tcp_bind server bind_addr)
+    (uv/uv_tcp_bind server bind-addr 0)
     (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
     (st/yield-control)))
 
 
+(st/apply-blocking println "FROM OTHER THREAD <---!!!!!")
+
+
 (tcp-server "0.0.0.0" 4242 nil)
+(comment
+  (defmacro make-readline-async []
+    `(let [libname ~(ffi-infer/compile-library {:prefix "pixie.io.readline"
+                                                :includes ["uv.h" "editline/readline.h"]})]))
+
+  (ffi-infer/compile-library))

@@ -122,3 +122,27 @@
 
 (defn promise []
   (->Promise nil (atom []) false))
+
+(defprotocol IThreadPool
+  (-execute [this work-fn]))
+
+
+;; Super basic Thread Pool, yes, this should be improved
+
+(deftype ThreadPool []
+  IThreadPool
+  (-execute [this work-fn]
+    (-thread (fn [] (work-fn)))))
+
+(def basic-thread-pool (->ThreadPool))
+
+(defn -run-in-other-thread [work-fn]
+  (-execute basic-thread-pool work-fn))
+
+
+(defn apply-blocking [f & args]
+  (call-cc (fn [k]
+             (-run-in-other-thread
+              (fn []
+                (let [result (apply f args)]
+                  (-run-later (fn [] (run-and-process k result)))))))))
