@@ -174,6 +174,20 @@
     (f/defccallback uv_async_cb)
     (f/defcfn uv_async_init)
     (f/defcfn uv_async_send)
+
+
+    ; TCP Networking
+    (f/defcstruct uv_tcp_t [])
+    (f/defc-raw-struct sockaddr_in)
+    (f/defcfn uv_tcp_init)
+    (f/defcfn uv_ip4_addr)
+    (f/defcfn uv_tcp_bind)
+    (f/defcfn uv_listen)
+    (f/defcfn uv_accept)
+    (f/defcfn uv_read_start)
+
+    (f/defccallback uv_connection_cb)
+
     )
 
 
@@ -183,3 +197,9 @@
     (pixie.ffi/set! bt :base b)
     (pixie.ffi/set! bt :len size)
     bt))
+
+
+(defn throw-on-error [result]
+  (if (neg? result)
+    (throw (str "UV Error: " (uv/uv_err_name result)))
+    result))

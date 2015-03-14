@@ -228,6 +228,33 @@ return 0;
                           :name ~(name nm))))
 
 
+(defn compile-library [{:keys [prefix includes]} & source]
+  (let [c-name (str "/tmp/" prefix ".c")
+        source-header (apply str (map (fn [i]
+                                        (str "#include \"" i "\"\n"))
+                                      includes))
+        source (apply str source-header (interpose "\n\n" source))
+        lib-name (str "/tmp/" prefix "-" (hash source) "." pixie.platform/so-ext)
+        cmd (str "cc -dynamic-lang "
+                 c-name
+                 (apply str (map (fn [x] ( str " -I " x " "))
+                                 @load-paths))
+
+                         " -o "
+                         lib-name)]
+    (io/spit c-name source)
+    (println cmd)
+    (io/run-command cmd)))
+
+
+
+(compile-library
+ {:prefix "foo"
+  :includes ["uv.h"]}
+ "int foo(int bar)
+  {
+    return 42;
+  }")
 
 
 (comment

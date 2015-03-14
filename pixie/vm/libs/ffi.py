@@ -238,6 +238,15 @@ class Buffer(object.Object):
     def capacity(self):
         return self._size
 
+    def free_data(self):
+        lltype.free(self._buffer, flavor="raw")
+
+
+
+@extend(proto._dispose_BANG_, Buffer)
+def _dispose_voidp(self):
+    self.free_data()
+
 
 @extend(proto._nth, Buffer)
 def _nth(self, idx):
@@ -457,6 +466,24 @@ class VoidP(object.Object):
 
     def raw_data(self):
         return rffi.cast(rffi.VOIDP, self._raw_data)
+
+    def free_data(self):
+        lltype.free(self._raw_data, flavor="raw")
+
+@extend(proto._dispose_BANG_, cvoidp)
+def _dispose_voidp(self):
+    self.free_data()
+
+
+
+@as_var(u"pixie.ffi", u"prep-string")
+def prep_string(s):
+    """Takes a Pixie string and returns a VoidP to that string. The string should be freed via dispose!, otherwise
+    memory leaks could result."""
+    affirm(isinstance(s, String), u"Can only prep strings with prep-string")
+    utf8 = unicode_to_utf8(rt.name(s))
+    raw = rffi.str2charp(utf8)
+    return VoidP(rffi.cast(rffi.VOIDP, raw))
 
 @as_var(u"pixie.ffi", u"unpack")
 def unpack(ptr, offset, tp):
@@ -715,6 +742,14 @@ def val_at(self, k, not_found):
 @as_var("pixie.ffi", "set!")
 def set_(self, k, val):
     return self.set_val(k, val)
+
+
+
+@as_var("pixie.ffi", "prep-ffi-call")
+def prep_ffi_call__args(args):
+    fn = args[0]
+    affirm(isinstance(fn, CFunctionType), u"First arg must be a FFI function")
+
 
 
 

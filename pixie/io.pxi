@@ -167,3 +167,24 @@
                 c)]
     (dispose! c)
     result))
+
+
+(defn tcp-server [ip port on-connection]
+  (assert (string? ip) "Ip should be a string")
+  (assert (integer? port) "Port should be a int")
+  (let [server (uv/uv_tcp_t)
+        bind-addr (uv/sockaddr_in)
+        _ (uv/throw-on-error (uv/uv_ip4_addr ip port bind-addr))
+        on-new-connetion (atom nil)]
+    (reset! (ffi-prep-callback
+             uv/uv_connection_cb
+             (fn [server status]
+               (when (not (= status -1))
+                 (println "Got Client!!!!!!!")))))
+    (uv/uv_tcp_init (uv/uv_default_loop) server)
+    (uv/uv_tcp_bind server bind_addr)
+    (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
+    (st/yield-control)))
+
+
+(tcp-server "0.0.0.0" 4242 nil)
