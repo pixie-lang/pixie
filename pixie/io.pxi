@@ -188,11 +188,11 @@
     (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
     (st/yield-control)))
 
+(comment
+  (st/apply-blocking println "FROM OTHER THREAD <---!!!!!")
 
-(st/apply-blocking println "FROM OTHER THREAD <---!!!!!")
 
-
-(tcp-server "0.0.0.0" 4242 nil)
+  (tcp-server "0.0.0.0" 4242 nil))
 (comment
   (defmacro make-readline-async []
     `(let [libname ~(ffi-infer/compile-library {:prefix "pixie.io.readline"

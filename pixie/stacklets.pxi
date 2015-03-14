@@ -83,7 +83,9 @@
 (defn -with-stacklets [fn]
   (let [[h f] ((new-stacklet fn) nil)]
     (f h)
-    (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT)))
+    (loop []
+      (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT)
+      (recur))))
 
 (defmacro with-stacklets [& body]
   `(-with-stacklets

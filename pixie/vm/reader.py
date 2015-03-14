@@ -2,6 +2,7 @@ py_object = object
 import pixie.vm.object as object
 from pixie.vm.object import affirm, runtime_error
 import pixie.vm.code as code
+from pixie.vm.code import as_var
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons
@@ -88,6 +89,40 @@ class PromptReader(PlatformReader):
     def unread(self, ch):
         assert self._string_reader is not None
         self._string_reader.unread(ch)
+
+
+class UserSpaceReader(PlatformReader):
+    def __init__(self, reader_fn):
+        self._string_reader = None
+        self._reader_fn = reader_fn
+
+
+    def read(self):
+        if self._string_reader is None:
+            result = rt.name(self._reader_fn.invoke([]))
+            if result == u"":
+                raise EOFError()
+            self._string_reader = StringReader(result)
+
+        try:
+            return self._string_reader.read()
+        except EOFError:
+            self._string_reader = None
+            return self.read()
+
+    def reset_line(self):
+        self._string_reader = None
+
+    def unread(self, ch):
+        assert self._string_reader is not None
+        self._string_reader.unread(ch)
+
+@as_var(u"reader-fn")
+def reader_fn(fn):
+    """(reader-fn f)
+    Creates a new reader that can be passed to read, that will call the given f when a new string
+    of input is needed."""
+    return MetaDataReader(UserSpaceReader(fn))
 
 class LinePromise(object.Object):
     _type = object.Type(u"pixie.stdlib.LinePromise")
@@ -763,6 +798,15 @@ def read(rdr, error_on_eof):
         itm = rt.with_meta(itm, rt.merge(meta, rt.meta(itm)))
 
     return itm
+
+@as_var("read")
+def _read_(rdr, error_on_eof):
+    """(read rdr error-on-eof)
+       Reads a single form from the input reader. If error-on-eof is true, an error will be thrown if eof is reached
+       and a valid form has not been parsed. Else will return eof"""
+    assert isinstance(rdr, PlatformReader)
+    return read(rdr, rt.is_true(error_on_eof))
+
 
 
 

@@ -157,6 +157,8 @@ def init():
 
     globals()["__inited__"] = True
 
+    globals()["is_true"] = lambda x: False if x is false or x is nil or x is None else True
+
 
 
 
