@@ -329,7 +329,7 @@ class LiteralStringReader(ReaderHandler):
                 acc.append(v)
 
 def read_token(rdr):
-    acc = u""
+    acc = rdr.read()
     while True:
         ch = rdr.read()
         if is_whitespace(ch) or is_terminating_macro(ch):
