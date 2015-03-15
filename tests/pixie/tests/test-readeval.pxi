@@ -15,3 +15,43 @@
   (t/assert= (read-string "false") false)
   (t/assert= (read-string "true") true)
   (t/assert= (read-string "(foo (bar (baz)))") '(foo (bar (baz)))))
+
+(t/deftest test-list-unclosed-list-fail
+  (t/assert-throws? RuntimeException
+                    "Unmatched list open '('"
+                    (read-string "("))
+  (t/assert-throws? RuntimeException
+                    "Unmatched list open '('"
+                    (read-string "((foo bar)")))
+
+(t/deftest test-vector-unclosed-list-fail
+  (t/assert-throws? RuntimeException
+                    "Unmatched vector open '['"
+                    (read-string "["))
+  (t/assert-throws? RuntimeException
+                    "Unmatched vector open '['"
+                    (read-string "[[foo bar]")))
+
+(t/deftest test-map-unclosed-list-fail
+  (t/assert-throws? RuntimeException
+                    "Unmatched map open '{'"
+                    (read-string "{"))
+  (t/assert-throws? RuntimeException
+                    "Unmatched map open '{'"
+                    (read-string "{foo {a b}")))
+
+(t/deftest test-set-unclosed-list-fail
+  (t/assert-throws? RuntimeException
+                    "Unmatched set open '#{'"
+                    (read-string "#{"))
+  (t/assert-throws? RuntimeException
+                    "Unmatched set open '#{'"
+                    (read-string "#{foo #{a}")))
+
+(t/deftest test-string-unclosed-fail
+  (t/assert-throws? RuntimeException
+                    "Unmatched string quote '\"'"
+                    (read-string "\""))
+  (t/assert-throws? RuntimeException
+                    "Unmatched string quote '\"'"
+                    (read-string "\"foo")))
