@@ -42,17 +42,19 @@
       "Invalid number of arguments 1 for function 'arity-2'. Expected 2"
       (arity-2 :foo))
     (t/assert-throws? RuntimeException
-      "Wrong number of arguments 2 for function 'arity-0-or-1'. Expected 1,0"
+      "Wrong number of arguments 2 for function 'arity-0-or-1'. Expected 0 or 1"
       (arity-0-or-1 :foo :bar))
     (t/assert-throws? RuntimeException
-      "Wrong number of arguments 3 for function 'arity-0-or-1'. Expected 1,0"
+      "Wrong number of arguments 3 for function 'arity-0-or-1'. Expected 0 or 1"
       (arity-0-or-1 :foo :bar :baz))
     (t/assert-throws? RuntimeException
-      "Wrong number of arguments 2 for function 'arity-1-or-3'. Expected 3,1"
+      "Wrong number of arguments 2 for function 'arity-1-or-3'. Expected 1 or 3"
       (arity-1-or-3 :foo :bar))
     (t/assert-throws? RuntimeException
-      "Wrong number of arguments 0 for function 'arity-1-or-3'. Expected 3,1"
+      "Wrong number of arguments 0 for function 'arity-1-or-3'. Expected 1 or 3"
       (arity-1-or-3))
     (t/assert-throws? RuntimeException
-      "Wrong number of arguments 2 for function 'arity-0-or-1-or-3-or-more'. Expected 1,0,3 or more"
+      "Wrong number of arguments 2 for function 'arity-0-or-1-or-3-or-more'. Expected 0, 1 or 3+"
       (arity-0-or-1-or-3-or-more :foo :bar))))
+
+(t/deftest test-code-arities)
