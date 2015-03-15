@@ -636,14 +636,14 @@ returns true"
 
 (defn nth
   {:doc "Returns the element at the idx.  If the index is not found it will return an error.
-         However, if you specify a not-found parameter, it will substitue that instead"
+         However, if you specify a not-found parameter, it will substitute that instead"
    :signatures [[coll idx] [coll idx not-found]]
    :added "0.1"}
   ([coll idx] (-nth coll idx))
   ([coll idx not-found] (-nth-not-found coll idx not-found)))
 
 (defn first
-  {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}
@@ -653,7 +653,7 @@ returns true"
     (-first coll)))
 
 (defn second
-  {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}
@@ -663,7 +663,7 @@ returns true"
     (first (next coll))))
 
 (defn third
-  {:doc "Returns the third item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the third item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}
@@ -673,7 +673,7 @@ returns true"
     (first (next (next coll)))))
 
 (defn fourth
-  {:doc "Returns the fourth item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the fourth item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}

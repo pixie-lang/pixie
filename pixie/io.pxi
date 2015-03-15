@@ -144,7 +144,7 @@
 
 
 (defn popen-read
-  {:doc "Open a file for reading, returning a IInputStream"
+  {:doc "Open a process for reading, returning a IInputStream"
    :added "0.1"}
   [command]
   (assert (string? command) "Command must be a string")
