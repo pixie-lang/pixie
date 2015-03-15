@@ -3,6 +3,7 @@ import pixie.vm.object as object
 from pixie.vm.object import affirm, runtime_error
 from pixie.vm.primitives import nil, false
 from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.listsort import TimSort
 from rpython.rlib.jit import elidable_promote, promote
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
@@ -124,6 +125,21 @@ class BaseCode(object.Object):
     def invoke_with(self, args, this_fn):
         return self.invoke(args)
 
+def join_last(words, sep):
+    """
+    Joins by commas and uses 'sep' on last word. 
+    
+    Eg. join_last(['dog', 'cat', 'rat'] , 'and') = 'dog, cat and rat'
+    """ 
+    if len(words) == 1:
+        return words[0]
+    else:
+        if len(words) == 2:
+            s = words[0] + u" " + sep + u" " + words[1]
+        else:
+            s = u", ".join(words[0:-1])
+            s += u" " + sep + u" " + words[-1]
+        return s
 
 class MultiArityFn(BaseCode):
     _type = object.Type(u"pixie.stdlib.MultiArityFn")
@@ -153,13 +169,18 @@ class MultiArityFn(BaseCode):
             return self._rest_fn
 
         acc = []
-        for x in self._arities:
+        sorted = TimSort(self.get_arities()) 
+        sorted.sort()
+        for x in sorted.list:
             acc.append(unicode(str(x)))
 
         if self._rest_fn:
-            acc.append(unicode(str(self._rest_fn.required_arity())) + u" or more")
+            acc.append(unicode(str(self._rest_fn.required_arity())) + u"+")
 
-        runtime_error(u"Wrong number of arguments " + unicode(str(arity)) + u" for function '" + unicode(self._name) + u"'. Expected " + u",".join(acc))
+        runtime_error(u"Wrong number of arguments " + unicode(str(arity)) + u" for function '" + unicode(self._name) + u"'. Expected " + join_last(acc, u"or"))
+
+    def get_arities(self):
+        return self._arities.keys()
 
     def invoke(self, args):
         return self.invoke_with(args, self)

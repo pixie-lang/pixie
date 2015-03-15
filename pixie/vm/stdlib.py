@@ -732,7 +732,7 @@ def _ici(meta):
     return InterpreterCodeInfo(line,
                                line_number.int_val() if line_number is not nil else 0,
                                col_number.int_val() if col_number is not nil else 0,
-                               rt.name(file) if file is not nil else u"<unknown")
+                               rt.name(file) if file is not nil else u"<unknown>")
 
 
 # @wrap_fn
