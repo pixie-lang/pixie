@@ -213,7 +213,6 @@ class ListReader(ReaderHandler):
             try:
                 eat_whitespace(rdr)
             except EOFError:
-                rdr.unread()
                 throw_syntax_error_with_data(rdr, u"Unmatched list open '('")
             ch = rdr.read()
 
@@ -226,8 +225,9 @@ class ListReader(ReaderHandler):
                 return acc
             
             rdr.unread()
-
-            lst.append(read(rdr, True))
+            itm = read(rdr, True, always_return_form=False)
+            if itm != rdr:
+                lst.append(itm)
 
 class UnmatchedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -248,7 +248,10 @@ class VectorReader(ReaderHandler):
                 return acc
 
             rdr.unread()
-            acc = rt.conj(acc, read(rdr, True))
+            itm = read(rdr, True, always_return_form=False)
+            if itm != rdr:
+                acc = rt.conj(acc, itm)
+
 
 class UnmatchedVectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -268,9 +271,15 @@ class MapReader(ReaderHandler):
                 return acc
 
             rdr.unread()
-            k = read(rdr, True)
-            v = read(rdr, False)
-            acc = rt._assoc(acc, k, v)
+            itm = read(rdr, True, always_return_form=False)
+            if itm != rdr:
+                k = itm
+                itm = rdr
+                while itm == rdr:
+                    itm = read(rdr, False, always_return_form=False)
+                v = itm
+                acc = rt._assoc(acc, k, v)
+
         return acc
 
 class UnmatchedMapReader(ReaderHandler):
@@ -335,7 +344,7 @@ class LiteralStringReader(ReaderHandler):
                 acc.append(v)
 
 def read_token(rdr):
-    acc = u""
+    acc = rdr.read()
     while True:
         ch = rdr.read()
         if is_whitespace(ch) or is_terminating_macro(ch):
@@ -591,17 +600,13 @@ class DispatchReader(ReaderHandler):
 class LineCommentReader(ReaderHandler):
     def invoke(self, rdr, ch):
         self.skip_line(rdr)
-        return read(rdr, True)
+        return rdr
 
     def skip_line(self, rdr):
         while True:
             ch = rdr.read()
             if ch == u"\n":
                 return
-            elif ch == u"\r":
-                ch2 = rdr.read()
-                if ch2 == u"\n":
-                    return
 
 handlers = {u"(": ListReader(),
             u")": UnmatchedListReader(),
@@ -740,8 +745,7 @@ def throw_syntax_error_with_data(rdr, txt):
     raise object.WrappedException(err)
 
 
-
-def read(rdr, error_on_eof):
+def read(rdr, error_on_eof, always_return_form=True):
     try:
         eat_whitespace(rdr)
     except EOFError as ex:
@@ -758,9 +762,11 @@ def read(rdr, error_on_eof):
         meta = nil
 
     macro = handlers.get(ch, None)
-    itm = nil
     if macro is not None:
         itm = macro.invoke(rdr, ch)
+        if always_return_form and itm == rdr:
+            return read(rdr, error_on_eof, always_return_form=always_return_form)
+
 
     elif is_digit(ch):
         itm = read_number(rdr, ch)
@@ -778,8 +784,9 @@ def read(rdr, error_on_eof):
     else:
         itm = read_symbol(rdr, ch)
 
-    if rt.has_meta_QMARK_(itm):
-        itm = rt.with_meta(itm, rt.merge(meta, rt.meta(itm)))
+    if itm != rdr:
+        if rt.has_meta_QMARK_(itm):
+            itm = rt.with_meta(itm, rt.merge(meta, rt.meta(itm)))
 
     return itm
 
