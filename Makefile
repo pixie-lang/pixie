@@ -1,6 +1,6 @@
 all: help
 
-EXTERNALS=../externals
+EXTERNALS=externals
 
 PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
@@ -73,5 +73,6 @@ clean_pxic:
 clean: clean_pxic
 	rm -rf ./lib
 	rm -rf ./include
+	rm -rf ./externals
 	rm -f ./pixie-vm
 	rm -f ./*.pyc
