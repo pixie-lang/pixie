@@ -4,7 +4,7 @@ import pixie.vm.object as object
 from pixie.vm.object import runtime_error
 from pixie.vm.keyword import Keyword
 import pixie.vm.stdlib  as proto
-from pixie.vm.code import as_var, affirm, extend
+from pixie.vm.code import as_var, affirm, extend, wrap_fn
 import pixie.vm.rt as rt
 from rpython.rtyper.lltypesystem import rffi, lltype, llmemory
 from pixie.vm.primitives import nil, true, false
@@ -238,6 +238,15 @@ class Buffer(object.Object):
     def capacity(self):
         return self._size
 
+    def free_data(self):
+        lltype.free(self._buffer, flavor="raw")
+
+
+
+@extend(proto._dispose_BANG_, Buffer)
+def _dispose_voidp(self):
+    self.free_data()
+
 
 @extend(proto._nth, Buffer)
 def _nth(self, idx):
@@ -359,11 +368,28 @@ class CCharP(CType):
             return String(unicode(rffi.charp2str(casted[0])))
 
     def ffi_set_value(self, ptr, val):
-        pnt = rffi.cast(rffi.CCHARPP, ptr)
-        utf8 = unicode_to_utf8(rt.name(val))
-        raw = rffi.str2charp(utf8)
-        pnt[0] = raw
-        return CCharPToken(raw)
+        if isinstance(val, String):
+            pnt = rffi.cast(rffi.CCHARPP, ptr)
+            utf8 = unicode_to_utf8(rt.name(val))
+            raw = rffi.str2charp(utf8)
+            pnt[0] = raw
+            return CCharPToken(raw)
+        elif isinstance(val, Buffer):
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = val.buffer()
+        elif isinstance(val, VoidP):
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = val.raw_data()
+        elif val is nil:
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = rffi.cast(rffi.VOIDP, 0)
+        elif isinstance(val, CStruct):
+            vpnt = rffi.cast(rffi.VOIDPP, ptr)
+            vpnt[0] = rffi.cast(rffi.VOIDP, val.raw_data())
+        else:
+            print val
+            affirm(False, u"Cannot encode this type")
+
 
     def ffi_size(self):
         return rffi.sizeof(rffi.CCHARP)
@@ -441,6 +467,24 @@ class VoidP(object.Object):
     def raw_data(self):
         return rffi.cast(rffi.VOIDP, self._raw_data)
 
+    def free_data(self):
+        lltype.free(self._raw_data, flavor="raw")
+
+@extend(proto._dispose_BANG_, cvoidp)
+def _dispose_voidp(self):
+    self.free_data()
+
+
+
+@as_var(u"pixie.ffi", u"prep-string")
+def prep_string(s):
+    """Takes a Pixie string and returns a VoidP to that string. The string should be freed via dispose!, otherwise
+    memory leaks could result."""
+    affirm(isinstance(s, String), u"Can only prep strings with prep-string")
+    utf8 = unicode_to_utf8(rt.name(s))
+    raw = rffi.str2charp(utf8)
+    return VoidP(rffi.cast(rffi.VOIDP, raw))
+
 @as_var(u"pixie.ffi", u"unpack")
 def unpack(ptr, offset, tp):
     """(unpack ptr offset tp)
@@ -460,6 +504,11 @@ def pack(ptr, offset, tp, val):
     tp.ffi_set_value(ptr, val)
     return nil
 
+@as_var(u"pixie.ffi", u"ptr-add")
+def pack(ptr, offset):
+    affirm(isinstance(ptr, VoidP) or isinstance(ptr, Buffer) or isinstance(ptr, CStruct), u"Type is not unpackable")
+    ptr = rffi.ptradd(ptr.raw_data(), offset.int_val())
+    return VoidP(ptr)
 
 class CStructType(object.Type):
     base_type = object.Type(u"pixie.ffi.CStruct")
@@ -565,7 +614,7 @@ def ffi_prep_callback(tp, f):
     affirm(isinstance(tp, CFunctionType), u"First argument to ffi-prep-callback must be a CFunctionType")
     raw_closure = rffi.cast(rffi.VOIDP, clibffi.closureHeap.alloc())
 
-    unique_id = len(registered_callbacks)
+    unique_id = rffi.cast(lltype.Signed, raw_closure)
 
     res = clibffi.c_ffi_prep_closure(rffi.cast(clibffi.FFI_CLOSUREP, raw_closure), tp.get_cd().cif,
                              invoke_callback,
@@ -653,12 +702,20 @@ class CStruct(object.Object):
         (tp, offset) = self._type.get_desc(k)
 
         if tp is None:
-            runtime_error(u"Invalid field name: " + rt.name(rt.str(tp)))
+            runtime_error(u"Invalid field name: " + rt.name(rt.str(k)))
 
         offset = rffi.ptradd(self._buffer, offset)
         tp.ffi_set_value(rffi.cast(rffi.VOIDP, offset), v)
 
         return nil
+
+    def free_data(self):
+        lltype.free(self._buffer, flavor="raw")
+
+@wrap_fn
+def _dispose_cstruct(self):
+    self.free_data()
+
 
 
 @as_var("pixie.ffi", "c-struct")
@@ -679,7 +736,9 @@ def c_struct(name, size, spec):
 
         d[nm] = (tp, offset.int_val())
 
-    return CStructType(rt.name(name), size.int_val(), d)
+    tp = CStructType(rt.name(name), size.int_val(), d)
+    proto._dispose_BANG_.extend(tp, _dispose_cstruct)
+    return tp
 
 @as_var("pixie.ffi", "cast")
 def c_cast(frm, to):
@@ -703,6 +762,14 @@ def set_(self, k, val):
     """(set! ptr k val)
        Sets a field k of struct ptr to value val"""
     return self.set_val(k, val)
+
+
+
+@as_var("pixie.ffi", "prep-ffi-call")
+def prep_ffi_call__args(args):
+    fn = args[0]
+    affirm(isinstance(fn, CFunctionType), u"First arg must be a FFI function")
+
 
 
 

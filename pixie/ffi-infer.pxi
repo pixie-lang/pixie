@@ -1,6 +1,6 @@
 (ns pixie.ffi-infer
+  (require pixie.io-blocking :as io))
 
-  (require pixie.io :as io))
 
 (defn -add-rel-path [rel]
   (swap! load-paths conj (str (first @load-paths) "/" rel)))
@@ -82,26 +82,30 @@ return 0;
 
 ;; To Ctype conversion
 
-(defmulti edn-to-ctype :type)
+(defmulti edn-to-ctype (fn [n _]
+                         (:type n)))
 
-(defn callback-type [{:keys [arguments returns]}]
-  `(pixie.ffi/ffi-callback ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns)))
+(defn callback-type [{:keys [arguments returns]} in-struct?]
+  `(pixie.ffi/ffi-callback ~(vec (map (fn [x] (edn-to-ctype x in-struct?))
+                            arguments))
+                 ~(edn-to-ctype returns in-struct?)))
 
 (defmethod edn-to-ctype :pointer
-  [{:keys [of-type] :as ptr}]
+  [{:keys [of-type] :as ptr} in-struct?]
   (cond
-   (= of-type {:signed? true :size 1 :type :int}) 'pixie.stdlib/CCharP
-   (= (:type of-type) :function) (callback-type of-type)
+   (and (= of-type {:signed? true :size 1 :type :int})
+        (not in-struct?)) 'pixie.stdlib/CCharP
+   (= (:type of-type) :function) (callback-type of-type in-struct?)
    :else 'pixie.stdlib/CVoidP))
 
 (defmethod edn-to-ctype :float
-  [{:keys [size]}]
+  [{:keys [size]} _]
   (cond
    (= size 8) 'pixie.stdlib/CDouble
    :else (assert False "unknown type")))
 
 (defmethod edn-to-ctype :void
-  [_]
+  [_ _]
   `pixie.stdlib/CVoid)
 
 (def int-types {[8 true] 'pixie.stdlib/CInt8
@@ -114,7 +118,7 @@ return 0;
                 [64 false] 'pixie.stdlib/CUInt64})
 
 (defmethod edn-to-ctype :int
-  [{:keys [size signed?] :as tp}]
+  [{:keys [size signed?] :as tp} _]
   (let [tp-found (get int-types [(* 8 size) signed?])]
     (assert tp-found (str "No type found for " tp))
     tp-found))
@@ -133,33 +137,36 @@ return 0;
   [{:keys [name]} {:keys [type arguments returns]}]
   (assert (= type :function) (str name " is not infered to be a function"))
   `(def ~(symbol name)
-     (ffi-fn *library* ~name ~(vec (map edn-to-ctype arguments)) ~(edn-to-ctype returns))))
+     (ffi-fn *library* ~name
+             ~(vec (map (fn [x] (edn-to-ctype x false))
+                       arguments))
+             ~(edn-to-ctype returns false))))
 
 (defmethod generate-code :raw-struct
   [{:keys [name members]} {:keys [size infered-members]}]
   `(def ~(symbol name)
      (pixie.ffi/c-struct ~name ~size [~@(map (fn [name {:keys [type offset]}]
-                                               `[~(keyword name) ~(edn-to-ctype type) ~offset])
+                                               `[~(keyword name) ~(edn-to-ctype type true) ~offset])
                                              members infered-members)])))
 
 (defmethod generate-code :struct
   [{:keys [name members]} {:keys [size infered-members]}]
   `(def ~(symbol name)
      (pixie.ffi/c-struct ~name ~size [~@(map (fn [name {:keys [type offset]}]
-                                               `[~(keyword name) ~(edn-to-ctype type) ~offset])
+                                               `[~(keyword name) ~(edn-to-ctype type true) ~offset])
                                              members infered-members)])))
 
 (defmethod generate-code :type
   [{:keys [name members]} {:keys [size infered-members]}]
   `(def ~(symbol name)
      (pixie.ffi/c-struct ~name ~size [~@(map (fn [name {:keys [type offset]}]
-                                               `[~(keyword name) ~(edn-to-ctype type) ~offset])
+                                               `[~(keyword name) ~(edn-to-ctype type true) ~offset])
                                              members infered-members)])))
 
 (defmethod generate-code :callback
   [{:keys [name]} {:keys [of-type]}]
   `(def ~(symbol name)
-     ~(callback-type of-type)))
+     ~(callback-type of-type false)))
 
 
 (defn run-infer [config cmds]
@@ -176,8 +183,9 @@ return 0;
                      (apply str " " (interpose " " (:cxx-flags *config*)))
                      " -o /tmp/a.out && /tmp/a.out")
         _ (println cmd-str)
-        result (read-string (io/run-command cmd-str))]
-    `(do ~@(map generate-code cmds result))))
+        result (read-string (io/run-command cmd-str))
+        gen (vec (map generate-code cmds result))]
+    `(do ~@gen)))
 
 (defn full-lib-name [library-name]
   (if (= library-name "c")
@@ -219,6 +227,25 @@ return 0;
 (defmacro defccallback [nm]
   `(swap! *bodies* conj (assoc {:op :callback}
                           :name ~(name nm))))
+
+
+(defn compile-library [{:keys [prefix includes]} & source]
+  (let [c-name (str "/tmp/" prefix ".c")
+        source-header (apply str (map (fn [i]
+                                        (str "#include \"" i "\"\n"))
+                                      includes))
+        source (apply str source-header (interpose "\n\n" source))
+        lib-name (str "/tmp/" prefix "-" (hash source) "." pixie.platform/so-ext)
+        cmd (str "cc -dynamic-lang "
+                 c-name
+                 (apply str (map (fn [x] ( str " -I " x " "))
+                                 @load-paths))
+
+                         " -o "
+                         lib-name)]
+    (io/spit c-name source)
+    (println cmd)
+    (io/run-command cmd)))
 
 
 

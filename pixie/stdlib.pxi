@@ -1080,12 +1080,6 @@ Creates new maps if the keys are not present."
            (pop-binding-frame!)
            ret))))
 
-(defmacro require [ns kw as-nm]
-  (assert (= kw :as) "Require expects :as as the second argument")
-  `(do (load-ns (quote ~ns))
-       (assert (the-ns (quote ~ns)) (str "Couldn't find the namespace " (quote ~ns) " after loading the file"))
-       (refer-ns (this-ns-name) (the-ns (quote ~ns)) (quote ~as-nm))))
-
 (defmacro ns [nm & body]
   `(do (in-ns ~(keyword (name nm)))
        ~@body))
@@ -1146,7 +1140,7 @@ Creates new maps if the keys are not present."
                                    (protocol? @(resolve-in *ns* body)) [@(resolve-in *ns* body)
                                                                         (second res)
                                                                         (conj (third res) body)]
-                                   :else (throw (str "can only extend protocols or Object, not " body)))
+                                   :else (throw (str "can only extend protocols or Object, not " body " of type " (type body))))
                    (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
                                  (if (protocol? proto)
                                    [proto tbs (conj pbs body)]
@@ -1656,7 +1650,10 @@ All these forms can be combined and nested, in the example below:
 
 For more information, see http://clojure.org/special_forms#binding-forms"}
   [bindings & body]
-  (let* [destructured-bindings (transduce (map #(apply destructure %1))
+  (let* [destructured-bindings (transduce (map (fn [args]
+                                                 (assert (= 2 (count args)) (str "Bindings must be in pairs, not " args
+                                                                                 " " (meta (first args))))
+                                                 (apply destructure args)))
                                           concat
                                           []
                                           (partition 2 bindings))]
@@ -1892,9 +1889,11 @@ user => (refer 'pixie.string :exclude '(substring))"
         exclude (set (:exclude filters))
         refers (if (= :all (:refer filters))
                  (keys nsmap)
-                 (or (:refer filters) (:only filters) (keys nsmap)))]
+                 (or (:refer filters) (:only filters)))]
     (when (and refers (not (satisfies? ISeqable refers)))
       (throw ":only/:refer must be a collection of symbols"))
+    (when-let [as (:as filters)]
+      (refer-ns *ns* ns-sym as))
     (loop [syms (seq refers)]
       (if (not syms)
         nil
@@ -1907,6 +1906,17 @@ user => (refer 'pixie.string :exclude '(substring))"
                 (refer-symbol *ns* (or (rename sym) sym) v))))
           (recur (next syms)))))
     nil))
+
+
+
+(defmacro require [ns & args]
+  `(do (load-ns (quote ~ns))
+       (assert (the-ns (quote ~ns))
+               (str "Couldn't find the namespace " (quote ~ns) " after loading the file"))
+
+       (apply refer (quote [~ns ~@args]))))
+
+
 
 (extend -iterator ISeq (fn [s]
                          (loop [s s]
@@ -2130,6 +2140,12 @@ Expands to calls to `extend-type`."
   ([sb] (str sb))
   ([sb item] (conj! sb item)))
 
+(defn dispose!
+  "Finalizes use of the object by cleaning up resources used by the object"
+  [x]
+  (-dispose! x)
+  nil)
+
 (defmacro using [bindings & body]
   (let [pairs (partition 2 bindings)
         names (map first pairs)]
@@ -2139,6 +2155,11 @@ Expands to calls to `extend-type`."
                 `(-dispose! ~nm))
               names)
        result#)))
+
+(defn partial [f & args]
+  (fn [& args2]
+    (apply f (-> args vec (into args2)))))
+
 (defn pst
   {:doc "Prints the trace of a Runtime Exception if given, or the last Runtime Exception in *e"
    :signatures [[] [e]]

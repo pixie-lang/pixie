@@ -365,6 +365,10 @@ def eval(form):
     val = interpret(compile(form))
     return val
 
+@as_var("undefined?")
+def is_undefined(var):
+    return rt.wrap(not var.is_defined())
+
 @as_var("load-ns")
 def load_ns(filename):
     import pixie.vm.string as string

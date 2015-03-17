@@ -6,7 +6,7 @@ PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 
-COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack
+COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack --continuation
 JIT_OPTS?=--opt=jit
 TARGET_OPTS?=target.py
 
@@ -20,9 +20,15 @@ help:
 
 build_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target.py
+	make compile_basics
 
 build_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target.py
+	make compile_basics
+
+compile_basics:
+	@echo -e "\n\n\n\nWARNING: Compiling core libs. If you want to modify one of these files delete the .pxic files first\n\n\n\n"
+	./pixie-vm -c pixie/uv.pxi -c pixie/io.pxi -c pixie/stacklets.pxi -c pixie/stdlib.pxi
 
 build_preload_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target_preload.py 2>&1 >/dev/null | grep -v 'WARNING'
@@ -52,8 +58,13 @@ $(EXTERNALS)/pypy:
 run:
 	./pixie-vm
 
+
 run_interactive:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py
+
+run_interactive_stacklets:
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py pixie/stacklets.pxi
+
 
 run_built_tests: pixie-vm
 	./pixie-vm run-tests.pxi

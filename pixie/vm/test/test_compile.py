@@ -1,4 +1,4 @@
-from pixie.vm.reader import read, StringReader, eof
+from pixie.vm.reader import read_inner, StringReader, eof
 from pixie.vm.object import Type
 from pixie.vm.cons import Cons
 from pixie.vm.numbers import Integer

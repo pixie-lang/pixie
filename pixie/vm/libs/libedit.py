@@ -14,7 +14,7 @@ compilation_info = ExternalCompilationInfo(
         libraries=["edit"])
 
 def llexternal(*args, **kwargs):
-    return rffi.llexternal(*args, compilation_info=compilation_info, **kwargs)
+    return rffi.llexternal(*args, compilation_info=compilation_info, releasegil=True, **kwargs)
 
 __readline = llexternal('readline', [rffi.CCHARP], rffi.CCHARP)
 

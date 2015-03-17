@@ -24,8 +24,7 @@
         s (io/line-seq f)]
     (t/assert= (last s) "Second line.")))
 
-(comment
 (t/deftest test-slurp-spit
-  (let [val (vec (range 128))]
-    (t/assert= val (read-string (io/slurp "test.tmp" (io/spit "test.tmp" val))))))
-)
+  (let [val (vec (range 1280))]
+    (io/spit "test.tmp" val)
+    (t/assert= val (read-string (io/slurp "test.tmp")))))

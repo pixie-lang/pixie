@@ -69,6 +69,7 @@ def init():
     import pixie.vm.libs.string
     import pixie.vm.threads
     import pixie.vm.string_builder
+    import pixie.vm.stacklet
 
     numbers.init()
 
@@ -155,6 +156,8 @@ def init():
     globals()[py_str(code.munge(u"ns"))] = NS_VAR
 
     globals()["__inited__"] = True
+
+    globals()["is_true"] = lambda x: False if x is false or x is nil or x is None else True
 
 
 
