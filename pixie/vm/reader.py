@@ -118,9 +118,9 @@ class UserSpaceReader(PlatformReader):
     def reset_line(self):
         self._string_reader = None
 
-    def unread(self, ch):
+    def unread(self):
         assert self._string_reader is not None
-        self._string_reader.unread(ch)
+        self._string_reader.unread()
 
 @as_var(u"reader-fn")
 def reader_fn(fn):

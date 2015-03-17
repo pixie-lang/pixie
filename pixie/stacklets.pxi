@@ -1,5 +1,6 @@
 (ns pixie.stacklets
-  (require pixie.uv :as uv))
+  (require pixie.uv :as uv)
+  (require pixie.ffi :as ffi))
 
 ;; If we don't do this, compiling this file doesn't work since the def will clear out
 ;; the existing value.
@@ -30,7 +31,7 @@
 (defn -run-later [f]
   (let [a (uv/uv_async_t)
         cb (atom nil)]
-    (reset! cb (ffi-prep-callback uv/uv_async_cb
+    (reset! cb (ffi/ffi-prep-callback uv/uv_async_cb
                                   (fn [handle]
                                     (try
                                       (uv/uv_close a close_cb)
@@ -49,15 +50,15 @@
   (call-cc (fn [k]
              (-run-later (partial run-and-process k)))))
 
-(def close_cb (ffi-prep-callback uv/uv_close_cb
-                                 pixie.ffi/free))
+(def close_cb (ffi/ffi-prep-callback uv/uv_close_cb
+                                 pixie.ffi/dispose!))
 
 ;;; Sleep
 (defn sleep [ms]
   (let [f (fn [k]
             (let [cb (atom nil)
                   timer (uv/uv_timer_t)]
-              (reset! cb (ffi-prep-callback uv/uv_timer_cb
+              (reset! cb (ffi/ffi-prep-callback uv/uv_timer_cb
                                             (fn [handle]
                                               (try
                                                 (run-and-process k)

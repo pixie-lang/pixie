@@ -119,8 +119,8 @@
       read-count))
   (read-byte [this]
     (fgetc fp))
-  IClosable
-  (close [this]
+  IDisposable
+  (-dispose! [this]
     (pclose fp))
   IReduce
   (-reduce [this f init]

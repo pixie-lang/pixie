@@ -10,7 +10,7 @@
   `(defn ~nm ~args
      (let [f (fn [k#]
                (let [cb# (atom nil)]
-                 (reset! cb# (ffi-prep-callback uv/uv_fs_cb
+                 (reset! cb# (ffi/ffi-prep-callback uv/uv_fs_cb
                                                 (fn [req#]
                                                   (try
                                                     (st/run-and-process k# (~return (pixie.ffi/cast req# uv/uv_fs_t)))
@@ -46,7 +46,7 @@
       read-count))
   IDisposable
   (-dispose! [this]
-    (pixie.ffi/free uvbuf)
+    (dispose! uvbuf)
     (fs_close fp))
   IReduce
   (-reduce [this f init]
@@ -183,7 +183,7 @@
           _ (uv/throw-on-error (uv/uv_ip4_addr ip port bind-addr))
           on-new-connetion (atom nil)]
       (reset! on-new-connetion
-              (ffi-prep-callback
+              (ffi/ffi-prep-callback
                uv/uv_connection_cb
                (fn [server status]
                  (when (not (= status -1))

@@ -4,7 +4,7 @@ import pixie.vm.object as object
 from pixie.vm.object import runtime_error
 from pixie.vm.keyword import Keyword
 import pixie.vm.stdlib  as proto
-from pixie.vm.code import as_var, affirm, extend
+from pixie.vm.code import as_var, affirm, extend, wrap_fn
 import pixie.vm.rt as rt
 from rpython.rtyper.lltypesystem import rffi, lltype, llmemory
 from pixie.vm.primitives import nil, true, false
@@ -709,6 +709,14 @@ class CStruct(object.Object):
 
         return nil
 
+    def free_data(self):
+        lltype.free(self._buffer, flavor="raw")
+
+@wrap_fn
+def _dispose_cstruct(self):
+    self.free_data()
+
+
 
 @as_var("pixie.ffi", "c-struct")
 def c_struct(name, size, spec):
@@ -728,7 +736,9 @@ def c_struct(name, size, spec):
 
         d[nm] = (tp, offset.int_val())
 
-    return CStructType(rt.name(name), size.int_val(), d)
+    tp = CStructType(rt.name(name), size.int_val(), d)
+    proto._dispose_BANG_.extend(tp, _dispose_cstruct)
+    return tp
 
 @as_var("pixie.ffi", "cast")
 def c_cast(frm, to):
