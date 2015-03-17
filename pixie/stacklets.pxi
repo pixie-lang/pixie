@@ -4,8 +4,12 @@
 ;; If we don't do this, compiling this file doesn't work since the def will clear out
 ;; the existing value.
 
-(if (undefined? (var stacklet-loop-h))
-  (def stacklet-loop-h (atom nil)))
+(when (undefined? (var stacklet-loop-h))
+  (def stacklet-loop-h (atom nil))
+  (def running-threads (atom 0))
+  (def main-loop-running? (atom false))
+  (def main-loop-lock (-create-lock))
+  (-acquire-lock main-loop-lock true))
 
 
 
@@ -34,7 +38,11 @@
                                       (f)
                                       (catch ex (println ex))))))
     (uv/uv_async_init (uv/uv_default_loop) a @cb)
-    (uv/uv_async_send a)))
+    (uv/uv_async_send a)
+    (when (not @main-loop-running?)
+      (reset! main-loop-running? true)
+      (-release-lock main-loop-lock))
+    nil))
 
 
 (defn yield-control []
@@ -53,7 +61,7 @@
                                             (fn [handle]
                                               (try
                                                 (run-and-process k)
-                                                (uv/uv_timer_stop timer)
+                                               (uv/uv_timer_stop timer)
                                                 (-dispose! @cb)
                                                 (catch ex
                                                     (println ex))))))
@@ -70,22 +78,29 @@
 
 (defmacro spawn [& body]
   `(-spawn (fn [h# _]
-            (try
-              (reset! stacklet-loop-h h#)
-              (let [result# (do ~@body)]
-                (call-cc (fn [_] nil)))
-              (catch e
-                  (println e))))))
+             (try
+               (swap! running-threads inc)
+               (reset! stacklet-loop-h h#)
+               (let [result# (do ~@body)]
+                 (swap! running-threads dec)
+                 (call-cc (fn [_] nil)))
+               (catch e
+                   (println e))))))
 
 
 
 
 (defn -with-stacklets [fn]
+  (swap! running-threads inc)
+  (reset! main-loop-running? true)
   (let [[h f] ((new-stacklet fn) nil)]
     (f h)
     (loop []
       (uv/uv_run (uv/uv_default_loop) uv/UV_RUN_DEFAULT)
-      (recur))))
+      (when (> @running-threads 0)
+        (reset! main-loop-running? false)
+        (-acquire-lock main-loop-lock true)
+        (recur)))))
 
 (defmacro with-stacklets [& body]
   `(-with-stacklets
@@ -93,6 +108,7 @@
       (try
         (reset! stacklet-loop-h h#)
         (let [result# (do ~@body)]
+          (swap! running-threads dec)
           (call-cc (fn [_] nil)))
         (catch e
             (println e))))))

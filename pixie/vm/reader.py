@@ -21,6 +21,10 @@ import pixie.vm.compiler as compiler
 from rpython.rlib.rbigint import rbigint
 from rpython.rlib.rsre import rsre_re as re
 
+READING_FORM_VAR = code.intern_var(u"pixie.stdlib", u"*reading-form*")
+READING_FORM_VAR.set_dynamic()
+READING_FORM_VAR.set_root(false)
+
 LINE_NUMBER_KW = keyword(u"line-number")
 COLUMN_NUMBER_KW = keyword(u"column-number")
 LINE_KW = keyword(u"line")
@@ -100,6 +104,7 @@ class UserSpaceReader(PlatformReader):
     def read(self):
         if self._string_reader is None:
             result = rt.name(self._reader_fn.invoke([]))
+            code._dynamic_vars.set_var_value(READING_FORM_VAR, rt.wrap(READING_FORM_VAR.deref().int_val() + 1))
             if result == u"":
                 raise EOFError()
             self._string_reader = StringReader(result)
@@ -256,7 +261,7 @@ class ListReader(ReaderHandler):
                 return acc
 
             rdr.unread(ch)
-            lst.append(read(rdr, True))
+            lst.append(read_inner(rdr, True))
 
 class UnmatchedListReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -272,7 +277,7 @@ class VectorReader(ReaderHandler):
                 return acc
 
             rdr.unread(ch)
-            acc = rt.conj(acc, read(rdr, True))
+            acc = rt.conj(acc, read_inner(rdr, True))
 
 class UnmatchedVectorReader(ReaderHandler):
     def invoke(self, rdr, ch):
@@ -288,8 +293,8 @@ class MapReader(ReaderHandler):
                 return acc
 
             rdr.unread(ch)
-            k = read(rdr, True)
-            v = read(rdr, False)
+            k = read_inner(rdr, True)
+            v = read_inner(rdr, False)
             acc = rt._assoc(acc, k, v)
         return acc
 
@@ -299,7 +304,7 @@ class UnmatchedMapReader(ReaderHandler):
 
 class QuoteReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        itm = read(rdr, True)
+        itm = read_inner(rdr, True)
         return cons(symbol(u"quote"), cons(itm))
 
 class KeywordReader(ReaderHandler):
@@ -307,11 +312,11 @@ class KeywordReader(ReaderHandler):
         nms = u""
         ch = rdr.read()
         if ch == u":":
-            itm = read(rdr, True)
+            itm = read_inner(rdr, True)
             nms = rt.name(rt.ns.deref())
         else:
             rdr.unread(ch)
-            itm = read(rdr, True)
+            itm = read_inner(rdr, True)
 
         affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
         if nms:
@@ -407,7 +412,7 @@ class LiteralCharacterReader(ReaderHandler):
 
 class DerefReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        return rt.cons(symbol(u"-deref"), rt.cons(read(rdr, True), nil))
+        return rt.cons(symbol(u"-deref"), rt.cons(read_inner(rdr, True), nil))
 
 
 QUOTE = symbol(u"quote")
@@ -430,7 +435,7 @@ def is_unquote_splicing(form):
 
 class SyntaxQuoteReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        form = read(rdr, True)
+        form = read_inner(rdr, True)
 
         with code.bindings(GEN_SYM_ENV, EMPTY_MAP):
             result = self.syntax_quote(form)
@@ -493,13 +498,13 @@ class UnquoteReader(ReaderHandler):
         else:
             rdr.unread(ch)
 
-        form = read(rdr, True)
+        form = read_inner(rdr, True)
         return rt.list(sym, form)
 
 class MetaReader(ReaderHandler):
     def invoke(self, rdr, ch):
-        meta = read(rdr, True)
-        obj = read(rdr, True)
+        meta = read_inner(rdr, True)
+        obj = read_inner(rdr, True)
 
         if isinstance(meta, Keyword):
             meta = rt.hashmap(meta, true)
@@ -522,7 +527,7 @@ class ArgReader(ReaderHandler):
         if is_whitespace(ch) or is_terminating_macro(ch):
             return ArgReader.register_next_arg(1)
 
-        n = read(rdr, True)
+        n = read_inner(rdr, True)
         if rt.eq(n, ARG_AMP):
             return ArgReader.register_next_arg(-1)
         if not isinstance(n, numbers.Integer):
@@ -559,7 +564,7 @@ class FnReader(ReaderHandler):
             ARG_ENV.set_value(rt.assoc(EMPTY_MAP, ARG_MAX, rt.wrap(-1)))
 
             rdr.unread(ch)
-            form = read(rdr, True)
+            form = read_inner(rdr, True)
 
             args = EMPTY_VECTOR
             percent_args = ARG_ENV.deref()
@@ -590,7 +595,7 @@ class SetReader(ReaderHandler):
                 return acc
 
             rdr.unread(ch)
-            acc = acc.conj(read(rdr, True))
+            acc = acc.conj(read_inner(rdr, True))
 
 dispatch_handlers = {
     u"{":  SetReader(),
@@ -608,7 +613,7 @@ class DispatchReader(ReaderHandler):
 class LineCommentReader(ReaderHandler):
     def invoke(self, rdr, ch):
         self.skip_line(rdr)
-        return read(rdr, True)
+        return read_inner(rdr, True)
 
     def skip_line(self, rdr):
         while True:
@@ -738,9 +743,13 @@ def read_symbol(rdr, ch):
 class EOF(object.Object):
     _type = object.Type(u"EOF")
 
+    def type(self):
+        return EOF._type
+
 
 eof = EOF()
 
+code.intern_var(u"pixie.stdlib", u"eof").set_root(eof)
 
 
 
@@ -758,7 +767,7 @@ def throw_syntax_error_with_data(rdr, txt):
 
 
 
-def read(rdr, error_on_eof):
+def read_inner(rdr, error_on_eof):
     try:
         eat_whitespace(rdr)
     except EOFError as ex:
@@ -799,6 +808,16 @@ def read(rdr, error_on_eof):
 
     return itm
 
+
+def read(rdr, error_on_eof):
+    code._dynamic_vars.push_binding_frame()
+    code._dynamic_vars.set_var_value(READING_FORM_VAR, rt.wrap(0))
+    try:
+        form = read_inner(rdr, error_on_eof)
+        return form
+    finally:
+        code._dynamic_vars.pop_binding_frame()
+
 @as_var("read")
 def _read_(rdr, error_on_eof):
     """(read rdr error-on-eof)
@@ -806,6 +825,8 @@ def _read_(rdr, error_on_eof):
        and a valid form has not been parsed. Else will return eof"""
     assert isinstance(rdr, PlatformReader)
     return read(rdr, rt.is_true(error_on_eof))
+
+
 
 
 

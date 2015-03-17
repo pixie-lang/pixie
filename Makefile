@@ -24,6 +24,10 @@ build_with_jit: fetch_externals
 build_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target.py
 
+compile_basics:
+	@echo -e "\e[31mWARNING: Compiling core libs. If you want to modify one of these files delete the .pxic files first\e[0m"
+	./pixie-vm -c pixie/uv.pxi -c pixie/io.pxi -c pixie/stacklets.pxi -c pixie/stdlib.pxi
+
 build_preload_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target_preload.py 2>&1 >/dev/null | grep -v 'WARNING'
 

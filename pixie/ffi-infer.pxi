@@ -248,14 +248,6 @@ return 0;
 
 
 
-(compile-library
- {:prefix "foo"
-  :includes ["uv.h"]}
- "int foo(int bar)
-  {
-    return 42;
-  }")
-
 
 (comment
 

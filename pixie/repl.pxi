@@ -8,13 +8,20 @@
   (f/defcfn readline))
 
 
-(defn run-repl []
-  (let [rdr (reader-fn (fn [] (str (st/apply-blocking readline "user->>>") "\n")))]
-    (loop [x 1]
-      (when (< x 3)
-
-        (let [form (read rdr false)]
-          (println (eval form))
-          (recur (inc x)))))))
-
-(run-repl)
+(defn repl []
+  (let [rdr (reader-fn (fn []
+                         (let [prompt (if (= 0 pixie.stdlib/*reading-form*)
+                                        (str (name pixie.stdlib/*ns*) " => ")
+                                        "")
+                               line (st/apply-blocking readline prompt)]
+                           (if line
+                             (str line "\n")
+                             ""))))]
+    (loop []
+      (try (let [form (read rdr false)]
+             (if (= form eof)
+               (exit 0)
+               (println (eval form))))
+           (catch ex
+               (println "ERROR: \n" ex)))
+      (recur))))

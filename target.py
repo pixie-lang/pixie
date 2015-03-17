@@ -1,5 +1,5 @@
 from pixie.vm.compiler import compile, with_ns, NS_VAR
-from pixie.vm.reader import StringReader, read, eof, PromptReader, MetaDataReader
+from pixie.vm.reader import StringReader, read_inner, eof, PromptReader, MetaDataReader
 from pixie.vm.interpreter import interpret
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
@@ -54,44 +54,55 @@ class ReplFn(NativeFn):
         self._argv = args
 
     def inner_invoke(self, args):
-        from pixie.vm.keyword import keyword
         import pixie.vm.rt as rt
-        from pixie.vm.string import String
-        import pixie.vm.persistent_vector as vector
+        from pixie.vm.code import intern_var
+        rt.load_ns(rt.wrap(u"pixie/repl.pxi"))
 
-        print "Pixie 0.1 - Interactive REPL"
-        print "(" + platform.name + ", " + platform.cc + ")"
-        print ":exit-repl or Ctrl-D to quit"
-        print "----------------------------"
-
+        repl = intern_var(u"pixie.repl", u"repl")
         with with_ns(u"user"):
-            NS_VAR.deref().include_stdlib()
+            repl.invoke([])
 
-        acc = vector.EMPTY
-        for x in self._argv:
-            acc = rt.conj(acc, rt.wrap(x))
 
-        PROGRAM_ARGUMENTS.set_root(acc)
 
-        rdr = MetaDataReader(PromptReader())
-        with with_ns(u"user"):
-            while True:
-                try:
-                    val = read(rdr, False)
-                    if val is eof:
-                        break
-                    val = interpret(compile(val))
-                    self.set_recent_vars(val)
-                except WrappedException as ex:
-                    print "Error: ", ex._ex.__repr__()
-                    rdr.reset_line()
-                    self.set_error_var(ex._ex)
-                    continue
-                if val is keyword(u"exit-repl"):
-                    break
-                val = rt._repr(val)
-                assert isinstance(val, String), "str should always return a string"
-                print unicode_to_utf8(val._str)
+    # def inner_invoke(self, args):
+    #     from pixie.vm.keyword import keyword
+    #     import pixie.vm.rt as rt
+    #     from pixie.vm.string import String
+    #     import pixie.vm.persistent_vector as vector
+    #
+    #     print "Pixie 0.1 - Interactive REPL"
+    #     print "(" + platform.name + ", " + platform.cc + ")"
+    #     print ":exit-repl or Ctrl-D to quit"
+    #     print "----------------------------"
+    #
+    #     with with_ns(u"user"):
+    #         NS_VAR.deref().include_stdlib()
+    #
+    #     acc = vector.EMPTY
+    #     for x in self._argv:
+    #         acc = rt.conj(acc, rt.wrap(x))
+    #
+    #     PROGRAM_ARGUMENTS.set_root(acc)
+    #
+    #     rdr = MetaDataReader(PromptReader())
+    #     with with_ns(u"user"):
+    #         while True:
+    #             try:
+    #                 val = read(rdr, False)
+    #                 if val is eof:
+    #                     break
+    #                 val = interpret(compile(val))
+    #                 self.set_recent_vars(val)
+    #             except WrappedException as ex:
+    #                 print "Error: ", ex._ex.__repr__()
+    #                 rdr.reset_line()
+    #                 self.set_error_var(ex._ex)
+    #                 continue
+    #             if val is keyword(u"exit-repl"):
+    #                 break
+    #             val = rt._repr(val)
+    #             assert isinstance(val, String), "str should always return a string"
+    #             print unicode_to_utf8(val._str)
 
     def set_recent_vars(self, val):
         if rt.eq(val, STAR_1.deref()):

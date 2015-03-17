@@ -1,5 +1,6 @@
 (ns pixie.io
   (require pixie.streams :as st :refer :all)
+  (require pixie.io-blocking :as io-blocking)
   (require pixie.uv :as uv)
   (require pixie.stacklets :as st)
   (require pixie.ffi :as ffi)
@@ -169,24 +170,28 @@
     (dispose! c)
     result))
 
+(defn run-command [command]
+  (st/apply-blocking io-blocking/run-command command))
 
-(defn tcp-server [ip port on-connection]
-  (assert (string? ip) "Ip should be a string")
-  (assert (integer? port) "Port should be a int")
-  (let [server (uv/uv_tcp_t)
-        bind-addr (uv/sockaddr_in)
-        _ (uv/throw-on-error (uv/uv_ip4_addr ip port bind-addr))
-        on-new-connetion (atom nil)]
-    (reset! on-new-connetion
-            (ffi-prep-callback
-             uv/uv_connection_cb
-             (fn [server status]
-               (when (not (= status -1))
-                 (println "Got Client!!!!!!!")))))
-    (uv/uv_tcp_init (uv/uv_default_loop) server)
-    (uv/uv_tcp_bind server bind-addr 0)
-    (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
-    (st/yield-control)))
+(comment
+
+  (defn tcp-server [ip port on-connection]
+    (assert (string? ip) "Ip should be a string")
+    (assert (integer? port) "Port should be a int")
+    (let [server (uv/uv_tcp_t)
+          bind-addr (uv/sockaddr_in)
+          _ (uv/throw-on-error (uv/uv_ip4_addr ip port bind-addr))
+          on-new-connetion (atom nil)]
+      (reset! on-new-connetion
+              (ffi-prep-callback
+               uv/uv_connection_cb
+               (fn [server status]
+                 (when (not (= status -1))
+                   (println "Got Client!!!!!!!")))))
+      (uv/uv_tcp_init (uv/uv_default_loop) server)
+      (uv/uv_tcp_bind server bind-addr 0)
+      (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
+      (st/yield-control))))
 
 (comment
   (st/apply-blocking println "FROM OTHER THREAD <---!!!!!")
