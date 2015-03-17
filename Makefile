@@ -69,3 +69,9 @@ compile_src:
 
 clean_pxic:
 	find * -name "*.pxic" | xargs rm
+
+clean: clean_pxic
+	rm -rf ./lib
+	rm -rf ./include
+	rm -f ./pixie-vm
+	rm -f ./*.pyc
