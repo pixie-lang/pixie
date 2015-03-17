@@ -117,11 +117,10 @@
     (let [read-count (fread buffer 1 len fp)]
       (set-buffer-count! buffer read-count)
       read-count))
-  IByteInputStream
   (read-byte [this]
     (fgetc fp))
-  IDisposable
-  (-dispose! [this]
+  IClosable
+  (close [this]
     (pclose fp))
   IReduce
   (-reduce [this f init]

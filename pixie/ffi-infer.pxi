@@ -1,6 +1,7 @@
 (ns pixie.ffi-infer
   (require pixie.io-blocking :as io))
 
+
 (defn -add-rel-path [rel]
   (swap! load-paths conj (str (first @load-paths) "/" rel)))
 
@@ -85,7 +86,7 @@ return 0;
                          (:type n)))
 
 (defn callback-type [{:keys [arguments returns]} in-struct?]
-  `(ffi-callback ~(vec (map (fn [x] (edn-to-ctype x in-struct?))
+  `(pixie.ffi/ffi-callback ~(vec (map (fn [x] (edn-to-ctype x in-struct?))
                             arguments))
                  ~(edn-to-ctype returns in-struct?)))
 

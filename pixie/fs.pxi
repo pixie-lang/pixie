@@ -18,11 +18,11 @@
 
   (basename [this]
     "Returns the basename of the Filesystem Object")
-  
+
   ;; TODO
   (permissions [this]
     "Returns a string of the octal permissions")
-  
+
   (mounted? [this]
     "Returns true if the directory is a mounted")
 
@@ -30,12 +30,12 @@
     "Returns the size of the file/dir on disk"))
 
 (defprotocol IFile
-  (extension [this]      
+  (extension [this]
     "Returns the extension")
-  
-  (extension? [this ext] 
+
+  (extension? [this ext]
     "Returns true if file has extension")
-  
+
   ;; TODO
   (touch [this]
     "Create the file if it doesn't exist."))
@@ -71,7 +71,7 @@
         ;; Same level
         (and (zero? (count diff-a)) (zero? (count diff-b)))
         "."
-        
+
         ;; If B diverges by one level and a is a Dir we use ".."
         (and (= 1 (count diff-b)) (instance? Dir a))
         ".."
@@ -92,16 +92,16 @@
 
   (abs [this]
     (path/-abs pathz))
-  
+
   (exists? [this]
     (path/-exists? pathz))
 
   (basename [this]
     (last (string/split (abs this) "/")))
 
-  IFile 
+  IFile
   ;; TODO: Sort out regex or make strings partitionable. So we can split at
-  ;; #".". 
+  ;; #".".
   (extension [this]
     (last (string/split (abs this) ".")))
 
@@ -113,11 +113,11 @@
     (hash (abs this)))
 
   (-eq [this other]
-    (if (instance? File other) 
+    (if (instance? File other)
       (= (abs this) (abs other))
       false))
 
-  (-str [this] 
+  (-str [this]
     (str (abs this)))
 
   (-repr [this]
@@ -140,10 +140,10 @@
 
   (basename [this]
     (last (string/split (abs this) "/")))
-  
+
   IDir
   (list [this]
-    (path/-list-dir pathz))
+    (vec (map fspath (path/-list-dir pathz))))
 
   (walk [this]
     (transduce (map #(if (path/-file? %)
@@ -165,11 +165,11 @@
     (hash (abs this)))
 
   (-eq [this other]
-    (if (instance? Dir other) 
+    (if (instance? Dir other)
       (= (abs this) (abs other))
       false))
 
-  (-str [this] 
+  (-str [this]
     (str (abs this)))
 
   (-repr [this]
@@ -177,11 +177,11 @@
 
 ;; (deftype Fifo [pathz])
 
-(defn file 
+(defn file
   "Returns a file if the path is a file or does not exist. If a different filesystem object exists at the path an error will be thrown."
   [x]
   (let [x (path/-path x)]
-    (cond 
+    (cond
       (path/-file? x)         (->File x)
       (not (path/-exists? x)) (->File x)
       :else (throw (str "A non-file object exists at path: " x)))))
@@ -190,7 +190,7 @@
   "Returns a dir if the path is a dir or does not exist. If a different filesystem object exists at the path an error will be thrown."
   [x]
   (let [x (path/-path x)]
-    (cond 
+    (cond
       (path/-dir? x)          (->Dir x)
       (not (path/-exists? x)) (->Dir x)
       :else (throw (str "A non-dir object exists at path: " x)))))

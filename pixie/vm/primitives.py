@@ -4,6 +4,9 @@ import pixie.vm.object as object
 class Nil(object.Object):
     _type = object.Type(u"pixie.stdlib.Nil")
 
+    def __repr__(self):
+        return u"nil"
+
     def type(self):
         return Nil._type
 

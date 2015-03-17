@@ -487,6 +487,8 @@ def prep_string(s):
 
 @as_var(u"pixie.ffi", u"unpack")
 def unpack(ptr, offset, tp):
+    """(unpack ptr offset tp)
+       Reads a value of type tp from offset of ptr."""
     affirm(isinstance(ptr, VoidP) or isinstance(ptr, Buffer) or isinstance(ptr, CStruct), u"Type is not unpackable")
     affirm(isinstance(tp, CType), u"Packing type must be a CType")
     ptr = rffi.ptradd(ptr.raw_data(), offset.int_val())
@@ -494,6 +496,8 @@ def unpack(ptr, offset, tp):
 
 @as_var(u"pixie.ffi", u"pack!")
 def pack(ptr, offset, tp, val):
+    """(pack! ptr offset tp val)
+       Writes val at offset of ptr with the format tp"""
     affirm(isinstance(ptr, VoidP) or isinstance(ptr, Buffer) or isinstance(ptr, CStruct), u"Type is not unpackable")
     affirm(isinstance(tp, CType), u"Packing type must be a CType")
     ptr = rffi.ptradd(ptr.raw_data(), offset.int_val())
@@ -583,8 +587,11 @@ def _dispose(self):
 
 
 
-@as_var(u"ffi-callback")
+@as_var(u"pixie.ffi", u"ffi-callback")
 def ffi_callback(args, ret_type):
+    """(ffi-callback args ret-type)
+       Creates a ffi callback type. Args is a vector of CType args. Ret-type is the CType return
+       type of the callback. Returns a ffi callback type that can be used with ffi-prep-callback."""
     args_w = [None] * rt.count(args)
 
     for x in range(rt.count(args)):
@@ -598,8 +605,12 @@ def ffi_callback(args, ret_type):
 
     return CFunctionType(args_w, ret_type)
 
-@as_var(u"ffi-prep-callback")
+@as_var(u"pixie.ffi", u"ffi-prep-callback")
 def ffi_prep_callback(tp, f):
+    """(ffi-prep-callback callback-tp fn)
+       Prepares a Pixie function for use as a c callback. callback-tp is a ffi callback type,
+       fn is a pixie function (can be a closure, native fn or any object that implements -invoke.
+       Returns a function pointer that can be passed to c and invoked as a callback."""
     affirm(isinstance(tp, CFunctionType), u"First argument to ffi-prep-callback must be a CFunctionType")
     raw_closure = rffi.cast(rffi.VOIDP, clibffi.closureHeap.alloc())
 
@@ -701,6 +712,9 @@ class CStruct(object.Object):
 
 @as_var("pixie.ffi", "c-struct")
 def c_struct(name, size, spec):
+    """(c-struct name size spec)
+       Creates a CStruct named name, of size size, with the given spec. Spec is a vector
+       of vectors. Each row of the format [field-name type offset]"""
     d = {}
     for x in range(rt.count(spec)):
         row = rt.nth(spec, rt.wrap(x))
@@ -718,6 +732,8 @@ def c_struct(name, size, spec):
 
 @as_var("pixie.ffi", "cast")
 def c_cast(frm, to):
+    """(cast from to)
+    Converts a VoidP to a CStruct. From is either a VoidP or a CStruct, to is a CStruct type."""
     if not isinstance(to, CStructType):
         runtime_error(u"Expected a CStruct type to cast to, got " + rt.name(rt.str(to)))
 
@@ -726,14 +742,6 @@ def c_cast(frm, to):
 
     return to.cast_to(frm)
 
-@as_var("pixie.ffi", "free")
-def c_free(frm):
-    if not isinstance(frm, CStruct) and not isinstance(frm, VoidP):
-        runtime_error(u"Can only free CStructs or CVoidP")
-
-    lltype.free(frm.raw_data(), flavor="raw")
-
-    return nil
 
 @extend(proto._val_at, CStructType.base_type)
 def val_at(self, k, not_found):
@@ -741,6 +749,8 @@ def val_at(self, k, not_found):
 
 @as_var("pixie.ffi", "set!")
 def set_(self, k, val):
+    """(set! ptr k val)
+       Sets a field k of struct ptr to value val"""
     return self.set_val(k, val)
 
 

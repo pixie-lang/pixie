@@ -636,14 +636,14 @@ returns true"
 
 (defn nth
   {:doc "Returns the element at the idx.  If the index is not found it will return an error.
-         However, if you specify a not-found parameter, it will substitue that instead"
+         However, if you specify a not-found parameter, it will substitute that instead"
    :signatures [[coll idx] [coll idx not-found]]
    :added "0.1"}
   ([coll idx] (-nth coll idx))
   ([coll idx not-found] (-nth-not-found coll idx not-found)))
 
 (defn first
-  {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the first item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}
@@ -653,7 +653,7 @@ returns true"
     (-first coll)))
 
 (defn second
-  {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}
@@ -663,7 +663,7 @@ returns true"
     (first (next coll))))
 
 (defn third
-  {:doc "Returns the third item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the third item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}
@@ -673,7 +673,7 @@ returns true"
     (first (next (next coll)))))
 
 (defn fourth
-  {:doc "Returns the fourth item in coll, if coll implements IIndexed nth will be used to retreive
+  {:doc "Returns the fourth item in coll, if coll implements IIndexed nth will be used to retrieve
          the item from the collection."
    :signatures [[coll]]
    :added "0.1"}
@@ -1153,18 +1153,12 @@ Creates new maps if the keys are not present."
         type-decl `(def ~nm (create-type ~(keyword (name nm)) ~all-fields))
         inst (gensym)
         ctor `(defn ~ctor-name ~field-syms
-                (let [~inst (new ~nm)]
-                  ~@(transduce
-                     (map (fn [field]
-                            `(set-field! ~inst ~field ~(symbol (name field)))))
-                     conj
-                     fields)
-                  ~@(transduce
-                     (map (fn [type-body]
-                            `(set-field! ~inst ~(keyword (name (first type-body))) ~(mk-body type-body))))
-                     conj
-                     type-bodies)
-                  ~inst))
+                (new ~nm
+                     ~@field-syms
+                     ~@(transduce (map (fn [type-body]
+                                         (mk-body type-body)))
+                                  conj
+                                  type-bodies)))
         proto-bodies (transduce
                       (map (fn [body]
                              (cond
@@ -1273,11 +1267,13 @@ and implements IAssociative, ILookup and IObject."
   {:doc "Returns the documentation of the given value."
    :added "0.1"}
   [v]
+
   (let [vr (resolve v)
         x (if vr @vr)
         doc (get (meta x) :doc)
         has-doc? (if doc true (get (meta x) :signatures))]
     (cond
+     (satisfies? IDoc x) (-doc x)
      has-doc? (let [sigs (get (meta x) :signatures)
                     examples (get (meta x) :examples)
                     indent (fn [s]

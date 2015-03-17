@@ -39,11 +39,11 @@
 
 (t/deftest test-ffi-callbacks
   (let [MAX 255
-        qsort-cb (ffi-callback [CVoidP CVoidP] CInt)
+        qsort-cb (pixie.ffi/ffi-callback [CVoidP CVoidP] CInt)
         qsort (ffi-fn libc "qsort" [CVoidP CInt CInt qsort-cb] CInt)
 
         buf (buffer MAX)]
-    (using [cb (ffi-prep-callback qsort-cb (fn [x y]
+    (using [cb (pixie.ffi/ffi-prep-callback qsort-cb (fn [x y]
                                          (if (> (pixie.ffi/unpack x 0 CUInt8)
                                                 (pixie.ffi/unpack y 0 CUInt8))
                                            -1

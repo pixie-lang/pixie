@@ -43,6 +43,8 @@ defprotocol("pixie.stdlib", "IStack", ["-push", "-pop"])
 
 defprotocol("pixie.stdlib", "IFn", ["-invoke"])
 
+defprotocol("pixie.stdlib", "IDoc", ["-doc"])
+
 IVector = as_var("pixie.stdlib", "IVector")(Protocol(u"IVector"))
 
 IMap = as_var("pixie.stdlib", "IMap")(Protocol(u"IMap"))
@@ -734,7 +736,7 @@ def _ici(meta):
     return InterpreterCodeInfo(line,
                                line_number.int_val() if line_number is not nil else 0,
                                col_number.int_val() if col_number is not nil else 0,
-                               rt.name(file) if file is not nil else u"<unknown")
+                               rt.name(file) if file is not nil else u"<unknown>")
 
 
 # @wrap_fn
@@ -803,5 +805,11 @@ def _seq(self):
 
 @as_var("ex-msg")
 def ex_msg(e):
+    """Returns the message contained in an exception"""
     assert isinstance(e, RuntimeException)
     return e._data
+
+@extend(_doc, code.NativeFn._type)
+def _doc(self):
+    assert isinstance(self, code.NativeFn)
+    return rt.wrap(self._doc)

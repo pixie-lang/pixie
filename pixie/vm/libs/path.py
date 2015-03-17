@@ -18,7 +18,7 @@ class Path(Object):
     #def rel_path(self, other):
     #    "Returns the path relative to other path"
     #    return rt.wrap(str(os.path.relpath(self._path, start=other._path)))
-    
+
     def abs_path(self):
         "Returns the absolute path"
         return rt.wrap(os.path.abspath(str(self._path)))
@@ -28,8 +28,8 @@ class Path(Object):
     #    return rt.wrap(rt.name(os.path.basename("a")))
 
     def exists(self):
-        return true if os.path.exists(str(self._path)) else false 
-    
+        return true if os.path.exists(str(self._path)) else false
+
     def is_file(self):
         return true if os.path.isfile(str(self._path)) else false
 
@@ -61,9 +61,14 @@ def path(path):
     return Path(path)
 
 # TODO: Implement this
-#@as_var("pixie.path", "list-dir")
-#def list_dir(path):
-    
+@as_var("pixie.path", "-list-dir")
+def list_dir(self):
+    assert isinstance(self, Path)
+    result = rt.vector()
+    for item in os.listdir(str(self._path)):
+        result = rt.conj(result, rt.wrap(str(self._path) + "/" + str(item)))
+    return result
+
 @as_var("pixie.path", "-abs")
 def _abs(self):
     assert isinstance(self, Path)
