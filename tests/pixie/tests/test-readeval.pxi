@@ -55,3 +55,6 @@
   (t/assert-throws? RuntimeException
                     "Unmatched string quote '\"'"
                     (read-string "\"foo")))
+
+(t/deftest test-comments-in-forms
+  (t/assert= (read-string "(foo ; a comment\n )") '(foo)))
