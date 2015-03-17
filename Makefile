@@ -1,6 +1,6 @@
 all: help
 
-EXTERNALS=../externals
+EXTERNALS=externals
 
 PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
@@ -20,12 +20,14 @@ help:
 
 build_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target.py
+	make compile_basics
 
 build_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target.py
+	make compile_basics
 
 compile_basics:
-	@echo -e "\e[31mWARNING: Compiling core libs. If you want to modify one of these files delete the .pxic files first\e[0m"
+	@echo -e "\n\n\n\nWARNING: Compiling core libs. If you want to modify one of these files delete the .pxic files first\n\n\n\n"
 	./pixie-vm -c pixie/uv.pxi -c pixie/io.pxi -c pixie/stacklets.pxi -c pixie/stdlib.pxi
 
 build_preload_with_jit: fetch_externals
@@ -78,3 +80,10 @@ compile_src:
 
 clean_pxic:
 	find * -name "*.pxic" | xargs rm
+
+clean: clean_pxic
+	rm -rf ./lib
+	rm -rf ./include
+	rm -rf ./externals
+	rm -f ./pixie-vm
+	rm -f ./*.pyc
