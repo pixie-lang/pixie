@@ -118,33 +118,8 @@
   (with-stacklets
     (f)))
 
-
-(deftype Promise [val pending-callbacks delivered?]
-  IDeref
-  (-deref [self]
-    (if delivered?
-      val
-      (do
-        (call-cc (fn [k]
-                   (swap! pending-callbacks conj
-                          (fn [v]
-                            (-run-later (partial run-and-process k v)))))))))
-  IFn
-  (-invoke [self v]
-    (assert (not delivered?) "Can only deliver a promise once")
-    (set-field! self :val v)
-    (println  @pending-callbacks)
-    (doseq [f @pending-callbacks]
-      (f v))
-    (reset! pending-callbacks nil)
-    nil))
-
-(defn promise []
-  (->Promise nil (atom []) false))
-
 (defprotocol IThreadPool
   (-execute [this work-fn]))
-
 
 ;; Super basic Thread Pool, yes, this should be improved
 
