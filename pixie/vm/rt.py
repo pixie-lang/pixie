@@ -49,6 +49,7 @@ def init():
     import sys
     #sys.setrecursionlimit(10000)  # Yeah we blow the stack sometimes, we promise it's not a bug
 
+    import pixie.vm.code as code
     import pixie.vm.numbers as numbers
     import pixie.vm.bits
     import pixie.vm.interpreter
@@ -70,8 +71,6 @@ def init():
     import pixie.vm.threads
     import pixie.vm.string_builder
     import pixie.vm.stacklet
-
-    numbers.init()
 
     @specialize.argtype(0)
     def wrap(x):
@@ -145,7 +144,7 @@ def init():
     # stacklet.with_stacklets(run_load_stdlib)
 
     init_fns = [u"reduce", u"get", u"reset!", u"assoc", u"key", u"val", u"keys", u"vals", u"vec", u"load-file", u"compile-file",
-                u"load-ns", u"hashmap"]
+                u"load-ns", u"hashmap", u"cons", u"-assoc", u"-val-at"]
     for x in init_fns:
         globals()[py_str(code.munge(x))] = unwrap(code.intern_var(u"pixie.stdlib", x))
 
@@ -158,6 +157,10 @@ def init():
     globals()["__inited__"] = True
 
     globals()["is_true"] = lambda x: False if x is false or x is nil or x is None else True
+
+    numbers.init()
+    code.init()
+
 
 
 

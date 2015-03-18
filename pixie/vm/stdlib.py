@@ -813,3 +813,17 @@ def ex_msg(e):
 def _doc(self):
     assert isinstance(self, code.NativeFn)
     return rt.wrap(self._doc)
+
+
+@as_var("-get-current-var-frames")
+def _get_current_var_frames(self):
+    """(-get-current-var-frames)
+       Returns the current var frames, will be a cons list of hash maps containing mappings of vars to dynamic values"""
+    return code._dynamic_vars.get_current_frames()
+
+@as_var("-set-current-var-frames")
+def _set_current_var_frames(self, frames):
+    """(-set-current-var-frames frames)
+       Sets the current var frames. Frames should be a cons list of hashmaps containing mappings of vars to dynamic
+       values. Setting this value to anything but this data format will cause undefined errors."""
+    code._dynamic_vars.set_current_frames(frames)
