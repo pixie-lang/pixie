@@ -623,7 +623,9 @@ class SetReader(ReaderHandler):
                 return acc
 
             rdr.unread()
-            acc = acc.conj(read_inner(rdr, True))
+            itm = read_inner(rdr, True, always_return_form=False)
+            if itm != rdr:
+                acc = acc.conj(itm)
 
 dispatch_handlers = {
     u"{":  SetReader(),
