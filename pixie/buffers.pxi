@@ -71,9 +71,61 @@
   (add-unbounded! [this val]
     (when (full? this)
       (resize! this (* 2 length)))
-    (add! this val)))
+    (add! this val))
+
+  ICounted
+  (-count [this]
+    length))
 
 
 (defn ring-buffer [size]
   (assert (> size 0) "Can't create a ring buffer of size <= 0")
   (->RingBuffer 0 0 0 (make-array size)))
+
+
+(defn fixed-buffer [size]
+  (ring-buffer size))
+
+
+(deftype DroppingBuffer [buf]
+  IMutableBuffer
+  (full? [this]
+    false)
+  (remove! [this]
+    (remove! buf))
+  (add! [this val]
+    (when-not (full? buf)
+      (add! buf val)))
+
+  ICounted
+  (-count [this]
+    (count buf)))
+
+(defn dropping-buffer [size]
+  (->DroppingBuffer (ring-buffer size)))
+
+
+(deftype SlidingBuffer [buf]
+  IMutableBuffer
+  (full? [this]
+    false)
+  (remove! [this]
+    (remove! buf))
+  (add! [this val]
+    (when (full? buf)
+      (remove! buf))
+    (add! buf val))
+
+  ICounted
+  (-count [this]
+    (count buf)))
+
+
+(extend -reduce IMutableBuffer
+        (fn [buf f acc]
+          (loop [acc acc]
+            (if (reduced? acc)
+              @acc
+              (if (> 0 (count buf))
+                (recur (f acc (remove! buf)))
+                acc)))))

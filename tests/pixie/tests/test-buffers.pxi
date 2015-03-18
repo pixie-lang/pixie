@@ -23,3 +23,13 @@
         (add-unbounded! buffer x))
       (dotimes [x y]
         (assert= x (remove! buffer))))))
+
+
+(def drain-buffer (partial into []))
+
+(deftest test-dropping-buffer
+  (let [buf (dropping-buffer 4)]
+    (dotimes [x 5]
+      (println (count buf) "x" x)
+      (add! buf x))
+    (assert= [1 2 3 4] (drain-buffer buf))))
