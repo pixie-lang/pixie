@@ -126,6 +126,6 @@
           (loop [acc acc]
             (if (reduced? acc)
               @acc
-              (if (> 0 (count buf))
+              (if (pos? (count buf))
                 (recur (f acc (remove! buf)))
                 acc)))))

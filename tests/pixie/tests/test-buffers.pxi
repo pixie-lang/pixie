@@ -32,4 +32,4 @@
     (dotimes [x 5]
       (println (count buf) "x" x)
       (add! buf x))
-    (assert= [1 2 3 4] (drain-buffer buf))))
+    (assert= [0 1 2 3] (drain-buffer buf))))

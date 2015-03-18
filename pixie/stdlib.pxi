@@ -1131,7 +1131,7 @@ Creates new maps if the keys are not present."
                                                 ~@body)])
                               rest
                               fields)]
-                    `(fn ~fn-name ~args ~@body)))
+                    `(fn ~(symbol (str fn-name "_" nm)) ~args ~@body)))
         bodies (reduce
                 (fn [res body]
                   (cond
