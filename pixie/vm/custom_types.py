@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, Type, affirm
+from pixie.vm.object import Object, Type, affirm, runtime_error
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.code import as_var
@@ -16,7 +16,10 @@ class CustomType(Type):
 
     @jit.elidable_promote()
     def get_slot_idx(self, nm):
-        return self._slots[nm]
+        val = self._slots.get(nm, -1)
+        if val == -1:
+            runtime_error(u"Invalid field named " + rt.name(rt.str(nm)) + u" on type " + rt.name(rt.str(self)))
+        return val
 
     def set_mutable(self, nm):
         if not self.is_mutable(nm):

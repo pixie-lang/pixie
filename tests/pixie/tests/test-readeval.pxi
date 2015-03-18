@@ -14,6 +14,7 @@
   (t/assert= (read-string "\"fo\\\\o\"") "fo\\o")
   (t/assert= (read-string "false") false)
   (t/assert= (read-string "true") true)
+  (t/assert= (read-string "#{1 2 3}") #{1 2 3})
   (t/assert= (read-string "(foo (bar (baz)))") '(foo (bar (baz)))))
 
 (t/deftest test-list-unclosed-list-fail
@@ -57,4 +58,8 @@
                     (read-string "\"foo")))
 
 (t/deftest test-comments-in-forms
-  (t/assert= (read-string "(foo ; a comment\n )") '(foo)))
+  (t/assert= (read-string "(foo ; a comment\n )") '(foo))
+  (t/assert= (read-string "[foo ; a comment\n ]") '[foo])
+  (t/assert= (read-string "{:foo :bar ; a comment\n }") '{:foo :bar})
+  (t/assert= (read-string "#{:foo ; a comment\n }") '#{:foo})
+  (t/assert= (read-string "{:foo ; a comment\n :bar }") '{:foo :bar}))

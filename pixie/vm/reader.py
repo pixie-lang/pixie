@@ -32,13 +32,13 @@ FILE_KW = keyword(u"file")
 
 GEN_SYM_ENV = code.intern_var(u"pixie.stdlib.reader", u"*gen-sym-env*")
 GEN_SYM_ENV.set_dynamic()
-GEN_SYM_ENV.set_value(EMPTY_MAP)
+GEN_SYM_ENV.set_root(EMPTY_MAP)
 
 ARG_AMP = symbol(u"&")
 ARG_MAX = keyword(u"max-arg")
 ARG_ENV = code.intern_var(u"pixie.stdlib.reader", u"*arg-env*")
 ARG_ENV.set_dynamic()
-ARG_ENV.set_value(nil)
+ARG_ENV.set_root(nil)
 
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
@@ -623,7 +623,9 @@ class SetReader(ReaderHandler):
                 return acc
 
             rdr.unread()
-            acc = acc.conj(read_inner(rdr, True))
+            itm = read_inner(rdr, True, always_return_form=False)
+            if itm != rdr:
+                acc = acc.conj(itm)
 
 dispatch_handlers = {
     u"{":  SetReader(),
