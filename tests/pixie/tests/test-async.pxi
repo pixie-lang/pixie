@@ -13,3 +13,17 @@
         f2 (future @f1)
         f3 (future @f2)]
     (assert= @f3 42)))
+
+(def *some-var* 0)
+(set-dynamic! (var *some-var*))
+
+(deftest test-dynamic-var-propagation
+  (set! (var *some-var*) 0)
+  (assert= *some-var* 0)
+  (let [fr @(future (do (println "running")
+                       (let [old-val *some-var*]
+                         (set! (var *some-var*) 42)
+                         [old-val *some-var*])))]
+
+    (assert= fr [0 42])
+    (assert= *some-var* 0)))

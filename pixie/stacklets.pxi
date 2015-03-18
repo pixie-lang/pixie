@@ -24,8 +24,10 @@
      (f h))))
 
 (defn call-cc [f]
-  (let [[h val] (@stacklet-loop-h f)]
+  (let [frames (-get-current-var-frames nil)
+        [h val] (@stacklet-loop-h f)]
     (reset! stacklet-loop-h h)
+    (-set-current-var-frames nil frames)
     val))
 
 (defn -run-later [f]
@@ -78,15 +80,17 @@
              (-run-later (partial run-and-process k)))))
 
 (defmacro spawn [& body]
-  `(-spawn (fn [h# _]
-             (try
-               (swap! running-threads inc)
-               (reset! stacklet-loop-h h#)
-               (let [result# (do ~@body)]
-                 (swap! running-threads dec)
-                 (call-cc (fn [_] nil)))
-               (catch e
-                   (println e))))))
+  `(let [frames (-get-current-var-frames nil)]
+     (-spawn (fn [h# _]
+               (-set-current-var-frames nil frames)
+               (try
+                 (swap! running-threads inc)
+                 (reset! stacklet-loop-h h#)
+                 (let [result# (do ~@body)]
+                   (swap! running-threads dec)
+                   (call-cc (fn [_] nil)))
+                 (catch e
+                     (println e)))))))
 
 
 

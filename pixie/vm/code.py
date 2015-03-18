@@ -5,6 +5,7 @@ from pixie.vm.primitives import nil, false
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.listsort import TimSort
 from rpython.rlib.jit import elidable_promote, promote
+from rpython.rlib.objectmodel import we_are_translated
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
 
@@ -377,21 +378,32 @@ undefined = Undefined()
 
 class DynamicVars(py_object):
     def __init__(self):
-        self._vars = [{}]
+        self._vars = rt.cons(rt.hashmap(), nil)
 
     def push_binding_frame(self):
-        self._vars.append(self._vars[-1].copy())
+        self._vars = rt.cons(rt.first(self._vars), self._vars)
 
     def pop_binding_frame(self):
-        self._vars.pop()
+        self._vars = rt.next(self._vars)
+
+    def current_frame(self):
+        return rt.first(self._vars)
+
+    def get_current_frames(self):
+        return self._vars
+
+    def set_current_frames(self, vars):
+        self._vars = vars
 
     def get_var_value(self, var, not_found):
-        return self._vars[-1].get(var, not_found)
+        return rt._val_at(self.current_frame(), var, not_found)
 
     def set_var_value(self, var, val):
-        self._vars[-1][var] = val
+        cur_frame = self.current_frame()
+        self.pop_binding_frame()
+        self._vars = rt.cons(rt._assoc(cur_frame, var, val), self._vars)
 
-_dynamic_vars = DynamicVars()
+
 
 
 class Var(BaseCode):
@@ -443,7 +455,14 @@ class Var(BaseCode):
 
     def deref(self):
         if self.is_dynamic():
-            return self.get_dynamic_value()
+            if we_are_translated():
+                return self.get_dynamic_value()
+            else:
+                ## NOT RPYTHON
+                if globals().has_key("_dynamic_vars"):
+                    return self.get_dynamic_value()
+                else:
+                    return self.get_root(self._rev)
         else:
             val = self.get_root(self._rev)
             affirm(val is not undefined, u"Var " + self._name + u" is undefined")
@@ -961,3 +980,7 @@ class bindings(py_object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         _dynamic_vars.pop_binding_frame()
+
+
+def init():
+    globals()["_dynamic_vars"] = DynamicVars()
