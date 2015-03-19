@@ -55,23 +55,19 @@ class CustomTypeInstance(Object):
         return self
 
     @jit.elidable_promote()
-    def get_field_immutable(self, name):
-        idx = self._custom_type.get_slot_idx(name)
-        if idx == -1:
-            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
-
+    def get_field_immutable(self, idx):
         return self._fields[idx]
 
 
     def get_field(self, name):
-        if self._custom_type.is_mutable(name):
-            idx = self._custom_type.get_slot_idx(name)
-            if idx == -1:
-                runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
+        idx = self._custom_type.get_slot_idx(name)
+        if idx == -1:
+            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
 
+        if self._custom_type.is_mutable(name):
             return self._fields[idx]
         else:
-            return self.get_field_immutable(name)
+            return self.get_field_immutable(idx)
 
     def set_field_by_idx(self, idx, val):
         affirm(isinstance(idx, r_uint), u"idx must be a r_uint")
