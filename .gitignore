@@ -4,3 +4,4 @@ pixie-vm
 .idea
 lib
 include
+pixie/*.pxic
