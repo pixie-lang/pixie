@@ -12,6 +12,10 @@
   (-put! [this itm cfn] "Write a value to this port passing true if the write succeeds and the
                          callback isn't canceled"))
 
+(defprotocol ICloseable
+  (-close! [this] "Closes the channel, future writes will be rejected, future reads will
+                   drain the channel before returning nil."))
+
 (deftype OpCell [val cfn]
   IIndexed
   (-nth [this idx]
@@ -62,8 +66,10 @@
   (-take! [this cfn]
     (if (canceled? cfn)
       false
-      (if closed?
-        (do (-run-later (partial cfn nil))
+      (if (and closed?
+               (b/empty-buffer? buffer)
+               (b/empty-buffer? puts))
+        (do (st/-run-later (partial cfn nil))
             false)
         (if (not (b/empty-buffer? buffer))
           (do (st/-run-later (partial cfn (b/remove! buffer)))
@@ -76,11 +82,12 @@
             (do (set-field! this :ops-since-last-clean (inc ops-since-last-clean))
                 (b/add-unbounded! takes cfn)
                 true))))))
+  IWritePort
   (-put! [this val cfn]
     (if (or (canceled? cfn))
       false
       (if closed?
-        (do (-run-later (partial cfn false))
+        (do (st/-run-later (partial cfn false))
             false)
         (if-let [tfn (-get-non-canceled! takes)]
           (do (st/-run-later (partial tfn val))
@@ -92,9 +99,19 @@
                 true)
             (do (b/add-unbounded! puts (->OpCell val cfn))
                 (set-field! this :ops-since-last-clean (inc ops-since-last-clean))
-                true)))))))
+                true))))))
+  ICloseable
+  (-close! [this]
+    (set-field! this :closed? true)
+    (when (not (b/empty-buffer? takes))
+      (loop []
+        (when-let [tfn (-get-non-canceled! takes)]
+          (st/-run-later (partial tfn nil))
+          (recur))))))
 
 (defn chan
+  "Creates a CSP channel with the given buffer. If an integer is provided as the argument
+   creates a channel with a fixed buffer of that size. "
   ([]
    (chan 0))
   ([size-or-buffer]
