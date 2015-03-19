@@ -7,9 +7,10 @@
   (assert= (<! (go 42)) 42))
 
 
-(comment
-  (deftest can-send-multiple-values
-    (let [c (chan 2)
-          go-result (go (mapv (partial >! c) (range 10)))]
-      (assert= (map <! c) (range 10))
-      (assert= go-result []))))
+
+(deftest can-send-multiple-values
+  (let [c (chan 2)
+        go-result (go (mapv (partial >! c) (range 10))
+                      (close! c))]
+    (assert= (vec c) (range 10))
+    (assert= (<! go-result) nil)))
