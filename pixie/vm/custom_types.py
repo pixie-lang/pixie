@@ -16,10 +16,7 @@ class CustomType(Type):
 
     @jit.elidable_promote()
     def get_slot_idx(self, nm):
-        val = self._slots.get(nm, -1)
-        if val == -1:
-            runtime_error(u"Invalid field named " + rt.name(rt.str(nm)) + u" on type " + rt.name(rt.str(self)))
-        return val
+        return self._slots.get(nm, -1)
 
     def set_mutable(self, nm):
         if not self.is_mutable(nm):
@@ -51,18 +48,27 @@ class CustomTypeInstance(Object):
     def set_field(self, name, val):
         self._custom_type.set_mutable(name)
         idx = self._custom_type.get_slot_idx(name)
+        if idx == -1:
+            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
+
         self._fields[idx] = val
         return self
 
     @jit.elidable_promote()
     def get_field_immutable(self, name):
         idx = self._custom_type.get_slot_idx(name)
+        if idx == -1:
+            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
+
         return self._fields[idx]
 
 
     def get_field(self, name):
         if self._custom_type.is_mutable(name):
             idx = self._custom_type.get_slot_idx(name)
+            if idx == -1:
+                runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
+
             return self._fields[idx]
         else:
             return self.get_field_immutable(name)
