@@ -1,0 +1,121 @@
+(ns pixie.channels
+  (require pixie.stacklets :as st)
+  (require pixie.buffers :as b))
+
+(defprotocol ICancelable
+  (-canceled? [this] "Determines if a request (such as a callback) that can be canceled"))
+
+(defprotocol IReadPort
+  (-take! [this cfn] "Take a value from this port passing it to a cancellable function"))
+
+(defprotocol IWritePort
+  (-put! [this itm cfn] "Write a value to this port passing true if the write succeeds and the
+                         callback isn't canceled"))
+
+(deftype OpCell [val cfn]
+  IIndexed
+  (-nth [this idx]
+    (cond
+     (= idx 0) val
+     (= idx 1) cfn
+     :else (throw "Index out of range")))
+  (-nth-not-found [this idx not-found]
+    (cond
+     (= idx 0) val
+     (= idx 1) cfn
+     :else not-found))
+  ICounted
+  (-count [this]
+    2)
+  ICancelable
+  (-canceled? [this]
+    (canceled? cfn)))
+
+(defn canceled? [this]
+  (-canceled? this))
+
+
+(defn -move-puts-to-buffer [puts buffer]
+  (loop []
+    (if (or (b/full? buffer)
+            (b/empty-buffer? puts))
+      nil
+      (let [[val cfn] (b/remove! puts)]
+        (if (cancelled? cfn)
+          (recur)
+          (do (st/-run-later (partial cfn true))
+              (b/add! buffer val)
+              (recur)))))))
+
+(defn -get-non-canceled! [buffer]
+  (loop []
+    (if (b/empty-buffer? buffer)
+      nil
+      (let [v (b/remove! buffer)]
+        (if (canceled? v)
+          (recur)
+          v)))))
+
+
+(deftype MultiReaderWriterChannel [puts takes buffer closed? ops-since-last-clean]
+  IReadPort
+  (-take! [this cfn]
+    (if (canceled? cfn)
+      false
+      (if closed?
+        (do (-run-later (partial cfn nil))
+            false)
+        (if (not (b/empty-buffer? buffer))
+          (do (st/-run-later (partial cfn (b/remove! buffer)))
+              (-move-puts-to-buffer puts buffer))
+
+          (if-let [[v pcfn] (-get-non-canceled! puts)]
+            (do (st/-run-later (partial pcfn true))
+                (st/-run-later (partial cfn v))
+                true)
+            (do (set-field! this :ops-since-last-clean (inc ops-since-last-clean))
+                (b/add-unbounded! takes cfn)
+                true))))))
+  (-put! [this val cfn]
+    (if (or (canceled? cfn))
+      false
+      (if closed?
+        (do (-run-later (partial cfn false))
+            false)
+        (if-let [tfn (-get-non-canceled! takes)]
+          (do (st/-run-later (partial tfn val))
+              (st/-run-later (partial cfn true))
+              true)
+          (if (not (b/full? buffer))
+            (do (b/add! buffer val)
+                (st/-run-later (partial cfn true))
+                true)
+            (do (b/add-unbounded! puts (->OpCell val cfn))
+                (set-field! this :ops-since-last-clean (inc ops-since-last-clean))
+                true)))))))
+
+(defn chan
+  ([]
+   (chan 0))
+  ([size-or-buffer]
+    (if (= 0 size-or-buffer)
+      (->MultiReaderWriterChannel (b/ring-buffer 8)
+                                  (b/ring-buffer 8)
+                                  b/null-buffer
+                                  false
+                                  0)
+      (if (integer? size-or-buffer)
+        (->MultiReaderWriterChannel (b/ring-buffer 8)
+                                    (b/ring-buffer 8)
+                                    (b/fixed-buffer size-or-buffer)
+                                    false
+                                    0)
+        (->MultiReaderWriterChannel (b/ring-buffer 8)
+                                    (b/ring-buffer 8)
+                                    size-or-buffer
+                                    false
+                                    0)))))
+
+
+(extend -canceled? IFn
+        (fn [this] false))

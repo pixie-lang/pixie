@@ -2186,3 +2186,7 @@ Expands to calls to `extend-type`."
                   (when (branch? node)
                     (mapcat walk (children node))))))]
     (walk root)))
+
+(defn mapv
+  ([f col]
+   (transduce (map f) conj col)))

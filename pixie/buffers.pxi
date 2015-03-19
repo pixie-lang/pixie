@@ -123,6 +123,18 @@
 (defn sliding-buffer [size]
   (->SlidingBuffer (ring-buffer size)))
 
+(defn empty-buffer? [buf]
+  (= (count buf) 0))
+
+
+(deftype NullBuffer []
+  IMutableBuffer
+  (full? [this]
+    true)
+  ICounted
+  (-count [this] 0))
+
+(def null-buffer (->NullBuffer))
 
 (extend -reduce IMutableBuffer
         (fn [buf f acc]
