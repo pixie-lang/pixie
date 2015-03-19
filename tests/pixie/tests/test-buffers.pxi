@@ -30,6 +30,13 @@
 (deftest test-dropping-buffer
   (let [buf (dropping-buffer 4)]
     (dotimes [x 5]
-      (println (count buf) "x" x)
       (add! buf x))
-    (assert= [0 1 2 3] (drain-buffer buf))))
+    (assert= [0 1 2 3] (drain-buffer buf))
+    (assert (not (full? buf)))))
+
+(deftest test-sliding-buffer
+  (let [buf (sliding-buffer 4)]
+    (dotimes [x 5]
+      (add! buf x))
+    (assert= [1 2 3 4] (drain-buffer buf))
+    (assert (not (full? buf)))))

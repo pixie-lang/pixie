@@ -120,6 +120,9 @@
   (-count [this]
     (count buf)))
 
+(defn sliding-buffer [size]
+  (->SlidingBuffer (ring-buffer size)))
+
 
 (extend -reduce IMutableBuffer
         (fn [buf f acc]
