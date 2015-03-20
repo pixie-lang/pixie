@@ -864,4 +864,3 @@ def _set_current_var_frames(self, frames):
        Sets the current var frames. Frames should be a cons list of hashmaps containing mappings of vars to dynamic
        values. Setting this value to anything but this data format will cause undefined errors."""
     code._dynamic_vars.set_current_frames(frames)
-
