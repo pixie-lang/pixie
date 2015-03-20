@@ -3,7 +3,8 @@
   (require pixie.buffers :as b))
 
 (defprotocol ICancelable
-  (-canceled? [this] "Determines if a request (such as a callback) that can be canceled"))
+  (-canceled? [this] "Determines if a request (such as a callback) that can be canceled")
+  (-commit! [this]))
 
 (defprotocol IReadPort
   (-take! [this cfn] "Take a value from this port passing it to a cancellable function"))
@@ -69,14 +70,18 @@
       (if (and closed?
                (b/empty-buffer? buffer)
                (b/empty-buffer? puts))
-        (do (st/-run-later (partial cfn nil))
+        (do (-commit! cfn)
+            (st/-run-later (partial cfn nil))
             false)
         (if (not (b/empty-buffer? buffer))
-          (do (st/-run-later (partial cfn (b/remove! buffer)))
+          (do (-commit! cfn)
+              (st/-run-later (partial cfn (b/remove! buffer)))
               (-move-puts-to-buffer puts buffer))
 
           (if-let [[v pcfn] (-get-non-canceled! puts)]
-            (do (st/-run-later (partial pcfn true))
+            (do (-commit! pcfn)
+                (-commit! cfn)
+                (st/-run-later (partial pcfn true))
                 (st/-run-later (partial cfn v))
                 true)
             (do (set-field! this :ops-since-last-clean (inc ops-since-last-clean))
@@ -87,14 +92,18 @@
     (if (or (canceled? cfn))
       false
       (if closed?
-        (do (st/-run-later (partial cfn false))
+        (do (-commit! cfn)
+            (st/-run-later (partial cfn false))
             false)
         (if-let [tfn (-get-non-canceled! takes)]
-          (do (st/-run-later (partial tfn val))
+          (do (-commit! cfn)
+              (-commit! tfn)
+              (st/-run-later (partial tfn val))
               (st/-run-later (partial cfn true))
               true)
           (if (not (b/full? buffer))
             (do (b/add! buffer val)
+                (-commit! cfn)
                 (st/-run-later (partial cfn true))
                 true)
             (do (b/add-unbounded! puts (->OpCell val cfn))
@@ -106,6 +115,7 @@
     (when (not (b/empty-buffer? takes))
       (loop []
         (when-let [tfn (-get-non-canceled! takes)]
+          (-commit! tfn)
           (st/-run-later (partial tfn nil))
           (recur))))))
 
@@ -133,6 +143,21 @@
                                     false
                                     0)))))
 
+(deftype AltHandler [atm f]
+  ICancelable
+  (-canceled? [this]
+    @atm)
+  (-commit! [this]
+    (reset! atm true))
+  IFn
+  (-invoke [this & args]
+    (apply f args)))
+
+(defn alt-handlers [fns]
+  (mapv (partial ->AltHandler (atom false)) fns))
 
 (extend -canceled? IFn
         (fn [this] false))
+
+(extend -commit! IFn
+        (fn [this] nil))

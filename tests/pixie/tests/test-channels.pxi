@@ -1,7 +1,8 @@
 (ns pixie.tests.test-channels
   (require pixie.test :refer :all)
   (require pixie.channels :refer :all)
-  (require pixie.async :refer :all))
+  (require pixie.async :refer :all)
+  (require pixie.stacklets :as st))
 
 
 (deftest simple-read-and-write
@@ -70,3 +71,17 @@
     (-close! c)
     (assert= (mapv (partial -take! c) tps) [true true false])
     (assert= (mapv deref tps) [0 1 nil])))
+
+(deftest alt-handlers-only-invoke-one-callback
+  (let [completed (atom 0)
+        c (chan 5)
+        [f1 f2] (alt-handlers
+                 [(fn [_] (swap! completed inc))
+                  (fn [_] (swap! completed inc))])]
+    (-take! c f1)
+    (-take! c f2)
+    (-put! c 1 (fn [_]))
+    (-put! c 2 (fn [_]))
+    (st/yield-control)
+
+    (assert= @completed 1)))
