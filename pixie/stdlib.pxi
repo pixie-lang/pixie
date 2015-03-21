@@ -2186,3 +2186,8 @@ Expands to calls to `extend-type`."
                   (when (branch? node)
                     (mapcat walk (children node))))))]
     (walk root)))
+
+(defn -push-history [x]
+  (def *3 *2)
+  (def *2 *1)
+  (def *1 x))
