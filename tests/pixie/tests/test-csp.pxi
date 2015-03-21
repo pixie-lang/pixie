@@ -14,3 +14,21 @@
                       (close! c))]
     (assert= (vec c) (range 10))
     (assert= (<! go-result) nil)))
+
+
+(deftest alts-works-correctly
+  (let [c1 (chan 1)
+        c2 (chan 1)
+        results (go (hash-set (alts! [c1 c2])
+                              (alts! [c1 c2])))]
+    (>! c1 1)
+    (>! c2 2)
+    (println (hash-set  [c1 1] [c2 2]))
+    (assert (not (= c1 c2)))
+    (assert= (<! results) #{[c1 1] [c2 2]})))
+
+(deftest alts-prefers-default
+  (let [c (chan 1)]
+    (assert= (alts! [c] :default 42) [:default 42])
+    (>! c 1)
+    (assert= (alts! [c] :default 42) [c 1])))

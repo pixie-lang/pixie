@@ -51,3 +51,12 @@
                 (if (nil? v)
                   acc
                   (recur (f acc v))))))))
+
+
+(defn alts!
+  ([ops]
+   (st/call-cc (fn [k]
+                 (chans/alts! ops (partial st/run-and-process k) {}))))
+  ([ops & opts]
+   (st/call-cc (fn [k]
+                 (chans/alts! ops (partial st/run-and-process k) (apply hashmap opts))))))

@@ -161,3 +161,23 @@
 
 (extend -commit! IFn
         (fn [this] nil))
+
+(defn alts! [ops k options]
+  (let [handler-atom (atom false)]
+    (reduce
+     (fn [_ op]
+       (if (vector? op)
+         (let [[c val] op
+               f (fn [v]
+                   (st/-run-later (partial k [c v])))]
+           (-put! c val (->AltHandler handler-atom f)))
+         (let [c op
+               f (fn [v]
+                   (st/-run-later (partial k [c v])))]
+           (-take! c (->AltHandler handler-atom f)))))
+     nil
+     ops)
+    (when (and (:default options)
+               (not @handler-atom))
+      (reset! handler-atom true)
+      (st/-run-later (partial k [:default (:default options)])))))
