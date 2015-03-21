@@ -25,5 +25,6 @@
                  (pixie.stdlib/-push-history x)
                  (println x))))
            (catch ex
-               (println "ERROR: \n" ex)))
+             (pixie.stdlib/-set-*e ex)
+             (println "ERROR: \n" ex)))
       (recur))))

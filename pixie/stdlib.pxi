@@ -2191,3 +2191,6 @@ Expands to calls to `extend-type`."
   (def *3 *2)
   (def *2 *1)
   (def *1 x))
+
+(defn -set-*e [e]
+  (def *e e))
