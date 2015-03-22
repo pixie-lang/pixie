@@ -91,6 +91,7 @@ def slice_from_start(from_list, count, extra=r_uint(0)):
 
 
 class BaseCode(object.Object):
+    _immutable_fields_ = ["_meta"]
     def __init__(self):
         assert isinstance(self, BaseCode)
         self._name = u"unknown"
@@ -213,7 +214,7 @@ class NativeFn(BaseCode):
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
     _type = object.Type(u"pixie.stdlib.Code")
-    __immutable_fields__ = ["_arity", "_consts[*]", "_bytecode", "_stack_size", "_meta"]
+    _immutable_fields_ = ["_arity", "_consts[*]", "_bytecode", "_stack_size", "_meta"]
 
     def type(self):
         return Code._type
@@ -271,7 +272,7 @@ class Code(BaseCode):
 
 
 class VariadicCode(BaseCode):
-    __immutable_fields__ = ["_required_arity", "_code", "_meta"]
+    _immutable_fields_ = ["_required_arity", "_code", "_meta"]
     _type = object.Type(u"pixie.stdlib.VariadicCode")
 
     def type(self):
@@ -314,7 +315,7 @@ class VariadicCode(BaseCode):
 
 class Closure(BaseCode):
     _type = object.Type(u"pixie.stdlib.Closure")
-    __immutable_fields__ = ["_closed_overs[*]", "_code", "_meta"]
+    _immutable_fields_ = ["_closed_overs[*]", "_code", "_meta"]
     
     def type(self):
         return Closure._type
@@ -632,7 +633,7 @@ class DefaultProtocolFn(NativeFn):
 class Protocol(object.Object):
     _type = object.Type(u"pixie.stdlib.Protocol")
 
-    __immutable_fields__ = ["_rev?"]
+    _immutable_fields_ = ["_rev?"]
 
     def type(self):
         return Protocol._type
@@ -664,7 +665,7 @@ class PolymorphicFn(BaseCode):
     def type(self):
         return PolymorphicFn._type
 
-    __immutable_fields__ = ["_rev?"]
+    _immutable_fields_ = ["_rev?"]
 
     def __init__(self, name, protocol):
         BaseCode.__init__(self)
@@ -738,7 +739,7 @@ class DoublePolymorphicFn(BaseCode):
     def type(self):
         return DefaultProtocolFn._type
 
-    __immutable_fields__ = ["_rev?"]
+    _immutable_fields_ = ["_rev?"]
 
     def __init__(self, name, protocol):
         BaseCode.__init__(self)

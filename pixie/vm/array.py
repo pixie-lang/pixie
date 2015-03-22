@@ -13,7 +13,7 @@ UNROLL_IF_SMALLER_THAN = 8
 
 class Array(object.Object):
     _type = object.Type(u"pixie.stdlib.Array")
-    __immutable_fields__ = ["_list[*]"]
+    _immutable_fields_ = ["_list[*]"]
     def type(self):
         return Array._type
 
@@ -76,7 +76,7 @@ def _seq(self):
 
 class ArraySeq(object.Object):
     _type = object.Type(u"pixie.stdlib.ArraySeq")
-    __immutable_fields__ = ["_idx", "_w_array"]
+    _immutable_fields_ = ["_idx", "_w_array"]
 
     def __init__(self, idx, array):
         self._idx = idx
