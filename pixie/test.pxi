@@ -61,15 +61,25 @@
           yr# ~y]
      (assert (= xr# yr#) (str (show '~x xr#) " != " (show '~y yr#)))))
 
-(defmacro assert-throws? [klass msg body]
-     `(try 
-       ~body 
-       (assert false (str "Expected a " ~klass " exception: " ~msg))
-       (catch e#
-         (assert (= (type e#) ~klass) 
-                 (str "Expected exception of class " ~klass " but got " (type e#)))
-         (assert (= (ex-msg e#) ~msg) 
-                 (str "Expected message: " ~msg " but got " (ex-msg e#))))))
+(defmacro assert-throws?
+  ([body]
+   `(let [exn# (try (do ~body nil) (catch e# e#))]
+      (assert (not (nil? exn#))
+              (str "Expected " (pr-str (quote ~body)) " to throw an exception"))
+      exn#))
+  ([klass body]
+   `(let [exn# (assert-throws? ~body)]
+     (assert (= (type exn#) ~klass)
+             (str "Expected " (pr-str (quote ~body))
+                  " to throw exception of class " (pr-str ~klass)
+                  " but got " (pr-str (type exn#))))
+     exn#))
+  ([klass msg body]
+   `(let [exn# (assert-throws? ~klass ~body)]
+     (assert (= (ex-msg exn#) ~msg)
+             (str "Expected " (pr-str (quote ~body))
+                  " to throw exception with message " (pr-str ~msg)
+                  " but got " (pr-str (ex-msg exn#)))))))
 
 (defmacro assert [x]
   `(let [x# ~x]
