@@ -811,6 +811,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn keyword? [v] (instance? Keyword v))
 
 (defn list? [v] (instance? PersistentList v))
+(defn set? [v] (instance? PersistentHashSet v))
 (defn map? [v] (satisfies? IMap v))
 (defn fn? [v] (satisfies? IFn v))
 
