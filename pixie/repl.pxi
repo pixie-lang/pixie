@@ -21,7 +21,10 @@
       (try (let [form (read rdr false)]
              (if (= form eof)
                (exit 0)
-               (println (eval form))))
+               (let [x (eval form)]
+                 (pixie.stdlib/-push-history x)
+                 (println x))))
            (catch ex
-               (println "ERROR: \n" ex)))
+             (pixie.stdlib/-set-*e ex)
+             (println "ERROR: \n" ex)))
       (recur))))
