@@ -23,7 +23,6 @@
                               (alts! [c1 c2])))]
     (>! c1 1)
     (>! c2 2)
-    (println (hash-set  [c1 1] [c2 2]))
     (assert (not (= c1 c2)))
     (assert= (<! results) #{[c1 1] [c2 2]})))
 

@@ -292,6 +292,7 @@
 (extend -with-meta Nil (fn [self _] nil))
 (extend -at-end? Nil (fn [_] true))
 (extend -deref Nil (fn [_] nil))
+(extend -contains-key Nil (fn [_ _] false))
 
 (extend -hash Integer hash-int)
 

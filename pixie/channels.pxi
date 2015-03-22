@@ -177,7 +177,7 @@
            (-take! c (->AltHandler handler-atom f)))))
      nil
      ops)
-    (when (and (:default options)
+    (when (and (contains? options :default)
                (not @handler-atom))
       (reset! handler-atom true)
       (st/-run-later (partial k [:default (:default options)])))))

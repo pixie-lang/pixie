@@ -56,7 +56,7 @@
 (defn alts!
   ([ops]
    (st/call-cc (fn [k]
-                 (chans/alts! ops (partial st/run-and-process k) {}))))
+                 (chans/alts! ops (partial st/run-and-process k) nil))))
   ([ops & opts]
    (st/call-cc (fn [k]
                  (chans/alts! ops (partial st/run-and-process k) (apply hashmap opts))))))
