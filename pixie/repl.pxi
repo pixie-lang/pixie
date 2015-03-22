@@ -23,7 +23,7 @@
                (exit 0)
                (let [x (eval form)]
                  (pixie.stdlib/-push-history x)
-                 (println x))))
+                 (prn x))))
            (catch ex
              (pixie.stdlib/-set-*e ex)
              (println "ERROR: \n" ex)))
