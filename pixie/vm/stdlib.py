@@ -817,6 +817,7 @@ def _doc(self):
 class PartialFunction(code.NativeFn):
     _immutable_fields_ = ["_partial_f", "_partial_args"]
     def __init__(self, f, args):
+        code.NativeFn.__init__(self)
         self._partial_f = f
         self._partial_args = args
 
@@ -834,6 +835,7 @@ class PartialFunction(code.NativeFn):
 
 
         return self._partial_f.invoke(new_args)
+
 
 @as_var("partial")
 @jit.unroll_safe
