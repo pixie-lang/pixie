@@ -62,6 +62,10 @@
   [{:keys [name]}]
   (str "PixieChecker::DumpType<__typeof__(" name ")>();"))
 
+(defmethod emit-infer-code :global
+  [_]
+  (str "std::cout <<\"[]\" << std::endl;"))
+
 
 (defn start-string []
   (str (apply str (map (fn [i]
@@ -79,6 +83,7 @@
   " std::cout << \"]\" << std::endl;
 return 0;
       }")
+
 
 ;; To Ctype conversion
 
@@ -130,6 +135,10 @@ return 0;
 (defmethod generate-code :const
   [{:keys [name]} {:keys [value type]}]
   `(def ~(symbol name) ~value))
+
+(defmethod generate-code :global
+  [{:keys [name]} _]
+  `(def ~(symbol name) (ffi-voidp *library* ~(str name))))
 
 
 
@@ -226,6 +235,10 @@ return 0;
 
 (defmacro defccallback [nm]
   `(swap! *bodies* conj (assoc {:op :callback}
+                          :name ~(name nm))))
+
+(defmacro defglobal [nm]
+  `(swap! *bodies* conj (assoc {:op :global}
                           :name ~(name nm))))
 
 

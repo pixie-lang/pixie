@@ -420,7 +420,6 @@ def _load_file(filename, compile=False):
     import pixie.vm.reader as reader
     import pixie.vm.libs.pxic.writer as pxic_writer
     import os.path as path
-    from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
     import os
 
 
@@ -668,7 +667,7 @@ def _try_catch(main_fn, catch_fn, final):
                 if not we_are_translated():
                     print "Python Error Info: ", ex.__dict__, ex
                     raise
-                ex = RuntimeException(rt.wrap(u"Some error"))
+                ex = RuntimeException(rt.wrap(u"Some error: " + unicode(str(ex))))
             else:
                 ex = RuntimeException(nil)
             return catch_fn.invoke([ex])

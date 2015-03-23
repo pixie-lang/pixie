@@ -144,32 +144,22 @@
                   ([result] (xf result))
                   ([result item] (xf result (f item))))))
            ([f coll]
-              (let [i (iterator coll)]
-                (loop []
-                  (if (at-end? i)
-                    nil
-                    (do (yield (f (current i)))
-                        (move-next! i)
-                        (recur))))))
+            (lazy-seq*
+              (fn []
+                (let [s (seq coll)]
+                  (if s
+                    (cons (f (first s))
+                          (map f (rest s)))
+                    nil)))))
            ([f & colls]
-              (let [its (vec (map iterator colls))]
-                (loop []
-                  (let [args (if (at-end? (first its))
-                               nil
-                               (reduce
-                                (fn [acc i]
-                                  (if (at-end? i)
-                                    (reduced nil)
-                                    (let [new-acc (conj acc (current i))]
-                                      (move-next! i)
-                                      new-acc)))
-                                []
-                                its))]
-
-                    (if args
-                      (do (yield (apply f args))
-                          (recur)))))))))
-
+              (let [step (fn step [cs]
+                           (lazy-seq*
+                             (fn []
+                               (let [ss (map seq cs)]
+                                 (if (every? identity ss)
+                                   (cons (map first ss) (step (map rest ss)))
+                                   nil)))))]
+                (map (fn [args] (apply f args)) (step colls))))))
 
 (def reduce (fn [rf init col]
               (-reduce col rf init)))
@@ -293,6 +283,7 @@
 (extend -with-meta Nil (fn [self _] nil))
 (extend -at-end? Nil (fn [_] true))
 (extend -deref Nil (fn [_] nil))
+(extend -contains-key Nil (fn [_ _] false))
 
 (extend -hash Integer hash-int)
 
@@ -812,6 +803,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn keyword? [v] (instance? Keyword v))
 
 (defn list? [v] (instance? PersistentList v))
+(defn set? [v] (instance? PersistentHashSet v))
 (defn map? [v] (satisfies? IMap v))
 (defn fn? [v] (satisfies? IFn v))
 
@@ -1132,7 +1124,7 @@ Creates new maps if the keys are not present."
                                                 ~@body)])
                               rest
                               fields)]
-                    `(fn ~fn-name ~args ~@body)))
+                    `(fn ~(symbol (str fn-name "_" nm)) ~args ~@body)))
         bodies (reduce
                 (fn [res body]
                   (cond
@@ -2183,3 +2175,15 @@ Expands to calls to `extend-type`."
                   (when (branch? node)
                     (mapcat walk (children node))))))]
     (walk root)))
+
+(defn mapv
+  ([f col]
+   (transduce (map f) conj col)))
+
+(defn -push-history [x]
+  (def *3 *2)
+  (def *2 *1)
+  (def *1 x))
+
+(defn -set-*e [e]
+  (def *e e))

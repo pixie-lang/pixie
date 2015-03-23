@@ -196,6 +196,13 @@ def _ffi_fn__args(args):
     f = FFIFn(lib, rt.name(nm), new_args, ret_type, is_variadic)
     return f
 
+@as_var("ffi-voidp")
+def _ffi_voidp(lib, nm):
+    affirm(isinstance(lib, ExternalLib), u"First argument to ffi-voidp should be an external library")
+    name = rt.name(nm)
+    return VoidP(lib.get_fn_ptr(name))
+
+
 
 
 
