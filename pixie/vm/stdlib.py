@@ -420,7 +420,6 @@ def _load_file(filename, compile=False):
     import pixie.vm.reader as reader
     import pixie.vm.libs.pxic.writer as pxic_writer
     import os.path as path
-    from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
     import os
 
 

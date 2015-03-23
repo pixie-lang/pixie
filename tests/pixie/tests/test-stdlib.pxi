@@ -6,6 +6,14 @@
     (doseq [v vs]
       (t/assert= (identity v) v))))
 
+(t/deftest test-map
+  (t/assert= (map inc [1 2 3]) [2 3 4])
+  (t/assert= (map + [1 2 3] [4 5 6]) [5 7 9])
+  (t/assert= (map + [1 2 3] [4 5 6] [7 8 9]) [12 15 18])
+  (let [value (map identity [1 2 3])]
+    (t/assert= (seq value) [1 2 3])
+    (t/assert= (seq value) [1 2 3])))
+
 (t/deftest test-mapcat
   (t/assert= (mapcat identity []) [])
   (t/assert= (mapcat first [[[1 2]] [[3] [:not :present]] [[4 5 6]]]) [1 2 3 4 5 6]))
