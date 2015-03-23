@@ -282,6 +282,7 @@
 (extend -with-meta Nil (fn [self _] nil))
 (extend -at-end? Nil (fn [_] true))
 (extend -deref Nil (fn [_] nil))
+(extend -contains-key Nil (fn [_ _] false))
 
 (extend -hash Integer hash-int)
 
@@ -1122,7 +1123,7 @@ Creates new maps if the keys are not present."
                                                 ~@body)])
                               rest
                               fields)]
-                    `(fn ~fn-name ~args ~@body)))
+                    `(fn ~(symbol (str fn-name "_" nm)) ~args ~@body)))
         bodies (reduce
                 (fn [res body]
                   (cond
@@ -2177,6 +2178,10 @@ Expands to calls to `extend-type`."
                   (when (branch? node)
                     (mapcat walk (children node))))))]
     (walk root)))
+
+(defn mapv
+  ([f col]
+   (transduce (map f) conj col)))
 
 (defn -push-history [x]
   (def *3 *2)
