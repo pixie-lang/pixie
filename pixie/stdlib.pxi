@@ -861,6 +861,12 @@ If further arguments are passed, invokes the method named by symbol, passing the
       ([x y] (not (f x y)))
       ([x y & more] (not (apply f x y more))))))
 
+(defn constantly [x]
+  {:doc "Return a function that always returns x, no matter what it is called with."
+   :examples [["(let [f (constantly :me)] [(f 1) (f \"foo\") (f :abc) (f nil)])"
+               nil [:me :me :me :me]]]}
+  (fn [& _] x))
+
 (defn some
   {:doc "Checks if the predicate is true for any element of the collection.
 
