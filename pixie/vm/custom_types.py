@@ -2,6 +2,7 @@ from pixie.vm.object import Object, Type, affirm, runtime_error
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.code import as_var
+from pixie.vm.numbers import Integer
 from pixie.vm.keyword import Keyword
 import pixie.vm.rt as rt
 
@@ -46,12 +47,15 @@ class CustomTypeInstance(Object):
         return self._custom_type
 
     def set_field(self, name, val):
-        self._custom_type.set_mutable(name)
         idx = self._custom_type.get_slot_idx(name)
         if idx == -1:
             runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
 
-        self._fields[idx] = val
+        old_val = self._fields[idx]
+        if isinstance(old_val, AbstractMutableCell):
+            old_val.set_mutable_cell_value(self._custom_type, self._fields, name, idx, val)
+        else:
+            self._fields[idx] = val
         return self
 
     @jit.elidable_promote()
@@ -65,9 +69,14 @@ class CustomTypeInstance(Object):
             runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
 
         if self._custom_type.is_mutable(name):
-            return self._fields[idx]
+            value = self._fields[idx]
         else:
-            return self.get_field_immutable(idx)
+            value = self.get_field_immutable(idx)
+
+        if isinstance(value, AbstractMutableCell):
+            return value.get_mutable_cell_value()
+        else:
+            return value
 
     def set_field_by_idx(self, idx, val):
         affirm(isinstance(idx, r_uint), u"idx must be a r_uint")
@@ -98,7 +107,10 @@ def _new__args(args):
     affirm(cnt - 1 != tp.get_num_slots(), u"Wrong number of initializer fields to custom type")
     arr = [None] * cnt
     for x in range(cnt):
-        arr[x] = args[x + 1]
+        val = args[x + 1]
+        if isinstance(val, Integer):
+            val = IntegerMutableCell(val.int_val())
+        arr[x] = val
     return CustomTypeInstance(tp, arr)
 
 @as_var("set-field!")
@@ -114,3 +126,29 @@ def get_field(inst, field):
     affirm(isinstance(field, Keyword), u"Field must be a keyword")
     return inst.get_field(field)
 
+
+
+class AbstractMutableCell(Object):
+    _type = Type(u"pixie.stdlib.AbstractMutableCell")
+    def type(self):
+        return self._type
+
+    def set_mutable_cell_value(self, ct, fields, nm, idx, value):
+        pass
+
+    def get_mutable_cell_value(self):
+        pass
+
+class IntegerMutableCell(AbstractMutableCell):
+    def __init__(self, int_val):
+        self._mutable_integer_val = int_val
+
+    def set_mutable_cell_value(self, ct, fields, nm, idx, value):
+        if not isinstance(value, Integer):
+            ct.set_mutable(nm)
+            fields[idx] = value
+        else:
+            self._mutable_integer_val = value.int_val()
+
+    def get_mutable_cell_value(self):
+        return rt.wrap(self._mutable_integer_val)
