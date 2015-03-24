@@ -13,7 +13,7 @@ UNROLL_IF_SMALLER_THAN = 8
 
 class Array(object.Object):
     _type = object.Type(u"pixie.stdlib.Array")
-    _immutable_fields_ = ["_list[*]"]
+    _immutable_fields_ = ["_list"]
     def type(self):
         return Array._type
 
