@@ -751,7 +751,6 @@ there's a value associated with the key. Use `some` for checking for values."
          ~then
          (cond ~@clauses))))
 
-
 (defmacro try [& body]
   (loop [catch nil
          catch-sym nil
@@ -2140,6 +2139,23 @@ Expands to calls to `extend-type`."
                      `(let ~coll-bindings
                         [~@body])))]
     `(or (seq ~(gen-loop [] bindings)) '())))
+
+;; TODO: docs, tests
+;; TODO: implement :>> like in Clojure?
+(defmacro condp [pred-form expr & clauses]
+  (let [x (gensym 'expr), pred (gensym 'pred)]
+    `(let [~x ~expr, ~pred ~pred-form]
+       (cond ~@(mapcat
+                 (fn [[a b :as clause]]
+                   (if (> (count clause) 1)
+                     `((~pred ~a ~x) ~b)
+                     `(:else ~a)))
+                 (partition 2 clauses))))))
+
+;; TODO: Not sure if I like the set idea...
+(defmacro case [expr & args]
+  `(condp #(if (set? %1) (%1 %2) (= %1 %2))
+     ~expr ~@args))
 
 (defmacro use
   [ns]
