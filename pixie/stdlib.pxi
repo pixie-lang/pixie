@@ -2221,6 +2221,19 @@ Expands to calls to `extend-type`."
                     (mapcat walk (children node))))))]
     (walk root)))
 
+(defn flatten [x]
+  ; TODO: laziness?
+  {:doc "Take any nested combination of ISeqable things, and return their contents
+        as a single, flat sequence.
+
+        Calling this function on something that is not ISeqable returns a seq with that
+        value as its only element."
+   :examples [["(flatten [[1 2 [3 4] [5 6]] 7])" nil [1 2 3 4 5 6 7]]]}
+  (if (not (satisfies? ISeqable x)) [x]
+    (transduce (comp (map flatten) cat)
+               conj []
+               (seq x))))
+
 (defn mapv
   ([f col]
    (transduce (map f) conj col)))
