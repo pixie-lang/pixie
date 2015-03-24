@@ -1596,6 +1596,14 @@ not enough elements were present."
      (when-let [s (seq coll)]
        (cons (take n s) (partition n step (drop step s))))))
 
+;; TODO: docs, tests
+(defn partitionf [f coll]
+  (when-let [s (seq coll)]
+    (lazy-seq
+      (let [n (f s)]
+        (cons (take n s)
+              (partitionf f (drop n coll)))))))
+
 (defn destructure [binding expr]
   (cond
    (symbol? binding) [binding expr]
