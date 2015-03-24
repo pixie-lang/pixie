@@ -3,7 +3,7 @@
 
 ; reexport native string functions
 (def substring si/substring)
-(def index-of si/index-of)
+(def index-of (comp #(if (not= -1 %) %) si/index-of))
 (def split si/split)
 
 (def ends-with? si/ends-with)
@@ -34,18 +34,16 @@
   (let [offset (if (zero? (count x)) (+ 1 (count r)) (count r))]
     (loop [start 0
            s s]
-      (let [i (index-of s x start)]
-        (if (neg? i)
-          s
-          (recur (+ i offset) (str (substring s 0 i) r (substring s (+ i (count x))))))))))
+      (if-let [i (index-of s x start)]
+        (recur (+ i offset) (str (substring s 0 i) r (substring s (+ i (count x)))))
+        s))))
 
 (defn replace-first
   "Replace the first occurrence of x in s with r."
   [s x r]
-  (let [i (index-of s x)]
-    (if (neg? i)
-      s
-      (str (substring s 0 i) r (substring s (+ i (count x)))))))
+  (if-let [i (index-of s x)]
+    (str (substring s 0 i) r (substring s (+ i (count x))))
+    s))
 
 (defn join
   {:doc "Join the elements of the collection using an optional separator"
