@@ -1249,6 +1249,17 @@ and implements IAssociative, ILookup and IObject."
   ([n x]
      (take n (repeat x))))
 
+(defn repeatedly
+  {:doc "Returns a lazy seq that contains the return values of repeated calls to f.
+
+        Yields an infinite seq with one argument.
+        With two arguments n specifies the number of elements."
+   :examples [["(into '(:batman!) (repeatedly 8 (fn [] :na)))"
+               nil (:na :na :na :na :na :na :na :na :batman!)]]
+   :signatures [[f] [n f]]}
+  ([f] (lazy-seq (cons (f) (repeatedly f))))
+  ([n f] (take n (repeatedly f))))
+
 (defmacro doseq
   {:doc "Evaluates all elements of the seq, presumably for side effects. Returns nil."
    :added "0.1"}
