@@ -1593,8 +1593,9 @@ not enough elements were present."
    :added "0.1"}
   ([n coll] (partition n n coll))
   ([n step coll]
-     (when-let [s (seq coll)]
-       (cons (take n s) (partition n step (drop step s))))))
+   (when-let [s (seq coll)]
+     (lazy-seq
+       (cons (take n s) (partition n step (drop step s)))))))
 
 ;; TODO: docs, tests
 (defn partitionf [f coll]
