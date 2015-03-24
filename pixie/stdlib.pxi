@@ -2197,10 +2197,14 @@ Expands to calls to `extend-type`."
   ([f col]
    (transduce (map f) conj col)))
 
+(def *1)
+(def *2)
+(def *3)
 (defn -push-history [x]
   (def *3 *2)
   (def *2 *1)
   (def *1 x))
 
+(def *e)
 (defn -set-*e [e]
   (def *e e))

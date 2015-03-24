@@ -40,15 +40,6 @@ LOAD_PATHS = intern_var(u"pixie.stdlib", u"load-paths")
 LOAD_PATHS.set_root(nil)
 load_path = Var(u"pixie.stdlib", u"internal-load-path")
 
-STAR_1 = intern_var(u"pixie.stdlib", u"*1")
-STAR_1.set_root(nil)
-STAR_2 = intern_var(u"pixie.stdlib", u"*2")
-STAR_2.set_root(nil)
-STAR_3 = intern_var(u"pixie.stdlib", u"*3")
-STAR_3.set_root(nil)
-STAR_E = intern_var(u"pixie.stdlib", u"*e")
-STAR_E.set_root(nil)
-
 class ReplFn(NativeFn):
     def __init__(self, args):
         self._argv = args
@@ -61,58 +52,6 @@ class ReplFn(NativeFn):
         repl = intern_var(u"pixie.repl", u"repl")
         with with_ns(u"user"):
             repl.invoke([])
-
-
-
-    # def inner_invoke(self, args):
-    #     from pixie.vm.keyword import keyword
-    #     import pixie.vm.rt as rt
-    #     from pixie.vm.string import String
-    #     import pixie.vm.persistent_vector as vector
-    #
-    #     print "Pixie 0.1 - Interactive REPL"
-    #     print "(" + platform.name + ", " + platform.cc + ")"
-    #     print ":exit-repl or Ctrl-D to quit"
-    #     print "----------------------------"
-    #
-    #     with with_ns(u"user"):
-    #         NS_VAR.deref().include_stdlib()
-    #
-    #     acc = vector.EMPTY
-    #     for x in self._argv:
-    #         acc = rt.conj(acc, rt.wrap(x))
-    #
-    #     PROGRAM_ARGUMENTS.set_root(acc)
-    #
-    #     rdr = MetaDataReader(PromptReader())
-    #     with with_ns(u"user"):
-    #         while True:
-    #             try:
-    #                 val = read(rdr, False)
-    #                 if val is eof:
-    #                     break
-    #                 val = interpret(compile(val))
-    #                 self.set_recent_vars(val)
-    #             except WrappedException as ex:
-    #                 print "Error: ", ex._ex.__repr__()
-    #                 rdr.reset_line()
-    #                 self.set_error_var(ex._ex)
-    #                 continue
-    #             if val is keyword(u"exit-repl"):
-    #                 break
-    #             val = rt._repr(val)
-    #             assert isinstance(val, String), "str should always return a string"
-    #             print unicode_to_utf8(val._str)
-
-    def set_recent_vars(self, val):
-        if rt.eq(val, STAR_1.deref()):
-            return
-        STAR_3.set_root(STAR_2.deref())
-        STAR_2.set_root(STAR_1.deref())
-        STAR_1.set_root(val)
-
-    def set_error_var(self, ex):
-        STAR_E.set_root(ex)
 
 class BatchModeFn(NativeFn):
     def __init__(self, args):
