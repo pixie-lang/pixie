@@ -1049,6 +1049,15 @@ Creates new maps if the keys are not present."
                             (assoc m k (apply update-inner-f (get m k) f ks))))]
     (apply update-inner-f m f ks)))
 
+; FIXME: This causes compile_basics to fail on stacklets.pxi for some weird reason.
+; (defn map-invert
+;   {:doc "Return a map where the vals are mapped to the keys."
+;    :examples [["(map-invert {:a :b, :c :d})" nil {:b :a, :d :c}]]}
+;   [m]
+;   (reduce (fn [m* ent]
+;             (assoc m* (val ent) (key ent)))
+;           {} m))
+
 (def subs pixie.string.internal/substring)
 
 (defmacro assert
