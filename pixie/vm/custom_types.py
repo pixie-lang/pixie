@@ -2,7 +2,7 @@ from pixie.vm.object import Object, Type, affirm, runtime_error
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.code import as_var
-from pixie.vm.numbers import Integer
+from pixie.vm.numbers import Integer, Float
 from pixie.vm.keyword import Keyword
 import pixie.vm.rt as rt
 
@@ -110,6 +110,9 @@ def _new__args(args):
         val = args[x + 1]
         if isinstance(val, Integer):
             val = IntegerMutableCell(val.int_val())
+        elif isinstance(val, Float):
+            val = FloatMutableCell(val.float_val())
+            
         arr[x] = val
     return CustomTypeInstance(tp, arr)
 
@@ -146,9 +149,29 @@ class IntegerMutableCell(AbstractMutableCell):
     def set_mutable_cell_value(self, ct, fields, nm, idx, value):
         if not isinstance(value, Integer):
             ct.set_mutable(nm)
-            fields[idx] = value
+            if isinstance(value, Float):
+                fields[idx] = FloatMutableCell(value.float_val())
+            else:
+                fields[idx] = value
         else:
             self._mutable_integer_val = value.int_val()
 
     def get_mutable_cell_value(self):
         return rt.wrap(self._mutable_integer_val)
+
+class FloatMutableCell(AbstractMutableCell):
+    def __init__(self, float_val):
+        self._mutable_float_val = float_val
+
+    def set_mutable_cell_value(self, ct, fields, nm, idx, value):
+        if not isinstance(value, Float):
+            ct.set_mutable(nm)
+            if isinstance(value, Integer):
+                fields[idx] = IntegerMutableCell(value.int_val())
+            else:
+                fields[idx] = value
+        else:
+            self._mutable_float_val = value.float_val()
+
+    def get_mutable_cell_value(self):
+        return rt.wrap(self._mutable_float_val)
