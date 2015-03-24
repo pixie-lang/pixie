@@ -17,6 +17,17 @@
 (def lower-case si/lower-case)
 (def upper-case si/upper-case)
 
+; TODO: There should be locale-aware variants of these values
+(def lower "abcdefghijklmnopqrstuvwxyz")
+(def upper "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+(def digits "0123456789")
+(def punctuation "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
+(def whitespace (str \space \newline \tab \backspace \formfeed \return))
+(def letters (str lower upper))
+(def printable (str letters digits punctuation whitespace))
+(def hexdigits "0123456789abcdefABCDEF")
+(def octdigits "012345678")
+
 (defn replace
   "Replace all occurrences of x in s with r."
   [s x r]
@@ -54,7 +65,7 @@
   "True if s is nil, empty, or contains only whitespace."
   [s]
   (if s
-    (let [white #{\space \newline \tab \backspace \formfeed \return}
+    (let [white (set whitespace)
           length (count s)]
       (loop [index 0]
         (if (= length index)
