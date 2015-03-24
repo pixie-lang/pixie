@@ -6,7 +6,7 @@ from pixie.vm.keyword import Keyword
 import pixie.vm.rt as rt
 
 class CustomType(Type):
-    __immutable_fields__ = ["_slots", "_rev?"]
+    _immutable_fields_ = ["_slots", "_rev?"]
     def __init__(self, name, slots):
         Type.__init__(self, name)
 
@@ -36,7 +36,7 @@ class CustomType(Type):
         return len(self._slots)
 
 class CustomTypeInstance(Object):
-    __immutable_fields__ = ["_type"]
+    _immutable_fields_ = ["_type"]
     def __init__(self, type, fields):
         affirm(isinstance(type, CustomType), u"Can't create a instance of a non custom type")
         self._custom_type = type

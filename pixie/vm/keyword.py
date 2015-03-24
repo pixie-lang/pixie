@@ -10,7 +10,6 @@ from rpython.rlib.rarithmetic import intmask
 
 class Keyword(Object):
     _type = Type(u"pixie.stdlib.Keyword")
-    __immutable_fields__ = ["_hash"]
     def __init__(self, name):
         self._str = name
         self._w_name = None

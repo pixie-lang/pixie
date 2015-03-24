@@ -814,6 +814,44 @@ def _doc(self):
     return rt.wrap(self._doc)
 
 
+class PartialFunction(code.NativeFn):
+    _immutable_fields_ = ["_partial_f", "_partial_args"]
+    def __init__(self, f, args):
+        code.NativeFn.__init__(self)
+        self._partial_f = f
+        self._partial_args = args
+
+    @jit.unroll_safe
+    def invoke(self, args):
+        new_args = [None] * (len(args) + len(self._partial_args))
+
+        for x in range(len(self._partial_args)):
+            new_args[x] = self._partial_args[x]
+
+        plen = len(self._partial_args)
+
+        for x in range(len(args)):
+            new_args[plen + x] = args[x]
+
+
+        return self._partial_f.invoke(new_args)
+
+
+@as_var("partial")
+@jit.unroll_safe
+def _partial__args(args):
+    """(partial f & args)
+       Creates a function that is a partial application of f. Thus ((partial + 1) 2) == 3"""
+
+    f = args[0]
+
+    new_args = [None] * (len(args) - 1)
+
+    for x in range(len(new_args)):
+        new_args[x] = args[x + 1]
+
+    return PartialFunction(f, new_args)
+
 @as_var("-get-current-var-frames")
 def _get_current_var_frames(self):
     """(-get-current-var-frames)
@@ -826,3 +864,4 @@ def _set_current_var_frames(self, frames):
        Sets the current var frames. Frames should be a cons list of hashmaps containing mappings of vars to dynamic
        values. Setting this value to anything but this data format will cause undefined errors."""
     code._dynamic_vars.set_current_frames(frames)
+

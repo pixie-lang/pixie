@@ -231,16 +231,17 @@
                                (seq (next coll)))
                         init)))))
 
-(def indexed-reduce (fn indexed-reduce
-                      [coll f init]
-                      (let [max (count coll)]
-                      (loop [init init
-                             i 0]
-                        (if (reduced? init)
-                          @init
-                          (if (-eq i max)
-                            init
-                            (recur (f init (nth coll i nil)) (+ i 1))))))))
+(def indexed-reduce
+  (fn indexed-reduce
+    [coll f init]
+    (let [max (count coll)]
+      (loop [init init
+             i 0]
+        (if (reduced? init)
+          @init
+          (if (-eq i max)
+            init
+            (recur (f init (nth coll i nil)) (+ i 1))))))))
 
 (def rest (fn ^{:doc "Returns the elements after the first element, or () if there are no more elements."
                 :signatures [[coll]]
@@ -2147,10 +2148,6 @@ Expands to calls to `extend-type`."
                 `(-dispose! ~nm))
               names)
        result#)))
-
-(defn partial [f & args]
-  (fn [& args2]
-    (apply f (-> args vec (into args2)))))
 
 (defn pst
   {:doc "Prints the trace of a Runtime Exception if given, or the last Runtime Exception in *e"

@@ -3,6 +3,7 @@ from pixie.vm.primitives import nil
 import pixie.vm.stdlib as proto
 from  pixie.vm.code import extend, as_var
 import pixie.vm.rt as rt
+import rpython.rlib.jit as jit
 
 
 class LazySeq(object.Object):
@@ -16,6 +17,7 @@ class LazySeq(object.Object):
         self._meta = meta
         self._s = nil
 
+    @jit.jit_callback("lazy_seq_sval")
     def sval(self):
         if self._fn is None:
             return self._s
@@ -23,6 +25,21 @@ class LazySeq(object.Object):
             self._s = self._fn.invoke([])
             self._fn = None
             return self._s
+
+    @jit.dont_look_inside
+    def lazy_seq_seq(self):
+        self.sval()
+        if self._s is not nil:
+            ls = self._s
+            while True:
+                if isinstance(ls, LazySeq):
+                    ls = ls.sval()
+                    continue
+                else:
+                    self._s = ls
+                    return rt.seq(self._s)
+        else:
+            return nil
 
 
 
@@ -41,18 +58,8 @@ def _next(self):
 @extend(proto._seq, LazySeq)
 def _seq(self):
     assert isinstance(self, LazySeq)
-    self.sval()
-    if self._s is not nil:
-        ls = self._s
-        while True:
-            if isinstance(ls, LazySeq):
-                ls = ls.sval()
-                continue
-            else:
-                self._s = ls
-                return rt.seq(self._s)
-    else:
-        return nil
+    return self.lazy_seq_seq()
+
 
 @as_var("lazy-seq*")
 def lazy_seq(f):
