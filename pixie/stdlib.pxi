@@ -2259,7 +2259,8 @@ Expands to calls to `extend-type`."
 
         Calling this function on something that is not ISeqable returns a seq with that
         value as its only element."
-   :examples [["(flatten [[1 2 [3 4] [5 6]] 7])" nil [1 2 3 4 5 6 7]]]}
+   :examples [["(flatten [[1 2 [3 4] [5 6]] 7])" nil [1 2 3 4 5 6 7]]
+              ["(flatten :this)" nil [:this]]]}
   (if (not (satisfies? ISeqable x)) [x]
     (transduce (comp (map flatten) cat)
                conj []
