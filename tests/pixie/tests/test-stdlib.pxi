@@ -277,7 +277,10 @@
   (t/assert= (some even? [2 3 6 8]) true)
   (t/assert= (some even? [1 3 5 8]) true)
   (t/assert= (some even? []) false)
-  (t/assert= (some odd? [2]) false))
+  (t/assert= (some odd? [2]) false)
+  (t/assert= (some #{:x :y} [:a :b :x :y]) :x)
+  (t/assert= (some #{:x :y} [:a :b :c :y]) :y)
+  (t/assert= (some #{:x :y} [:a :b :c :d]) false))
 
 (t/deftest test-filter
   (t/assert= (vec (filter (fn [x] true) [])) [])
@@ -416,3 +419,59 @@
 (t/deftest test-frequencies
   (t/assert= (frequencies [1 2 3 4 3 2 1])
              {1 2, 2 2, 3 2, 4 1}))
+
+(t/deftest test-condp
+  (t/assert-throws? RuntimeException
+    "No matching clause!"
+    (condp :dont-call-me :dont-use-me))
+  (let [f (fn [x]
+            (condp = x
+              1 :one
+              2 :two
+              :whatever))]
+    (t/assert= (f 1) :one)
+    (t/assert= (f 2) :two)
+    (t/assert= (f 9) :whatever)))
+
+(t/deftest test-case
+  (t/assert-throws? RuntimeException
+    "No matching clause!"
+    (case :no-matter-what))
+  (let [f (fn [x]
+            (case x
+              1 :one
+              2 :two
+              #{3 4} :large
+              :toolarge))]
+    (t/assert= (f 1) :one)
+    (t/assert= (f 2) :two)
+    (t/assert= (f 3) :large)
+    (t/assert= (f 4) :large)
+    (t/assert= (f 9) :toolarge)))
+
+(t/deftest test-instance?
+  (t/assert= (instance? Keyword :a) true)
+  (t/assert= (instance? Keyword 'a) false)
+  (t/assert= (instance? [Symbol Keyword] :a) true)
+  (t/assert= (instance? [Symbol Keyword] 'a) true)
+  (t/assert= (instance? [Symbol Keyword] 42) false)
+  (t/assert= (instance? [] :x) false)
+  (t/assert-throws? RuntimeException
+    "c must be a type"
+    (instance? :not-a-type 123))
+  (t/assert-throws? RuntimeException
+    "c must be a type"
+    (instance? [Keyword :also-not-a-type] 123)))
+
+(t/deftest test-satisfies?
+  (t/assert= (satisfies? IIndexed [1 2]) true)
+  (t/assert= (satisfies? IIndexed '(1 2)) false)
+  (t/assert= (satisfies? [] :xyz) true)
+  (t/assert= (satisfies? [ILookup IIndexed] [1 2]) true)
+  (t/assert= (satisfies? [ILookup IIndexed] {1 2}) false)
+  (t/assert-throws? RuntimeException
+    "proto must be a Protocol"
+    (satisfies? :not-a-proto 123))
+  (t/assert-throws? RuntimeException
+    "proto must be a Protocol"
+    (satisfies? [IIndexed :also-not-a-proto] [1 2])))

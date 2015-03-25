@@ -3,7 +3,7 @@
 
 ; reexport native string functions
 (def substring si/substring)
-(def index-of si/index-of)
+(def index-of (comp #(if (not= -1 %) %) si/index-of))
 (def split si/split)
 
 (def ends-with? si/ends-with)
@@ -17,24 +17,33 @@
 (def lower-case si/lower-case)
 (def upper-case si/upper-case)
 
+; TODO: There should be locale-aware variants of these values
+(def lower "abcdefghijklmnopqrstuvwxyz")
+(def upper "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+(def digits "0123456789")
+(def punctuation "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
+(def whitespace (str \space \newline \tab \backspace \formfeed \return))
+(def letters (str lower upper))
+(def printable (str letters digits punctuation whitespace))
+(def hexdigits "0123456789abcdefABCDEF")
+(def octdigits "012345678")
+
 (defn replace
   "Replace all occurrences of x in s with r."
   [s x r]
   (let [offset (if (zero? (count x)) (+ 1 (count r)) (count r))]
     (loop [start 0
            s s]
-      (let [i (index-of s x start)]
-        (if (neg? i)
-          s
-          (recur (+ i offset) (str (substring s 0 i) r (substring s (+ i (count x))))))))))
+      (if-let [i (index-of s x start)]
+        (recur (+ i offset) (str (substring s 0 i) r (substring s (+ i (count x)))))
+        s))))
 
 (defn replace-first
   "Replace the first occurrence of x in s with r."
   [s x r]
-  (let [i (index-of s x)]
-    (if (neg? i)
-      s
-      (str (substring s 0 i) r (substring s (+ i (count x)))))))
+  (if-let [i (index-of s x)]
+    (str (substring s 0 i) r (substring s (+ i (count x))))
+    s))
 
 (defn join
   {:doc "Join the elements of the collection using an optional separator"
@@ -54,7 +63,7 @@
   "True if s is nil, empty, or contains only whitespace."
   [s]
   (if s
-    (let [white #{\space \newline \tab \backspace \formfeed \return}
+    (let [white (set whitespace)
           length (count s)]
       (loop [index 0]
         (if (= length index)
@@ -63,3 +72,32 @@
             (recur (inc index))
             false))))
     true))
+
+(defmacro interp
+  ; TODO: This might merit special read syntax
+  {:doc "String interpolation."
+   :examples [["(require pixie.string :refer [interp])"]
+              ["(interp \"2 plus 2 is $(+ 2 2)$!\")" nil "2 plus 2 is 4!"]
+              ["(let [x \"locals\"] (interp \"You can use arbitrary forms; for example $x$\"))"
+               nil "You can use arbitrary forms; for example locals"]
+              ["(interp \"$$$$ is the escape for a literal $$\")"
+               nil "$$ is the escape for a literal $"]
+              ]}
+  [txt]
+  (loop [forms [], txt txt]
+    (cond
+      (empty? txt) `(str ~@ forms)
+      (starts-with? txt "$")
+        (let [pos (or (index-of txt "$" 1)
+                      (throw "Unmatched $ in interp argument!"))
+              form-str (subs txt 1 pos)
+              form (if (empty? form-str) "$"
+                     (read-string form-str))
+              rest-str (subs txt (inc pos))]
+          (recur (conj forms form) rest-str))
+      :else
+        (let [pos (or (index-of txt "$")
+                      (count txt))
+              form (subs txt 0 pos)
+              rest-str (subs txt pos)]
+          (recur (conj forms form) rest-str)))))

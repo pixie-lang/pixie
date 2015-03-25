@@ -255,11 +255,11 @@ def write_object(obj, wtr):
     elif isinstance(obj, Var):
         #wtr.write_cached_obj(obj, write_var)
         write_var(obj, wtr)
-    elif rt.satisfies_QMARK_(rt.IMap.deref(), obj):
+    elif rt._satisfies_QMARK_(rt.IMap.deref(), obj):
         write_map(obj, wtr)
-    elif rt.satisfies_QMARK_(rt.IVector.deref(), obj):
+    elif rt._satisfies_QMARK_(rt.IVector.deref(), obj):
         write_vector(obj, wtr)
-    elif rt.satisfies_QMARK_(rt.ISeq.deref(), obj):
+    elif rt._satisfies_QMARK_(rt.ISeq.deref(), obj):
         write_seq(obj, wtr)
     elif isinstance(obj, Keyword):
         wtr.write_cached_obj(obj, write_keyword)

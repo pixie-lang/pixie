@@ -164,6 +164,32 @@
 (def reduce (fn [rf init col]
               (-reduce col rf init)))
 
+(def instance? (fn ^{:doc "Checks if x is an instance of t.
+
+                           When t is seqable, checks if x is an instance of
+                           any of the types contained therein."
+                     :signatures [[t x]]}
+                 instance? [t x]
+                 (if (-satisfies? ISeqable t)
+                   (let [ts (seq t)]
+                     (if (not ts) false
+                       (or (-instance? (first ts) x)
+                           (instance? (rest ts) x))))
+                   (-instance? t x))))
+
+(def satisfies? (fn ^{:doc "Checks if x satisfies the protocol p.
+
+                            When p is seqable, checks if x satisfies all of
+                            the protocols contained therein."
+                      :signatures [[t x]]}
+                  satisfies? [p x]
+                  (if (-satisfies? ISeqable p)
+                    (let [ps (seq p)]
+                      (if (not ps) true
+                        (and (-satisfies? (first ps) x)
+                             (satisfies? (rest ps) x))))
+                    (-satisfies? p x))))
+
 (def into (fn ^{:doc "Add the elements of `from` to the collection `to`."
                 :signatures [[to from]]
                 :added "0.1"}
@@ -751,7 +777,6 @@ there's a value associated with the key. Use `some` for checking for values."
          ~then
          (cond ~@clauses))))
 
-
 (defmacro try [& body]
   (loop [catch nil
          catch-sym nil
@@ -802,7 +827,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn string? [v] (instance? String v))
 (defn keyword? [v] (instance? Keyword v))
 
-(defn list? [v] (instance? PersistentList v))
+(defn list? [v] (instance? [PersistentList Cons] v))
 (defn set? [v] (instance? PersistentHashSet v))
 (defn map? [v] (satisfies? IMap v))
 (defn fn? [v] (satisfies? IFn v))
@@ -861,17 +886,21 @@ If further arguments are passed, invokes the method named by symbol, passing the
       ([x y] (not (f x y)))
       ([x y & more] (not (apply f x y more))))))
 
-(defn some
-  {:doc "Checks if the predicate is true for any element of the collection.
+(defn constantly [x]
+  {:doc "Return a function that always returns x, no matter what it is called with."
+   :examples [["(let [f (constantly :me)] [(f 1) (f \"foo\") (f :abc) (f nil)])"
+               nil [:me :me :me :me]]]}
+  (fn [& _] x))
 
-Stops if it finds such an element."
+(defn some
+  {:doc "Returns the first true value of the predicate for the elements of the collection."
    :signatures [[pred coll]]
    :added "0.1"}
   [pred coll]
-  (cond
-   (nil? (seq coll)) false
-   (pred (first coll)) true
-   :else (recur pred (next coll))))
+  (if-let [coll (seq coll)]
+    (or (pred (first coll))
+        (recur pred (next coll)))
+    false))
 
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn map-entry-nth [self idx]
@@ -1053,7 +1082,7 @@ Creates new maps if the keys are not present."
   ([test msg]
      `(if ~test
         nil
-        (throw (str "Assert failed " ~msg)))))
+        (throw (str "Assert failed: " ~msg)))))
 
 (defmacro resolve
   {:doc "Resolve the var associated with the symbol in the current namespace."
@@ -1242,6 +1271,17 @@ and implements IAssociative, ILookup and IObject."
      (cons x (lazy-seq* (fn [] (repeat x)))))
   ([n x]
      (take n (repeat x))))
+
+(defn repeatedly
+  {:doc "Returns a lazy seq that contains the return values of repeated calls to f.
+
+        Yields an infinite seq with one argument.
+        With two arguments n specifies the number of elements."
+   :examples [["(into '(:batman!) (repeatedly 8 (fn [] :na)))"
+               nil (:na :na :na :na :na :na :na :na :batman!)]]
+   :signatures [[f] [n f]]}
+  ([f] (lazy-seq (cons (f) (repeatedly f))))
+  ([n f] (take n (repeatedly f))))
 
 (defmacro doseq
   {:doc "Evaluates all elements of the seq, presumably for side effects. Returns nil."
@@ -1476,6 +1516,13 @@ The new value is thus `(apply f current-value-of-atom args)`."
       (recur (dec n) (next s))
       s)))
 
+(defn split-at
+  {:doc "Returns a vector of the first n elements of the collection, and the remaining elements."
+   :examples [["(split-at 2 [:a :b :c :d :e])" nil
+               [(:a :b) (:c :d :e)]]]}
+  [n coll]
+  [(take n coll) (drop n coll)])
+
 (defmacro while
   {:doc "Repeatedly executes body while test expression is true. Presumes
   some side-effect will cause test to become false/nil. Returns nil"
@@ -1568,8 +1615,21 @@ not enough elements were present."
    :added "0.1"}
   ([n coll] (partition n n coll))
   ([n step coll]
-     (when-let [s (seq coll)]
-       (cons (take n s) (partition n step (drop step s))))))
+   (when-let [s (seq coll)]
+     (lazy-seq
+       (cons (take n s) (partition n step (drop step s)))))))
+
+(defn partitionf [f coll]
+  {:doc "A generalized version of partition. Instead of taking a constant number of elements,
+         this function calls f with the remaining collection to determine how many elements to
+         take."
+   :examples [["(partitionf first [1 :a, 2 :a b, 3 :a :b :c])"
+               nil ((1 :a) (2 :a :b) (3 :a :b :c))]]}
+  (when-let [s (seq coll)]
+    (lazy-seq
+      (let [n (f s)]
+        (cons (take n s)
+              (partitionf f (drop n coll)))))))
 
 (defn destructure [binding expr]
   (cond
@@ -1942,6 +2002,9 @@ user => (refer 'pixie.string :exclude '(substring))"
    (pred (first coll)) (recur pred (next coll))
    :else false))
 
+; If you want a fn that uses destructuring in its parameter list, place
+; it after this definition. If you don't, you will get compile failures
+; in unrelated files.
 (defmacro fn
   {:doc "Creates a function.
 
@@ -2115,6 +2178,45 @@ Expands to calls to `extend-type`."
                         [~@body])))]
     `(or (seq ~(gen-loop [] bindings)) '())))
 
+(defn reverse
+  ; TODO: We should probably have a protocol IReversible, so we can e.g.
+  ;       reverse vectors efficiently, etc..
+  [coll]
+  "Returns a collection that contains all the elements of the argument in reverse order."
+  (into () coll))
+
+;; TODO: implement :>> like in Clojure?
+(defmacro condp
+  "Takes a binary predicate, an expression and a number of two-form clauses.
+  Calls the predicate on the first value of each clause and the expression.
+  If the result is truthy returns the second value of the clause.
+
+  If the number of arguments is odd and no clause matches, the last argument is returned.
+  If the number of arguments is even and no clause matches, throws an exception."
+  [pred-form expr & clauses]
+  (let [x (gensym 'expr), pred (gensym 'pred)]
+    `(let [~x ~expr, ~pred ~pred-form]
+       (cond ~@(mapcat
+                 (fn [[a b :as clause]]
+                   (if (> (count clause) 1)
+                     `((~pred ~a ~x) ~b)
+                     `(:else ~a)))
+                 (partition 2 clauses))
+             :else (throw "No matching clause!")))))
+
+(defmacro case
+  "Takes an expression and a number of two-form clauses.
+  Checks for each clause if the first part is equal to the expression.
+  If yes, returns the value of the second part.
+
+  The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
+
+  If the number of arguments is odd and no clause matches, the last argument is returned.
+  If the number of arguments is even and no clause matches, throws an exception."
+  [expr & args]
+  `(condp #(if (set? %1) (%1 %2) (= %1 %2))
+     ~expr ~@args))
+
 (defmacro use
   [ns]
   `(do
@@ -2176,14 +2278,47 @@ Expands to calls to `extend-type`."
                     (mapcat walk (children node))))))]
     (walk root)))
 
+(defn flatten [x]
+  ; TODO: laziness?
+  {:doc "Takes any nested combination of ISeqable things, and return their contents
+        as a single, flat sequence.
+
+        Calling this function on something that is not ISeqable returns a seq with that
+        value as its only element."
+   :examples [["(flatten [[1 2 [3 4] [5 6]] 7])" nil [1 2 3 4 5 6 7]]
+              ["(flatten :this)" nil [:this]]]}
+  (if (not (satisfies? ISeqable x)) [x]
+    (transduce (comp (map flatten) cat)
+               conj []
+               (seq x))))
+
+(defn juxt [& fns]
+  {:doc "Returns a function that applies all fns to its arguments,
+         and returns a vector of the results."
+   :examples [["((juxt + - *) 2 3)" nil [5 -1 6]]]}
+  (fn [& args]
+    (mapv #(apply % args) fns)))
+
+(defn map-invert
+  {:doc "Returns a map where the vals are mapped to the keys."
+   :examples [["(map-invert {:a :b, :c :d})" nil {:b :a, :d :c}]]}
+  [m]
+  (reduce (fn [m* ent]
+            (assoc m* (val ent) (key ent)))
+          {} m))
+
 (defn mapv
   ([f col]
    (transduce (map f) conj col)))
 
+(def *1)
+(def *2)
+(def *3)
 (defn -push-history [x]
   (def *3 *2)
   (def *2 *1)
   (def *1 x))
 
+(def *e)
 (defn -set-*e [e]
   (def *e e))

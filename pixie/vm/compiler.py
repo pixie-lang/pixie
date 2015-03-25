@@ -353,7 +353,7 @@ def compile_form(form, ctx):
         ctx.push_const(nil)
         return
 
-    if rt.satisfies_QMARK_(rt.ISeq.deref(), form) and form is not nil:
+    if rt._satisfies_QMARK_(rt.ISeq.deref(), form) and form is not nil:
         form = macroexpand(form)
         return compile_cons(form, ctx)
     if isinstance(form, numbers.Integer):
@@ -425,7 +425,7 @@ def compile_form(form, ctx):
         compile_set_literal(form, ctx)
         return
 
-    if rt.satisfies_QMARK_(rt.IMap.deref(), form):
+    if rt._satisfies_QMARK_(rt.IMap.deref(), form):
         compile_map_literal(form, ctx)
         return
 
@@ -480,7 +480,7 @@ def compile_fn(form, ctx):
 
 
 
-    if rt.satisfies_QMARK_(rt.ISeq.deref(), rt.first(form)):
+    if rt._satisfies_QMARK_(rt.ISeq.deref(), rt.first(form)):
         arities = []
         while form is not nil:
             required_arity, argc = compile_fn_body(name, rt.first(rt.first(form)), rt.next(rt.first(form)), ctx)

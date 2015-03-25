@@ -31,15 +31,15 @@
   (let [s "heyhohuh"]
     (t/assert= (s/index-of s "hey") 0)
     (t/assert= (s/index-of s "ho") 3)
-    (t/assert= (s/index-of s "foo") -1)
+    (t/assert= (s/index-of s "foo") nil)
 
     (t/assert= (s/index-of s "h" 2) 3)
     (t/assert= (s/index-of s "h" 4) 5)
     (t/assert= (s/index-of s "hey" 0) 0)
-    (t/assert= (s/index-of s "hey" 1) -1)
+    (t/assert= (s/index-of s "hey" 1) nil)
 
-    (t/assert= (s/index-of s "h" 0 0) -1)
-    (t/assert= (s/index-of s "h" 1 2) -1)))
+    (t/assert= (s/index-of s "h" 0 0) nil)
+    (t/assert= (s/index-of s "h" 1 2) nil)))
 
 (t/deftest test-substring
   (let [s "heyhohuh"]
