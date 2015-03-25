@@ -18,10 +18,12 @@ import os.path as path
 import rpython.rlib.rpath as rpath
 import rpython.rlib.rpath as rposix
 from rpython.rlib.objectmodel import we_are_translated
+from rpython.jit.codewriter.policy import log
 
 class DebugIFace(JitHookInterface):
     def on_abort(self, reason, jitdriver, greenkey, greenkey_repr, logops, operations):
-        print "Aborted Trace, reason: ", Counters.counter_names[reason], logops, greenkey_repr
+        # print "Aborted Trace, reason: ", Counters.counter_names[reason], logops, greenkey_repr
+        pass
 
 import sys, pdb
 
