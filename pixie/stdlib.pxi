@@ -2254,7 +2254,7 @@ Expands to calls to `extend-type`."
 
 (defn flatten [x]
   ; TODO: laziness?
-  {:doc "Take any nested combination of ISeqable things, and return their contents
+  {:doc "Takes any nested combination of ISeqable things, and return their contents
         as a single, flat sequence.
 
         Calling this function on something that is not ISeqable returns a seq with that
@@ -2273,7 +2273,7 @@ Expands to calls to `extend-type`."
     (mapv #(apply % args) fns)))
 
 (defn map-invert
-  {:doc "Return a map where the vals are mapped to the keys."
+  {:doc "Returns a map where the vals are mapped to the keys."
    :examples [["(map-invert {:a :b, :c :d})" nil {:b :a, :d :c}]]}
   [m]
   (reduce (fn [m* ent]
