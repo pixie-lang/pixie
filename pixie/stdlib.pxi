@@ -167,7 +167,8 @@
 (def instance? (fn ^{:doc "Checks if x is an instance of t.
 
                            When t is seqable, checks if x is an instance of
-                           any of the types contained therein."}
+                           any of the types contained therein."
+                     :signatures [[t x]]}
                  instance? [t x]
                  (if (-satisfies? ISeqable t)
                    (let [ts (seq t)]
@@ -179,7 +180,8 @@
 (def satisfies? (fn ^{:doc "Checks if x satisfies the protocol p.
 
                             When p is seqable, checks if x satisfies all of
-                            the protocols contained therein."}
+                            the protocols contained therein."
+                      :signatures [[t x]]}
                   satisfies? [p x]
                   (if (-satisfies? ISeqable p)
                     (let [ps (seq p)]
