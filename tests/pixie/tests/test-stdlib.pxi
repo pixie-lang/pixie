@@ -419,3 +419,14 @@
 (t/deftest test-frequencies
   (t/assert= (frequencies [1 2 3 4 3 2 1])
              {1 2, 2 2, 3 2, 4 1}))
+
+(t/deftest test-condp
+  (t/assert= (condp :dont-call-me :dont-use-me) nil)
+  (let [f (fn [x]
+            (condp = x
+              0 :one
+              1 :two
+              :whatever))]
+    (t/assert= (f 0) :one)
+    (t/assert= (f 1) :two)
+    (t/assert= (f 9) :whatever)))

@@ -2152,9 +2152,15 @@ Expands to calls to `extend-type`."
   "Returns a collection that contains all the elements of the argument in reverse order."
   (into () coll))
 
-;; TODO: docs, tests
 ;; TODO: implement :>> like in Clojure?
-(defmacro condp [pred-form expr & clauses]
+(defmacro condp
+  "Takes a binary predicate, an expression and a number of two-form clauses.
+  Calls the predicate on the first value of each clause and the expression.
+  If the result is truthy returns the second value of the clause.
+
+  If the number of arguments is odd and no clause matches, the last argument is returned.
+  If the number of arguments is even and no clause matches, nil is returned."
+  [pred-form expr & clauses]
   (let [x (gensym 'expr), pred (gensym 'pred)]
     `(let [~x ~expr, ~pred ~pred-form]
        (cond ~@(mapcat
