@@ -448,3 +448,30 @@
     (t/assert= (f 3) :large)
     (t/assert= (f 4) :large)
     (t/assert= (f 9) :toolarge)))
+
+(t/deftest test-instance?
+  (t/assert= (instance? Keyword :a) true)
+  (t/assert= (instance? Keyword 'a) false)
+  (t/assert= (instance? [Symbol Keyword] :a) true)
+  (t/assert= (instance? [Symbol Keyword] 'a) true)
+  (t/assert= (instance? [Symbol Keyword] 42) false)
+  (t/assert= (instance? [] :x) false)
+  (t/assert-throws? RuntimeException
+    "c must be a type"
+    (instance? :not-a-type 123))
+  (t/assert-throws? RuntimeException
+    "c must be a type"
+    (instance? [Keyword :also-not-a-type] 123)))
+
+(t/deftest test-satisfies?
+  (t/assert= (satisfies? IIndexed [1 2]) true)
+  (t/assert= (satisfies? IIndexed '(1 2)) false)
+  (t/assert= (satisfies? [] :xyz) true)
+  (t/assert= (satisfies? [ILookup IIndexed] [1 2]) true)
+  (t/assert= (satisfies? [ILookup IIndexed] {1 2}) false)
+  (t/assert-throws? RuntimeException
+    "proto must be a Protocol"
+    (satisfies? :not-a-proto 123))
+  (t/assert-throws? RuntimeException
+    "proto must be a Protocol"
+    (satisfies? [IIndexed :also-not-a-proto] [1 2])))
