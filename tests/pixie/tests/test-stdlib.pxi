@@ -430,3 +430,17 @@
     (t/assert= (f 0) :one)
     (t/assert= (f 1) :two)
     (t/assert= (f 9) :whatever)))
+
+(t/deftest test-case
+  (t/assert= (case :unused) nil)
+  (let [f (fn [x]
+            (case x
+              1 :one
+              2 :two
+              #{3 4} :large
+              :toolarge))]
+    (t/assert= (f 1) :one)
+    (t/assert= (f 2) :two)
+    (t/assert= (f 3) :large)
+    (t/assert= (f 4) :large)
+    (t/assert= (f 9) :toolarge)))
