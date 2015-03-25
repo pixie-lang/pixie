@@ -1490,6 +1490,13 @@ The new value is thus `(apply f current-value-of-atom args)`."
       (recur (dec n) (next s))
       s)))
 
+(defn split-at
+  {:doc "Returns a vector of the first n elements of the collection, and the remaining elements."
+   :examples [["(split-at 2 [:a :b :c :d :e])" nil
+               [(:a :b) (:c :d :e)]]]}
+  [n coll]
+  [(take n coll) (drop n coll)])
+
 (defmacro while
   {:doc "Repeatedly executes body while test expression is true. Presumes
   some side-effect will cause test to become false/nil. Returns nil"
