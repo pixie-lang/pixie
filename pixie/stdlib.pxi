@@ -2166,7 +2166,7 @@ Expands to calls to `extend-type`."
   If the result is truthy returns the second value of the clause.
 
   If the number of arguments is odd and no clause matches, the last argument is returned.
-  If the number of arguments is even and no clause matches, nil is returned."
+  If the number of arguments is even and no clause matches, throws an exception."
   [pred-form expr & clauses]
   (let [x (gensym 'expr), pred (gensym 'pred)]
     `(let [~x ~expr, ~pred ~pred-form]
@@ -2175,18 +2175,18 @@ Expands to calls to `extend-type`."
                    (if (> (count clause) 1)
                      `((~pred ~a ~x) ~b)
                      `(:else ~a)))
-                 (partition 2 clauses))))))
+                 (partition 2 clauses))
+             :else (throw "No matching clause!")))))
 
 (defmacro case
   "Takes an expression and a number of two-form clauses.
   Checks for each clause if the first part is equal to the expression.
   If yes, returns the value of the second part.
 
-  The first part of each clause can also be a set. If that is the case, the clause
-  matches when the result of the expression is in the set.
+  The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
 
   If the number of arguments is odd and no clause matches, the last argument is returned.
-  If the number of arguments is even and no clause matches, nil is returned."
+  If the number of arguments is even and no clause matches, throws an exception."
   [expr & args]
   `(condp #(if (set? %1) (%1 %2) (= %1 %2))
      ~expr ~@args))

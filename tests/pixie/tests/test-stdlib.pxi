@@ -421,7 +421,9 @@
              {1 2, 2 2, 3 2, 4 1}))
 
 (t/deftest test-condp
-  (t/assert= (condp :dont-call-me :dont-use-me) nil)
+  (t/assert-throws? RuntimeException
+    "No matching clause!"
+    (condp :dont-call-me :dont-use-me))
   (let [f (fn [x]
             (condp = x
               1 :one
@@ -432,7 +434,9 @@
     (t/assert= (f 9) :whatever)))
 
 (t/deftest test-case
-  (t/assert= (case :unused) nil)
+  (t/assert-throws? RuntimeException
+    "No matching clause!"
+    (case :no-matter-what))
   (let [f (fn [x]
             (case x
               1 :one
