@@ -1067,7 +1067,7 @@ Creates new maps if the keys are not present."
   ([test msg]
      `(if ~test
         nil
-        (throw (str "Assert failed " ~msg)))))
+        (throw (str "Assert failed: " ~msg)))))
 
 (defmacro resolve
   {:doc "Resolve the var associated with the symbol in the current namespace."
