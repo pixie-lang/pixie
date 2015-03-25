@@ -18,7 +18,7 @@
 (deftype FileStream [fp]
   IInputStream
   (read [this buffer len]
-    (assert (<= (buffer-capacity buffer) len)
+    (assert (>= (buffer-capacity buffer) len)
             "Not enough capacity in the buffer")
     (let [read-count (fread buffer 1 len fp)]
       (set-buffer-count! buffer read-count)
