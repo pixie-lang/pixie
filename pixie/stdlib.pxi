@@ -1967,6 +1967,9 @@ user => (refer 'pixie.string :exclude '(substring))"
    (pred (first coll)) (recur pred (next coll))
    :else false))
 
+; If you want a fn that uses destructuring in its parameter list, place
+; it after this definition. If you don't, you will get compile failures
+; in unrelated files.
 (defmacro fn
   {:doc "Creates a function.
 
