@@ -2236,8 +2236,10 @@ Expands to calls to `extend-type`."
                conj []
                (seq x))))
 
-; TODO: tests, docs
 (defn juxt [& fns]
+  {:doc "Returns a function that applies all fns to its arguments,
+         and returns a vector of the results."
+   :examples [["((juxt + - *) 2 3)" nil [5 -1 6]]]}
   (fn [& args]
     (mapv #(apply % args) fns)))
 
