@@ -151,6 +151,16 @@ def runtime_error(msg):
     import pixie.vm.rt as rt
     raise WrappedException(RuntimeException(rt.wrap(msg)))
 
+def safe_invoke(f, args):
+    try:
+        f.invoke(args)
+    except Exception as ex:
+        if isinstance(ex, WrappedException):
+            print "UNSAFE EXCEPTION", ex._ex.__repr__()
+        else:
+            print "UNSAFE EXCEPTION", ex
+    return None
+
 class ErrorInfo(Object):
     _type = Type(u"pixie.stdlib.ErrorInfo")
     def type(self):
