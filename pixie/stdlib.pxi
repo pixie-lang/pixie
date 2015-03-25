@@ -2243,6 +2243,11 @@ Expands to calls to `extend-type`."
                conj []
                (seq x))))
 
+; TODO: tests, docs
+(defn juxt [& fns]
+  (fn [& args]
+    (mapv #(apply % args) fns)))
+
 (defn mapv
   ([f col]
    (transduce (map f) conj col)))
