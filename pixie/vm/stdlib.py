@@ -337,36 +337,16 @@ def apply__args(args):
 @returns(bool)
 @as_var("instance?")
 def _instance(c, o):
-    from pixie.vm.persistent_vector import PersistentVector
-    if isinstance(c, Type):
-        return true if istypeinstance(o, c) else false
-    elif isinstance(c, PersistentVector):
-        for i in range(rt.count(c)):
-            t = rt.nth(c, rt.wrap(i))
-            affirm(isinstance(t, Type), u"every element of c must be a type")
-            if istypeinstance(o, t):
-                return true
-        return false
-    else:
-        affirm(False, u"c must be a type or a vector")
+    affirm(isinstance(c, Type), u"c must be a type")
 
+    return true if istypeinstance(o, c) else false
 
 @returns(bool)
 @as_var("satisfies?")
 def _satisfies(proto, o):
-    from pixie.vm.persistent_vector import PersistentVector
-    t = o.type()
-    if isinstance(proto, Protocol):
-        return true if proto.satisfies(t) else false
-    elif isinstance(proto, PersistentVector):
-        for i in range(rt.count(proto)):
-            p = rt.nth(proto, rt.wrap(i))
-            affirm(isinstance(p, Protocol), u"every element of proto must be a Protocol")
-            if p.satisfies(t):
-                return true
-        return false
-    else:
-        affirm(False, u"c must be a Protocol or a vector")
+    affirm(isinstance(proto, Protocol), u"proto must be a Protocol")
+
+    return true if proto.satisfies(o.type()) else false
 
 
 import pixie.vm.rt as rt
