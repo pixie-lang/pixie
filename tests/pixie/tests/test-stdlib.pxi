@@ -424,11 +424,11 @@
   (t/assert= (condp :dont-call-me :dont-use-me) nil)
   (let [f (fn [x]
             (condp = x
-              0 :one
-              1 :two
+              1 :one
+              2 :two
               :whatever))]
-    (t/assert= (f 0) :one)
-    (t/assert= (f 1) :two)
+    (t/assert= (f 1) :one)
+    (t/assert= (f 2) :two)
     (t/assert= (f 9) :whatever)))
 
 (t/deftest test-case
