@@ -1597,7 +1597,7 @@ not enough elements were present."
   {:doc "A generalized version of partition. Instead of taking a constant number of elements,
          this function calls f with the remaining collection to determine how many elements to
          take."
-   :examples [["(fpartition first [1 :a, 2 :a b, 3 :a :b :c])"
+   :examples [["(partitionf first [1 :a, 2 :a b, 3 :a :b :c])"
                nil ((1 :a) (2 :a :b) (3 :a :b :c))]]}
   (when-let [s (seq coll)]
     (lazy-seq
