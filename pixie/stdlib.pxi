@@ -867,16 +867,14 @@ If further arguments are passed, invokes the method named by symbol, passing the
   (fn [& _] x))
 
 (defn some
-  {:doc "Checks if the predicate is true for any element of the collection.
-
-Stops if it finds such an element."
+  {:doc "Returns the first true value of the predicate for the elements of the collection."
    :signatures [[pred coll]]
    :added "0.1"}
   [pred coll]
-  (cond
-   (nil? (seq coll)) false
-   (pred (first coll)) true
-   :else (recur pred (next coll))))
+  (if-let [coll (seq coll)]
+    (or (pred (first coll))
+        (recur pred (next coll)))
+    false))
 
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn map-entry-nth [self idx]

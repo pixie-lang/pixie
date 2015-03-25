@@ -277,7 +277,10 @@
   (t/assert= (some even? [2 3 6 8]) true)
   (t/assert= (some even? [1 3 5 8]) true)
   (t/assert= (some even? []) false)
-  (t/assert= (some odd? [2]) false))
+  (t/assert= (some odd? [2]) false)
+  (t/assert= (some #{:x :y} [:a :b :x :y]) :x)
+  (t/assert= (some #{:x :y} [:a :b :c :y]) :y)
+  (t/assert= (some #{:x :y} [:a :b :c :d]) false))
 
 (t/deftest test-filter
   (t/assert= (vec (filter (fn [x] true) [])) [])
