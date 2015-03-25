@@ -1586,8 +1586,12 @@ not enough elements were present."
      (lazy-seq
        (cons (take n s) (partition n step (drop step s)))))))
 
-;; TODO: docs, tests
 (defn partitionf [f coll]
+  {:doc "A generalized version of partition. Instead of taking a constant number of elements,
+         this function calls f with the remaining collection to determine how many elements to
+         take."
+   :examples [["(fpartition first [1 :a, 2 :a b, 3 :a :b :c])"
+               nil ((1 :a) (2 :a :b) (3 :a :b :c))]]}
   (when-let [s (seq coll)]
     (lazy-seq
       (let [n (f s)]
