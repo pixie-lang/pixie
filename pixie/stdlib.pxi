@@ -2145,6 +2145,13 @@ Expands to calls to `extend-type`."
                         [~@body])))]
     `(or (seq ~(gen-loop [] bindings)) '())))
 
+(defn reverse
+  ; TODO: We should probably have a protocol IReversible, so we can e.g.
+  ;       reverse vectors efficiently, etc..
+  [coll]
+  "Returns a collection that contains all the elements of the argument in reverse order."
+  (into () coll))
+
 ;; TODO: docs, tests
 ;; TODO: implement :>> like in Clojure?
 (defmacro condp [pred-form expr & clauses]
