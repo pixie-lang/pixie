@@ -164,6 +164,30 @@
 (def reduce (fn [rf init col]
               (-reduce col rf init)))
 
+(def instance? (fn ^{:doc "Checks if x is an instance of t.
+
+                           When t is seqable, checks if x is an instance of
+                           any of the types contained therein."}
+                 instance? [t x]
+                 (if (-satisfies? ISeqable t)
+                   (let [ts (seq t)]
+                     (if (not ts) false
+                       (or (-instance? (first ts) x)
+                           (instance? (rest ts) x))))
+                   (-instance? t x))))
+
+(def satisfies? (fn ^{:doc "Checks if x satisfies the protocol p.
+
+                            When p is seqable, checks if x satisfies all of
+                            the protocols contained therein."}
+                  satisfies? [p x]
+                  (if (-satisfies? ISeqable p)
+                    (let [ps (seq p)]
+                      (if (not ps) true
+                        (and (-satisfies? (first ps) x)
+                             (satisfies? (rest ps) x))))
+                    (-satisfies? p x))))
+
 (def into (fn ^{:doc "Add the elements of `from` to the collection `to`."
                 :signatures [[to from]]
                 :added "0.1"}

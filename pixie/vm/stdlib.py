@@ -121,7 +121,7 @@ _meta.set_default_fn(wrap_fn(lambda x: nil))
 
 @as_var("first")
 def first(x):
-    if rt.satisfies_QMARK_(ISeq, x):
+    if rt._satisfies_QMARK_(ISeq, x):
         return rt._first(x)
 
     seq = rt.seq(x)
@@ -131,7 +131,7 @@ def first(x):
 
 @as_var("next")
 def next(x):
-    if rt.satisfies_QMARK_(ISeq, x):
+    if rt._satisfies_QMARK_(ISeq, x):
         return rt.seq(rt._next(x))
     seq = rt.seq(x)
     if seq is nil:
@@ -145,7 +145,7 @@ def seq(x):
 
 @as_var("seq?")
 def seq_QMARK_(x):
-    return true if rt.satisfies_QMARK_(rt.ISeq.deref(), x) else false
+    return true if rt._satisfies_QMARK_(rt.ISeq.deref(), x) else false
 
 @as_var("-seq-eq")
 def _seq_eq(a, b):
@@ -153,7 +153,7 @@ def _seq_eq(a, b):
         return true
     if a is nil or b is nil:
         return false
-    if not (rt.satisfies_QMARK_(rt.ISeqable.deref(), b) or rt.satisfies_QMARK_(rt.ISeq.deref(), b)):
+    if not (rt._satisfies_QMARK_(rt.ISeqable.deref(), b) or rt._satisfies_QMARK_(rt.ISeq.deref(), b)):
         return false
 
     a = rt.seq(a)
@@ -286,7 +286,7 @@ def __with_meta(a, b):
 @returns(bool)
 @as_var("has-meta?")
 def __has_meta(a):
-    return true if rt.satisfies_QMARK_(rt.IMeta.deref(), a) else false
+    return true if rt._satisfies_QMARK_(rt.IMeta.deref(), a) else false
 
 @as_var("conj")
 def conj(a, b):
@@ -313,8 +313,8 @@ def str__args(args):
 @jit.unroll_safe
 def apply__args(args):
     last_itm = args[len(args) - 1]
-    if not (rt.satisfies_QMARK_(rt.IIndexed.deref(), last_itm) and
-            rt.satisfies_QMARK_(rt.ICounted.deref(), last_itm)):
+    if not (rt._satisfies_QMARK_(rt.IIndexed.deref(), last_itm) and
+            rt._satisfies_QMARK_(rt.ICounted.deref(), last_itm)):
         last_itm = rt.vec(last_itm)
 
     fn = args[0]
@@ -335,14 +335,14 @@ def apply__args(args):
 #    return nil
 
 @returns(bool)
-@as_var("instance?")
+@as_var("-instance?")
 def _instance(c, o):
     affirm(isinstance(c, Type), u"c must be a type")
 
     return true if istypeinstance(o, c) else false
 
 @returns(bool)
-@as_var("satisfies?")
+@as_var("-satisfies?")
 def _satisfies(proto, o):
     affirm(isinstance(proto, Protocol), u"proto must be a Protocol")
 
@@ -625,7 +625,7 @@ def identical(a, b):
 
 @as_var("vector?")
 def vector_QMARK_(a):
-    return true if rt.satisfies_QMARK_(rt.IVector.deref(), a) else false
+    return true if rt._satisfies_QMARK_(rt.IVector.deref(), a) else false
 
 @returns(bool)
 @as_var("eq")
