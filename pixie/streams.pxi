@@ -11,3 +11,8 @@
 
 (defprotocol IByteOutputStream
   (write-byte [this byte]))
+
+(defprotocol ISeekableStream
+  (position [this])
+  (seek [this position])
+  (rewind [this]))

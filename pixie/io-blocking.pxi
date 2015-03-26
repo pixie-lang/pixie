@@ -3,6 +3,9 @@
 
 
 (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
+(def fseek (ffi-fn libc "fseek" [CVoidP CInt CInt] CInt))
+(def ftell  (ffi-fn libc "ftell" [CVoidP] CInt))
+(def -rewind (ffi-fn libc "rewind" [CVoidP] CVoidP))
 (def fread (ffi-fn libc "fread" [CVoidP CInt CInt CVoidP] CInt))
 (def fgetc (ffi-fn libc "fgetc" [CVoidP] CInt))
 (def fputc (ffi-fn libc "fputc" [CInt CVoidP] CInt))
@@ -15,6 +18,18 @@
 
 (def DEFAULT-BUFFER-SIZE 1024)
 
+(defn default-stream-reducer [this f init]
+  (let [buf (buffer DEFAULT-BUFFER-SIZE)
+        rrf (preserving-reduced f)]
+    (loop [acc init]
+      (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
+        (if (> read-count 0)
+          (let [result (reduce rrf acc buf)]
+            (if (not (reduced? result))
+              (recur result)
+              @result))
+          acc)))))
+
 (deftype FileStream [fp]
   IInputStream
   (read [this buffer len]
@@ -25,21 +40,17 @@
       read-count))
   (read-byte [this]
     (fgetc buffer))
+  ISeekableStream
+  (seek [this pos]
+    (fseek fp pos 0))
+  (rewind [this]
+    (-rewind fp))
   IDisposable
   (-dispose! [this]
     (fclose fp))
   IReduce
   (-reduce [this f init]
-    (let [buf (buffer DEFAULT-BUFFER-SIZE)
-          rrf (preserving-reduced f)]
-      (loop [acc init]
-        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-          (if (> read-count 0)
-            (let [result (reduce rrf acc buf)]
-              (if (not (reduced? result))
-                (recur result)
-                @result))
-            acc))))))
+    (default-stream-reducer this f init)))
 
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
@@ -109,6 +120,15 @@
     (dispose! c)
     result))
 
+(defn slurp-stream [stream]
+  (let [c stream
+        result (transduce
+                (map char)
+                string-builder
+                c)]
+    (dispose! c)
+    result))
+
 (deftype ProcessInputStream [fp]
   IInputStream
   (read [this buffer len]
@@ -124,16 +144,7 @@
     (pclose fp))
   IReduce
   (-reduce [this f init]
-    (let [buf (buffer DEFAULT-BUFFER-SIZE)
-          rrf (preserving-reduced f)]
-      (loop [acc init]
-        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-          (if (> read-count 0)
-            (let [result (reduce rrf acc buf)]
-              (if (not (reduced? result))
-                (recur result)
-                @result))
-            acc))))))
+    (default-stream-reducer this f init)))
 
 
 (defn popen-read
