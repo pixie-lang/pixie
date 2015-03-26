@@ -97,7 +97,6 @@ return 0;
 
 (defmethod edn-to-ctype :pointer
   [{:keys [of-type] :as ptr} in-struct?]
-  (println ptr in-struct?)
   (cond
    (and (= (:size of-type) 1)
         (= (:type of-type) :int)
