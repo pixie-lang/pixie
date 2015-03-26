@@ -44,6 +44,13 @@
       (set-field! this :offset (+ offset read-count))
       (set-buffer-count! buffer read-count)
       read-count))
+  ISeekableStream
+  (position [this]
+    offset)
+  (rewind [this]
+    (set-field! this :offset 0))
+  (seek [this pos]
+    (set-field! this :offset pos))
   IDisposable
   (-dispose! [this]
     (dispose! uvbuf)
