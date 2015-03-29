@@ -98,7 +98,8 @@ return 0;
 (defmethod edn-to-ctype :pointer
   [{:keys [of-type] :as ptr} in-struct?]
   (cond
-   (and (= of-type {:signed? true :size 1 :type :int})
+   (and (= (:size of-type) 1)
+        (= (:type of-type) :int)
         (not in-struct?)) 'pixie.stdlib/CCharP
    (= (:type of-type) :function) (callback-type of-type in-struct?)
    :else 'pixie.stdlib/CVoidP))
