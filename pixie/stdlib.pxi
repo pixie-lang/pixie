@@ -959,7 +959,9 @@ If further arguments are passed, invokes the method named by symbol, passing the
         (fn [v]
           (transduce cat unordered-hash-reducing-fn v)))
 
-(extend -seq PersistentHashSet (fn [self] (seq (iterator self))))
+(extend -seq PersistentHashSet
+        (fn [s]
+          (reduce conj nil s)))
 
 (extend -str PersistentHashSet
         (fn [s]
