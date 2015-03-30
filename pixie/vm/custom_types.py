@@ -55,13 +55,18 @@ class CustomTypeInstance(Object):
         if isinstance(old_val, AbstractMutableCell):
             old_val.set_mutable_cell_value(self._custom_type, self._fields, name, idx, val)
         else:
+            self._custom_type.set_mutable(name)
             self._fields[idx] = val
         return self
 
     @jit.elidable_promote()
-    def get_field_immutable(self, idx):
+    def _get_field_immutable(self, idx, rev):
         return self._fields[idx]
 
+    def get_field_immutable(self, idx):
+        tp = self._custom_type
+        assert isinstance(tp, CustomType)
+        return self._get_field_immutable(idx, tp._rev)
 
     def get_field(self, name):
         idx = self._custom_type.get_slot_idx(name)
@@ -77,11 +82,6 @@ class CustomTypeInstance(Object):
             return value.get_mutable_cell_value()
         else:
             return value
-
-    def set_field_by_idx(self, idx, val):
-        affirm(isinstance(idx, r_uint), u"idx must be a r_uint")
-        self._fields[idx] = val
-        return self
 
 
 @as_var("create-type")
