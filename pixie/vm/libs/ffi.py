@@ -394,8 +394,9 @@ class CCharP(CType):
             vpnt = rffi.cast(rffi.VOIDPP, ptr)
             vpnt[0] = rffi.cast(rffi.VOIDP, val.raw_data())
         else:
-            print val
-            affirm(False, u"Cannot encode this type")
+            frm_name = rt.name(rt.str(val.type()))
+            to_name = rt.name(rt.str(self))
+            affirm(False, u"Cannot encode " + frm_name + u" as " + to_name)
 
 
     def ffi_size(self):
@@ -445,7 +446,13 @@ class CVoidP(CType):
 
     def ffi_set_value(self, ptr, val):
         pnt = rffi.cast(rffi.VOIDPP, ptr)
-        if isinstance(val, Buffer):
+        if isinstance(val, String):
+            pnt = rffi.cast(rffi.CCHARPP, ptr)
+            utf8 = unicode_to_utf8(rt.name(val))
+            raw = rffi.str2charp(utf8)
+            pnt[0] = raw
+            return CCharPToken(raw)
+        elif isinstance(val, Buffer):
             pnt[0] = val.buffer()
         elif isinstance(val, VoidP):
             pnt[0] = val.raw_data()
@@ -454,8 +461,10 @@ class CVoidP(CType):
         elif isinstance(val, CStruct):
             pnt[0] = rffi.cast(rffi.VOIDP, val.raw_data())
         else:
-            print val
-            affirm(False, u"Cannot encode this type")
+            frm_name = rt.name(rt.str(val.type()))
+            to_name = rt.name(rt.str(self))
+            affirm(False, u"Cannot encode " + frm_name + u" as " + to_name)
+
 
     def ffi_size(self):
         return rffi.sizeof(rffi.VOIDP)

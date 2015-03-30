@@ -2311,6 +2311,24 @@ Expands to calls to `extend-type`."
   ([f col]
    (transduce (map f) conj col)))
 
+(defn macroexpand-1 [form]
+  {:doc "If form is a macro call, returns the expanded form.
+
+        Does nothing if not a macro call."
+   :signatures [[form]]
+   :examples [["(macroexpand-1 '(when condition this and-this))"
+               nil `(if condition (do this and-this))]
+              ["(macroexpand-1 ())" nil ()]
+              ["(macroexpand-1 [1 2])" nil [1 2]]]}
+  (if (or (not (list? form))
+          (= () form))
+    form
+    (let [[sym & args] form
+          fvar (resolve sym)]
+      (if (and fvar (macro? @fvar))
+        (apply @fvar args)
+        form))))
+
 (def *1)
 (def *2)
 (def *3)

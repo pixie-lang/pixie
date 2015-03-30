@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, Type
+from pixie.vm.object import Object, Type, safe_invoke
 from pixie.vm.primitives import true
 import rpython.rlib.rthread as rthread
 from pixie.vm.primitives import nil
@@ -42,7 +42,7 @@ def bootstrap():
     rthread.gc_thread_start()
     fn = bootstrapper.fn()
     bootstrapper.release()
-    fn.invoke([])
+    safe_invoke(fn, [])
     rthread.gc_thread_die()
 
 bootstrapper = Bootstrapper()
