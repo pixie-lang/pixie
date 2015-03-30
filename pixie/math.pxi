@@ -23,4 +23,8 @@
   (i/defcfn ceil)
   (i/defcfn fabs)
   (i/defcfn floor)
-  (i/defcfn fmod))
+  (i/defcfn fmod)
+
+  (i/defconst M_PI))
+
+(def pi M_PI)

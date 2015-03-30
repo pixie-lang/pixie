@@ -11,6 +11,9 @@
     b))
 
 
-(def adder (->Adder 1 0))
-(dotimes [x (* 1024 1024 1024)]
+
+(def adder (->Adder 1.0 0))
+(println "Starting....")
+(dotimes [x (* 1024 1024 1024 20)]
   (assert (= (inc x) (add-them adder))))
+(println "Ending....")
