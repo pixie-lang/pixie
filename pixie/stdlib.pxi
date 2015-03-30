@@ -2340,3 +2340,13 @@ Expands to calls to `extend-type`."
 (def *e)
 (defn -set-*e [e]
   (def *e e))
+
+(extend -str Environment
+        (fn [v]
+          (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
+            (apply str "#Environment{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
+
+(extend -repr Environment
+        (fn [v]
+          (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
+            (apply str "#Environment{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
