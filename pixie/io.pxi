@@ -131,9 +131,27 @@
     (set-buffer-count! buffer idx)
     (write downstream buffer)))
 
+(deftype BufferedInputStream [upstream idx buffer]
+  IByteInputStream
+  (read-byte [this]
+    (when (= idx (count buffer))
+      (set-field! this :idx 0)
+      (read upstream buffer (buffer-capacity buffer)))
+    (let [val (nth buffer idx)]
+      (set-field! this :idx (inc idx))
+      val))
+  IDisposable
+  (-dispose! [this]
+    (dispose! upstream)
+    (dispose! buffer)))
+
 (defn buffered-output-stream [downstream size]
   (->BufferedOutputStream downstream 0 (buffer size)))
 
+(defn buffered-input-stream [upstream size]
+  (let [b (buffer size)]
+    (set-buffer-count! b size)
+    (->BufferedInputStream upstream size b)))
 
 (defn throw-on-error [result]
   (when (neg? result)
