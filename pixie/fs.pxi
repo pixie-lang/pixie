@@ -1,7 +1,19 @@
 (ns pixie.fs
   (:require [pixie.path :as path]
-            [pixie.string :as string]))
+            [pixie.string :as string]
+            [pixie.ffi-infer :as f]))
 
+(f/with-config {:library "c"
+                :cxx-flags ["-lc"]
+                :includes ["sys/stat.h"]}
+  (f/defc-raw-struct stat [:st_mode :st_size]))
+
+(def stat-struct stat)
+
+(f/with-config {:library "c"
+                :cxx-flags ["-lc"]
+                :includes ["sys/stat.h"]}
+  (f/defcfn stat))
 
 (defprotocol IFSPath
   (path [this]
@@ -19,15 +31,16 @@
   (basename [this]
     "Returns the basename of the Filesystem Object")
 
-  ;; TODO
   (permissions [this]
     "Returns a string of the octal permissions")
 
-  (mounted? [this]
-    "Returns true if the directory is a mounted")
-
   (size [this]
-    "Returns the size of the file/dir on disk"))
+    "Returns the size of the file/dir on disk")
+
+  ;; TODO
+
+  (mounted? [this]
+    "Returns true if the directory is a mounted"))
 
 (defprotocol IFile
   (extension [this]
@@ -80,6 +93,29 @@
         :else
         (apply str (interpose "/" (concat (repeat (count diff-b) "..") diff-a)))))))
 
+(defn- assert-existence [f]
+    (assert (exists? f) (str "No file or directory at \"" (abs f) "\"")))
+
+(defn- read-stat-field [path field]
+  (assert-existence path)
+  (let [s (stat-struct)
+        _ (stat (abs path) s)
+        result (field s)]
+    (dispose! s)
+    result))
+
+(defn- size-of-path [path]
+  (read-stat-field path :st_size))
+
+(defn- permission-string [n]
+  (apply str
+         (for [shift [6 3 0]]
+           (let [mask (bit-shift-left 7 shift)
+                 masked (bit-and mask n)]
+             (bit-shift-right masked shift)))))
+
+(defn- permissions-of-path [path]
+  (permission-string (read-stat-field path :st_mode)))
 
 ;; File and Dir are just wrappers around paths.
 (deftype File [pathz]
@@ -98,6 +134,12 @@
 
   (basename [this]
     (last (string/split (abs this) "/")))
+
+  (size [this]
+    (size-of-path this))
+
+  (permissions [this]
+    (permissions-of-path this))
 
   IFile
   ;; TODO: Sort out regex or make strings partitionable. So we can split at
@@ -140,6 +182,12 @@
 
   (basename [this]
     (last (string/split (abs this) "/")))
+
+  (size [this]
+    (size-of-path this))
+
+  (permissions [this]
+    (permissions-of-path pathz))
 
   IDir
   (list [this]

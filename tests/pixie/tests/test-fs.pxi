@@ -105,3 +105,21 @@
     (t/assert= (fs/exists? real-dir)  true)
     (t/assert= (fs/exists? fake-dir)  false)
     (t/assert= (fs/exists? fake-file) false)))
+
+(t/deftest test-size
+  (let [file-with-content (fs/file "tests/pixie/tests/fs/parent/foo.txt")
+        file-without-content (fs/file "tests/pixie/tests/fs/parent/bar.txt")
+        fake-file (fs/file "tests/pixie/tests/fs/parent/fake-file")]
+        (t/assert= (fs/size file-with-content) 4)
+        (t/assert= (fs/size file-without-content) 0)
+        (t/assert-throws?  (fs/size fake-file))))
+
+(t/deftest test-permissions
+  (let [file (fs/file "tests/pixie/tests/fs/parent/foo.txt")
+        fake-file (fs/file "tests/pixie/tests/fs/parent/fake-file")]
+    ; because Travis seems to change the permissions of some files...
+    (let [perms (fs/permissions file)]
+      (t/assert= (count perms) 3)
+      (t/assert (instance? String perms))
+      (t/assert= (set (seq perms)) #{\6 \4}))
+    (t/assert-throws?  (fs/permissions fake-file))))
