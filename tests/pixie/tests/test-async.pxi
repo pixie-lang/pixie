@@ -1,7 +1,7 @@
 (ns pixie.tests.test-async
-  (require pixie.stacklets :as st)
-  (require pixie.async :as async :refer :all)
-  (require pixie.test :as t :refer :all))
+  (:require [pixie.stacklets :as st]
+            [pixie.async :as async :refer :all]
+            [pixie.test :as t :refer :all]))
 
 
 (deftest test-future-deref

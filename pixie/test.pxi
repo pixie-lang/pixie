@@ -1,6 +1,6 @@
 (ns pixie.test
-  (require pixie.string :as s)
-  (require pixie.fs :as fs))
+  (:require [pixie.string :as s]
+            [pixie.fs :as fs]))
 
 (def tests (atom {}))
 

@@ -1,8 +1,8 @@
 (ns pixie.tests.test-channels
-  (require pixie.test :refer :all)
-  (require pixie.channels :refer :all)
-  (require pixie.async :refer :all)
-  (require pixie.stacklets :as st))
+  (:require [pixie.test :refer :all]
+            [pixie.channels :refer :all]
+            [pixie.async :refer :all]
+            [pixie.stacklets :as st]))
 
 
 (deftest simple-read-and-write

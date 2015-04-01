@@ -1,7 +1,7 @@
 (ns pixie.csp
-  (require pixie.stacklets :as st)
-  (require pixie.buffers :as b)
-  (require pixie.channels :as chans))
+  (:require [pixie.stacklets :as st]
+            [pixie.buffers :as b]
+            [pixie.channels :as chans]))
 
 (def chan chans/chan)
 

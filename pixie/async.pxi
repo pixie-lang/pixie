@@ -1,5 +1,5 @@
 (ns pixie.async
-  (require pixie.stacklets :as st))
+  (:require [pixie.stacklets :as st]))
 
 
 (deftype Promise [val pending-callbacks delivered?]

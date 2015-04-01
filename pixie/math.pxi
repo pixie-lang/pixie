@@ -1,5 +1,5 @@
 (ns pixie.math
-  (require pixie.ffi-infer :as i))
+  (:require [pixie.ffi-infer :as i]))
 
 (i/with-config {:library "m"
                 :cxx-flags ["-lm"]

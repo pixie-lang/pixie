@@ -1,6 +1,6 @@
 (ns pixie.fs
-  (require pixie.path :as path)
-  (require pixie.string :as string))
+  (:require [pixie.path :as path]
+            [pixie.string :as string]))
 
 
 (defprotocol IFSPath

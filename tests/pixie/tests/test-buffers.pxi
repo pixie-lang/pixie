@@ -1,7 +1,6 @@
 (ns pixie.tests.test-buffers
-  (require pixie.test :refer :all)
-  (require pixie.buffers :refer :all))
-
+  (:require [pixie.test :refer :all]
+            [pixie.buffers :refer :all]))
 
 (deftest test-adding-and-removing-from-buffer
   (let [buffer (ring-buffer 10)]
