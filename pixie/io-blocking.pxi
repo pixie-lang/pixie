@@ -1,5 +1,5 @@
 (ns pixie.io-blocking
-  (require pixie.streams :as st :refer :all))
+  (:require [pixie.streams :as st :refer :all]))
 
 
 (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))

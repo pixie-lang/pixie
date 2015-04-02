@@ -1,6 +1,6 @@
 (ns pixie.channels
-  (require pixie.stacklets :as st)
-  (require pixie.buffers :as b))
+  (:require [pixie.stacklets :as st]
+            [pixie.buffers :as b]))
 
 (defprotocol ICancelable
   (-canceled? [this] "Determines if a request (such as a callback) that can be canceled")

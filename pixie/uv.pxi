@@ -1,5 +1,5 @@
 (ns pixie.uv
-  (require pixie.ffi-infer :as f))
+  (:require [pixie.ffi-infer :as f]))
 
 (f/with-config  {:library "uv"
                 :includes ["uv.h"]}

@@ -1,6 +1,6 @@
 (ns pixie.stacklets
-  (require pixie.uv :as uv)
-  (require pixie.ffi :as ffi))
+  (:require [pixie.uv :as uv]
+            [pixie.ffi :as ffi]))
 
 ;; If we don't do this, compiling this file doesn't work since the def will clear out
 ;; the existing value.

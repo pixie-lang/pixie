@@ -1105,9 +1105,22 @@ Creates new maps if the keys are not present."
            ret))))
 
 (defmacro ns [nm & body]
-  `(do (in-ns ~(keyword (name nm)))
-       ~@body))
+  (let [bmap (reduce (fn [m b]
+                       (update-in m [(first b)] (fnil conj []) (rest b)))
+                     {}
+                     body)
+        requires
+        (do
+          (assert (>= 1 (count (:require bmap)))
+                  "Only one :require block can be defined per namespace")
+            (map (fn [r] `(require ~@r)) (first (:require bmap))))
 
+        old-style-requires
+        (map (fn [r] `(require ~@r))
+             (bmap 'require))]
+    `(do (in-ns ~(keyword (name nm)))
+         ~@requires
+         ~@old-style-requires)))
 
 (defn symbol? [x]
   (identical? Symbol (type x)))

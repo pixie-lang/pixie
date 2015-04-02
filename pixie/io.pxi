@@ -1,10 +1,10 @@
 (ns pixie.io
-  (require pixie.streams :as st :refer :all)
-  (require pixie.io-blocking :as io-blocking)
-  (require pixie.uv :as uv)
-  (require pixie.stacklets :as st)
-  (require pixie.ffi :as ffi)
-  (require pixie.ffi-infer :as ffi-infer))
+  (:require [pixie.streams :as st :refer :all]
+            [pixie.io-blocking :as io-blocking]
+            [pixie.uv :as uv]
+            [pixie.stacklets :as st]
+            [pixie.ffi :as ffi]
+            [pixie.ffi-infer :as ffi-infer]))
 
 (defmacro defuvfsfn [nm args return]
   `(defn ~nm ~args
