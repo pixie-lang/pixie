@@ -51,7 +51,7 @@ Pixie now comes with a build tool called [dust](https://github.com/pixie-lang/du
 
 ### So this is written in Python?
 
-It's actually written in the RPython, the same language PyPy is written in. `make build_with_jit` will compile Pixie using the PyPy toolchain. After some time, it will produce an executable called `pixie-vm`. This executable is a full blown native interpreter with a JIT, GC, etc. So yes, the guts are written in RPython, just like the guts of most lisp interpreters are written in C. At runtime the only thing that is interpreted is the Pixie bytecode, that is until the JIT kicks in...
+It's actually written in RPython, the same language PyPy is written in. `make build_with_jit` will compile Pixie using the PyPy toolchain. After some time, it will produce an executable called `pixie-vm`. This executable is a full blown native interpreter with a JIT, GC, etc. So yes, the guts are written in RPython, just like the guts of most lisp interpreters are written in C. At runtime the only thing that is interpreted is the Pixie bytecode, that is until the JIT kicks in...
 
 
 ### What's this bit about "magical powers"?
