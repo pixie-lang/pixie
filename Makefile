@@ -37,7 +37,7 @@ build_preload_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target_preload.py
 
 build: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS) 
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS)
 
 fetch_externals: $(EXTERNALS)/pypy ./lib
 
@@ -87,3 +87,28 @@ clean: clean_pxic
 	rm -rf ./externals
 	rm -f ./pixie-vm
 	rm -f ./*.pyc
+
+package:
+	make package_`uname -s`_`uname -m`
+
+package_Darwin_x86_64:
+	make compile_basics
+	make compile_src
+	make compile_tests
+	rm -rf dist
+	mkdir dist
+	mkdir dist/pixie
+	mkdir dist/pixie/pixie
+	mkdir dist/pixie/test
+	cp ./pixie-vm dist/pixie/pixie-vm
+	rsync -avm --include='*.pxi' -f'hide,! */' ./pixie ./dist/pixie
+	rsync -avm --include='*.hpp' -f'hide,! */' ./pixie ./dist/pixie
+	rsync -avm --include='*.pxic' -f'hide,! */' ./pixie ./dist/pixie
+	rsync -avm --include='*.txt' -f'hide,! */' ./tests ./dist/pixie
+	rsync -avm --include='*.pxi' -f'hide,! */' ./tests ./dist/pixie
+	rsync -avm --include='*.pxic' -f'hide,! */' ./tests ./dist/pixie
+	cp ./run-tests.pxi dist/pixie/run-tests.pxi
+	cp -L ./lib/libuv.dylib ./dist/pixie/libuv.dylib
+	cp -L /usr/lib/libffi.dylib ./dist/pixie/libffi.dylib
+	cp -L /usr/lib/libedit.dylib ./dist/pixie/libedit.dylib
+	cd dist && tar -cjvf pixie-`uname -s`-`uname -m`-`git describe --tags`.tar.bz2 ./pixie

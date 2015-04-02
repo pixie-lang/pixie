@@ -2,14 +2,6 @@
   (require pixie.test :as t)
   (require pixie.math :as m))
 
-
-
-(t/deftest test-buffer-ffi
-  (let [fp (fopen "README.md" "r")
-        b (buffer 1024)]
-    (t/assert= 10 (fread b 1 10 fp))
-    (t/assert= 91 (nth b 0))))
-
 (t/deftest test-arity-check
   (let [sscanf-2 (ffi-fn libc "sscanf" [CCharP CCharP] CInt)
         sscanf-* (ffi-fn libc "sscanf" [CCharP CCharP] CInt :variadic? true)]
