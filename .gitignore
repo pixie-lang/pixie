@@ -5,3 +5,4 @@ pixie-vm
 lib
 include
 pixie/*.pxic
+test.tmp
