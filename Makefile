@@ -112,3 +112,25 @@ package_Darwin_x86_64:
 	cp -L /usr/lib/libffi.dylib ./dist/pixie/libffi.dylib
 	cp -L /usr/lib/libedit.dylib ./dist/pixie/libedit.dylib
 	cd dist && tar -cjvf pixie-`uname -s`-`uname -m`-`git describe --tags`.tar.bz2 ./pixie
+
+package_Linux_armv7l:
+	#make compile_basics
+	#make compile_src
+	#make compile_tests
+	rm -rf dist
+	mkdir dist
+	mkdir dist/pixie
+	mkdir dist/pixie/pixie
+	mkdir dist/pixie/test
+	cp ./pixie-vm dist/pixie/pixie-vm
+	rsync -avm --include='*.pxi' -f'hide,! */' ./pixie ./dist/pixie
+	rsync -avm --include='*.hpp' -f'hide,! */' ./pixie ./dist/pixie
+	rsync -avm --include='*.pxic' -f'hide,! */' ./pixie ./dist/pixie
+	rsync -avm --include='*.txt' -f'hide,! */' ./tests ./dist/pixie
+	rsync -avm --include='*.pxi' -f'hide,! */' ./tests ./dist/pixie
+	rsync -avm --include='*.pxic' -f'hide,! */' ./tests ./dist/pixie
+	cp ./run-tests.pxi dist/pixie/run-tests.pxi
+	cp -L libuv.so ./dist/pixie/libuv.so
+	cp -L /usr/lib/arm-linux-gnueabihf/libffi.so.5 ./dist/pixie/libffi.so.5
+	cp -L /usr/local/lib/libedit.so ./dist/pixie/libedit.so
+	cd dist && tar -cjvf pixie-`uname -s`-`uname -m`-`git describe --tags`.tar.bz2 ./pixie
