@@ -2206,11 +2206,11 @@ Expands to calls to `extend-type`."
 ;; TODO: implement :>> like in Clojure?
 (defmacro condp
   "Takes a binary predicate, an expression and a number of two-form clauses.
-  Calls the predicate on the first value of each clause and the expression.
-  If the result is truthy returns the second value of the clause.
+Calls the predicate on the first value of each clause and the expression.
+If the result is truthy returns the second value of the clause.
 
-  If the number of arguments is odd and no clause matches, the last argument is returned.
-  If the number of arguments is even and no clause matches, throws an exception."
+If the number of arguments is odd and no clause matches, the last argument is returned.
+If the number of arguments is even and no clause matches, throws an exception."
   [pred-form expr & clauses]
   (let [x (gensym 'expr), pred (gensym 'pred)]
     `(let [~x ~expr, ~pred ~pred-form]
@@ -2224,13 +2224,13 @@ Expands to calls to `extend-type`."
 
 (defmacro case
   "Takes an expression and a number of two-form clauses.
-  Checks for each clause if the first part is equal to the expression.
-  If yes, returns the value of the second part.
+Checks for each clause if the first part is equal to the expression.
+If yes, returns the value of the second part.
 
-  The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
+The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
 
-  If the number of arguments is odd and no clause matches, the last argument is returned.
-  If the number of arguments is even and no clause matches, throws an exception."
+If the number of arguments is odd and no clause matches, the last argument is returned.
+If the number of arguments is even and no clause matches, throws an exception."
   [expr & args]
   `(condp #(if (set? %1) (%1 %2) (= %1 %2))
      ~expr ~@args))
@@ -2285,9 +2285,9 @@ Expands to calls to `extend-type`."
 
 (defn tree-seq
   "Returns a lazy sequence of the nodes in a tree via a depth-first walk.
-   branch? - fn of node that should true when node has children
-   children - fn of node that should return a sequence of children (called if branch? true)
-   root - root node of the tree"
+branch? - fn of node that should true when node has children
+children - fn of node that should return a sequence of children (called if branch? true)
+root - root node of the tree"
   [branch? children root]
   (let [walk (fn walk [node]
                (lazy-seq
@@ -2298,11 +2298,9 @@ Expands to calls to `extend-type`."
 
 (defn flatten
   ; TODO: laziness?
-  {:doc "Takes any nested combination of ISeqable things, and return their contents
-        as a single, flat sequence.
+  {:doc "Takes any nested combination of ISeqable things, and return their contents as a single, flat sequence.
 
-        Calling this function on something that is not ISeqable returns a seq with that
-        value as its only element."
+Calling this function on something that is not ISeqable returns a seq with that value as its only element."
    :examples [["(flatten [[1 2 [3 4] [5 6]] 7])" nil [1 2 3 4 5 6 7]]
               ["(flatten :this)" nil [:this]]]}
   [x]
@@ -2312,8 +2310,7 @@ Expands to calls to `extend-type`."
                (seq x))))
 
 (defn juxt
-  {:doc "Returns a function that applies all fns to its arguments,
-         and returns a vector of the results."
+  {:doc "Returns a function that applies all fns to its arguments, and returns a vector of the results."
    :examples [["((juxt + - *) 2 3)" nil [5 -1 6]]]}
   [& fns]
   (fn [& args]
@@ -2332,9 +2329,7 @@ Expands to calls to `extend-type`."
    (transduce (map f) conj col)))
 
 (defn macroexpand-1
-  {:doc "If form is a macro call, returns the expanded form.
-
-        Does nothing if not a macro call."
+  {:doc "If form is a macro call, returns the expanded form. Does nothing if not a macro call."
    :signatures [[form]]
    :examples [["(macroexpand-1 '(when condition this and-this))"
                nil (if condition (do this and-this))]
