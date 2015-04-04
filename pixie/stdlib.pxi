@@ -1601,7 +1601,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defn group-by
   {:doc "Groups the collection into a map keyed by the result of applying f on each element. The value at each key is a vector of elements in order of appearance."
    :examples [["(group-by even? [1 2 3 4 5])" nil {false [1 3 5] true [2 4]}]
-              ["(group-by (partial apply +) [[1 2 3][2 4][1 2]]" nil {6 [[1 2 3] [2 4]] 3 [[1 2]]}]]
+              ["(group-by (partial apply +) [[1 2 3] [2 4] [1 2]])" nil {6 [[1 2 3] [2 4]] 3 [[1 2]]}]]
    :signatures [[f coll]]
    :added "0.1"}
   [f coll]
@@ -1640,8 +1640,8 @@ not enough elements were present."
   {:doc "A generalized version of partition. Instead of taking a constant number of elements,
          this function calls f with the remaining collection to determine how many elements to
          take."
-   :examples [["(partitionf first [1 :a, 2 :a b, 3 :a :b :c])"
-               nil ((1 :a) (2 :a :b) (3 :a :b :c))]]}
+   :examples [["(partitionf first [2 :a, 3 :a :b, 4 :a :b :c])"
+               nil ((2 :a) (3 :a :b) (4 :a :b :c))]]}
   [f coll]
   (when-let [s (seq coll)]
     (lazy-seq
@@ -2337,7 +2337,7 @@ Expands to calls to `extend-type`."
         Does nothing if not a macro call."
    :signatures [[form]]
    :examples [["(macroexpand-1 '(when condition this and-this))"
-               nil `(if condition (do this and-this))]
+               nil (if condition (do this and-this))]
               ["(macroexpand-1 ())" nil ()]
               ["(macroexpand-1 [1 2])" nil [1 2]]]}
   [form]
