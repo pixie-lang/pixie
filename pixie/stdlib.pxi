@@ -1598,21 +1598,23 @@ The new value is thus `(apply f current-value-of-atom args)`."
        (lazy-seq (step pred coll)))))
 
 ;; TODO: use a transient map in the future
-(defn group-by [f coll]
+(defn group-by
   {:doc "Groups the collection into a map keyed by the result of applying f on each element. The value at each key is a vector of elements in order of appearance."
    :examples [["(group-by even? [1 2 3 4 5])" nil {false [1 3 5] true [2 4]}]
-              ["(group-by (partial apply +) [[1 2 3][2 4][1 2]]" nil {6 [[1 2 3] [2 4]] 3 [[1 2]]}]]
+              ["(group-by (partial apply +) [[1 2 3] [2 4] [1 2]])" nil {6 [[1 2 3] [2 4]] 3 [[1 2]]}]]
    :signatures [[f coll]]
    :added "0.1"}
+  [f coll]
   (reduce (fn [res elem]
             (update-in res [(f elem)] (fnil conj []) elem))
           {}
           coll))
 
 ;; TODO: use a transient map in the future
-(defn frequencies [coll]
+(defn frequencies
   {:doc "Returns a map with distinct elements as keys and the number of occurences as values"
    :added "0.1"}
+  [coll]
   (reduce (fn [res elem]
             (update-in res [elem] (fnil inc 0)))
           {}
@@ -1634,17 +1636,18 @@ not enough elements were present."
      (lazy-seq
        (cons (take n s) (partition n step (drop step s)))))))
 
-(defn partitionf [f coll]
+(defn partitionf
   {:doc "A generalized version of partition. Instead of taking a constant number of elements,
          this function calls f with the remaining collection to determine how many elements to
          take."
-   :examples [["(partitionf first [1 :a, 2 :a b, 3 :a :b :c])"
-               nil ((1 :a) (2 :a :b) (3 :a :b :c))]]}
+   :examples [["(partitionf first [2 :a, 3 :a :b, 4 :a :b :c])"
+               nil ((2 :a) (3 :a :b) (4 :a :b :c))]]}
+  [f coll]
   (when-let [s (seq coll)]
     (lazy-seq
       (let [n (f s)]
         (cons (take n s)
-              (partitionf f (drop n coll)))))))
+              (partitionf f (drop n s)))))))
 
 (defn destructure [binding expr]
   (cond
@@ -2203,11 +2206,11 @@ Expands to calls to `extend-type`."
 ;; TODO: implement :>> like in Clojure?
 (defmacro condp
   "Takes a binary predicate, an expression and a number of two-form clauses.
-  Calls the predicate on the first value of each clause and the expression.
-  If the result is truthy returns the second value of the clause.
+Calls the predicate on the first value of each clause and the expression.
+If the result is truthy returns the second value of the clause.
 
-  If the number of arguments is odd and no clause matches, the last argument is returned.
-  If the number of arguments is even and no clause matches, throws an exception."
+If the number of arguments is odd and no clause matches, the last argument is returned.
+If the number of arguments is even and no clause matches, throws an exception."
   [pred-form expr & clauses]
   (let [x (gensym 'expr), pred (gensym 'pred)]
     `(let [~x ~expr, ~pred ~pred-form]
@@ -2221,13 +2224,13 @@ Expands to calls to `extend-type`."
 
 (defmacro case
   "Takes an expression and a number of two-form clauses.
-  Checks for each clause if the first part is equal to the expression.
-  If yes, returns the value of the second part.
+Checks for each clause if the first part is equal to the expression.
+If yes, returns the value of the second part.
 
-  The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
+The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
 
-  If the number of arguments is odd and no clause matches, the last argument is returned.
-  If the number of arguments is even and no clause matches, throws an exception."
+If the number of arguments is odd and no clause matches, the last argument is returned.
+If the number of arguments is even and no clause matches, throws an exception."
   [expr & args]
   `(condp #(if (set? %1) (%1 %2) (= %1 %2))
      ~expr ~@args))
@@ -2282,9 +2285,9 @@ Expands to calls to `extend-type`."
 
 (defn tree-seq
   "Returns a lazy sequence of the nodes in a tree via a depth-first walk.
-   branch? - fn of node that should true when node has children
-   children - fn of node that should return a sequence of children (called if branch? true)
-   root - root node of the tree"
+branch? - fn of node that should true when node has children
+children - fn of node that should return a sequence of children (called if branch? true)
+root - root node of the tree"
   [branch? children root]
   (let [walk (fn walk [node]
                (lazy-seq
@@ -2293,24 +2296,23 @@ Expands to calls to `extend-type`."
                     (mapcat walk (children node))))))]
     (walk root)))
 
-(defn flatten [x]
+(defn flatten
   ; TODO: laziness?
-  {:doc "Takes any nested combination of ISeqable things, and return their contents
-        as a single, flat sequence.
+  {:doc "Takes any nested combination of ISeqable things, and return their contents as a single, flat sequence.
 
-        Calling this function on something that is not ISeqable returns a seq with that
-        value as its only element."
+Calling this function on something that is not ISeqable returns a seq with that value as its only element."
    :examples [["(flatten [[1 2 [3 4] [5 6]] 7])" nil [1 2 3 4 5 6 7]]
               ["(flatten :this)" nil [:this]]]}
+  [x]
   (if (not (satisfies? ISeqable x)) [x]
     (transduce (comp (map flatten) cat)
                conj []
                (seq x))))
 
-(defn juxt [& fns]
-  {:doc "Returns a function that applies all fns to its arguments,
-         and returns a vector of the results."
+(defn juxt
+  {:doc "Returns a function that applies all fns to its arguments, and returns a vector of the results."
    :examples [["((juxt + - *) 2 3)" nil [5 -1 6]]]}
+  [& fns]
   (fn [& args]
     (mapv #(apply % args) fns)))
 
@@ -2326,15 +2328,14 @@ Expands to calls to `extend-type`."
   ([f col]
    (transduce (map f) conj col)))
 
-(defn macroexpand-1 [form]
-  {:doc "If form is a macro call, returns the expanded form.
-
-        Does nothing if not a macro call."
+(defn macroexpand-1
+  {:doc "If form is a macro call, returns the expanded form. Does nothing if not a macro call."
    :signatures [[form]]
    :examples [["(macroexpand-1 '(when condition this and-this))"
-               nil `(if condition (do this and-this))]
+               nil (if condition (do this and-this))]
               ["(macroexpand-1 ())" nil ()]
               ["(macroexpand-1 [1 2])" nil [1 2]]]}
+  [form]
   (if (or (not (list? form))
           (= () form))
     form
