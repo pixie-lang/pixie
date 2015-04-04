@@ -114,9 +114,9 @@ package_Darwin_x86_64:
 	cd dist && tar -cjvf pixie-`uname -s`-`uname -m`-`git describe --tags`.tar.bz2 ./pixie
 
 package_Linux_armv7l:
-	#make compile_basics
-	#make compile_src
-	#make compile_tests
+	make compile_basics
+	make compile_src
+	make compile_tests
 	rm -rf dist
 	mkdir dist
 	mkdir dist/pixie
