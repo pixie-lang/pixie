@@ -173,8 +173,9 @@
                  (if (-satisfies? ISeqable t)
                    (let [ts (seq t)]
                      (if (not ts) false
-                       (or (-instance? (first ts) x)
-                           (instance? (rest ts) x))))
+                       (if (-instance? (first ts) x)
+                         true
+                         (instance? (rest ts) x))))
                    (-instance? t x))))
 
 (def satisfies? (fn ^{:doc "Checks if x satisfies the protocol p.
@@ -186,8 +187,9 @@
                   (if (-satisfies? ISeqable p)
                     (let [ps (seq p)]
                       (if (not ps) true
-                        (and (-satisfies? (first ps) x)
-                             (satisfies? (rest ps) x))))
+                        (if (not (-satisfies? (first ps) x))
+                          false
+                          (satisfies? (rest ps) x))))
                     (-satisfies? p x))))
 
 (def into (fn ^{:doc "Add the elements of `from` to the collection `to`."
