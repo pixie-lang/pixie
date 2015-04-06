@@ -2,7 +2,7 @@ FROM debian:sid
 
 # install dependencies
 RUN apt-get update \
-    && apt-get install -y gcc pkg-config make curl bzip2 python2.7 \
+    && apt-get install -y gcc g++ pkg-config make curl bzip2 python2.7 \
     && apt-get install -y libffi-dev libuv-dev libedit-dev
 
 ADD . /usr/src/pixie
