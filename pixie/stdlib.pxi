@@ -415,7 +415,14 @@
       nil
       (cons (nth self x) (lazy-seq* (fn [] (vector-seq self (+ x 1)))))))))
 
-
+(extend -seq String
+  (fn string-seq
+   ([self]
+    (string-seq self 0))
+   ([self x]
+    (if (= x (count self))
+      nil
+      (cons (nth self x) (lazy-seq* (fn [] (string-seq self (+ x 1)))))))))
 
 (def concat
   (fn ^{:doc "Concatenates its arguments."
@@ -893,16 +900,6 @@ If further arguments are passed, invokes the method named by symbol, passing the
    :examples [["(let [f (constantly :me)] [(f 1) (f \"foo\") (f :abc) (f nil)])"
                nil [:me :me :me :me]]]}
   (fn [& _] x))
-
-(defn some
-  {:doc "Returns the first true value of the predicate for the elements of the collection."
-   :signatures [[pred coll]]
-   :added "0.1"}
-  [pred coll]
-  (if-let [coll (seq coll)]
-    (or (pred (first coll))
-        (recur pred (next coll)))
-    false))
 
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn map-entry-nth [self idx]
@@ -1421,21 +1418,6 @@ The new value is thus `(apply f current-value-of-atom args)`."
            (do ~@body
                (recur (inc ~b))))))))
 
-(extend -iterator PersistentVector
-        (fn [v]
-          (dotimes [x (count v)]
-            (yield (nth v x nil)))))
-
-(extend -iterator Array
-        (fn [v]
-          (dotimes [x (count v)]
-            (yield (nth v x nil)))))
-
-(extend -iterator String
-        (fn [v]
-          (dotimes [x (count v)]
-            (yield (nth v x nil)))))
-
 (defmacro and
   {:doc "Check if the given expressions return truthy values, returning the last, or false."
    :examples [["(and true false)" nil false]
@@ -1482,6 +1464,16 @@ The new value is thus `(apply f current-value-of-atom args)`."
             (let [~bind tmp#]
               ~then)
             ~else)))))
+
+(defn some
+  {:doc "Returns the first true value of the predicate for the elements of the collection."
+   :signatures [[pred coll]]
+   :added "0.1"}
+  [pred coll]
+  (if (seq coll)
+    (or (pred (first coll))
+        (some pred (next coll)))
+    false))
 
 (defn nnext
   {:doc "Equivalent to (next (next coll))"
@@ -1767,14 +1759,6 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
             @acc
             (recur (+ i step) acc)))
         acc)))
-  IIterable
-  (-iterator [self]
-    (loop [i start]
-      (when (or (and (> step 0) (< i stop))
-                (and (< step 0) (> i stop))
-                (and (= step 0)))
-        (yield i)
-        (recur (+ i step)))))
   ICounted
   (-count [self]
     (if (or (and (< start stop) (< step 0))
@@ -1816,33 +1800,6 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
   ([start stop] (->Range start stop 1))
   ([start stop step] (->Range start stop step)))
 
-(defn iterator
-  {:doc "Returns an iterator for the collection."
-   :added "0.1"}
-  [coll]
-  (-iterator coll))
-
-(defn move-next! [i]
-  (-move-next! i)
-  i)
-
-(defn at-end? [i]
-  (-at-end? i))
-
-(defn current [i]
-  (-current i))
-
-(defn iterator-seq [i]
-  (if (at-end? i)
-    nil
-    (cons (current i) (lazy-seq (iterator-seq (move-next! i))))))
-
-(extend -first IIterator -current)
-(extend -iterator IIterator identity)
-
-(extend -seq IIterator iterator-seq)
-(extend -seq IIterable (comp seq iterator))
-
 (extend -eq ISeqable -seq-eq)
 
 (deftype Unknown [])
@@ -1863,36 +1820,25 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                          true
                          self))))
 
-(extend -reduce ShallowContinuation
-        (fn [k f init]
-          (loop [acc init]
-            (if (reduced? init)
-              @init
-              (if (-at-end? k)
-                acc
-                (let [acc (f acc (-current k))]
-                  (-move-next! k)
-                  (recur acc)))))))
-
 (defn filter
   {:doc "Filter the collection for elements matching the predicate."
    :signatures [[pred] [pred coll]]
    :added "0.1"}
-  ([f] (fn [xf]
-         (fn
-           ([] (xf))
-           ([acc] (xf acc))
-           ([acc i] (if (f i)
-                      (xf acc i)
-                      acc)))))
-  ([f coll]
-    (let [iter (iterator coll)]
-      (loop []
-        (when (not (at-end? iter))
-          (if (f (current iter))
-            (yield (current iter)))
-          (move-next! iter)
-          (recur))))))
+  ([pred] 
+   (fn [xf]
+     (fn
+       ([] (xf))
+       ([acc] (xf acc))
+       ([acc i] (if (pred i)
+                  (xf acc i)
+                  acc)))))
+  ([pred coll]
+   (lazy-seq
+     (when-let [s (seq coll)]
+       (let [[f & r] s]
+         (if (pred f)
+           (cons f (filter pred r))
+           (filter pred r)))))))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
@@ -1910,33 +1856,35 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                    (swap! seen conj i)
                    (xf acc i))))))))
   ([coll]
-    (let [iter (iterator coll)]
-      (loop [acc #{}]
-        (when (not (at-end? iter))
-          (if (contains? acc (current iter))
-            (do (move-next! iter)
-                (recur acc))
-            (let [val (current iter)]
-              (yield val)
-              (move-next! iter)
-              (recur (conj acc val)))))))))
-
+   (let [step (fn step [xs seen]
+                (lazy-seq
+                  ((fn [f seen]
+                     (when-let [s (seq f)]
+                       (let [xs (first s)]
+                         (if (contains? seen xs)
+                           (step (rest s) seen)
+                           (cons xs (step (rest s) (conj seen xs)))))))
+                   xs seen)))]
+     (step coll #{}))))
 
 (defn keep
   ([f]
-     (fn [xf]
-       (fn
-         ([] (xf))
-         ([acc] (xf acc))
-         ([acc i] (let [result (f i)]
-                    (if result
-                      (xf acc result)
-                      acc))))))
+   (fn [xf]
+     (fn
+       ([] (xf))
+       ([acc] (xf acc))
+       ([acc i] (let [result (f i)]
+                  (if result
+                    (xf acc result)
+                    acc))))))
   ([f coll]
-     (iterate [x coll]
-              (let [result (f x)]
-                (if result
-                  (yield result))))))
+   (lazy-seq 
+     (when-let [s (seq coll)]
+       (let [[first & rest] s
+             result (f first)]
+         (if result
+           (cons result (keep f rest))
+           (keep f rest)))))))
 
 (defn refer
   {:doc "Refer to the specified vars from a namespace directly.
@@ -1990,13 +1938,6 @@ user => (refer 'pixie.string :exclude '(substring))"
        (apply refer (quote [~ns ~@args]))))
 
 
-
-(extend -iterator ISeq (fn [s]
-                         (loop [s s]
-                           (when s
-                             (yield (first s))
-                             (recur (next s))))))
-(extend -at-end? EmptyList (fn [_] true))
 
 (defn merge-with
   [f & maps]
