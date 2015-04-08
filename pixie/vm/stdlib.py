@@ -57,9 +57,6 @@ defprotocol("pixie.stdlib", "IToTransient", ["-transient"])
 defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
 defprotocol("pixie.stdlib", "ITransientStack", ["-push!", "-pop!"])
 
-defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
-defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
-
 defprotocol("pixie.stdlib", "IDisposable", ["-dispose!"])
 
 @as_var("pixie.stdlib.internal", "-defprotocol")
@@ -232,22 +229,6 @@ def __name(self):
 @extend(_namespace, code.Namespace)
 def __name(_):
     return nil
-
-@extend(_current, ShallowContinuation)
-def _current(self):
-    assert isinstance(self, ShallowContinuation)
-    return self._val
-
-@extend(_at_end_QMARK_, ShallowContinuation)
-def _(self):
-    assert isinstance(self, ShallowContinuation)
-    return true if self.is_finished() else false
-
-@extend(_move_next_BANG_, ShallowContinuation)
-def _(self):
-    assert isinstance(self, ShallowContinuation)
-    self.invoke([nil])
-    return self
 
 @returns(r_uint)
 @as_var("hash")
