@@ -280,6 +280,7 @@
 (extend -invoke Code -invoke)
 (extend -invoke NativeFn -invoke)
 (extend -invoke VariadicCode -invoke)
+(extend -invoke MultiArityFn -invoke)
 (extend -invoke Closure -invoke)
 (extend -invoke Var -invoke)
 (extend -invoke PolymorphicFn -invoke)
@@ -2340,3 +2341,9 @@ Expands to calls to `extend-type`."
 (def *e)
 (defn -set-*e [e]
   (def *e e))
+
+
+(def hash-map hashmap)
+
+(defn zipmap [a b]
+  (into {} (map vector a b)))
