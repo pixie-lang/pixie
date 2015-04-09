@@ -257,8 +257,9 @@ class PixieCodeInfo(ErrorInfo):
         return tm
 
 class ExtraCodeInfo(ErrorInfo):
-    def __init__(self, str):
+    def __init__(self, str, data=None):
         self._str = str
+        self._data = data
 
     def __repr__(self):
         return self._str
@@ -268,7 +269,11 @@ class ExtraCodeInfo(ErrorInfo):
         from pixie.vm.keyword import keyword
 
         tm = {keyword(u"type"): keyword(u"extra"),
-              keyword(u"data"): rt.wrap(self._str)}
+              keyword(u"msg"): rt.wrap(self._str)}
+
+        if self._data:
+            tm[keyword(u"data")] = self._data
+
         return tm
 
 

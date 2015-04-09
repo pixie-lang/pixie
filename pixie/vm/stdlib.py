@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
-    runtime_error, add_info
+    runtime_error, add_info, ExtraCodeInfo
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           list_copy, returns, intern_var
 import pixie.vm.code as code
@@ -865,3 +865,10 @@ def _set_current_var_frames(self, frames):
        Sets the current var frames. Frames should be a cons list of hashmaps containing mappings of vars to dynamic
        values. Setting this value to anything but this data format will cause undefined errors."""
     code._dynamic_vars.set_current_frames(frames)
+
+@as_var("add-exception-info")
+def _add_exception_info(ex, str, data):
+    affirm(isinstance(ex, RuntimeException), u"First argument must be an exception")
+    assert isinstance(ex, RuntimeException)
+    ex._trace.append(ExtraCodeInfo(rt.name(str), data))
+    return ex
