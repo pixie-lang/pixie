@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
-    runtime_error
+    runtime_error, add_info
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           list_copy, returns, intern_var
 import pixie.vm.code as code
@@ -506,12 +506,32 @@ def load_reader(rdr):
             form = reader.read(rdr, False)
             if form is reader.eof:
                 return nil
-            compiled = compiler.compile(form)
 
-            if pxic_writer is not None:
-                pxic_writer.write_object(compiled)
+            try:
+                compiled = compiler.compile(form)
 
-            compiled.invoke([])
+            except WrappedException as ex:
+                meta = rt.meta(form)
+                if meta is not nil:
+                    ci = rt.interpreter_code_info(meta)
+                    add_info(ex, ci.__repr__())
+                add_info(ex, u"Compiling: " + rt.name(rt.str(form)))
+                raise ex
+
+            try:
+                if pxic_writer is not None:
+                    pxic_writer.write_object(compiled)
+
+                compiled.invoke([])
+
+            except WrappedException as ex:
+                meta = rt.meta(form)
+                if meta is not nil:
+                    ci = rt.interpreter_code_info(meta)
+                    add_info(ex, ci.__repr__())
+                add_info(ex, u"Running: " + rt.name(rt.str(form)))
+                raise ex
+
 
     if not we_are_translated():
         print "done"

@@ -78,7 +78,10 @@ class Context(object):
         self._max_sp = 0
         self.can_tail_call = False
         self.closed_overs = []
-        self.name = name
+        if parent_ctx:
+            self.name = parent_ctx.name + u"_" + name
+        else:
+            self.name = name
         self.recur_points = []
         self.debug_points = {}
 

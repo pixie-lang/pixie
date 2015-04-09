@@ -231,7 +231,6 @@ def write_namespace(o, wtr):
 
 def write_interpreter_code_info(obj, wtr):
     line, line_number, column_number, file = obj.interpreter_code_info_state()
-
     write_tag(CODE_INFO, wtr)
 
     write_object(line, wtr)
