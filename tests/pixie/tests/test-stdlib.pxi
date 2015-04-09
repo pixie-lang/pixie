@@ -296,7 +296,9 @@
   (t/assert= (seq (filter (fn [x] true) [])) nil)
   (t/assert= (seq (filter (fn [x] false) [])) nil)
   (t/assert= (seq (filter (fn [x] true) [1 2 3 4])) '(1 2 3 4))
-  (t/assert= (seq (filter (fn [x] false) [1 2 3 4])) nil))
+  (t/assert= (seq (filter (fn [x] false) [1 2 3 4])) nil)
+  (t/assert= (into {} (filter (fn [[_ v]] (odd? v)) {:a 1, :b 2, :c 3, :d 4}))
+             {:a 1 :c 3}))
 
 (t/deftest test-distinct
   (t/assert= (seq (distinct [1 2 3 2 1])) '(1 2 3))
@@ -344,7 +346,6 @@
 
 (t/deftest test-range
   (t/assert= (= (-seq (range 10))
-                (-seq (-iterator (range 10)))
                 '(0 1 2 3 4 5 6 7 8 9))
              true))
 
