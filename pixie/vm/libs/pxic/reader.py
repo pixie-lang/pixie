@@ -55,7 +55,8 @@ def read_raw_integer(rdr):
     return r_uint(ord(rdr.read()[0]) | (ord(rdr.read()[0]) << 8) | (ord(rdr.read()[0]) << 16) | (ord(rdr.read()[0]) << 24))
 
 def read_raw_string(rdr):
-    return rdr.read_cached_string()
+    s = rdr.read_cached_string()
+    return s
 
 def read_code(rdr):
     sz = read_raw_integer(rdr)
@@ -129,7 +130,6 @@ def read_interpreter_code_info(rdr):
     line_number = read_raw_integer(rdr)
     column_number = read_raw_integer(rdr)
     file = read_raw_string(rdr)
-
     return InterpreterCodeInfo(line, intmask(line_number), intmask(column_number), file)
 
 def read_obj(rdr):
@@ -151,6 +151,7 @@ def read_obj(rdr):
         return symbol(read_raw_string(rdr))
     elif tag == LINE_PROMISE:
         lp = LinePromise()
+        lp._chrs = None
         lp._str = read_raw_string(rdr)
         return lp
     elif tag == MAP:

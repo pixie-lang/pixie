@@ -78,7 +78,10 @@ class Context(object):
         self._max_sp = 0
         self.can_tail_call = False
         self.closed_overs = []
-        self.name = name
+        if name == default_fn_name and parent_ctx:
+            self.name = parent_ctx.name + u"_fn"
+        else:
+            self.name = name
         self.recur_points = []
         self.debug_points = {}
 
@@ -456,7 +459,10 @@ def compile_platform_plus(form, ctx):
 def add_args(name, args, ctx):
     required_args = -1
     local_idx = 0
-    ctx.add_local(name, Self())
+
+    if name != default_fn_name:
+        ctx.add_local(name, Self())
+
     for x in range(rt.count(args)):
         arg = rt.nth(args, rt.wrap(x))
         affirm(isinstance(arg, symbol.Symbol), u"Argument names must be symbols")
@@ -468,6 +474,7 @@ def add_args(name, args, ctx):
         local_idx += 1
     return required_args
 
+default_fn_name = u"some_long_name_unlikely_to_be_used"
 
 def compile_fn(form, ctx):
     form = rt.next(form)
@@ -475,7 +482,7 @@ def compile_fn(form, ctx):
         name = rt.first(form)
         form = rt.next(form)
     else:
-        name = symbol.symbol(u"-fn")
+        name = symbol.symbol(default_fn_name)
 
 
 
@@ -508,9 +515,7 @@ def compile_fn_body(name, args, body, ctx):
     required_args = add_args(rt.name(name), args, new_ctx)
     bc = 0
 
-    if name is not None:
-        affirm(isinstance(name, symbol.Symbol), u"Function names must be symbols")
-        #new_ctx.add_local(name._str, Self())
+    affirm(isinstance(name, symbol.Symbol), u"Function names must be symbols")
 
     arg_syms = EMPTY
     for x in range(rt.count(args)):
@@ -844,7 +849,7 @@ def compile_fn_call(form, ctx):
 
 
 def compile(form):
-    ctx = Context(u"main", 0, None)
+    ctx = Context(u"_toplevel_", 0, None)
     compile_form(form, ctx)
     ctx.bytecode.append(code.RETURN)
     return ctx.to_code()

@@ -1975,9 +1975,8 @@ The following two forms are allowed:
 
 The params can be destructuring bindings, see `(doc let)` for details."}
   [& decls]
-  (let [name (if (symbol? (first decls)) (first decls) nil)
+  (let [name (if (symbol? (first decls)) [(first decls)] nil)
         decls (if name (next decls) decls)
-        name (or name '-fn)
         decls (cond
                (vector? (first decls)) (list decls)
                ;(satisfies? ISeqable (first decls)) decls
@@ -2000,8 +1999,8 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                                   ~@body)))))
                         decls))]
     (if (= (count decls) 1)
-      `(fn* ~name ~(first (first decls)) ~@(next (first decls)))
-      `(fn* ~name ~@decls))))
+      `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
+      `(fn* ~@name ~@decls))))
 
 (deftype MultiMethod [dispatch-fn default-val methods]
   IFn
