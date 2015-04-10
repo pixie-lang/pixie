@@ -1,19 +1,7 @@
 (ns pixie.fs
   (:require [pixie.path :as path]
             [pixie.string :as string]
-            [pixie.ffi-infer :as f]))
-
-(f/with-config {:library "c"
-                :cxx-flags ["-lc"]
-                :includes ["sys/stat.h"]}
-  (f/defc-raw-struct stat [:st_mode :st_size]))
-
-(def stat-struct stat)
-
-(f/with-config {:library "c"
-                :cxx-flags ["-lc"]
-                :includes ["sys/stat.h"]}
-  (f/defcfn stat))
+            [pixie.uv :as uv]))
 
 (defprotocol IFSPath
   (path [this]
@@ -96,16 +84,12 @@
 (defn- assert-existence [f]
     (assert (exists? f) (str "No file or directory at \"" (abs f) "\"")))
 
-(defn- read-stat-field [path field]
-  (assert-existence path)
-  (let [s (stat-struct)
-        _ (stat (abs path) s)
-        result (field s)]
-    (dispose! s)
-    result))
+(uv/defuvfsfn fs-size pixie.uv/uv_fs_stat [file] :statbuf.st_size)
+(uv/defuvfsfn fs-mode pixie.uv/uv_fs_stat [file] :statbuf.st_mode)
 
 (defn- size-of-path [path]
-  (read-stat-field path :st_size))
+  (assert-existence path)
+  (fs-size (abs path)))
 
 (defn- permission-string [n]
   (apply str
@@ -115,7 +99,8 @@
              (bit-shift-right masked shift)))))
 
 (defn- permissions-of-path [path]
-  (permission-string (read-stat-field path :st_mode)))
+  (assert-existence path)
+  (permission-string (fs-mode (abs path))))
 
 ;; File and Dir are just wrappers around paths.
 (deftype File [pathz]
