@@ -309,7 +309,6 @@
 (extend -reduce Nil (fn [self f init] init))
 (extend -hash Nil (fn [self] 100000))
 (extend -with-meta Nil (fn [self _] nil))
-(extend -at-end? Nil (fn [_] true))
 (extend -deref Nil (fn [_] nil))
 (extend -contains-key Nil (fn [_ _] false))
 
@@ -396,13 +395,6 @@
     (if v
       1111111
       3333333)))
-
-(def stacklet->lazy-seq
-  (fn [k]
-    (if (-at-end? k)
-      nil
-      (cons (-current k)
-            (lazy-seq* (fn [] (stacklet->lazy-seq (-move-next! k))))))))
 
 (def = -eq)
 
@@ -1391,18 +1383,6 @@ The new value is thus `(apply f current-value-of-atom args)`."
         nil)
     nil
     ~(nth binding 1 nil)))
-
-(defmacro iterate [binding & body]
-  (assert (= 2 (count binding)) "binding and collection required")
-  `(let [i# (iterator ~(second binding))]
-     (loop []
-       (if (at-end? i#)
-         nil
-         (let [~(first binding) (current i#)]
-           ~@body
-           (move-next! i#)
-           (recur))))))
-
 
 (defmacro dotimes
   {:doc "Execute the expressions in the body n times."
