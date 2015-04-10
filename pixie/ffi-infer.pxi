@@ -1,5 +1,5 @@
 (ns pixie.ffi-infer
-  (require pixie.io-blocking :as io))
+  (:require [pixie.io-blocking :as io]))
 
 
 (defn -add-rel-path [rel]

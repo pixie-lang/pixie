@@ -65,6 +65,7 @@ def init():
     import pixie.vm.map_entry
     import pixie.vm.libs.platform
     import pixie.vm.libs.ffi
+    import pixie.vm.libs.env
     import pixie.vm.symbol
     import pixie.vm.libs.path
     import pixie.vm.libs.string

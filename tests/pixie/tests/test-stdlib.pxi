@@ -243,7 +243,7 @@
   (t/assert= (fn? #(%)) true)
   (t/assert= (fn? :foo) true)
   (t/assert= (fn? 1) false)
-  (t/assert= (fn? and) false)
+  (t/assert= (fn? and) true)
   (t/assert= (fn? "foo") false)
   (t/assert= (fn? (let [x 8] (fn [y] (+ x y)))) true))
 
@@ -296,7 +296,9 @@
   (t/assert= (seq (filter (fn [x] true) [])) nil)
   (t/assert= (seq (filter (fn [x] false) [])) nil)
   (t/assert= (seq (filter (fn [x] true) [1 2 3 4])) '(1 2 3 4))
-  (t/assert= (seq (filter (fn [x] false) [1 2 3 4])) nil))
+  (t/assert= (seq (filter (fn [x] false) [1 2 3 4])) nil)
+  (t/assert= (into {} (filter (fn [[_ v]] (odd? v)) {:a 1, :b 2, :c 3, :d 4}))
+             {:a 1 :c 3}))
 
 (t/deftest test-distinct
   (t/assert= (seq (distinct [1 2 3 2 1])) '(1 2 3))
@@ -344,7 +346,6 @@
 
 (t/deftest test-range
   (t/assert= (= (-seq (range 10))
-                (-seq (-iterator (range 10)))
                 '(0 1 2 3 4 5 6 7 8 9))
              true))
 
@@ -355,20 +356,20 @@
   (defn baz [x y] (+ x y))
   ;; Back into the text namespace
   (in-ns :pixie.tests.test-stdlib)
-  (t/assert= (set (keys (ns-map 'foo))) 
+  (t/assert= (set (keys (ns-map 'foo)))
              #{'bar 'baz}))
 
 (t/deftest test-while
   (t/assert=  (while (pos? 0) true ) nil)
   (t/assert=  (while (pos? 0) false) nil)
   (t/assert=  0 (let [x (atom 10)
-                  cnt (atom 0)] 
+                  cnt (atom 0)]
                  (while (pos? @x)
                    (do (swap! x dec)
                        (swap! cnt inc)))
                     @x))
   (t/assert=  10 (let [x (atom 10)
-                  cnt (atom 0)] 
+                  cnt (atom 0)]
                  (while (pos? @x)
                    (do (swap! x dec)
                        (swap! cnt inc)))
@@ -408,7 +409,7 @@
   (t/assert= (group-by :age [{:name "banjo" :age 3}
                              {:name "mary"  :age 3}
                              {:name "boris" :age 7}])
-             {3  [{:name "banjo" :age 3} 
+             {3  [{:name "banjo" :age 3}
                   {:name "mary"  :age 3}]
               7  [{:name "boris" :age 7}]})
   (t/assert= (group-by even? (range 1 5))

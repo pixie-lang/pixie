@@ -1,5 +1,5 @@
 (ns pixie.uv
-  (require pixie.ffi-infer :as f))
+  (:require [pixie.ffi-infer :as f]))
 
 (f/with-config  {:library "uv"
                 :includes ["uv.h"]}
@@ -27,8 +27,17 @@
   (f/defcfn uv_update_time)
   (f/defcfn uv_walk)
 
+  (f/defccallback uv_alloc_cb)
 
+  (f/defcstruct uv_connect_t [:handle])
+  (f/defcstruct uv_stream_t [])
+
+  (f/defcfn uv_read_start)
   (f/defccallback uv_read_cb)
+
+  (f/defcfn uv_write)
+  (f/defcstruct uv_write_t [])
+  (f/defccallback uv_write_cb)
 
 
   ;; Timer
@@ -184,9 +193,11 @@
     (f/defcfn uv_tcp_bind)
     (f/defcfn uv_listen)
     (f/defcfn uv_accept)
-    (f/defcfn uv_read_start)
+    (f/defcfn uv_tcp_connect)
+    (f/defcfn uv_tcp_keepalive)
 
     (f/defccallback uv_connection_cb)
+    (f/defccallback uv_connect_cb)
 
     )
 

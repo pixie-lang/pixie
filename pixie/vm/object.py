@@ -255,3 +255,29 @@ class PixieCodeInfo(ErrorInfo):
         tm = {keyword(u"type") : keyword(u"pixie")}
         tm[keyword(u"name")] = String(self._name)
         return tm
+
+class ExtraCodeInfo(ErrorInfo):
+    def __init__(self, str, data=None):
+        self._str = str
+        self._data = data
+
+    def __repr__(self):
+        return self._str
+
+    def trace_map(self):
+        import pixie.vm.rt as rt
+        from pixie.vm.keyword import keyword
+
+        tm = {keyword(u"type"): keyword(u"extra"),
+              keyword(u"msg"): rt.wrap(self._str)}
+
+        if self._data:
+            tm[keyword(u"data")] = self._data
+
+        return tm
+
+
+def add_info(ex, data):
+    assert isinstance(ex, WrappedException)
+    ex._ex._trace.append(ExtraCodeInfo(data))
+    return ex

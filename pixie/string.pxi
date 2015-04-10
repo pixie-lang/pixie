@@ -1,5 +1,5 @@
 (ns pixie.string
-  (require pixie.string.internal :as si))
+  (:require [pixie.string.internal :as si]))
 
 ; reexport native string functions
 (def substring si/substring)

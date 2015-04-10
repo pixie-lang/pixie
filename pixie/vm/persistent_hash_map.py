@@ -7,7 +7,6 @@ from  pixie.vm.code import extend, as_var
 from rpython.rlib.rarithmetic import r_int, r_uint, intmask
 import rpython.rlib.jit as jit
 import pixie.vm.rt as rt
-from pixie.vm.iterator import NativeIterator, empty_iterator
 
 MASK_32 = r_uint(0xFFFFFFFF)
 
@@ -58,16 +57,6 @@ class PersistentHashMap(object.Object):
         if new_root is self._root:
             return self
         return PersistentHashMap(self._cnt - 1, new_root, self._meta)
-
-    def iter(self):
-        if self._root is None:
-            return empty_iterator
-        else:
-            return self._root.iter()
-
-
-
-
 
 
 class INode(object.Object):
@@ -185,9 +174,6 @@ class BitmapIndexedNode(INode):
                 return init
         return init
 
-    def iter(self):
-        return BitmapIndexedNodeIterator(self._array)
-
     def without_inode(self, shift, hash, key):
         bit = bitpos(hash, shift)
         if self._bitmap & bit == 0:
@@ -215,59 +201,6 @@ class BitmapIndexedNode(INode):
         return self
 
 BitmapIndexedNode_EMPTY = BitmapIndexedNode(None, r_uint(0), [])
-
-
-class BitmapIndexedNodeIterator(NativeIterator):
-    def __init__(self, array):
-        self._array_w = array
-        self._idx = 0
-        self._child_iterator_w = None
-        self._at_end = False
-        self._current = nil
-        self.move_next()
-
-    def move_next(self):
-        while True:
-            if self._child_iterator_w is None:
-                while True:
-                    if self._idx == len(self._array_w):
-                        self._current = nil
-                        self._at_end = True
-                        self._array_w = None
-                        return self
-                    key_or_none = self._array_w[self._idx]
-                    val_or_node = self._array_w[self._idx + 1]
-
-                    if key_or_none is not None:
-                        self._idx += 2
-                        self._current = rt.map_entry(key_or_none, val_or_node)
-                        return self
-
-                    elif val_or_node is not None:
-                        iter = val_or_node.iter()
-                        if iter.at_end():
-                            self._idx += 1
-                            continue
-                        self._child_iterator_w = iter
-                        self._current = self._child_iterator_w.current()
-                        return self
-
-                    self._idx += 2
-            else:
-                self._child_iterator_w.move_next()
-                if self._child_iterator_w.at_end():
-                    continue
-                self._current = self._child_iterator_w.current()
-                return self
-
-    def at_end(self):
-        return self._at_end
-
-    def current(self):
-        return self._current
-
-
-
 
 class ArrayNode(INode):
     def __init__(self, edit, cnt, array):
@@ -345,54 +278,6 @@ class ArrayNode(INode):
 
         return init
 
-    def iter(self):
-        return ArrayMapIterator(self._array)
-
-class ArrayMapIterator(NativeIterator):
-    def __init__(self, array):
-        self._array_w = array
-        self._idx = 0
-        self._child_iterator_w = None
-        self._at_end = False
-        self._current = nil
-        self.move_next()
-
-    def move_next(self):
-        while True:
-            if self._child_iterator_w is None:
-                while True:
-                    if self._idx == len(self._array_w):
-                        self._current = nil
-                        self._at_end = True
-                        self._array_w = None
-                        return self
-                    val = self._array_w[self._idx]
-                    if val is not None:
-                        iter = val.iter()
-                        if iter.at_end():
-                            self._idx += 1
-                            continue
-                        self._child_iterator_w = iter
-                        self._current = self._child_iterator_w.current()
-                        return self
-
-                    self._idx += 1
-            else:
-                self._child_iterator_w.move_next()
-                if self._child_iterator_w.at_end():
-                    continue
-                self._current = self._child_iterator_w.current()
-                return self
-
-    def at_end(self):
-        return self._at_end
-
-    def current(self):
-        return self._current
-
-
-
-
 class HashCollisionNode(INode):
     def __init__(self, edit, hash, array):
         self._hash = hash
@@ -437,9 +322,6 @@ class HashCollisionNode(INode):
                 return init
         return init
 
-    def iter(self):
-        return HashCollisionNodeIterator(self._array)
-
     def find_index(self, key):
         i = r_int(0)
         while i < len(self._array):
@@ -459,37 +341,6 @@ class HashCollisionNode(INode):
             return None
 
         return HashCollisionNode(None, self._hash, remove_pair(self._array, r_uint(idx) / 2))
-
-
-class HashCollisionNodeIterator(NativeIterator):
-    def __init__(self, array):
-        self._w_array = array
-        self._w_idx = 0
-        self._w_current = nil
-        self.move_next()
-
-    def move_next(self):
-        while True:
-            if self._w_idx == len(self._w_array):
-                self._w_current = nil
-                self._w_array = None
-                return self
-
-            key = self._w_array[self._w_idx]
-            val = self._w_array[self._w_idx + 1]
-            self._w_idx += 2
-            if key is None:
-                continue
-
-            self._w_current = rt.map_entry(key, val)
-            return
-
-    def at_end(self):
-        return self._w_current is None
-
-    def current(self):
-        return self._w_current
-
 
 
 def create_node(shift, key1, val1, key2hash, key2, val2):

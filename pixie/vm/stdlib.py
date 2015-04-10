@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
-    runtime_error
+    runtime_error, add_info, ExtraCodeInfo
 from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           list_copy, returns, intern_var
 import pixie.vm.code as code
@@ -56,9 +56,6 @@ defprotocol("pixie.stdlib", "IToTransient", ["-transient"])
 
 defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
 defprotocol("pixie.stdlib", "ITransientStack", ["-push!", "-pop!"])
-
-defprotocol("pixie.stdlib", "IIterable", ["-iterator"])
-defprotocol("pixie.stdlib", "IIterator", ["-current", "-at-end?", "-move-next!"])
 
 defprotocol("pixie.stdlib", "IDisposable", ["-dispose!"])
 
@@ -232,22 +229,6 @@ def __name(self):
 @extend(_namespace, code.Namespace)
 def __name(_):
     return nil
-
-@extend(_current, ShallowContinuation)
-def _current(self):
-    assert isinstance(self, ShallowContinuation)
-    return self._val
-
-@extend(_at_end_QMARK_, ShallowContinuation)
-def _(self):
-    assert isinstance(self, ShallowContinuation)
-    return true if self.is_finished() else false
-
-@extend(_move_next_BANG_, ShallowContinuation)
-def _(self):
-    assert isinstance(self, ShallowContinuation)
-    self.invoke([nil])
-    return self
 
 @returns(r_uint)
 @as_var("hash")
@@ -506,12 +487,32 @@ def load_reader(rdr):
             form = reader.read(rdr, False)
             if form is reader.eof:
                 return nil
-            compiled = compiler.compile(form)
 
-            if pxic_writer is not None:
-                pxic_writer.write_object(compiled)
+            try:
+                compiled = compiler.compile(form)
 
-            compiled.invoke([])
+            except WrappedException as ex:
+                meta = rt.meta(form)
+                if meta is not nil:
+                    ci = rt.interpreter_code_info(meta)
+                    add_info(ex, ci.__repr__())
+                add_info(ex, u"Compiling: " + rt.name(rt.str(form)))
+                raise ex
+
+            try:
+                if pxic_writer is not None:
+                    pxic_writer.write_object(compiled)
+
+                compiled.invoke([])
+
+            except WrappedException as ex:
+                meta = rt.meta(form)
+                if meta is not nil:
+                    ci = rt.interpreter_code_info(meta)
+                    add_info(ex, ci.__repr__())
+                add_info(ex, u"Running: " + rt.name(rt.str(form)))
+                raise ex
+
 
     if not we_are_translated():
         print "done"
@@ -865,3 +866,9 @@ def _set_current_var_frames(self, frames):
        values. Setting this value to anything but this data format will cause undefined errors."""
     code._dynamic_vars.set_current_frames(frames)
 
+@as_var("add-exception-info")
+def _add_exception_info(ex, str, data):
+    affirm(isinstance(ex, RuntimeException), u"First argument must be an exception")
+    assert isinstance(ex, RuntimeException)
+    ex._trace.append(ExtraCodeInfo(rt.name(str), data))
+    return ex

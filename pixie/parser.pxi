@@ -1,5 +1,5 @@
 (ns pixie.parser
-  (require pixie.stdlib :as s))
+  (:require [pixie.stdlib :as s]))
 
 
 ;; This file contans a small framework for writing generic parsers in Pixie. Although the generated
@@ -68,7 +68,11 @@
     this)
   Character
   (to-parser [this]
-    (parse-if #(= % this))))
+    (parse-if #(= % this)))
+  String
+  (to-parser [this]
+    (println "bad-parser " this)
+    (assert false)))
 
 
 
@@ -164,6 +168,28 @@
   [name]
   (->PromiseFn nil name))
 
+(defn -parse-parser-args [args]
+  (loop [rules {}
+         args args]
+    (if args
+      (let [name (first args)
+            body (second args)
+            args (-> args next next)]
+        (assert (symbol? name) "Must name all rules")
+        (if (= '<- (first args))
+          (let [return (first (next args))
+                full-rule `(let [p# (to-parser ~body)]
+                              (fn [cursor#]
+                                      (let [~'value (p# cursor#)]
+                                        (if (failure? ~'value)
+                                          ~'value
+                                          ~return))))]
+            (recur (assoc rules name full-rule)
+                   (next (next args))))
+          (recur (assoc rules name body)
+                 args)))
+      rules)))
+
 (defmacro parser
   "(parser nm inherits & rules)
   Defines a new parser named `nm` that inherits from zero or more other parsers defined ion `inherits`. Rules are pairs
@@ -173,7 +199,7 @@
   (let [parted (apply merge
                       (conj (mapv (fn [sym]
                                     (-> sym resolve deref ::forms)) inherits)
-                            (apply hashmap rules)))
+                            (-parse-parser-args rules)))
         rules (apply concat parted)
         syms (keys parted)]
     `(let [~@(mapcat (fn [s]
@@ -268,12 +294,12 @@
   (assert (= '<- arrow) "Middle argument to sequence must be a return arrow")
   `(and ~@coll ~'<- ~body))
 
-(def end
+(defn end
   "A parser that only succeeds if there is no more input left to process."
-  (fn [cursor]
-    (if (at-end? cursor)
-      nil
-      fail)))
+  [cursor]
+  (if (at-end? cursor)
+    nil
+    fail))
 
 (defn one-of
   "Deines a parser that succeeds if the value being parsed is found in v"
@@ -337,9 +363,7 @@
                 digits -> d2
                 digits -> d3
                 digits -> d4
-                <- (do
-                     (println [d1 d2 d3 d4])
-                     (char (read-string (str "0x" d1 d2 d3 d4)))))
+                <- (char (read-string (str "0x" d1 d2 d3 d4))))
 
            (parse-if #(not= % \")))
 
@@ -349,7 +373,7 @@
               <- s))
 
 ;; Basic JSON parser
-(defparser JSONParser [NumberParser EscapedStringParser]
+(defparser JSONParser  [NumberParser EscapedStringParser]
 
   NULL (sequence "null" <- nil)
   TRUE (sequence "true" <- true)
@@ -359,10 +383,10 @@
              (zero+ (and ENTRY -> e
                          (maybe \,)
                          <- e)) -> items
-             (eat whitespace)
-             (eat whitespace)
-             \]
-             <- items)
+                         (eat whitespace)
+                         (eat whitespace)
+                         \]
+                         <- items)
   MAP-ENTRY (and (eat whitespace)
                  STRING -> key
                  (eat whitespace)

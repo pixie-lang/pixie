@@ -1,7 +1,7 @@
 (ns pixie.repl
-  (require pixie.stacklets :as st)
-  (require pixie.io :as io)
-  (require pixie.ffi-infer :as f))
+  (:require [pixie.stacklets :as st]
+            [pixie.io :as io]
+            [pixie.ffi-infer :as f]))
 
 (f/with-config {:library "edit"
                 :includes ["editline/readline.h"]}
