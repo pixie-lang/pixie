@@ -92,3 +92,10 @@
      (if (= orig res)
        (pr-str orig)
        (str (pr-str orig) " = " (pr-str res)))))
+
+
+(defmacro assert-table [pattern expr & vals]
+  (let [parted (partition (count pattern) vals)]
+    `(do ~@(for [fact parted]
+             `(let [~@(interleave pattern fact)]
+                ~expr)))))
