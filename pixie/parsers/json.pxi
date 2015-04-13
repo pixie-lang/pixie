@@ -13,7 +13,7 @@
                    (parse-if (set "123456789")) -> first
                    (zero+chars digits) -> rest
                    <- (str first rest))
-                  (and \0))
+                  (and \0 <- "0"))
               -> integer-digits
 
               (maybe (and \.
