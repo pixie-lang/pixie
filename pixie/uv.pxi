@@ -1,5 +1,6 @@
 (ns pixie.uv
-  (:require [pixie.ffi-infer :as f]))
+  (:require [pixie.ffi :as ffi]
+            [pixie.ffi-infer :as f]))
 
 (f/with-config  {:library "uv"
                 :includes ["uv.h"]}
@@ -58,7 +59,9 @@
                          :fs_type
                          :path
                          :result
-                         :ptr])
+                         :ptr
+                         :statbuf.st_size
+                         :statbuf.st_mode])
   (f/defcstruct uv_timespec_t [:tv_sec
                                :tv_nsec])
   (f/defcstruct uv_stat_t [:st_dev
@@ -214,3 +217,24 @@
   (if (neg? result)
     (throw (str "UV Error: " (uv_err_name result)))
     result))
+
+(defmacro defuvfsfn
+  ([nm args return]
+   (defuvfsfn nm (symbol (str "pixie.uv/uv_" (name nm))) args return))
+  ([nm uv-fn args return]
+  `(defn ~nm ~args
+     (let [f (fn [k#]
+               (let [cb# (atom nil)]
+                 (reset! cb# (ffi/ffi-prep-callback uv_fs_cb
+                                                (fn [req#]
+                                                  (try
+                                                    (pixie.stacklets/run-and-process k# (~return (pixie.ffi/cast req# uv_fs_t)))
+                                                    (uv_fs_req_cleanup req#)
+                                                    (-dispose! @cb#)
+                                                    (catch e (println e))))))
+                 (~uv-fn
+                  (uv_default_loop)
+                  (uv_fs_t)
+                  ~@args
+                  @cb#)))]
+       (pixie.stacklets/call-cc f)))))

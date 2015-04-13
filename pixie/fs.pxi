@@ -1,7 +1,7 @@
 (ns pixie.fs
   (:require [pixie.path :as path]
-            [pixie.string :as string]))
-
+            [pixie.string :as string]
+            [pixie.uv :as uv]))
 
 (defprotocol IFSPath
   (path [this]
@@ -19,15 +19,16 @@
   (basename [this]
     "Returns the basename of the Filesystem Object")
 
-  ;; TODO
   (permissions [this]
     "Returns a string of the octal permissions")
 
-  (mounted? [this]
-    "Returns true if the directory is a mounted")
-
   (size [this]
-    "Returns the size of the file/dir on disk"))
+    "Returns the size of the file/dir on disk")
+
+  ;; TODO
+
+  (mounted? [this]
+    "Returns true if the directory is a mounted"))
 
 (defprotocol IFile
   (extension [this]
@@ -80,6 +81,26 @@
         :else
         (apply str (interpose "/" (concat (repeat (count diff-b) "..") diff-a)))))))
 
+(defn- assert-existence [f]
+    (assert (exists? f) (str "No file or directory at \"" (abs f) "\"")))
+
+(uv/defuvfsfn fs-size pixie.uv/uv_fs_stat [file] :statbuf.st_size)
+(uv/defuvfsfn fs-mode pixie.uv/uv_fs_stat [file] :statbuf.st_mode)
+
+(defn- size-of-path [path]
+  (assert-existence path)
+  (fs-size (abs path)))
+
+(defn- permission-string [n]
+  (apply str
+         (for [shift [6 3 0]]
+           (let [mask (bit-shift-left 7 shift)
+                 masked (bit-and mask n)]
+             (bit-shift-right masked shift)))))
+
+(defn- permissions-of-path [path]
+  (assert-existence path)
+  (permission-string (fs-mode (abs path))))
 
 ;; File and Dir are just wrappers around paths.
 (deftype File [pathz]
@@ -98,6 +119,12 @@
 
   (basename [this]
     (last (string/split (abs this) "/")))
+
+  (size [this]
+    (size-of-path this))
+
+  (permissions [this]
+    (permissions-of-path this))
 
   IFile
   ;; TODO: Sort out regex or make strings partitionable. So we can split at
@@ -140,6 +167,12 @@
 
   (basename [this]
     (last (string/split (abs this) "/")))
+
+  (size [this]
+    (size-of-path this))
+
+  (permissions [this]
+    (permissions-of-path pathz))
 
   IDir
   (list [this]

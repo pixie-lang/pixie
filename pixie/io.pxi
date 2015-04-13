@@ -6,28 +6,10 @@
             [pixie.ffi :as ffi]
             [pixie.ffi-infer :as ffi-infer]))
 
-(defmacro defuvfsfn [nm args return]
-  `(defn ~nm ~args
-     (let [f (fn [k#]
-               (let [cb# (atom nil)]
-                 (reset! cb# (ffi/ffi-prep-callback uv/uv_fs_cb
-                                                (fn [req#]
-                                                  (try
-                                                    (st/run-and-process k# (~return (pixie.ffi/cast req# uv/uv_fs_t)))
-                                                    (uv/uv_fs_req_cleanup req#)
-                                                    (-dispose! @cb#)
-                                                    (catch e (println e))))))
-                 (~(symbol (str "pixie.uv/uv_" (name nm)))
-                  (uv/uv_default_loop)
-                  (uv/uv_fs_t)
-                  ~@args
-                  @cb#)))]
-       (st/call-cc f))))
-
-(defuvfsfn fs_open [path flags mode] :result)
-(defuvfsfn fs_read [file bufs nbufs offset] :result)
-(defuvfsfn fs_write [file bufs nbufs offset] :result)
-(defuvfsfn fs_close [file] :result)
+(uv/defuvfsfn fs_open [path flags mode] :result)
+(uv/defuvfsfn fs_read [file bufs nbufs offset] :result)
+(uv/defuvfsfn fs_write [file bufs nbufs offset] :result)
+(uv/defuvfsfn fs_close [file] :result)
 
 
 (def DEFAULT-BUFFER-SIZE 1024)
