@@ -55,3 +55,6 @@
            (dotimes [x (dec MAX)]
              (t/assert (> (pixie.ffi/unpack buf x CUInt8)
                           (pixie.ffi/unpack buf (inc x) CUInt8)))))))
+
+(t/deftest test-size
+  (t/assert= (pixie.ffi/struct-size (pixie.ffi/c-struct "struct" 1234 [])) 1234))

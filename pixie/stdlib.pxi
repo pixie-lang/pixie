@@ -1385,7 +1385,6 @@ The new value is thus `(apply f current-value-of-atom args)`."
     nil
     ~(nth binding 1 nil)))
 
-
 (defmacro dotimes
   {:doc "Execute the expressions in the body n times."
    :examples [["(dotimes [i 3] (println i))" "1\n2\n3\n"]]
