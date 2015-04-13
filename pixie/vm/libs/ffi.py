@@ -550,6 +550,9 @@ class CStructType(object.Type):
 
         return tp
 
+    def get_size(self):
+        return self._size
+
     def cast_to(self, frm):
         return CStruct(self, frm.raw_data())
 
@@ -768,6 +771,14 @@ def c_cast(frm, to):
 
     return to.cast_to(frm)
 
+@as_var("pixie.ffi", "struct-size")
+def struct_size(tp):
+    """(struct-size tp)
+    Gives the size of the given CStruct type tp, in bytes."""
+    if not isinstance(tp, CStructType):
+        runtime_error(u"Expected a CStruct type to get the size of, got " + rt.name(rt.str(tp)))
+
+    return rt.wrap(tp.get_size())
 
 @extend(proto._val_at, CStructType.base_type)
 def val_at(self, k, not_found):
