@@ -37,7 +37,7 @@ build_preload_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target_preload.py
 
 build: fetch_externals
-	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS) 
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) $(JIT_OPTS) $(TARGET_OPTS)
 
 fetch_externals: $(EXTERNALS)/pypy ./lib
 

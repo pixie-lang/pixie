@@ -282,6 +282,7 @@
 (extend -invoke Code -invoke)
 (extend -invoke NativeFn -invoke)
 (extend -invoke VariadicCode -invoke)
+(extend -invoke MultiArityFn -invoke)
 (extend -invoke Closure -invoke)
 (extend -invoke Var -invoke)
 (extend -invoke PolymorphicFn -invoke)
@@ -1804,7 +1805,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
   {:doc "Filter the collection for elements matching the predicate."
    :signatures [[pred] [pred coll]]
    :added "0.1"}
-  ([pred] 
+  ([pred]
    (fn [xf]
      (fn
        ([] (xf))
@@ -1858,7 +1859,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                     (xf acc result)
                     acc))))))
   ([f coll]
-   (lazy-seq 
+   (lazy-seq
      (when-let [s (seq coll)]
        (let [[first & rest] s
              result (f first)]
@@ -2279,6 +2280,11 @@ Calling this function on something that is not ISeqable returns a seq with that 
 (defn -set-*e [e]
   (def *e e))
 
+(def hash-map hashmap)
+
+(defn zipmap [a b]
+  (into {} (map vector a b)))
+
 (extend -str Environment
         (fn [v]
           (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
@@ -2288,3 +2294,22 @@ Calling this function on something that is not ISeqable returns a seq with that 
         (fn [v]
           (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
             (apply str "#Environment{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
+
+
+(defn interleave
+  "Returns a seq of all the items in the input collections interleaved"
+  ([] ())
+  ([c1] (seq c1))
+  ([c1 c2]
+   (lazy-seq
+    (let [s1 (seq c1)
+          s2 (seq c2)]
+      (when (and s1 s2)
+        (cons (first s1) (cons (first s2)
+                               (interleave (next s1) (next s2))))))))
+  ([& colls]
+   (lazy-seq
+    (let [ss (map seq colls)]
+      (when (every? identity ss)
+        (concat (map first ss)
+                (apply interleave (map next ss))))))))
