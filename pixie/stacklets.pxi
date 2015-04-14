@@ -93,6 +93,19 @@
                      (println e)))))))
 
 
+(defn spawn-from-non-stacklet [f]
+  (let [s (new-stacklet (fn [h _]
+                          (try
+                            (reset! stacklet-loop-h h)
+                            (swap! running-threads inc)
+                            (f)
+                            (swap! running-threads dec)
+                            (call-cc (fn [_] nil))
+                            (catch e
+                                (println e)))))]
+    (-run-later
+     (fn []
+       (run-and-process s)))))
 
 
 (defn -with-stacklets [fn]
