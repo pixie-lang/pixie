@@ -67,14 +67,18 @@ def get_type_by_name(nm):
     return _type_registry.get_by_name(nm)
 
 class Type(Object):
-    def __init__(self, name, parent = None):
+    def __init__(self, name, parent=None, object_inited=True):
         assert isinstance(name, unicode), u"Type names must be unicode"
         _type_registry.register_type(name, self)
         self._name = name
-        self._parent = parent
-        if parent is not None:
+
+        if object_inited:
+            if parent is None:
+                parent = Object._type
+
             parent.add_subclass(self)
 
+        self._parent = parent
         self._subclasses = []
 
     def name(self):
@@ -89,7 +93,8 @@ class Type(Object):
     def subclasses(self):
         return self._subclasses
 
-Type._type = Type(u"Type")
+Object._type = Type(u"pixie.stdlib.Object", None, False)
+Type._type = Type(u"pixie.stdlib.Type")
 
 @jit.elidable_promote()
 def istypeinstance(obj, t):
