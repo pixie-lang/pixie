@@ -198,11 +198,14 @@
     (f/defcfn uv_accept)
     (f/defcfn uv_tcp_connect)
     (f/defcfn uv_tcp_keepalive)
+    (f/defcfn uv_read_start)
+    (f/defcfn uv_read_stop)
 
     (f/defccallback uv_connection_cb)
     (f/defccallback uv_connect_cb)
 
-    )
+    (f/defccallback uv_alloc_cb)
+    (f/defccallback uv_read_cb))
 
 
 (defn new-fs-buf [size]
