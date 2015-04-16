@@ -2324,4 +2324,4 @@ Calling this function on something that is not ISeqable returns a seq with that 
   "Returns the largest of all the arguments to this function. Assumes arguments are numeric"
   ([x] x)
   ([x y] (if (> x y) x y))
-  ([x y & zs] (apply min (min x y) zs)))
+  ([x y & zs] (apply max (max x y) zs)))

@@ -4,7 +4,12 @@
             [pixie.uv :as uv]
             [pixie.ffi :as ffi]))
 
-(defrecord TCPServer [ip port on-connect uv-server bind-addr on-connection-cb])
+(defrecord TCPServer [ip port on-connect uv-server bind-addr on-connection-cb]
+  IDisposable
+  (-dispose! [this]
+    (uv/uv_close uv-server st/close_cb)
+    (dispose! @on-connection-cb)
+    (dispose! bind-addr)))
 
 (defn -prep-uv-buffer-fn [buf read-bytes]
   (ffi/ffi-prep-callback
@@ -12,7 +17,6 @@
    (fn [handle suggested-size uv-buf]
      (try
        (let [casted (ffi/cast uv-buf uv/uv_buf_t)]
-         (println "Alloc " handle suggested-size buf read-bytes)
          (ffi/set! casted :base buf)
          (ffi/set! casted :len (min suggested-size
                                     (buffer-capacity buf)
@@ -30,14 +34,15 @@
                  (reset! read-cb (ffi/ffi-prep-callback
                                   uv/uv_read_cb
                                   (fn [stream nread uv-buf]
-                                    (println "-<<< nread <-- " nread)
                                     (set-buffer-count! buffer nread)
                                     (try
                                       (dispose! alloc-cb)
                                       (dispose! @read-cb)
                                       ;(dispose! uv-buf)
                                       (uv/uv_read_stop stream)
-                                      (st/run-and-process k nread)
+                                      (st/run-and-process k (or
+                                                             (st/exception-on-uv-error nread)
+                                                             nread))
                                       (catch ex
                                           (println ex))))))
                  (uv/uv_read_start uv-client alloc-cb @read-cb)))))
@@ -45,7 +50,6 @@
   (write [this buffer]
     (let [write-cb (atom nil)
           uv_write (uv/uv_write_t)]
-      (println "writing " (count buffer))
       (ffi/set! uv-write-buf :base buffer)
       (ffi/set! uv-write-buf :len (count buffer))
       (st/call-cc
@@ -53,14 +57,17 @@
          (reset! write-cb (ffi/ffi-prep-callback
                           uv/uv_write_cb
                           (fn [req status]
-                            (println status "<<-- status")
                             (try
                               (dispose! @write-cb)
                               ;(uv/uv_close uv_write st/close_cb)
                               (st/run-and-process k status)
                               (catch ex
                                   (println ex))))))
-         (uv/uv_write uv_write uv-client uv-write-buf 1 @write-cb))))))
+         (uv/uv_write uv_write uv-client uv-write-buf 1 @write-cb)))))
+  IDisposable
+  (-dispose! [this]
+    (dispose! uv-write-buf)
+    (uv/uv_close uv-client st/close_cb)))
 
 (defn launch-tcp-client-from-server [svr]
   (assert (instance? TCPServer svr) "Requires a TCPServer as the first argument")
@@ -94,3 +101,27 @@
       (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
       (st/yield-control)
       tcp-server))
+
+
+(defn tcp-client [ip port]
+  (let [client-addr (uv/sockaddr_in)
+        uv-connect (uv/uv_connect_t)
+        client (uv/uv_tcp_t)
+        cb (atom nil)]
+    (uv/throw-on-error (uv/uv_ip4_addr ip port client-addr))
+    (uv/uv_tcp_init (uv/uv_default_loop) client)
+    (st/call-cc (fn [k]
+               (reset! cb (ffi/ffi-prep-callback
+                           uv/uv_connect_cb
+                           (fn [_ status]
+                             (try
+                               (dispose! @cb)
+                               (dispose! uv-connect)
+                               (dispose! client-addr)
+                               (st/run-and-process k (or (st/exception-on-uv-error status)
+                                                         (->TCPStream client (uv/uv_buf_t))))
+                               (catch ex
+                                   (println ex))))))
+               (uv/uv_tcp_connect uv-connect client client-addr @cb)))
+
+    ))

@@ -1,15 +1,40 @@
 (ns pixie.test.io.test-tcp
   (:require [pixie.io.tcp :refer :all]
-            [pixie.io :refer [read write]]
+            [pixie.io :refer [buffered-input-stream buffered-output-stream read-byte write-byte]]
+            [pixie.streams :refer :all]
             [pixie.stacklets :as st]
-            [pixie.async :as async]))
+            [pixie.async :as async]
+            [pixie.uv :as uv]
+            [pixie.test :refer :all]))
 
-(defn on-client [conn]
-  (let [b (buffer 1024)]
-    (read conn b 1024)
-    (write conn b)
-    (dotimes [x 1000]
-      (st/yield-control))
-    (println "Done Writing..")))
+(deftest test-echo-server
+  (let [client-done (async/promise)
+        on-client (fn on-client [conn]
+                    (let [in (buffered-input-stream conn)
+                          out (buffered-output-stream conn)]
+                      (try
+                        (loop []
+                          (let [val (read-byte in)]
+                            (write-byte out val)
+                            (flush out)
+                            (recur)))
+                        (catch ex
+                            (dispose! in)
+                          (dispose! out)
 
-(tcp-server "0.0.0.0" 4242 on-client)
+                          (dispose! conn)
+                          (client-done true)))))
+
+        server (tcp-server "0.0.0.0" 4242 on-client)]
+
+    (let [client-stream (tcp-client "127.0.0.1" 4242)
+          in (buffered-input-stream client-stream)
+          out (buffered-output-stream client-stream)]
+
+      (dotimes [x 255]
+        (write-byte out x)
+        (flush out)
+        (assert= x (read-byte in)))
+      (dispose! client-stream)
+      (assert @client-done)
+      (dispose! server))))

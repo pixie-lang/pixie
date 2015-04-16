@@ -1,5 +1,8 @@
 (ns pixie.streams)
 
+(defprotocol IFlushableStream
+  (flush [this] "Flushes all buffers in this stream and applies writes to any parent streams"))
+
 (defprotocol IInputStream
   (read [this buffer len] "Reads multiple bytes into a buffer, returns the number of bytes read"))
 

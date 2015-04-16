@@ -124,6 +124,8 @@
     (f/defconst UV_DIRENT_CHAR)
     (f/defconst UV_DIRENT_BLOCK)
 
+    (f/defconst UV_EOF)
+
     (f/defcstruct uv_dirent_t [:name
                                :type])
 
