@@ -82,7 +82,10 @@
 
 
 
-(defn tcp-server [ip port on-connection]
+(defn tcp-server
+  "Creates a TCP server on the given ip (as a string) and port (as an integer). Returns a TCPServer that can be
+  shutdown with dispose!. on-connection is a function that will be passed a TCPStream for each connecting client."
+  [ip port on-connection]
     (assert (string? ip) "Ip should be a string")
     (assert (integer? port) "Port should be a int")
 
@@ -103,7 +106,9 @@
       tcp-server))
 
 
-(defn tcp-client [ip port]
+(defn tcp-client
+  "Creates a TCP connection to the given ip (as a string) and port (an integer). Will return a TCPStream"
+  [ip port]
   (let [client-addr (uv/sockaddr_in)
         uv-connect (uv/uv_connect_t)
         client (uv/uv_tcp_t)
@@ -122,6 +127,4 @@
                                                          (->TCPStream client (uv/uv_buf_t))))
                                (catch ex
                                    (println ex))))))
-               (uv/uv_tcp_connect uv-connect client client-addr @cb)))
-
-    ))
+               (uv/uv_tcp_connect uv-connect client client-addr @cb)))))
