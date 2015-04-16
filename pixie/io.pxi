@@ -111,6 +111,11 @@
   IDisposable
   (-dispose! [this]
     (set-buffer-count! buffer idx)
+    (write downstream buffer))
+  IFlushableStream
+  (flush [this]
+    (set-buffer-count! buffer idx)
+    (set-field! this :idx 0)
     (write downstream buffer)))
 
 (deftype BufferedInputStream [upstream idx buffer]
@@ -124,16 +129,21 @@
       val))
   IDisposable
   (-dispose! [this]
-    (dispose! upstream)
     (dispose! buffer)))
 
-(defn buffered-output-stream [downstream size]
-  (->BufferedOutputStream downstream 0 (buffer size)))
+(defn buffered-output-stream
+  ([downstream]
+   (buffered-output-stream downstream DEFAULT-BUFFER-SIZE))
+  ([downstream size]
+    (->BufferedOutputStream downstream 0 (buffer size))))
 
-(defn buffered-input-stream [upstream size]
-  (let [b (buffer size)]
-    (set-buffer-count! b size)
-    (->BufferedInputStream upstream size b)))
+(defn buffered-input-stream
+  ([upstream]
+   (buffered-input-stream upstream DEFAULT-BUFFER-SIZE))
+  ([upstream size]
+   (let [b (buffer size)]
+     (set-buffer-count! b size)
+     (->BufferedInputStream upstream size b))))
 
 (defn throw-on-error [result]
   (when (neg? result)
@@ -180,25 +190,6 @@
 (defn run-command [command]
   (st/apply-blocking io-blocking/run-command command))
 
-(comment
-
-  (defn tcp-server [ip port on-connection]
-    (assert (string? ip) "Ip should be a string")
-    (assert (integer? port) "Port should be a int")
-    (let [server (uv/uv_tcp_t)
-          bind-addr (uv/sockaddr_in)
-          _ (uv/throw-on-error (uv/uv_ip4_addr ip port bind-addr))
-          on-new-connetion (atom nil)]
-      (reset! on-new-connetion
-              (ffi/ffi-prep-callback
-               uv/uv_connection_cb
-               (fn [server status]
-                 (when (not (= status -1))
-                   (println "Got Client!!!!!!!")))))
-      (uv/uv_tcp_init (uv/uv_default_loop) server)
-      (uv/uv_tcp_bind server bind-addr 0)
-      (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
-      (st/yield-control))))
 
 (comment
   (st/apply-blocking println "FROM OTHER THREAD <---!!!!!")

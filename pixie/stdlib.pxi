@@ -2295,7 +2295,6 @@ Calling this function on something that is not ISeqable returns a seq with that 
           (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
             (apply str "#Environment{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
 
-
 (defn interleave
   "Returns a seq of all the items in the input collections interleaved"
   ([] ())
@@ -2313,3 +2312,15 @@ Calling this function on something that is not ISeqable returns a seq with that 
       (when (every? identity ss)
         (concat (map first ss)
                 (apply interleave (map next ss))))))))
+
+(defn min
+  "Returns the smallest of all the arguments to this function. Assumes arguments are numeric"
+  ([x] x)
+  ([x y] (if (< x y) x y))
+  ([x y & zs] (apply min (min x y) zs)))
+
+(defn max
+  "Returns the largest of all the arguments to this function. Assumes arguments are numeric"
+  ([x] x)
+  ([x y] (if (> x y) x y))
+  ([x y & zs] (apply max (max x y) zs)))

@@ -16,6 +16,8 @@
 
 ;; Yield
 
+(defrecord ThrowException [ex])
+
 (defn run-and-process
   ([k]
    (run-and-process k nil))
@@ -23,12 +25,19 @@
    (let [[h f] (k val)]
      (f h))))
 
+(defn exception-on-uv-error [result]
+  (when (neg? result)
+    (->ThrowException (str "UV Error: " (uv/uv_err_name result)))))
+
+
 (defn call-cc [f]
   (let [frames (-get-current-var-frames nil)
         [h val] (@stacklet-loop-h f)]
     (reset! stacklet-loop-h h)
     (-set-current-var-frames nil frames)
-    val))
+    (if (instance? ThrowException val)
+      (throw (:ex val))
+      val)))
 
 (defn -run-later [f]
   (let [a (uv/uv_async_t)
@@ -93,6 +102,19 @@
                      (println e)))))))
 
 
+(defn spawn-from-non-stacklet [f]
+  (let [s (new-stacklet (fn [h _]
+                          (try
+                            (reset! stacklet-loop-h h)
+                            (swap! running-threads inc)
+                            (f)
+                            (swap! running-threads dec)
+                            (call-cc (fn [_] nil))
+                            (catch e
+                                (println e)))))]
+    (-run-later
+     (fn []
+       (run-and-process s)))))
 
 
 (defn -with-stacklets [fn]
