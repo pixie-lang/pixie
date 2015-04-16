@@ -2313,7 +2313,6 @@ Calling this function on something that is not ISeqable returns a seq with that 
         (concat (map first ss)
                 (apply interleave (map next ss))))))))
 
-
 (defn min
   "Returns the smallest of all the arguments to this function. Assumes arguments are numeric"
   ([x] x)
