@@ -216,15 +216,16 @@ class Buffer(object.Object):
     def type(self):
         return Buffer._type
 
-    def __init__(self, size):
+    def __init__(self, size, auto_free):
         self._size = size
         self._used_size = 0
+        self._auto_free = auto_free
         self._buffer = lltype.malloc(rffi.CCHARP.TO, size, flavor="raw")
 
 
     def __del__(self):
-        #lltype.free(self._buffer, flavor="raw")
-        pass
+        if self._auto_free:
+            lltype.free(self._buffer, flavor="raw")
 
     def set_used_size(self, size):
         self._used_size = size
@@ -247,8 +248,7 @@ class Buffer(object.Object):
 
     def free_data(self):
         lltype.free(self._buffer, flavor="raw")
-
-
+        self._auto_free = False
 
 @extend(proto._dispose_BANG_, Buffer)
 def _dispose_voidp(self):
@@ -270,7 +270,11 @@ def _count(self):
 
 @as_var("buffer")
 def buffer(size):
-    return Buffer(size.int_val())
+    return Buffer(size.int_val(), False)
+
+@as_var("gc-buffer")
+def gc_buffer(size):
+    return Buffer(size.int_val(), True)
 
 @as_var("buffer-capacity")
 def buffer_capacity(buffer):

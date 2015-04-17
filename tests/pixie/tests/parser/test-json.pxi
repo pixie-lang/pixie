@@ -1,5 +1,7 @@
 (ns pixie.tests.parser.test-json
   (:require [pixie.test :refer :all]
+            [pixie.io :refer [slurp open-read]]
+            [pixie.parser :refer [failure? input-stream-cursor]]
             [pixie.parser.json :as json]))
 
 
@@ -31,3 +33,16 @@
                 "{\"foo\": 42}"  {"foo", 42}
                 "{\"foo\": 42, \"bar\":null}"  {"foo" 42
                                                 "bar" nil}))
+
+(deftest test-streaming-json-file
+  (let [filename "tests/pixie/tests/parser/test-json-data.json"
+        cursor (-> filename
+                   open-read
+                   input-stream-cursor)
+        streamed-result (json/read-one cursor)
+        slurped-result (-> "tests/pixie/tests/parser/test-json-data.json"
+                           slurp
+                           json/read-string)]
+    (assert (not (failure? streamed-result)))
+    (assert (not (failure? slurped-result)))
+    (assert= slurped-result streamed-result)))

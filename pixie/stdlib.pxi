@@ -1234,7 +1234,7 @@ and implements IAssociative, ILookup and IObject."
                                             `(= (. self ~field) (. other ~field)))
                                           fields)))
                         `(-hash [self]
-                                (throw "not implemented"))]
+                                (hash ~fields))]
         deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
     `(do ~type-from-map
          ~deftype-decl)))

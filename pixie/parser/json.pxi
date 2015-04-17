@@ -109,3 +109,7 @@
     (if (failure? result)
       (println (current c) (snapshot c))
       result)))
+
+(defn read-one [c]
+  (assert (satisfies? ICursor c))
+  ((:ENTRY JSONParser) c))

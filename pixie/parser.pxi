@@ -1,5 +1,8 @@
 (ns pixie.parser
-  (:require [pixie.stdlib :as s]))
+  (:require [pixie.stdlib :as s]
+            [pixie.streams :refer [read IInputStream IInputStream]]))
+
+(def DEFAULT-BUFFER-SIZE 1024)
 
 
 ;; This file contans a small framework for writing generic parsers in Pixie. Although the generated
@@ -310,3 +313,43 @@
 (def digits (parse-if (set "1234567890")))
 
 (def whitespace (parse-if #{\newline \return \space \tab}))
+
+
+
+
+;; Represents an input stream that implements ICursor
+
+(defn -input-stream-buffer-seq
+  "Creates a lazy seq of buffers retreived from the input stream"
+  [is]
+  (let [buf (gc-buffer DEFAULT-BUFFER-SIZE)
+        result (try
+                 (read is buf DEFAULT-BUFFER-SIZE)
+                 buf
+                 (catch ex nil))]
+    (when (s/and result (pos? (count buf)))
+      (cons buf (lazy-seq (-input-stream-buffer-seq is))))))
+
+(defrecord InputStreamSnapshot [buffer-cell idx])
+
+(deftype InputStreamCursor [buffer-cell idx]
+  ICursor
+  (next! [this]
+    (if (= (inc idx) (count (first buffer-cell)))
+      (do (set-field! this :buffer-cell (next buffer-cell))
+          (set-field! this :idx 0))
+      (set-field! this :idx (inc idx))))
+  (current [this]
+    (let [val (when (s/and buffer (< idx (count (first buffer-cell))))
+                (char (nth (first buffer-cell) idx)))]
+      val))
+  (at-end? [this] (= nil buffer-cell))
+  (snapshot [this]
+    (->InputStreamSnapshot buffer-cell idx))
+  (rewind! [this snapshot]
+    (assert (instance? InputStreamSnapshot snapshot) (str "Must provide an input stream snapshot "))
+    (set-field! this :buffer-cell (:buffer-cell snapshot))
+    (set-field! this :idx (:idx snapshot))))
+
+(defn input-stream-cursor [is]
+  (->InputStreamCursor (-input-stream-buffer-seq is) 0))
