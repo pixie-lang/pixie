@@ -151,7 +151,7 @@
   result)
 
 (defn open-write
-  {:doc "Open a file for reading, returning a IInputStream"
+  {:doc "Open a file for writing, returning a IOutputStream"
    :added "0.1"}
   [filename]
   (assert (string? filename) "Filename must be a string")
@@ -172,6 +172,20 @@
        (write-byte fp chr)
        nil))))
 
+(defn stream-output-rf [output-stream]
+  (let [fp (buffered-output-stream output-stream
+                                   DEFAULT-BUFFER-SIZE)]
+    (fn ([] 0)
+      ([_] (dispose! fp))
+      ([_ chr]
+       (assert (integer? chr))
+       (write-byte fp chr)
+       nil))))
+
+(defn write-stream [output-stream val]
+  (transduce (map int)
+             (stream-output-rf output-stream)
+             (str val)))
 
 (defn spit [filename val]
   (transduce (map int)

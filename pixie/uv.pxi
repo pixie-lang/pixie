@@ -189,6 +189,14 @@
     (f/defcfn uv_async_init)
     (f/defcfn uv_async_send)
 
+    ; TTY
+    (f/defcfn uv_tty_init)
+    (f/defconst UV_TTY_MODE_NORMAL)
+    (f/defcfn uv_guess_handle)
+    ;(f/defcfn uv_tty_set_mode)
+    (f/defcstruct uv_tty_t [])
+    (f/defconst UV_TTY)
+
 
     ; TCP Networking
     (f/defcstruct uv_tcp_t [])
@@ -243,3 +251,15 @@
                   ~@args
                   @cb#)))]
        (pixie.stacklets/call-cc f)))))
+
+(defn -prep-uv-buffer-fn [buf read-bytes]
+  (ffi/ffi-prep-callback
+   uv_alloc_cb
+   (fn [handle suggested-size uv-buf]
+     (try
+       (let [casted (ffi/cast uv-buf uv_buf_t)]
+         (ffi/set! casted :base buf)
+         (ffi/set! casted :len (min suggested-size
+                                    (buffer-capacity buf)
+                                    read-bytes)))
+       (catch ex (println ex))))))

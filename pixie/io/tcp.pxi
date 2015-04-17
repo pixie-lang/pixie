@@ -11,24 +11,12 @@
     (dispose! @on-connection-cb)
     (dispose! bind-addr)))
 
-(defn -prep-uv-buffer-fn [buf read-bytes]
-  (ffi/ffi-prep-callback
-   uv/uv_alloc_cb
-   (fn [handle suggested-size uv-buf]
-     (try
-       (let [casted (ffi/cast uv-buf uv/uv_buf_t)]
-         (ffi/set! casted :base buf)
-         (ffi/set! casted :len (min suggested-size
-                                    (buffer-capacity buf)
-                                    read-bytes)))
-       (catch ex (println ex))))))
-
 (deftype TCPStream [uv-client uv-write-buf]
   IInputStream
   (read [this buffer len]
     (assert (<= (buffer-capacity buffer) len)
             "Not enough capacity in the buffer")
-    (let [alloc-cb (-prep-uv-buffer-fn buffer len)
+    (let [alloc-cb (uv/-prep-uv-buffer-fn buffer len)
           read-cb (atom nil)]
       (st/call-cc (fn [k]
                  (reset! read-cb (ffi/ffi-prep-callback
