@@ -92,16 +92,16 @@
     (let [server (uv/uv_tcp_t)
           bind-addr (uv/sockaddr_in)
           _ (uv/throw-on-error (uv/uv_ip4_addr ip port bind-addr))
-          on-new-connetion (atom nil)
-          tcp-server (->TCPServer ip port on-connection server bind-addr on-new-connetion)]
-      (reset! on-new-connetion
+          on-new-connection (atom nil)
+          tcp-server (->TCPServer ip port on-connection server bind-addr on-new-connection)]
+      (reset! on-new-connection
               (ffi/ffi-prep-callback
                uv/uv_connection_cb
                (fn [server status]
                  (launch-tcp-client-from-server tcp-server))))
       (uv/uv_tcp_init (uv/uv_default_loop) server)
       (uv/uv_tcp_bind server bind-addr 0)
-      (uv/throw-on-error (uv/uv_listen server 128 @on-new-connetion))
+      (uv/throw-on-error (uv/uv_listen server 128 @on-new-connection))
       (st/yield-control)
       tcp-server))
 
