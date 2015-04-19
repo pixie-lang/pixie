@@ -67,3 +67,12 @@
   "Creates a UTF8 encoder that writes characters to the given IByteOutputStream."
   [o]
   (->UTF8OutputStream o))
+
+(defn utf8-output-stream-rf [output-stream]
+  (let [fp (utf8-output-stream output-stream)]
+    (fn ([] 0)
+      ([_] (dispose! fp))
+      ([_ chr]
+       (assert (char? chr))
+       (write-char fp chr)
+       nil))))
