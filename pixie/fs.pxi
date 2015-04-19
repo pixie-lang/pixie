@@ -52,7 +52,7 @@
     "Recursively returns all files and directories below")
 
   (walk-files [this]
-    "Recursivelt returns all files underneath")
+    "Recursively returns all files underneath")
 
   (walk-dirs [this]
     "Recursivley returns all directories underneath"))
