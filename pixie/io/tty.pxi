@@ -6,18 +6,20 @@
             [pixie.system :as sys]
             [pixie.ffi :as ffi]))
 
+(def DEFAULT-BUFFER-SIZE 1024)
+
 (deftype TTYInputStream [uv-client uv-write-buf]
   IInputStream
-  (read [this buffer len]
-    (assert (<= (buffer-capacity buffer) len)
+  (read [this buf len]
+    (assert (<= (buffer-capacity buf) len)
             "Not enough capacity in the buffer")
-    (let [alloc-cb (uv/-prep-uv-buffer-fn buffer len)
+    (let [alloc-cb (uv/-prep-uv-buffer-fn buf len)
           read-cb (atom nil)]
       (st/call-cc (fn [k]
                  (reset! read-cb (ffi/ffi-prep-callback
                                   uv/uv_read_cb
                                   (fn [stream nread uv-buf]
-                                    (set-buffer-count! buffer nread)
+                                    (set-buffer-count! buf nread)
                                     (try
                                       (dispose! alloc-cb)
                                       (dispose! @read-cb)
@@ -28,7 +30,25 @@
                                                              nread))
                                       (catch ex
                                           (println ex))))))
-                 (uv/uv_read_start uv-client alloc-cb @read-cb))))))
+                 (uv/uv_read_start uv-client alloc-cb @read-cb)))))
+
+  IDisposable
+  (-dispose! [this]
+    (dispose! uvbuf)
+    (fs_close fp))
+
+  IReduce
+  (-reduce [this f init]
+    (let [buf (buffer DEFAULT-BUFFER-SIZE)
+          rrf (preserving-reduced f)]
+      (loop [acc init]
+        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
+          (if (> read-count 0)
+            (let [result (reduce rrf acc buf)]
+              (if (not (reduced? result))
+                (recur result)
+                @result))
+            acc))))))
 
 (deftype TTYOutputStream [uv-client uv-write-buf]
   IOutputStream
