@@ -195,11 +195,14 @@
 (def into (fn ^{:doc "Add the elements of `from` to the collection `to`."
                 :signatures [[to from]]
                 :added "0.1"}
-            into
-            [to from]
-            (if (satisfies? IToTransient to)
-              (persistent! (reduce conj! (transient to) from))
-              (reduce conj to from))))
+            ([to from]
+             (if (satisfies? IToTransient to)
+               (persistent! (reduce conj! (transient to) from))
+               (reduce conj to from)))
+            ([to xform from]
+             (if (satisfies? IToTransient to)
+               (transduce xform conj! (transient to) from)
+               (transduce xform conj to from)))))
 
 (def interpose
   (fn ^{:doc "Returns a transducer that inserts `val` in between elements of a collection."

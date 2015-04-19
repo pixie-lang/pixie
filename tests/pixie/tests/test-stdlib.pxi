@@ -338,6 +338,10 @@
               [2 :a] [2 :b] [2 :c]
               [3 :a] [3 :b] [3 :c]]))
 
+(t/deftest test-into
+  (t/assert= [1 3] (into [] (comp (map inc) (filter odd?)) (range 3)))
+  (t/assert= {:a 1 :b 2} (into {} [[:a 1] [:b 2]])))
+
 (t/deftest test-ex-msg
   (try
      (throw "This is an exception")
