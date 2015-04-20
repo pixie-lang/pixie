@@ -36,7 +36,8 @@
   (t/assert= (str {:a 1}) "{:a 1}")
   (t/assert= (str (type 3)) "<type pixie.stdlib.Integer>")
   (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]")
-  (t/assert= (seq (map identity "iterable")) '(\i \t \e \r \a \b \l \e)))
+  (t/assert= (seq (map identity "iterable")) '(\i \t \e \r \a \b \l \e))
+  (t/assert= (str (range 3)) "(0 1 2)"))
 
 (t/deftest test-repr
   (t/assert= (-repr nil) "nil")
@@ -58,7 +59,8 @@
   (t/assert= (-repr {:a 1}) "{:a 1}")
   (t/assert= (-repr (type 3)) "pixie.stdlib.Integer")
 
-  (t/assert= (-repr [1 {:a 1} "hey"]) "[1 {:a 1} \"hey\"]"))
+  (t/assert= (-repr [1 {:a 1} "hey"]) "[1 {:a 1} \"hey\"]")
+  (t/assert= (-repr (range 3)) "(0 1 2)"))
 
 (t/deftest test-nth
   ;; works if the index is found
