@@ -114,7 +114,10 @@ def istypeinstance(obj, t):
 
 class RuntimeException(Object):
     _type = Type(u"pixie.stdlib.RuntimeException")
-    def __init__(self, data):
+    def __init__(self, msg, data):
+        assert data is not None
+        assert msg is not None
+        self._msg = msg
         self._data = data
         self._trace = []
 
@@ -129,8 +132,8 @@ class RuntimeException(Object):
         for x in trace:
             s.append(x.__repr__())
             s.append(u"\n")
-
-        s.extend([u"RuntimeException: " + rt.name(rt.str(self._data)) + u"\n"])
+        s.extend([u"RuntimeException: " + rt.name(rt.str(self._data)) + u" " +
+                  rt.name(rt.str(self._msg)) + u"\n"])
 
         return u"".join(s)
 
@@ -150,11 +153,15 @@ def affirm(val, msg):
     assert isinstance(msg, unicode)
     if not val:
         import pixie.vm.rt as rt
-        raise WrappedException(RuntimeException(rt.wrap(msg)))
+        from pixie.vm.keyword import keyword
+        raise WrappedException(RuntimeException(rt.wrap(msg), keyword(u"pixie.stdlib/AssertionException")))
 
-def runtime_error(msg):
+def runtime_error(msg, data=None):
     import pixie.vm.rt as rt
-    raise WrappedException(RuntimeException(rt.wrap(msg)))
+    from pixie.vm.keyword import keyword
+    if data is None:
+        data = u"pixie.stdlib/AssertionException"
+    raise WrappedException(RuntimeException(rt.wrap(msg), keyword(data)))
 
 def safe_invoke(f, args):
     try:

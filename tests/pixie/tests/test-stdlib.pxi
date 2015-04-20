@@ -344,9 +344,33 @@
 
 (t/deftest test-ex-msg
   (try
-     (throw "This is an exception")
-     (catch e
-       (t/assert= (ex-msg e) "This is an exception"))))
+    (throw [::something "This is an exception"])
+    (catch e
+        (t/assert= (ex-msg e) "This is an exception")
+        (t/assert= (ex-data e) ::something))))
+
+(t/deftest test-ex-filtering
+  (let [f (fn [val]
+            (try
+              (try
+                (throw [val "Some failure"])
+                (catch ::catch-this ex
+                  :found))
+              (catch ex
+                  :not-found)))]
+    (t/assert= (f ::catch-this) :found)
+    (t/assert= (f :something-else) :not-found))
+
+  (let [f (fn [val]
+            (try
+              (try
+                (throw [val "Some failure"])
+                (catch (= ::catch-this (ex-data ex)) ex
+                  :found))
+              (catch ex
+                  :not-found)))]
+    (t/assert= (f ::catch-this) :found)
+    (t/assert= (f :something-else) :not-found)))
 
 (t/deftest test-range
   (t/assert= (= (-seq (range 10))
@@ -397,7 +421,9 @@
   (try
     (/ 0 0)
     (catch e
-        (t/assert= (first (trace e)) {:type :runtime :data "Divide by zero"})
+        (t/assert= (first (trace e)) {:type :runtime
+                                      :data :pixie.stdlib/AssertionException
+                                      :msg "Divide by zero"})
         (t/assert= (second (trace e)) {:type :native :name "_div"} ))))
 
 (t/deftest test-tree-seq
