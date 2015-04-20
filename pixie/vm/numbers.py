@@ -134,9 +134,9 @@ def define_num_ops():
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
                 extend_num_op(op, c1, c2, conv1, sym, conv2)
-            extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
             if c1 != Integer or c2 != Integer:
                     extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
+                    extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
             for (op, sym) in [("_num_eq", "=="), ("_lt", "<"), ("_gt", ">"), ("_lte", "<="), ("_gte", ">=")]:
                 extend_num_op(op, c1, c2, conv1, sym, conv2,
                               wrap_start = "true if ", wrap_end = " else false")
