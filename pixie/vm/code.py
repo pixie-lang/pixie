@@ -179,7 +179,8 @@ class MultiArityFn(BaseCode):
         if self._rest_fn:
             acc.append(unicode(str(self._rest_fn.required_arity())) + u"+")
 
-        runtime_error(u"Wrong number of arguments " + unicode(str(arity)) + u" for function '" + unicode(self._name) + u"'. Expected " + join_last(acc, u"or"))
+        runtime_error(u"Wrong number of arguments " + unicode(str(arity)) + u" for function '" + unicode(self._name) + u"'. Expected " + join_last(acc, u"or"),
+                      u"pixie.stdlib/InvalidArityException")
 
     def get_arities(self):
         return self._arities.keys()
@@ -241,7 +242,8 @@ class Code(BaseCode):
         else:
             runtime_error(u"Invalid number of arguments " + unicode(str(len(args))) 
                           + u" for function '" + unicode(str(self._name)) + u"'. Expected "
-                          + unicode(str(self.get_arity())))
+                          + unicode(str(self.get_arity())),
+                          u":pixie.stdlib/InvalidArityException")
 
     def invoke_with(self, args, this_fn):
         try:

@@ -787,7 +787,7 @@ def throw_syntax_error_with_data(rdr, txt):
         meta = nil
 
     data = rt.interpreter_code_info(meta)
-    err = object.RuntimeException(rt.wrap(txt))
+    err = object.runtime_error(txt)
     err._trace.append(data)
     raise object.WrappedException(err)
 
@@ -797,7 +797,8 @@ def read_inner(rdr, error_on_eof, always_return_form=True):
         eat_whitespace(rdr)
     except EOFError as ex:
         if error_on_eof:
-            runtime_error(u"Unexpected EOF while reading")
+            runtime_error(u"Unexpected EOF while reading",
+                          u"pixie.stdlib/EOFWhileReadingException")
         return eof
 
 

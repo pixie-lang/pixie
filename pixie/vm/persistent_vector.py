@@ -182,7 +182,8 @@ class PersistentVector(object.Object):
         if idx == self._cnt:
             return self.conj(val)
         else:
-            object.runtime_error(u"index out of range")
+            object.runtime_error(u"index out of range",
+                                 u"pixie.stdlib/OutOfRangeException")
 
 
 def do_assoc(lvl, node, idx, val):
