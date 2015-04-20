@@ -30,6 +30,8 @@ Some planned and implemented features:
     make build_with_jit
     ./pixie-vm
 
+Note: Mac OS X does not come with the build tools required by default. Install the XCode Command Line tools ([Apple Developer Site](http://developer.apple.com)) or install them independently.
+
 
 ## Running the tests
 
