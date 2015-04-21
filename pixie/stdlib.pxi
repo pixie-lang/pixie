@@ -1804,6 +1804,13 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
               (and (< step 0) (> start stop)))
       (cons start (lazy-seq* #(range (+ start step) stop step))))))
 
+(extend -str Range
+        (fn [v]
+          (-str (seq v))))
+(extend -repr Range
+        (fn [v]
+          (-repr (seq v))))
+
 (defn range
   {:doc "Returns a range of numbers."
    :examples [["(seq (range 3))" nil (0 1 2)]
