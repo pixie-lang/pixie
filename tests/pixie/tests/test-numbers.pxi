@@ -49,3 +49,16 @@
 (t/deftest test-float
   (doseq [[x f] [[1 1.0] [3 3.0] [3.333 3.333] [3/2 1.5] [1/7 (/ 1.0 7.0)]]]
     (t/assert= (float x) f)))
+
+(t/deftest rem-types
+  (t/assert= "<type pixie.stdlib.Integer>" (str (type (rem 5 3))))
+  (t/assert= "<type pixie.stdlib.Float>" (str (type (rem 5.0 3))))
+  (t/assert= "<type pixie.stdlib.Ratio>" (str (type (rem 7/2 3))))
+  (t/assert= "<type pixie.stdlib.Float>" (str (type (rem 7/2 3.0)))))
+
+(t/deftest quot-types
+  (t/assert= "<type pixie.stdlib.Integer>" (str (type (quot 5 3))))
+  (t/assert= "<type pixie.stdlib.Float>" (str (type (quot 5.0 3))))
+  (t/assert= "<type pixie.stdlib.Integer>" (str (type (quot 7/2 3/7))))
+  (t/assert= "<type pixie.stdlib.Float>" (str (type (quot 7/2 3.0)))))
+
