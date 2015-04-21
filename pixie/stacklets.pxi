@@ -27,7 +27,8 @@
 
 (defn exception-on-uv-error [result]
   (when (neg? result)
-    (->ThrowException (str "UV Error: " (uv/uv_err_name result)))))
+    (->ThrowException [(keyword (str ":pixie.io/" (uv/uv_err_name result)))
+                       (str "UV Error: " (uv/uv_err_name result))])))
 
 
 (defn call-cc [f]

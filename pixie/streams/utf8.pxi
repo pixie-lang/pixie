@@ -24,8 +24,7 @@
                             (write-byte out (bit-or 0x80 (bit-and ch 0x3F))))
        :else (assert false (str "Cannot encode a UTF8 character of code " ch)))))
   IDisposable
-  (-dispose! [this]
-    (dispose! out)))
+  (-dispose! [this]))
 
 
 (deftype UTF8InputStream [in bad-char]
@@ -52,8 +51,7 @@
               (throw (str "Invalid UTF8 character decoded: " n)))
             (char n))))))
   IDisposable
-  (-dispose! [this]
-    (dispose! in)))
+  (-dispose! [this]))
 
 (defn utf8-input-stream
   "Creates a UTF8 decoder that reads characters from the given IByteInputStream. If a bad character is found
@@ -67,3 +65,20 @@
   "Creates a UTF8 encoder that writes characters to the given IByteOutputStream."
   [o]
   (->UTF8OutputStream o))
+
+(defn utf8-output-stream-rf [output-stream]
+  (let [fp (utf8-output-stream output-stream)]
+    (fn ([] 0)
+      ([_] (dispose! fp))
+      ([_ chr]
+       (assert (char? chr))
+       (write-char fp chr)
+       nil))))
+
+(defn write-string [os s]
+  (reduce
+   (fn [os c]
+     (write-char os c)
+     os)
+   os
+   s))

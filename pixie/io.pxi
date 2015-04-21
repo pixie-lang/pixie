@@ -1,5 +1,6 @@
 (ns pixie.io
   (:require [pixie.streams :as st :refer :all]
+            [pixie.streams.utf8 :as utf8]
             [pixie.io-blocking :as io-blocking]
             [pixie.uv :as uv]
             [pixie.stacklets :as st]
@@ -36,20 +37,21 @@
   IDisposable
   (-dispose! [this]
     (dispose! uvbuf)
-    (fs_close fp))
-  IReduce
-  (-reduce [this f init]
-    (let [buf (buffer DEFAULT-BUFFER-SIZE)
-          rrf (preserving-reduced f)]
-      (loop [acc init]
-        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-          (if (> read-count 0)
-            (let [result (reduce rrf acc buf)]
-              (if (not (reduced? result))
-                (recur result)
-                @result))
-            acc))))))
+    (fs_close fp)))
 
+(defn -reduce-input-stream-fn [this f init]
+  (let [buf (buffer DEFAULT-BUFFER-SIZE)
+        rrf (preserving-reduced f)]
+    (loop [acc init]
+      (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
+        (if (> read-count 0)
+          (let [result (reduce rrf acc buf)]
+            (if (not (reduced? result))
+              (recur result)
+              @result))
+          acc)))))
+
+(extend -reduce IInputStream -reduce-input-stream-fn)
 
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
@@ -151,7 +153,7 @@
   result)
 
 (defn open-write
-  {:doc "Open a file for reading, returning a IInputStream"
+  {:doc "Open a file for writing, returning a IOutputStream"
    :added "0.1"}
   [filename]
   (assert (string? filename) "Filename must be a string")
@@ -161,31 +163,40 @@
                       0
                       (uv/uv_buf_t)))
 
+(defn spit
+  "Writes the content to output. Output must be a file or an IOutputStream."
+  [output content]
+  (cond
+    (string? output)
+    (transduce (map identity)
+               (-> output
+                   open-write
+                   buffered-output-stream
+                   utf8/utf8-output-stream-rf)
+               (str content))
 
-(defn file-output-rf [filename]
-  (let [fp (buffered-output-stream (open-write filename)
-                                   DEFAULT-BUFFER-SIZE)]
-    (fn ([] 0)
-      ([_] (dispose! fp))
-      ([_ chr]
-       (assert (integer? chr))
-       (write-byte fp chr)
-       nil))))
+    (satisfies? IOutputStream output)
+    (transduce (map identity)
+               (-> output
+                   buffered-output-stream
+                   utf8/utf8-output-stream-rf)
+               (str content))
 
+    :else (throw "Expected a string or IOutputStream")))
 
-(defn spit [filename val]
-  (transduce (map int)
-             (file-output-rf filename)
-             (str val)))
-
-(defn slurp [filename]
-  (let [c (open-read filename)
+(defn slurp
+  "Reads in the contents of input. Input must be a filename or an IInputStream"
+  [input]
+  (let [stream (cond
+                 (string? input) (open-read input)
+                 (satisfies? IInputStream input) input
+                 :else (throw "Expected a string or an IInputStream"))
         result (transduce
-                (map char)
-                string-builder
-                c)]
-    (dispose! c)
-    result))
+                 (map char)
+                 string-builder
+                 stream)]
+      (dispose! stream)
+      result))
 
 (defn run-command [command]
   (st/apply-blocking io-blocking/run-command command))

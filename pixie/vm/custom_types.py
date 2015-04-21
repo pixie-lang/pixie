@@ -49,7 +49,8 @@ class CustomTypeInstance(Object):
     def set_field(self, name, val):
         idx = self._custom_type.get_slot_idx(name)
         if idx == -1:
-            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
+            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())),
+                          u"pixie.stdlib/InvalidFieldException")
 
         old_val = self._fields[idx]
         if isinstance(old_val, AbstractMutableCell):
@@ -71,7 +72,8 @@ class CustomTypeInstance(Object):
     def get_field(self, name):
         idx = self._custom_type.get_slot_idx(name)
         if idx == -1:
-            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())))
+            runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())),
+                          u"pixie.stdlib/InvalidFieldException")
 
         if self._custom_type.is_mutable(name):
             value = self._fields[idx]

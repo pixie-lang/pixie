@@ -1,6 +1,5 @@
 (in-ns :pixie.stdlib)
 
-
 (def libc (ffi-library pixie.platform/lib-c-name))
 
 
@@ -195,11 +194,14 @@
 (def into (fn ^{:doc "Add the elements of `from` to the collection `to`."
                 :signatures [[to from]]
                 :added "0.1"}
-            into
-            [to from]
-            (if (satisfies? IToTransient to)
-              (persistent! (reduce conj! (transient to) from))
-              (reduce conj to from))))
+            ([to from]
+             (if (satisfies? IToTransient to)
+               (persistent! (reduce conj! (transient to) from))
+               (reduce conj to from)))
+            ([to xform from]
+             (if (satisfies? IToTransient to)
+               (transduce xform conj! (transient to) from)
+               (transduce xform conj to from)))))
 
 (def interpose
   (fn ^{:doc "Returns a transducer that inserts `val` in between elements of a collection."
@@ -792,19 +794,37 @@ there's a value associated with the key. Use `some` for checking for values."
           (let [head (first form)]
             (cond
              (= head 'catch) (if catch
-                               (throw "Can only have one catch clause per try")
+                               (throw [:pixie.stdlib/SyntaxException
+                                       "Can only have one catch clause per try"])
                                (recur (next (next form)) (first (next form)) body-items finally (next body)))
              (= head 'finally) (if finally
-                                 (throw "Can only have one finally clause per try")
+                                 (throw [:pixie.stdlib/SyntaxException
+                                         "Can only have one finally clause per try"])
                                  (recur catch catch-sym body-items (next form) (next body)))
              :else (recur catch catch-sym (conj body-items form) finally (next body)))))
-        `(-try-catch
-          (fn [] ~@body-items)
-          ~(if catch
-             `(fn [~catch-sym] ~@catch)
-             `(fn [] nil))
+        (let [catch-data (cond
+                                 (keyword? catch-sym) (let [sym (first catch)]
+                                                        (assert (symbol? sym) (str "Invalid catch binding form"
+                                                                                   catch))
+                                                        [`[(if (= ~catch-sym (ex-data ~sym))
+                                                             (do ~@(next catch))
+                                                             (throw ~sym))]
+                                                         sym])
+                                 (seq? catch-sym) (let [sym (first catch)]
+                                                        (assert (symbol? sym) (str "Invalid catch binding form"
+                                                                                   catch))
+                                                        [`[(if ~catch-sym
+                                                             (do ~@(next catch))
+                                                             (throw ~sym))]
+                                                         sym])
+                                 :else [catch catch-sym])]
+          `(-try-catch
+            (fn [] ~@body-items)
+            ~(if catch
+               `(fn [~(nth catch-data 1)] ~@(nth catch-data 0))
+               `(fn [] nil))
 
-          (fn [] ~@finally))))))
+            (fn [] ~@finally)))))))
 
 (defn .
   {:doc "Access the field named by the symbol.
@@ -843,7 +863,9 @@ If further arguments are passed, invokes the method named by symbol, passing the
   [x]
   (cond
    (number? x) (+ x 0.0)
-   :else (throw (str "Can't convert a value of type " (type x) " to a Float"))))
+   :else (throw
+          [:pixie.stdlib/ConversionException
+           (str "Can't convert a value of type " (type x) " to a Float")])))
 
 (defn int
   {:doc "Converts a number to an integer."
@@ -854,7 +876,9 @@ If further arguments are passed, invokes the method named by symbol, passing the
    (float? x) (lround (floor x))
    (ratio? x) (int (/ (float (numerator x)) (float (denominator x))))
    (char? x) (+ x 0)
-   :else (throw (str "Can't convert a value of type " (type x) " to an Integer"))))
+   :else (throw
+          [:pixie.stdlib/ConversionException
+           (throw (str "Can't convert a value of type " (type x) " to an Integer"))])))
 
 (defn last
   {:doc "Returns the last element of the collection, or nil if none."
@@ -880,13 +904,9 @@ If further arguments are passed, invokes the method named by symbol, passing the
   {:doc "Given a function, return a new function which takes the same arguments
          but returns the opposite truth value"}
   [f]
-  (if (not (fn? f))
-    (throw "Complement must be passed a function")
-    (fn
-      ([] (not (f)))
-      ([x] (not (f x)))
-      ([x y] (not (f x y)))
-      ([x y & more] (not (apply f x y more))))))
+  (assert (fn? f) "Complement must be passed a function")
+  (fn [& args]
+    (not (apply f args))))
 
 (defn constantly [x]
   {:doc "Return a function that always returns x, no matter what it is called with."
@@ -980,13 +1000,17 @@ If further arguments are passed, invokes the method named by symbol, passing the
              (instance? PersistentVector x)
              (if (= (count x) 2)
                  (assoc coll (nth x 0 nil) (nth x 1 nil))
-                 (throw "Vector arg to map conj must be a pair"))
+                 (throw
+                  [:pixie.stdlib/InvalidArgumentException
+                   "Vector arg to map conj must be a pair"]))
 
              (satisfies? ISeqable x)
              (reduce conj coll (-seq x))
 
              :else
-             (throw (str (type x) " cannot be conjed to a map")))))
+             (throw
+              [:pixie.stdlib/InvalidArgumentException
+               (str (type x) " cannot be conjed to a map")]))))
 
 (extend -conj Cons
         (fn [coll x]
@@ -1072,11 +1096,13 @@ Creates new maps if the keys are not present."
   ([test]
      `(if ~test
         nil
-        (throw "Assert failed")))
+        (throw [:pixie.stdlib/AssertionException
+                "Assert failed"])))
   ([test msg]
      `(if ~test
         nil
-        (throw (str "Assert failed: " ~msg)))))
+        (throw [:pixie.stdlib/AssertionException
+                (str "Assert failed: " ~msg)]))))
 
 (defmacro resolve
   {:doc "Resolve the var associated with the symbol in the current namespace."
@@ -1169,7 +1195,9 @@ Creates new maps if the keys are not present."
                                    (protocol? @(resolve-in *ns* body)) [@(resolve-in *ns* body)
                                                                         (second res)
                                                                         (conj (third res) body)]
-                                   :else (throw (str "can only extend protocols or Object, not " body " of type " (type body))))
+                                   :else (throw
+                                          [:pixie.stdlib/AssertionException
+                                           (str "can only extend protocols or Object, not " body " of type " (type body))]))
                    (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
                                  (if (protocol? proto)
                                    [proto tbs (conj pbs body)]
@@ -1219,7 +1247,8 @@ and implements IAssociative, ILookup and IObject."
                         `(-contains-key [self k]
                                         (contains? ~(set fields) k))
                         `(-dissoc [self k]
-                                  (throw "dissoc is not supported on defrecords"))
+                                  (throw [:pixie.stdlib/NotImplementedException
+                                          "dissoc is not supported on defrecords"]))
                         'ILookup
                         `(-val-at [self k not-found]
                                   (if (contains? ~(set fields) k)
@@ -1235,6 +1264,7 @@ and implements IAssociative, ILookup and IObject."
                                           fields)))
                         `(-hash [self]
                                 (hash ~fields))]
+
         deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
     `(do ~type-from-map
          ~deftype-decl)))
@@ -1633,7 +1663,8 @@ not enough elements were present."
    (map? binding) (let [name (gensym "map__")]
                     (reduce conj [name expr]
                             (destructure-map binding name)))
-   :else (throw (str "unsupported binding form: " binding))))
+   :else (throw [:pixie.stdlib/AssertionException
+                 (str "unsupported binding form: " binding)])))
 
 (defn destructure-vector [binding-vector expr]
   (loop [bindings (seq binding-vector)
@@ -1708,12 +1739,15 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
 
 (extend -nth ISeq (fn [s n]
                     (when (empty? s)
-                      (throw "Index out of Range"))
+                      (throw
+                       [:pixie.stdlib/OutOfRangeException
+                        "Index out of Range"]))
                     (if (and (pos? n) s)
                       (recur (next s) (dec n))
                       (if (zero? n)
                         (first s)
-                        (throw "Index out of Range")))))
+                        (throw [:pixie.stdlib/OutOfRangeException
+                                "Index out of Range"])))))
 (extend -nth-not-found ISeq (fn [s n not-found]
                               (if (and (pos? n) s)
                                 (recur (next s) (dec n) not-found)
@@ -1750,12 +1784,12 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
   IIndexed
   (-nth [self idx]
     (when (or (= start stop 0) (neg? idx))
-      (throw "Index out of Range"))
+      (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))
     (let [cmp (if (< start stop) < >)
           val (+ start (* idx step))]
       (if (cmp val stop)
         val
-        (throw "Index out of Range"))))
+        (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))))
   (-nth-not-found [self idx not-found]
     (let [cmp (if (< start stop) < >)
           val (+ start (* idx step))]
@@ -1884,7 +1918,8 @@ user => (refer 'pixie.string :rename '{index-of find})
 user => (refer 'pixie.string :exclude '(substring))"
    :added "0.1"}
   [ns-sym & filters]
-  (let [ns (or (the-ns ns-sym) (throw (str "No such namespace: " ns-sym)))
+  (let [ns (or (the-ns ns-sym) (throw [:pixie.stdlib/NamespaceNotFoundException
+                                       (str "No such namespace: " ns-sym)]))
         filters (apply hashmap filters)
         nsmap (ns-map ns)
         rename (or (:rename filters) {})
@@ -1893,7 +1928,8 @@ user => (refer 'pixie.string :exclude '(substring))"
                  (keys nsmap)
                  (or (:refer filters) (:only filters)))]
     (when (and refers (not (satisfies? ISeqable refers)))
-      (throw ":only/:refer must be a collection of symbols"))
+      (throw [:pixie.stdlib/InvalidArgumentException
+              ":only/:refer must be a collection of symbols"]))
     (when-let [as (:as filters)]
       (refer-ns *ns* ns-sym as))
     (loop [syms (seq refers)]
@@ -1904,7 +1940,8 @@ user => (refer 'pixie.string :exclude '(substring))"
             (when-not (exclude sym)
               (let [v (nsmap sym)]
                 (when-not v
-                  (throw (str sym "does not exist")))
+                  (throw [:pixie.stdlib/SymbolNotFoundException
+                          (str sym "does not exist")]))
                 (refer-symbol *ns* (or (rename sym) sym) v))))
           (recur (next syms)))))
     nil))
@@ -2143,7 +2180,8 @@ If the number of arguments is even and no clause matches, throws an exception."
                      `((~pred ~a ~x) ~b)
                      `(:else ~a)))
                  (partition 2 clauses))
-             :else (throw "No matching clause!")))))
+             :else (throw [:pixie.stdlib/MissingClauseException
+                           "No matching clause!"])))))
 
 (defmacro case
   "Takes an expression and a number of two-form clauses.
@@ -2189,7 +2227,7 @@ If the number of arguments is even and no clause matches, throws an exception."
            result# (do ~@body)]
        ~@(map (fn [nm]
                 `(-dispose! ~nm))
-              names)
+              (reverse names))
        result#)))
 
 (defn pst

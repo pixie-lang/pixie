@@ -25,8 +25,9 @@
   (next! [this]
     (set-field! this :idx (inc idx)))
   (current [this]
-    (when (< idx (count s))
-      (nth s idx)))
+    (if (< idx (count s))
+      (nth s idx)
+      ::at-end))
   (snapshot [this]
     idx)
   (rewind! [this val]
@@ -55,11 +56,13 @@
   the cursor to the next element."
   [pred]
   (fn [cursor]
-    (if (pred (current cursor))
-      (let [value (current cursor)]
-        (next! cursor)
-        value)
-      fail)))
+    (let [cur (current cursor)]
+      (if (and
+           (pred cur)
+           (not (identical? cur ::at-end)))
+        (do (next! cursor)
+            cur)
+        fail))))
 
 
 (defprotocol IParserGenerator
@@ -272,14 +275,15 @@
 (defn eat
   "Eagerly parses as many values as possible until g fails. Discards the result, returns nil."
   [g]
-  (fn [cursor]
-    (loop []
-      (let [prev-pos (snapshot cursor)
-            v (g cursor)]
-        (if (identical? v fail)
-          (do (rewind! cursor prev-pos)
-              nil)
-          (recur))))))
+  (let [g (to-parser g)]
+    (fn [cursor]
+      (loop []
+        (let [prev-pos (snapshot cursor)
+              v (g cursor)]
+          (if (identical? v fail)
+            (do (rewind! cursor prev-pos)
+                nil)
+            (recur)))))))
 
 (defn maybe
   "Always succeeds, returns nil when the input did not match the parser."
@@ -323,11 +327,8 @@
   "Creates a lazy seq of buffers retreived from the input stream"
   [is]
   (let [buf (gc-buffer DEFAULT-BUFFER-SIZE)
-        result (try
-                 (read is buf DEFAULT-BUFFER-SIZE)
-                 buf
-                 (catch ex nil))]
-    (when (s/and result (pos? (count buf)))
+        nread (read is buf DEFAULT-BUFFER-SIZE)]
+    (when (pos? nread)
       (cons buf (lazy-seq (-input-stream-buffer-seq is))))))
 
 (defrecord InputStreamSnapshot [buffer-cell idx])

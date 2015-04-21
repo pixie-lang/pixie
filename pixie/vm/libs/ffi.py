@@ -68,7 +68,8 @@ class ExternalLib(object.Object):
                     self._dyn_lib = dynload.dlopen(s)
                     self._is_inited = True
                 except dynload.DLOpenError as ex:
-                    raise object.WrappedException(object.RuntimeException(rt.wrap(u"Couldn't Load Library: " + self._name)))
+                    raise object.runtime_error(u"Couldn't Load Library: " + self._name,
+                                               u"pixie.stdlib/LibraryNotFoundException")
                 finally:
                     rffi.free_charp(s)
 

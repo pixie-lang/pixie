@@ -659,6 +659,7 @@ def namespace(s):
 
 @as_var("-try-catch")
 def _try_catch(main_fn, catch_fn, final):
+    from pixie.vm.keyword import keyword
     try:
         return main_fn.invoke([])
     except Exception as ex:
@@ -668,9 +669,9 @@ def _try_catch(main_fn, catch_fn, final):
                 if not we_are_translated():
                     print "Python Error Info: ", ex.__dict__, ex
                     raise
-                ex = RuntimeException(rt.wrap(u"Some error: " + unicode(str(ex))))
+                ex = RuntimeException(rt.wrap(u"Internal error: " + unicode(str(ex))), keyword(u"pixie.stdlib/InternalError"))
             else:
-                ex = RuntimeException(nil)
+                ex = RuntimeException(u"No available message", keyword(u"pixie.stdlib/UnknownInternalError"))
             return catch_fn.invoke([ex])
         else:
             return catch_fn.invoke([ex._ex])
@@ -680,9 +681,19 @@ def _try_catch(main_fn, catch_fn, final):
 
 @as_var("throw")
 def _throw(ex):
+    from pixie.vm.keyword import keyword
     if isinstance(ex, RuntimeException):
         raise WrappedException(ex)
-    raise WrappedException(RuntimeException(ex))
+    if rt._satisfies_QMARK_(IVector, ex):
+        data = rt.nth(ex, rt.wrap(0))
+        msg = rt.nth(ex, rt.wrap(1))
+    elif rt._satisfies_QMARK_(ILookup, ex):
+        data = rt._val_at(ex, keyword(u"data"), nil)
+        msg = rt._val_at(ex, keyword(u"msg"), nil)
+    else:
+        affirm(False, u"Can only throw vectors, maps and exceptions")
+        return nil
+    raise WrappedException(RuntimeException(msg, data))
 
 @as_var("resolve-in")
 def _var(ns, nm):
@@ -791,6 +802,7 @@ def _seq(self):
     trace = vector.EMPTY
     trace_element = rt.hashmap(keyword(u"type"), keyword(u"runtime"))
     trace_element = rt.assoc(trace_element, keyword(u"data"), rt.wrap(self._data))
+    trace_element = rt.assoc(trace_element, keyword(u"msg"), rt.wrap(self._msg))
     trace = rt.conj(trace, trace_element)
     for x in self._trace:
         tmap = x.trace_map()
@@ -806,8 +818,17 @@ def _seq(self):
 @as_var("ex-msg")
 def ex_msg(e):
     """Returns the message contained in an exception"""
+    affirm(isinstance(e, RuntimeException), u"Argument must be a RuntimeException")
+    assert isinstance(e, RuntimeException)
+    return e._msg
+
+@as_var("ex-data")
+def ex_data(e):
+    """Returns the data contained in an exception"""
+    affirm(isinstance(e, RuntimeException), u"Argument must be a RuntimeException")
     assert isinstance(e, RuntimeException)
     return e._data
+
 
 @extend(_doc, code.NativeFn._type)
 def _doc(self):

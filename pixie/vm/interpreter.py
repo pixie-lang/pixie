@@ -81,7 +81,8 @@ class Frame(object):
         self.sp -= 1
 
         if not 0 <= self.sp < len(self.stack):
-            runtime_error(u"Stack out of range: " + unicode(str(self.sp)))
+            runtime_error(u"Stack out of range: " + unicode(str(self.sp)),
+                          u"pixie.vm.interpreter/InterpreterError")
 
         v = self.stack[self.sp]
         self.stack[self.sp] = None
@@ -91,7 +92,8 @@ class Frame(object):
     def nth(self, delta):
         affirm(delta >= 0, u"Invalid nth value, (compiler error)")
         if not self.sp - 1 >= delta:
-            runtime_error(u"Interpreter nth out of range: " + unicode(str(self.sp - 1)) + u", " + unicode(str(delta)))
+            runtime_error(u"Interpreter nth out of range: " + unicode(str(self.sp - 1)) + u", " + unicode(str(delta)),
+                          u"pixie.vm.interpreter/InterpreterError")
         return self.stack[self.sp - delta - 1]
 
     def push_nth(self, delta):
