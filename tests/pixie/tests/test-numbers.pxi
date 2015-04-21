@@ -57,8 +57,8 @@
   (t/assert= "<type pixie.stdlib.Float>" (str (type (rem 7/2 3.0)))))
 
 (t/deftest quot-types
-  (t/assert= "<type pixie.stdlib.Integer>" (str (type (quot 5 3))))
-  (t/assert= "<type pixie.stdlib.Float>" (str (type (quot 5.0 3))))
-  (t/assert= "<type pixie.stdlib.Integer>" (str (type (quot 7/2 3/7))))
-  (t/assert= "<type pixie.stdlib.Float>" (str (type (quot 7/2 3.0)))))
+  (t/assert= Integer (type (quot 5 3)))
+  (t/assert= Float (type (quot 5.0 3)))
+  (t/assert= Integer (type (quot 7/2 3/7)))
+  (t/assert= Float (type (quot 7/2 3.0))))
 
