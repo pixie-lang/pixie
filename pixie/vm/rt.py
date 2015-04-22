@@ -93,7 +93,9 @@ def init():
             return nil
 
         if not we_are_translated():
-            print x, type(x)
+            print "DATA ->>>> ", x, type(x)
+
+        print "DATA", x
         affirm(False, u"Bad wrap")
 
     globals()["wrap"] = wrap
@@ -161,6 +163,9 @@ def init():
 
     numbers.init()
     code.init()
+
+    # Requires bootstrapped RT
+    import pixie.vm.libs.code
 
 
 

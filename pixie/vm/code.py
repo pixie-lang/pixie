@@ -11,10 +11,8 @@ import pixie.vm.rt as rt
 
 
 BYTECODES = ["LOAD_CONST",
-             "ADD",
              "EQ",
              "INVOKE",
-             "TAIL_CALL",
              "DUP_NTH",
              "RETURN",
              "COND_BR",
@@ -24,7 +22,6 @@ BYTECODES = ["LOAD_CONST",
              "SET_VAR",
              "POP",
              "DEREF_VAR",
-             "INSTALL",
              "LOOP_RECUR",
              "ARG",
              "PUSH_SELF",
@@ -195,9 +192,11 @@ class MultiArityFn(BaseCode):
 class NativeFn(BaseCode):
     """Wrapper for a native function"""
     _type = object.Type(u"pixie.stdlib.NativeFn")
+    _fn_name = u"<unknown>"
 
     def __init__(self, doc=None):
         BaseCode.__init__(self)
+
 
     def type(self):
         return NativeFn._type
@@ -851,17 +850,19 @@ CO_VARARGS = 0x4
 def wrap_fn(fn, tp=object.Object):
     """Converts a native Python function into a pixie function."""
     docstring = unicode(fn.__doc__) if fn.__doc__ else u""
-    def as_native_fn(f):
-        return type("W" + fn.__name__, (NativeFn,), {"inner_invoke": f, "_doc": docstring})()
+    def as_native_fn(f, fn_name):
+        return type("W" + fn.__name__, (NativeFn,), {"inner_invoke": f, "_doc": docstring, "_fn_name": fn_name})()
 
-    def as_variadic_fn(f):
-        return type("W" + fn.__name__[:len("__args")], (NativeFn,), {"inner_invoke": f, "_doc": docstring})()
+    def as_variadic_fn(f, fn_name):
+        return type("W" + fn.__name__[:len("__args")], (NativeFn,), {"inner_invoke": f, "_doc": docstring, "_fn_name": fn_name})()
+
+
+    fn_name = unicode(getattr(fn, "__real_name__", fn.__name__))
 
     code = fn.func_code
     if fn.__name__.endswith("__args"):
-        return as_variadic_fn(lambda self, args: fn(args))
+        return as_variadic_fn(lambda self, args: fn(args), fn_name)
 
-    fn_name = unicode(getattr(fn, "__real_name__", fn.__name__))
 
     if code.co_flags & CO_VARARGS:
         raise Exception("Variadic functions not supported by wrap")
@@ -875,7 +876,7 @@ def wrap_fn(fn, tp=object.Object):
                 except object.WrappedException as ex:
                     ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
-            return as_native_fn(wrapped_fn)
+            return as_native_fn(wrapped_fn, fn_name)
 
         if argc == 1:
             def wrapped_fn(self, args):
@@ -885,7 +886,7 @@ def wrap_fn(fn, tp=object.Object):
                 except object.WrappedException as ex:
                     ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
-            return as_native_fn(wrapped_fn)
+            return as_native_fn(wrapped_fn, fn_name)
 
         if argc == 2:
             def wrapped_fn(self, args):
@@ -895,7 +896,7 @@ def wrap_fn(fn, tp=object.Object):
                 except object.WrappedException as ex:
                     ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
-            return as_native_fn(wrapped_fn)
+            return as_native_fn(wrapped_fn, fn_name)
         if argc == 3:
             def wrapped_fn(self, args):
                 affirm(len(args) == 3, u"Expected 3 arguments to " + fn_name)
@@ -905,7 +906,7 @@ def wrap_fn(fn, tp=object.Object):
                 except object.WrappedException as ex:
                     ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
-            return as_native_fn(wrapped_fn)
+            return as_native_fn(wrapped_fn, fn_name)
 
         if argc == 4:
             def wrapped_fn(self, args):
@@ -916,7 +917,7 @@ def wrap_fn(fn, tp=object.Object):
                 except object.WrappedException as ex:
                     ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
-            return as_native_fn(wrapped_fn)
+            return as_native_fn(wrapped_fn, fn_name)
 
         assert False, "implement more"
 

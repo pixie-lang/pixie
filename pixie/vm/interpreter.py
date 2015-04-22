@@ -219,17 +219,6 @@ def interpret(code_obj=None, args=[], self_obj = None, frame=None):
 
             continue
 
-        # if inst == code.TAIL_CALL:
-        #     argc = frame.get_inst()
-        #     fn = frame.nth(argc - 1)
-        #
-        #     assert isinstance(fn, code.BaseCode)
-        #
-        #     args = frame.pop_n(argc - 1)
-        #     frame.pop()
-        #
-        #     return code.TailCall(fn, args)
-
         if inst == code.ARG:
             arg = frame.get_inst()
             frame.push_arg(arg)
