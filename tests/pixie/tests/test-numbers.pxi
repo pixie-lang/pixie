@@ -51,10 +51,10 @@
     (t/assert= (float x) f)))
 
 (t/deftest rem-types
-  (t/assert= "<type pixie.stdlib.Integer>" (str (type (rem 5 3))))
-  (t/assert= "<type pixie.stdlib.Float>" (str (type (rem 5.0 3))))
-  (t/assert= "<type pixie.stdlib.Ratio>" (str (type (rem 7/2 3))))
-  (t/assert= "<type pixie.stdlib.Float>" (str (type (rem 7/2 3.0)))))
+  (t/assert= Integer (type (rem 5 3)))
+  (t/assert= Float (type (rem 5.0 3)))
+  (t/assert= Ratio (type (rem 7/2 3)))
+  (t/assert= Float (type (rem 7/2 3.0))))
 
 (t/deftest quot-types
   (t/assert= Integer (type (quot 5 3)))
