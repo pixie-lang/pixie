@@ -52,6 +52,9 @@
   (f/defcfn uv_timer_set_repeat)
   (f/defcfn uv_timer_get_repeat)
 
+  ;; Time
+  (f/defcfn uv_hrtime)
+
 
   ;; Filesystem
 
