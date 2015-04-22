@@ -1467,6 +1467,11 @@ The new value is thus `(apply f current-value-of-atom args)`."
          (let [~bind tmp#]
            ~@body)))))
 
+(defmacro if-not
+  ([test then] `(if-not ~test ~then nil))
+  ([test then else]
+   `(if (not ~test) ~then ~else)))
+
 (defmacro if-let
   ([binding then] `(if-let ~binding ~then nil))
   ([binding then else]
