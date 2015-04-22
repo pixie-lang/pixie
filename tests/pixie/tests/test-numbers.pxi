@@ -49,3 +49,16 @@
 (t/deftest test-float
   (doseq [[x f] [[1 1.0] [3 3.0] [3.333 3.333] [3/2 1.5] [1/7 (/ 1.0 7.0)]]]
     (t/assert= (float x) f)))
+
+(t/deftest rem-types
+  (t/assert= Integer (type (rem 5 3)))
+  (t/assert= Float (type (rem 5.0 3)))
+  (t/assert= Ratio (type (rem 7/2 3)))
+  (t/assert= Float (type (rem 7/2 3.0))))
+
+(t/deftest quot-types
+  (t/assert= Integer (type (quot 5 3)))
+  (t/assert= Float (type (quot 5.0 3)))
+  (t/assert= Integer (type (quot 7/2 3/7)))
+  (t/assert= Float (type (quot 7/2 3.0))))
+
