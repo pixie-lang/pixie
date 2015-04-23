@@ -405,6 +405,14 @@
                        (swap! cnt inc)))
                     @cnt)))
 
+(t/deftest test-loop-destructure
+  (t/assert=
+   [3 -3]
+   (loop [[a b :as vs] [0 0]]
+     (if (> a 2)
+       vs
+       (recur [(inc a) (dec b)])))))
+
 (t/deftest test-take-while
   (t/assert= (take-while pos? [1 2 3 -1]) [1 2 3])
   (t/assert= (take-while pos? [-1 2]) ())

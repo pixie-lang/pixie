@@ -508,7 +508,7 @@ def compile_fn(form, ctx):
     if rt.meta(name) is not nil:
         compile_meta(rt.meta(name), ctx)
 
-LOOP = symbol.symbol(u"loop")
+LOOP = symbol.symbol(u"loop*")
 
 def compile_fn_body(name, args, body, ctx):
     new_ctx = Context(rt.name(name), rt.count(args), ctx)
@@ -698,7 +698,7 @@ def compile_loop(form, ctx):
     for i in range(0, rt.count(bindings), 2):
         binding_count += 1
         name = rt.nth(bindings, rt.wrap(i))
-        affirm(isinstance(name, symbol.Symbol), u"Loop must bindings must be symbols")
+        affirm(isinstance(name, symbol.Symbol), u"Loop bindings must be symbols")
         bind = rt.nth(bindings, rt.wrap(i + 1))
 
         compile_form(bind, ctx)
@@ -787,7 +787,7 @@ builtins = {u"fn*": compile_fn,
             u"quote": compile_quote,
             u"recur": compile_recur,
             u"let*": compile_let,
-            u"loop": compile_loop,
+            u"loop*": compile_loop,
             u"comment": compile_comment,
             u"var": compile_var,
             u"catch": compile_catch,
