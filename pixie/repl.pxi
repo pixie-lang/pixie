@@ -19,7 +19,7 @@
                              ""))))]
     (loop []
       (try (let [form (read rdr false)]
-             (if (= form eof)
+             (if (or (= form eof) (= form :exit))
                (exit 0)
                (let [x (eval form)]
                  (pixie.stdlib/-push-history x)
