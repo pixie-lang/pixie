@@ -160,8 +160,11 @@
                                    nil)))))]
                 (map (fn [args] (apply f args)) (step colls))))))
 
-(def reduce (fn [rf init col]
-              (-reduce col rf init)))
+(def reduce (fn
+             ([rf col]
+              (reduce rf (rf) col))
+             ([rf init col]
+              (-reduce col rf init))))
 
 (def instance? (fn ^{:doc "Checks if x is an instance of t.
 
