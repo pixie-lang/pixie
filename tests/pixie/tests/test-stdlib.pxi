@@ -508,3 +508,8 @@
   (t/assert-throws? RuntimeException
     "proto must be a Protocol"
     (satisfies? [IIndexed :also-not-a-proto] [1 2])))
+
+(t/deftest test-reduce
+ (t/assert= 5050 (reduce + (range 101)))
+ (t/assert= 3628800 (reduce * (range 1 11)))
+ (t/assert= 5051 (reduce + 1 (range 101))))
