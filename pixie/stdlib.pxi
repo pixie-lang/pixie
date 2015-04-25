@@ -37,6 +37,10 @@
               (cons 'let* args)))
 (set-macro! let)
 
+(def loop (fn* [& args]
+              (cons 'loop* args)))
+(set-macro! loop)
+
 (def identity
   (fn ^{:doc "The identity function. Returns its argument."
         :added "0.1"}
@@ -131,6 +135,15 @@
                     (let [f (xform rf)
                           result (-reduce coll f init)]
                       (f result)))))
+
+(defn every?
+  {:doc "Check if every element of the collection satisfies the predicate."
+   :added "0.1"}
+  [pred coll]
+  (cond
+    (nil? (seq coll)) true
+    (pred (first coll)) (recur pred (next coll))
+    :else false))
 
 (def map (fn ^{:doc "map - creates a transducer that applies f to every input element"
                :signatures [[f] [f coll]]
@@ -1325,6 +1338,24 @@ and implements IAssociative, ILookup and IObject."
   ([f] (lazy-seq (cons (f) (repeatedly f))))
   ([n f] (take n (repeatedly f))))
 
+(defn interleave
+  "Returns a seq of all the items in the input collections interleaved"
+  ([] ())
+  ([c1] (seq c1))
+  ([c1 c2]
+   (lazy-seq
+    (let [s1 (seq c1)
+          s2 (seq c2)]
+      (when (and s1 s2)
+        (cons (first s1) (cons (first s2)
+                               (interleave (next s1) (next s2))))))))
+  ([& colls]
+   (lazy-seq
+    (let [ss (map seq colls)]
+      (when (every? identity ss)
+        (concat (map first ss)
+                (apply interleave (map next ss))))))))
+
 (defmacro doseq
   {:doc "Evaluates all elements of the seq, presumably for side effects. Returns nil."
    :added "0.1"}
@@ -1713,7 +1744,7 @@ not enough elements were present."
     res))
 
 (defmacro let
-  {:doc "Makes the bindings availlable in the body.
+  {:doc "Makes the bindings available in the body.
 
 The bindings must be a vector of binding-expr pairs. The binding can be a destructuring
 binding, as below.
@@ -1746,6 +1777,44 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                                           (partition 2 bindings))]
         `(let* ~destructured-bindings
                ~@body)))
+
+(defn take-nth
+  "Returns a lazy seq of every nth item in coll.  Returns a stateful
+  transducer when no collection is provided."
+  ([n]
+   (fn [rf]
+     (let [ia (atom -1)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+          (let [i (swap! ia inc)]
+            (if (zero? (rem i n))
+              (rf result input)
+              result)))))))
+  ([n coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (cons (first s) (take-nth n (drop n s)))))))
+
+(defmacro loop
+  [bindings & body]
+  (let [vals (take-nth 2 (drop 1 bindings))
+        bindings (take-nth 2 bindings)
+        binding-syms (map (fn [b] (if (symbol? b) b (gensym))) bindings)
+        binding-forms (transduce
+                       (map (fn [bind]
+                              (let [[b v s] bind]
+                                (if (symbol? b)
+                                  [b v]
+                                  [s v b s]))))
+                       concat
+                       []
+                       (map vector bindings vals binding-syms))]
+    `(let ~(vec binding-forms)
+       (loop* ~(vec (interleave binding-syms binding-syms))
+              (let ~(vec (interleave bindings binding-syms))
+                ~@body)))))
 
 (extend -nth ISeq (fn [s n]
                     (when (empty? s)
@@ -1988,15 +2057,6 @@ user => (refer 'pixie.string :exclude '(substring))"
                                 (or m1 {})
                                 m2))]
            (reduce merge2 (first maps) (next maps)))))
-
-(defn every?
-  {:doc "Check if every element of the collection satisfies the predicate."
-   :added "0.1"}
-  [pred coll]
-  (cond
-   (nil? (seq coll)) true
-   (pred (first coll)) (recur pred (next coll))
-   :else false))
 
 ; If you want a fn that uses destructuring in its parameter list, place
 ; it after this definition. If you don't, you will get compile failures
@@ -2349,24 +2409,6 @@ Calling this function on something that is not ISeqable returns a seq with that 
         (fn [v]
           (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
             (apply str "#Environment{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
-
-(defn interleave
-  "Returns a seq of all the items in the input collections interleaved"
-  ([] ())
-  ([c1] (seq c1))
-  ([c1 c2]
-   (lazy-seq
-    (let [s1 (seq c1)
-          s2 (seq c2)]
-      (when (and s1 s2)
-        (cons (first s1) (cons (first s2)
-                               (interleave (next s1) (next s2))))))))
-  ([& colls]
-   (lazy-seq
-    (let [ss (map seq colls)]
-      (when (every? identity ss)
-        (concat (map first ss)
-                (apply interleave (map next ss))))))))
 
 (defn min
   "Returns the smallest of all the arguments to this function. Assumes arguments are numeric"
