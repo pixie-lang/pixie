@@ -63,3 +63,11 @@
   (t/assert= (read-string "{:foo :bar ; a comment\n }") '{:foo :bar})
   (t/assert= (read-string "#{:foo ; a comment\n }") '#{:foo})
   (t/assert= (read-string "{:foo ; a comment\n :bar }") '{:foo :bar}))
+
+(t/deftest test-comment-reader-macro
+  (t/assert= (read-string "(foo #_bar baz)") '(foo baz))
+  (t/assert= (read-string "(foo #_  bar baz)") '(foo baz))
+  (t/assert= (read-string "(foo #_ #_ bar baz)") '(foo))
+  (t/assert= (read-string "(foo #_(bar goo) baz)") '(foo baz))
+  (t/assert= (read-string "(foo bar #_baz)") '(foo bar))
+  (t/assert= (read-string "(foo bar #_ ; comment \n baz)") '(foo bar)))

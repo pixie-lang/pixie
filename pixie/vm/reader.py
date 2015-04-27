@@ -627,9 +627,15 @@ class SetReader(ReaderHandler):
             if itm != rdr:
                 acc = acc.conj(itm)
 
+class CommentReader(ReaderHandler):
+    def invoke(self, rdr, ch):
+        read_inner(rdr, True, always_return_form=True)
+        return rdr
+
 dispatch_handlers = {
-    u"{":  SetReader(),
-    u"(": FnReader()
+    u"{": SetReader(),
+    u"(": FnReader(),
+    u"_": CommentReader()
 }
 
 class DispatchReader(ReaderHandler):
