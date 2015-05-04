@@ -6,6 +6,9 @@ from pixie.vm.numbers import Integer, Float
 from pixie.vm.keyword import Keyword
 import pixie.vm.rt as rt
 
+MAX_FIELDS = 32
+
+
 class CustomType(Type):
     _immutable_fields_ = ["_slots", "_rev?"]
     def __init__(self, name, slots):
@@ -38,10 +41,9 @@ class CustomType(Type):
 
 class CustomTypeInstance(Object):
     _immutable_fields_ = ["_type"]
-    def __init__(self, type, fields):
+    def __init__(self, type):
         affirm(isinstance(type, CustomType), u"Can't create a instance of a non custom type")
         self._custom_type = type
-        self._fields = fields
 
     def type(self):
         return self._custom_type
@@ -52,17 +54,17 @@ class CustomTypeInstance(Object):
             runtime_error(u"Invalid field named " + rt.name(rt.str(name)) + u" on type " + rt.name(rt.str(self.type())),
                           u"pixie.stdlib/InvalidFieldException")
 
-        old_val = self._fields[idx]
+        old_val = self.get_field_by_idx(idx)
         if isinstance(old_val, AbstractMutableCell):
-            old_val.set_mutable_cell_value(self._custom_type, self._fields, name, idx, val)
+            old_val.set_mutable_cell_value(self._custom_type, self, name, idx, val)
         else:
             self._custom_type.set_mutable(name)
-            self._fields[idx] = val
+            self.set_field_by_idx(idx, val)
         return self
 
     @jit.elidable_promote()
     def _get_field_immutable(self, idx, rev):
-        return self._fields[idx]
+        return self.get_field_by_idx(idx)
 
     def get_field_immutable(self, idx):
         tp = self._custom_type
@@ -76,7 +78,7 @@ class CustomTypeInstance(Object):
                           u"pixie.stdlib/InvalidFieldException")
 
         if self._custom_type.is_mutable(name):
-            value = self._fields[idx]
+            value = self.get_field_by_idx(idx)
         else:
             value = self.get_field_immutable(idx)
 
@@ -86,11 +88,86 @@ class CustomTypeInstance(Object):
             return value
 
 
+create_type_prefix = """
+def new_inst(tp, fields):
+    l = len(fields)
+    if l >= {max_c}:
+        runtime_error(u"Too many fields for type", u"pixie.stdlib/TooManyFields")
+"""
+
+clause_template = """
+    elif l == {c}:
+        return CustomType{c}(tp, fields)
+"""
+
+def gen_ct_code():
+    acc = create_type_prefix.format(max_c=MAX_FIELDS + 1)
+    for x in range(MAX_FIELDS + 1):
+        acc += clause_template.format(c=x)
+
+    #print acc
+    return acc
+
+exec gen_ct_code()
+
+
+type_template = """
+class CustomType{c}(CustomTypeInstance):
+    def __init__(self, tp, fields):
+        CustomTypeInstance.__init__(self, tp)
+        {self_fields_list} = fields
+
+    def get_field_by_idx(self, idx):
+        if idx >= {max}:
+            return None
+"""
+
+get_field_by_idx_template = """
+        elif idx == {c}:
+            return self._custom_field{c}
+"""
+
+set_field_prefix_template = """
+    def set_field_by_idx(self, idx, val):
+        if idx >= {max}:
+            return
+"""
+
+set_field_by_idx_template = """
+        elif idx == {c}:
+            self._custom_field{c} = val
+"""
+
+def gen_ct_class_code():
+    acc = ""
+    for x in range(MAX_FIELDS + 1):
+        if x == 0:
+            self_fields_list = "_null_"
+        elif x == 1:
+            self_fields_list = "self._custom_field0,"
+        else:
+            self_fields_list = ",".join(map(lambda x: "self._custom_field" + str(x), range(x)))
+        acc += type_template.format(c=x, self_fields_list=self_fields_list, max=x)
+        for y in range(x):
+            acc += get_field_by_idx_template.format(c=y)
+
+        acc += set_field_prefix_template.format(max=x)
+
+        for y in range(x):
+            acc += set_field_by_idx_template.format(c=y)
+
+
+
+    #print acc
+    return acc
+
+exec gen_ct_class_code()
+
+
 @as_var("create-type")
 def create_type(type_name, fields):
     affirm(isinstance(type_name, Keyword), u"Type name must be a keyword")
 
-    field_count = rt.count(fields)
     acc = {}
     for i in range(rt.count(fields)):
         val = rt.nth(fields, rt.wrap(i))
@@ -101,6 +178,7 @@ def create_type(type_name, fields):
     return CustomType(rt.name(type_name), acc)
 
 @as_var("new")
+@jit.unroll_safe
 def _new__args(args):
     affirm(len(args) >= 1, u"new takes at least one parameter")
     tp = args[0]
@@ -116,7 +194,7 @@ def _new__args(args):
             val = FloatMutableCell(val.float_val())
             
         arr[x] = val
-    return CustomTypeInstance(tp, arr)
+    return new_inst(tp, arr)
 
 @as_var("set-field!")
 def set_field(inst, field, val):
@@ -152,9 +230,9 @@ class IntegerMutableCell(AbstractMutableCell):
         if not isinstance(value, Integer):
             ct.set_mutable(nm)
             if isinstance(value, Float):
-                fields[idx] = FloatMutableCell(value.float_val())
+                fields.set_field_by_idx(idx, FloatMutableCell(value.float_val()))
             else:
-                fields[idx] = value
+                fields.set_field_by_idx(idx, value)
         else:
             self._mutable_integer_val = value.int_val()
 
@@ -169,9 +247,9 @@ class FloatMutableCell(AbstractMutableCell):
         if not isinstance(value, Float):
             ct.set_mutable(nm)
             if isinstance(value, Integer):
-                fields[idx] = IntegerMutableCell(value.int_val())
+                fields.set_field_by_idx(idx, IntegerMutableCell(value.int_val()))
             else:
-                fields[idx] = value
+                fields.set_field_by_idx(idx, value)
         else:
             self._mutable_float_val = value.float_val()
 
