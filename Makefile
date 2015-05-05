@@ -22,6 +22,9 @@ build_with_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target.py
 	make compile_basics
 
+build_with_jit2: fetch_externals
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --opt=jit target2.py
+
 build_no_jit: fetch_externals
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target.py
 	make compile_basics
@@ -61,6 +64,9 @@ run:
 
 run_interactive:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py
+
+run_interactive2:
+	@PYTHONPATH=$(PYTHONPATH) pypy target2.py
 
 run_interactive_stacklets:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py pixie/stacklets.pxi

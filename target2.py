@@ -1,0 +1,125 @@
+
+import pixie.vm2.interpreter as i
+from pixie.vm2.object import StackCell, run_stack
+import pixie.vm2.rt as rt
+import pixie.vm2.code as code
+from pixie.vm2.keyword import keyword as kw
+
+rt.init()
+def testit(max):
+    #lt = i.Const(code.intern_var(u"pixie.stdlib", u"-lt"))
+    eq = i.Const(code.intern_var(u"pixie.stdlib", u"-num-eq"))
+    add = i.Const(code.intern_var(u"pixie.stdlib", u"-add"))
+    count_up = kw(u"count-up")
+    x = kw(u"i")
+    max = kw(u"max")
+
+    f = i.Fn(count_up, [x, max],
+             i.If(i.Invoke([eq, i.Lookup(x), i.Lookup(max)]),
+                  i.Lookup(x),
+                  i.TailCall([i.Lookup(count_up),
+                            i.Invoke([add, i.Lookup(x), i.Const(rt.wrap(1))]),
+                            i.Lookup(max)])))
+
+    c = i.Invoke([f, i.Const(rt.wrap(0)), i.Const(rt.wrap(10))])
+
+
+    return run_stack(None, i.InterpretK(c, None))
+
+#val = testit()
+#print val.int_val(), val
+
+def entry_point():
+    #s = rt.wrap(u"Foo")
+    from pixie.vm2.string import String
+    s = String(u"Foo")
+    max = 10000 #int(args[1])
+
+    return testit(max).int_val()
+
+## JIT STUFF
+
+
+from rpython.jit.codewriter.policy import JitPolicy
+from rpython.rlib.jit import JitHookInterface, Counters
+from rpython.rlib.rfile import create_stdio
+from rpython.annotator.policy import AnnotatorPolicy
+from rpython.rtyper.lltypesystem import lltype
+from rpython.jit.metainterp import warmspot
+
+def run_child(glob, loc):
+    interp = loc['interp']
+    graph = loc['graph']
+    interp.malloc_check = False
+
+    def returns_null(T, *args, **kwds):
+        return lltype.nullptr(T)
+    interp.heap.malloc_nonmovable = returns_null     # XXX
+
+    from rpython.jit.backend.llgraph.runner import LLGraphCPU
+    #LLtypeCPU.supports_floats = False     # for now
+    apply_jit(interp, graph, LLGraphCPU)
+
+
+def apply_jit(interp, graph, CPUClass):
+    print 'warmspot.jittify_and_run() started...'
+    policy = Policy()
+    warmspot.jittify_and_run(interp, graph, [], policy=policy,
+                             listops=True, CPUClass=CPUClass,
+                             backendopt=True, inline=True)
+
+def run_debug(argv):
+    from rpython.rtyper.test.test_llinterp import get_interpreter
+
+    # first annotate and rtype
+    try:
+        interp, graph = get_interpreter(entry_point, [], backendopt=False,
+                                        #config=config,
+                                        #type_system=config.translation.type_system,
+                                        policy=Policy())
+    except Exception, e:
+        print '%s: %s' % (e.__class__, e)
+        pdb.post_mortem(sys.exc_info()[2])
+        raise
+
+    # parent process loop: spawn a child, wait for the child to finish,
+    # print a message, and restart
+    #unixcheckpoint.restartable_point(auto='run')
+
+    from rpython.jit.codewriter.codewriter import CodeWriter
+    CodeWriter.debug = True
+    run_child(globals(), locals())
+
+#stacklet.global_state = stacklet.GlobalState()
+
+class DebugIFace(JitHookInterface):
+    def on_abort(self, reason, jitdriver, greenkey, greenkey_repr, logops, operations):
+        # print "Aborted Trace, reason: ", Counters.counter_names[reason], logops, greenkey_repr
+        pass
+
+import sys, pdb
+
+class Policy(JitPolicy, AnnotatorPolicy):
+    def __init__(self):
+        JitPolicy.__init__(self, DebugIFace())
+
+def jitpolicy(driver):
+    return JitPolicy(jithookiface=DebugIFace())
+
+def target(*args):
+    import pixie.vm.rt as rt
+    driver = args[0]
+    driver.exe_name = "pixie-vm"
+    rt.__config__ = args[0].config
+
+
+    print "ARG INFO: ", args
+
+
+    return entry_point, None
+
+import rpython.config.translationoption
+print rpython.config.translationoption.get_combined_translation_config()
+
+if __name__ == "__main__":
+    run_debug(sys.argv)

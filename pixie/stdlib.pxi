@@ -1816,6 +1816,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
               (and (< step 0) (> start stop)))
       (cons start (lazy-seq* #(range (+ start step) stop step))))))
 
+
 (extend -str Range
         (fn [v]
           (-str (seq v))))
