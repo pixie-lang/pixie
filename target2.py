@@ -23,6 +23,52 @@ def testit(max):
 
     c = i.Invoke([f, i.Const(rt.wrap(0)), i.Const(rt.wrap(10))])
 
+    c = i.Do(
+  args=[
+    i.Invoke(args=[
+# (def user/it)
+      i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
+      i.Const(code.intern_var(u"user", u"it")),
+      i.Fn(args=[kw(u"i"),kw(u"max")],name=kw(u"this"),
+        body=i.Do(
+          args=[
+            i.If(
+              test=i.Invoke(
+                args=[
+                  i.Const(code.intern_var(u"pixie.stdlib", u"-lt")),
+
+    i.Lookup(kw(u"i")),
+                  i.Lookup(kw(u"max")),
+                ],
+              ),
+              then=i.Invoke(
+                args=[
+                  i.Lookup(kw(u"this")),
+                  i.Invoke(
+                    args=[
+                      i.Const(code.intern_var(u"pixie.stdlib", u"-add")),
+                      i.Lookup(kw(u"i")),
+                      i.Const(rt.wrap(1)),
+                    ],
+                  ),
+                  i.Lookup(kw(u"max")),
+                ],
+              ),
+              els=i.Lookup(kw(u"i")),
+              ),
+          ],
+        ),
+      )]),
+    i.Invoke(
+      args=[
+        i.Const(code.intern_var(u"user", u"it")),
+        i.Const(rt.wrap(0)),
+        i.Const(rt.wrap(1000)),
+      ],
+    ),
+  ],
+)
+
 
     return run_stack(None, i.InterpretK(c, None))
 
@@ -122,4 +168,5 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    run_debug(sys.argv)
+    #run_debug(sys.argv)
+    entry_point()

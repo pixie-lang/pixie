@@ -152,6 +152,7 @@ def run_stack(val, cont, stack=None):
 ## TODO: fix
 def affirm(f, msg):
     if not f:
+        print msg
         raise NotImplementedError()
 
 def runtime_error(msg):

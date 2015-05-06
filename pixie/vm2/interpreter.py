@@ -189,3 +189,31 @@ class IfK(Continuation):
         else:
             stack = stack_cons(stack, InterpretK(ast._c_then, self._c_locals))
         return nil, stack
+
+
+class Do(AST):
+    _immutable_fields_ = ["_c_body_asts"]
+    def __init__(self, args, meta=nil):
+        AST.__init__(self, meta)
+        self._c_body_asts = args
+
+    @jit.unroll_safe
+    def interpret(self, val, locals, stack):
+        return val, stack_cons(stack, DoK(self._c_body_asts, locals))
+
+
+class DoK(Continuation):
+    _immutable_ = True
+    def __init__(self, do_asts, locals, idx=0):
+        self._c_locals = locals
+        self._c_body_asts = do_asts
+        self._c_idx = idx
+
+    def call_continuation(self, val, stack):
+        if self._c_idx + 1 < len(self._c_body_asts):
+            stack = stack_cons(stack, DoK(self._c_body_asts, self._c_locals, self._c_idx + 1))
+            stack = stack_cons(stack, InterpretK(self._c_body_asts[self._c_idx], self._c_locals))
+            return nil, stack
+        else:
+            stack = stack_cons(stack, InterpretK(self._c_body_asts[self._c_idx], self._c_locals))
+            return nil, stack

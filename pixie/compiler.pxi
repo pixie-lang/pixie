@@ -9,7 +9,8 @@
                            (seq? x) :seq
                            (vector? x) :vector
                            (symbol? x) :symbol
-                           (number? x) :number)))
+                           (number? x) :number
+                           (keyword? x) :keyword)))
 
 (defmulti analyze-seq (fn [x]
                          (let [f (first x)]
@@ -51,7 +52,7 @@
                   [body]
                   body)
         analyzed-bodies (reduce
-                         analyze-fn-body
+                         (partial analyze-fn-body name)
                          {}
                          arities)]
     {:op :fn
@@ -62,9 +63,14 @@
      :arities (vals analyzed-bodies)}
     ))
 
-(defn analyze-fn-body [acc [args & body]]
+(defn analyze-fn-body [fn-name acc [args & body]]
   ; TODO: Add support for variadic fns
   (let [arity (count args)
+        new-env (assoc-in *env* [:locals fn-name] {:op :binding
+                                                   :type :fn-self
+                                                   :name fn-name
+                                                   :form fn-name
+                                                   :env *env*})
         new-env (reduce
                  (fn [acc idx]
                    (let [arg-name (nth args idx)]
@@ -74,7 +80,7 @@
                                                        :name arg-name
                                                        :form arg-name
                                                        :env *env*})))
-                 *env*
+                 new-env
                  (range (count args)))]
     (assert (not (acc arity)) (str "Duplicate arity for " (cons args body)))
     (assoc acc arity {:op :fn-body
@@ -130,7 +136,8 @@
 (defmethod analyze-seq :default
   [[sym & args :as form]]
   (println form)
-  (let [resolved (resolve-in (the-ns (:ns *env*)) sym)]
+  (let [resolved (and (symbol? sym)
+                      (resolve-in (the-ns (:ns *env*)) sym))]
     (if (and resolved
              (macro? @resolved))
       (analyze-form (apply @resolved args))
@@ -145,6 +152,14 @@
 (defmethod analyze-form :number
   [x]
   {:op :const
+   :type :number
+   :form x
+   :env *env*})
+
+(defmethod analyze-form :keyword
+  [x]
+  {:op :const
+   :type :keyword
    :form x
    :env *env*})
 
@@ -156,9 +171,30 @@
   [x]
   (if-let [local (get-in *env* [:locals x])]
     local
-    {:op :global
-     :env *env*
-     :form x}))
+    (maybe-var x)))
+
+(defmethod analyze-form :vector
+  [x]
+  (println "analyze " x)
+  {:op :vector
+   :children [:items]
+   :items (mapv analyze-form x)
+   :form x
+   :env *env*})
+
+(defn maybe-var [x]
+  (let [resolved (resolve-in (the-ns (:ns *env*)) x)]
+    (if resolved
+      {:op :var
+       :env *env*
+       :ns (namespace resolved)
+       :name (name resolved)
+       :form x}
+      {:op :var
+       :env *env*
+       :ns (name (:ns *env*))
+       :name (name x)
+       :form x})))
 
 
 ;; ENV Functions
@@ -190,20 +226,24 @@
        (selector node))
       post))
 
+(defn post-walk [f ast]
+  (walk f identity :children ast))
+
+(defn clean-do [ast]
+  (post-walk
+   (fn [{:keys [op statements ret] :as do}]
+     (println ">-- " op (count statements))
+     (if (and (= op :do)
+              (= (count statements) 0))
+       (do (println "reducing ") ret)
+       ast))
+   ast))
 
 (defn remove-env [ast]
   (walk #(dissoc % :env)
         identity
         :children
         ast))
-
-(let [form '((fn this [i max]
-                (if (-lt i max)
-                  (this (-add i 1)
-                        max)
-                  i))
-             1000)]
-  (println (string-builder @(to-rpython (atom (string-builder)) 0 (remove-env (analyze form))))))
 
 (defn write! [sb val]
   (swap! sb conj! val)
@@ -214,6 +254,7 @@
     (write! sb "  ")))
 
 (defmulti to-rpython (fn [sb offset node]
+                       (println (:op node))
                          (:op node)))
 
 (defmethod to-rpython :if
@@ -223,7 +264,7 @@
   (let [offset (inc offset)]
     (doseq [[nm form] [[:test test]
                        [:then then]
-                       [:else else]]]
+                       [:els else]]]
       (offset-spaces sb offset)
       (write! sb (name nm))
       (write! sb "=")
@@ -232,12 +273,129 @@
   (offset-spaces sb offset)
   (write! sb ")")))
 
-(defmethod to-rpython :const
+(defmulti write-const (fn [sb offset const]
+                         (:type const)))
+
+(defmethod write-const :keyword
   [sb offset {:keys [form]}]
-  (write! sb "i.Const(rt.wrap(")
-  (write! sb (str form))
-  (write! sb "))"))
+  (write! sb "kw(u\"")
+  (when (namespace form)
+    (write! sb (namespace form))
+    (write! sb "/"))
+  (write! sb (name form))
+  (write! sb "\")"))
+
+(defmethod to-rpython :const
+  [sb offset ast]
+  (write! sb "i.Const(")
+  (write-const sb offset ast)
+  (write! sb ")"))
+
+(defmethod to-rpython :invoke
+  [sb offset ast]
+  (write! sb "i.Invoke(\n")
+  (let [offset (inc offset)]
+    (offset-spaces sb offset)
+    (write! sb "args=[\n")
+    (let [offset (inc offset)]
+      (doseq [x `(~(:fn ast) ~@(:args ast))]
+        (offset-spaces sb offset)
+        (to-rpython sb offset x)
+        (write! sb ",\n")))
+    (offset-spaces sb offset)
+    (write! sb "],\n"))
+  (offset-spaces sb offset)
+  (write! sb ")"))
 
 
+(defmethod to-rpython :do
+  [sb offset {:keys [ret statements]}]
+  (write! sb "i.Do(\n")
+  (let [offset (inc offset)]
+    (offset-spaces sb offset)
+    (write! sb "args=[\n")
+    (let [offset (inc offset)]
+      (doseq [x `(~@statements ~ret)]
+        (offset-spaces sb offset)
+        (to-rpython sb offset x)
+        (write! sb ",\n")))
+    (offset-spaces sb offset)
+    (write! sb "],\n"))
+  (offset-spaces sb offset)
+  (write! sb ")"))
 
-(defmethod rpython-node)
+
+(defmethod to-rpython :fn
+  [sb offset {:keys [name arities]}]
+  (assert (= (count arities) 1))
+  (to-rpython-fn-body sb offset name (nth arities 0)))
+
+(defn to-rpython-fn-body
+  [sb offset name {:keys [args body]}]
+  (write! sb "i.Fn(args=[")
+  (write! sb (->> args
+                  (map (fn [name]
+                              (str "kw(u\"" name "\")")))
+                  (interpose ",")
+                  (apply str)))
+  (write! sb "],name=kw(u\"")
+  (write! sb (str name))
+  (write! sb "\"),\n")
+  (let [offset (inc offset)]
+    (offset-spaces sb offset)
+    (write! sb "body=")
+    (to-rpython sb offset body)
+    (write! sb ",\n"))
+  (offset-spaces sb offset)
+  (write! sb ")"))
+
+(defmethod to-rpython :var
+  [sb offset {:keys [ns name]}]
+  (write! sb "i.Const(code.intern_var(")
+  (write! sb "u\"")
+  (write! sb ns)
+  (write! sb "\", u\"")
+  (write! sb name)
+  (write! sb "\"))"))
+
+(defmethod to-rpython :binding
+  [sb offset {:keys [name]}]
+  (write! sb "i.Lookup(kw(u\"")
+  (write! sb name)
+  (write! sb "\"))"))
+
+(defmethod to-rpython :def
+  [sb offset {:keys [name env val]}]
+  (write! sb "i.Invoke(args=[\n")
+  (write! sb (str "# (def " (:ns env) "/" name ")\n"))
+  (let [offset (inc offset)]
+    (offset-spaces sb offset)
+    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"set-var-root!\")),\n")
+    (offset-spaces sb offset)
+    (write! sb "i.Const(code.intern_var(u\"")
+    (write! sb (:ns env))
+    (write! sb "\",u\"")
+    (write! sb name)
+    (write! sb "\")),\n")
+    (offset-spaces sb offset)
+    (to-rpython sb offset val)
+    (write! sb "])")
+    ))
+
+(defmethod to-rpython :vector
+  [sb offset {:keys [items]}]
+  (write! sb "i.Invoke(args=[\n")
+  (let [offset (inc offset)]
+    (offset-spaces sb offset)
+    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"vector\")),\n")
+    (doseq [item items]
+      (offset-spaces sb offset)
+      (to-rpython sb offset item)
+      (write! sb ",\n"))
+    (offset-spaces sb offset)
+    (write! sb "])")))
+
+
+(let [form '(do (deftype Cons [head tail meta]))]
+  (println (string-builder @(to-rpython (atom (string-builder)) 0 (clean-do (analyze form))))))
+
