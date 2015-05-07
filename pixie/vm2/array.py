@@ -35,6 +35,11 @@ class Array(object.Object):
                 return rt.deref(init)
             init = f.invoke([init, self._list[x]])
         return init
+
+@as_var("array")
+def array__args(lst):
+    return Array(lst)
+
 #
 #
 # @extend(proto._count, Array)

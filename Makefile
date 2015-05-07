@@ -93,3 +93,7 @@ clean: clean_pxic
 	rm -rf ./externals
 	rm -f ./pixie-vm
 	rm -f ./*.pyc
+
+compile_rpython:
+	rm /tmp/pxi.py
+	./pixie-vm pixie/compiler.pxi

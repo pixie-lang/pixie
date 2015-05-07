@@ -217,3 +217,12 @@ class DoK(Continuation):
         else:
             stack = stack_cons(stack, InterpretK(self._c_body_asts[self._c_idx], self._c_locals))
             return nil, stack
+
+class VDeref(AST):
+    _immutable_fields_ = ["_c_var"]
+    def __init__(self, var, meta=nil):
+        AST.__init__(self, meta)
+        self._c_var = var
+
+    def interpret(self, val, locals, stack):
+        return self._c_var.deref(), stack

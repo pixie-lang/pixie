@@ -1,4 +1,16 @@
-(ns pixie.compiler)
+(ns pixie.compiler
+  (:require [pixie.io :as io]))
+
+(def macro-overrides
+  {
+   (resolve 'defprotocol)
+   (fn
+     [nm & sigs]
+     `(do (def ~nm (protocol ~(str nm)))
+          ~@(map (fn [[x]]
+                   `(def ~x (polymorphic-fn ~(str x) ~nm)))
+                 sigs)))})
+
 
 (def *env* nil)
 (set-dynamic! (var *env*))
@@ -10,6 +22,7 @@
                            (vector? x) :vector
                            (symbol? x) :symbol
                            (number? x) :number
+                           (string? x) :string
                            (keyword? x) :keyword)))
 
 (defmulti analyze-seq (fn [x]
@@ -120,6 +133,8 @@
 
 (defmethod analyze-seq 'def
   [[_ nm val :as form]]
+  (swap! (:vars *env*) update-in [(:ns *env*) nm] (fn [x]
+                                          (or x :def)))
   {:op :def
    :name nm
    :form form
@@ -127,9 +142,27 @@
    :children [:val]
    :val (analyze-form val)})
 
+(defmethod analyze-seq 'quote
+  [[_ val]]
+  {:op :const
+   :type (cond
+           (symbol? val) :symbol
+           (string? val) :string
+           :else :unknown)
+   :form val})
+
+(defmethod analyze-seq 'local-macro
+  [[_ [nm replace] body :as form]]
+  (binding [*env* (assoc-in *env* [:locals nm] {:op :local-macro
+                                                :name nm
+                                                :replace-with replace
+                                                :form form})]
+    (analyze-form body)))
+
 (defmethod analyze-form nil
   [_]
   {:op :const
+   :type (keyword "nil")
    :env *env*
    :form nil})
 
@@ -138,9 +171,17 @@
   (println form)
   (let [resolved (and (symbol? sym)
                       (resolve-in (the-ns (:ns *env*)) sym))]
-    (if (and resolved
-             (macro? @resolved))
+    (println "fff" (contains? macro-overrides resolved))
+    (cond
+      (and resolved
+           (contains? macro-overrides resolved))
+      (analyze-form (apply (macro-overrides resolved) args))
+      
+      (and resolved
+           (macro? @resolved))
       (analyze-form (apply @resolved args))
+
+      :else
       {:op :invoke
        :children '[:fn :args]
        :form form
@@ -163,6 +204,13 @@
    :form x
    :env *env*})
 
+(defmethod analyze-form :string
+  [x]
+  {:op :const
+   :type :string
+   :form x
+   :env *env*})
+
 (defmethod analyze-form :seq
   [x]
   (analyze-seq x))
@@ -170,7 +218,9 @@
 (defmethod analyze-form :symbol
   [x]
   (if-let [local (get-in *env* [:locals x])]
-    local
+    (if (= (:op local) :local-macro)
+      (analyze-form (:replace-with local))
+      local)
     (maybe-var x)))
 
 (defmethod analyze-form :vector
@@ -184,12 +234,22 @@
 
 (defn maybe-var [x]
   (let [resolved (resolve-in (the-ns (:ns *env*)) x)]
-    (if resolved
+    (cond
+      (get-in @(:vars *env*) [(:ns *env*) x])
+      {:op :var
+       :env *env*
+       :ns (:ns *env*)
+       :name x
+       :form x}
+      
+     resolved
       {:op :var
        :env *env*
        :ns (namespace resolved)
        :name (name resolved)
        :form x}
+
+      :else
       {:op :var
        :env *env*
        :ns (name (:ns *env*))
@@ -202,7 +262,8 @@
 (defn new-env
   "Creates a new (empty) environment"
   []
-  {:ns 'user})
+  {:ns 'pixie.stdlib
+   :vars (atom nil)})
 
 
 (defn analyze [form]
@@ -274,6 +335,7 @@
   (write! sb ")")))
 
 (defmulti write-const (fn [sb offset const]
+                        (println "const " const)
                          (:type const)))
 
 (defmethod write-const :keyword
@@ -283,6 +345,31 @@
     (write! sb (namespace form))
     (write! sb "/"))
   (write! sb (name form))
+  (write! sb "\")"))
+
+(defmethod write-const (keyword "nil")
+  [sb offset _]
+  (write! sb "nil"))
+
+(defmethod write-const :symbol
+  [sb offset {:keys [form]}]
+  (write! sb "sym(u\"")
+  (when (namespace form)
+    (write! sb (namespace form))
+    (write! sb "/"))
+  (write! sb (name form))
+  (write! sb "\")"))
+
+(defmethod write-const :string
+  [sb offset {:keys [form]}]
+  (write! sb "rt.wrap(u\"")
+  (write! sb form)
+  (write! sb "\")"))
+
+(defmethod write-const :number
+  [sb offset {:keys [form]}]
+  (write! sb "rt.wrap(u\"")
+  (write! sb (str form))
   (write! sb "\")"))
 
 (defmethod to-rpython :const
@@ -351,7 +438,7 @@
 
 (defmethod to-rpython :var
   [sb offset {:keys [ns name]}]
-  (write! sb "i.Const(code.intern_var(")
+  (write! sb "i.VDeref(code.intern_var(")
   (write! sb "u\"")
   (write! sb ns)
   (write! sb "\", u\"")
@@ -387,7 +474,7 @@
   (write! sb "i.Invoke(args=[\n")
   (let [offset (inc offset)]
     (offset-spaces sb offset)
-    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"vector\")),\n")
+    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"array\")),\n")
     (doseq [item items]
       (offset-spaces sb offset)
       (to-rpython sb offset item)
@@ -396,6 +483,23 @@
     (write! sb "])")))
 
 
-(let [form '(do (deftype Cons [head tail meta]))]
-  (println (string-builder @(to-rpython (atom (string-builder)) 0 (clean-do (analyze form))))))
+(let [form '(do
+              (defprotocol ISeq
+                (-first [this])
+                (-next [this]))
+              (defprotocol IMeta
+                (-meta [this]))
+              (deftype Cons [head tail meta]
+                  ISeq
+                  (-first [this]
+                    head)
+                  (-next [this]
+                    tail)
+                  IMeta
+                  (-meta [this]
+                    meta))
+                )
+      str (string-builder @(to-rpython (atom (string-builder)) 0 (clean-do (analyze form))))]
+  (print str)
+  (io/spit "/tmp/pxi.py" str))
 

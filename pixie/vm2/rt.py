@@ -62,7 +62,7 @@ def init():
     #import pixie.vm.persistent_list
     #import pixie.vm.persistent_hash_map
     #import pixie.vm.persistent_hash_set
-    #import pixie.vm.custom_types
+    import pixie.vm2.custom_types
     #import pixie.vm.map_entry
     #import pixie.vm.libs.platform
     #import pixie.vm.libs.ffi

@@ -4,70 +4,14 @@ from pixie.vm2.object import StackCell, run_stack
 import pixie.vm2.rt as rt
 import pixie.vm2.code as code
 from pixie.vm2.keyword import keyword as kw
+from pixie.vm2.symbol import symbol as sym
+
 
 rt.init()
 def testit(max):
-    #lt = i.Const(code.intern_var(u"pixie.stdlib", u"-lt"))
-    eq = i.Const(code.intern_var(u"pixie.stdlib", u"-num-eq"))
-    add = i.Const(code.intern_var(u"pixie.stdlib", u"-add"))
-    count_up = kw(u"count-up")
-    x = kw(u"i")
-    max = kw(u"max")
 
-    f = i.Fn(count_up, [x, max],
-             i.If(i.Invoke([eq, i.Lookup(x), i.Lookup(max)]),
-                  i.Lookup(x),
-                  i.TailCall([i.Lookup(count_up),
-                            i.Invoke([add, i.Lookup(x), i.Const(rt.wrap(1))]),
-                            i.Lookup(max)])))
-
-    c = i.Invoke([f, i.Const(rt.wrap(0)), i.Const(rt.wrap(10))])
-
-    c = i.Do(
-  args=[
-    i.Invoke(args=[
-# (def user/it)
-      i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
-      i.Const(code.intern_var(u"user", u"it")),
-      i.Fn(args=[kw(u"i"),kw(u"max")],name=kw(u"this"),
-        body=i.Do(
-          args=[
-            i.If(
-              test=i.Invoke(
-                args=[
-                  i.Const(code.intern_var(u"pixie.stdlib", u"-lt")),
-
-    i.Lookup(kw(u"i")),
-                  i.Lookup(kw(u"max")),
-                ],
-              ),
-              then=i.Invoke(
-                args=[
-                  i.Lookup(kw(u"this")),
-                  i.Invoke(
-                    args=[
-                      i.Const(code.intern_var(u"pixie.stdlib", u"-add")),
-                      i.Lookup(kw(u"i")),
-                      i.Const(rt.wrap(1)),
-                    ],
-                  ),
-                  i.Lookup(kw(u"max")),
-                ],
-              ),
-              els=i.Lookup(kw(u"i")),
-              ),
-          ],
-        ),
-      )]),
-    i.Invoke(
-      args=[
-        i.Const(code.intern_var(u"user", u"it")),
-        i.Const(rt.wrap(0)),
-        i.Const(rt.wrap(1000)),
-      ],
-    ),
-  ],
-)
+    with open("/tmp/pxi.py") as f:
+        c = eval(f.read())
 
 
     return run_stack(None, i.InterpretK(c, None))
@@ -78,10 +22,13 @@ def testit(max):
 def entry_point():
     #s = rt.wrap(u"Foo")
     from pixie.vm2.string import String
+
     s = String(u"Foo")
     max = 10000 #int(args[1])
 
-    return testit(max).int_val()
+    val = testit(max)
+    print val
+    return val
 
 ## JIT STUFF
 

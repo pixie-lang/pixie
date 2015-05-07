@@ -2042,15 +2042,22 @@ The params can be destructuring bindings, see `(doc let)` for details."}
       `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
       `(fn* ~@name ~@decls))))
 
-(deftype MultiMethod [dispatch-fn default-val methods]
+(deftype MultiMethod [name dispatch-fn default-val methods]
   IFn
   (-invoke [self & args]
     (let [dispatch-val (apply dispatch-fn args)
           method (if (contains? @methods dispatch-val)
                    (get @methods dispatch-val)
                    (get @methods default-val))
-          _ (assert method (str "no method defined for " dispatch-val))]
-      (apply method args))))
+          _ (assert method (str "no method defined for " dispatch-val " on " name))]
+      (try
+        (apply method args)
+        (catch ex
+            (throw (add-exception-info ex (str "In multimethod "
+                                               name
+                                               " dispatching on "
+                                               dispatch-val
+                                               "\n") args)))))))
 
 (defmacro defmulti
   {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
@@ -2069,7 +2076,7 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                       [meta args])
         dispatch-fn (first args)
         options (apply hashmap (next args))]
-    `(def ~name (->MultiMethod ~dispatch-fn ~(get options :default :default) (atom {})))))
+    `(def ~name (->MultiMethod ~(str name) ~dispatch-fn ~(get options :default :default) (atom {})))))
 
 (defmacro defmethod
   {:doc "Define a method of a multimethod. See `(doc defmulti)` for details."
