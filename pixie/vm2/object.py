@@ -118,6 +118,10 @@ class Continuation(object):
     def call_continuation(self, val, stack):
         return None, stack
 
+    def get_ast(self):
+        from pixie.vm2.primitives import nil
+        return nil
+
 
 class StackCell(object):
     """Defines an immutable call stack, stacks can be copied, spliced and combined"""
@@ -131,18 +135,25 @@ def stack_cons(stack, other):
 
 
 from rpython.rlib.jit import JitDriver
-jitdriver = JitDriver(greens=[], reds=["stack", "val"])
+jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"])
 
 def run_stack(val, cont, stack=None):
-    stack = StackCell(cont, stack)
+    stack = None
     val = None
-    while stack is not None:
-        jitdriver.jit_merge_point(stack=stack, val=val)
-        cont = stack._cont
-        stack = stack._parent
+    ast = cont.get_ast()
+    while True:
+        jitdriver.jit_merge_point(ast=ast, stack=stack, val=val, cont=cont)
         val, stack = cont.call_continuation(val, stack)
-        if stack is not None and stack._cont.should_enter_jit:
-            jitdriver.can_enter_jit(stack=stack, val=val)
+        if stack is None:
+            return val
+        old_cont = cont
+        old_ast = old_cont.get_ast()
+        cont = stack._cont
+        ast = cont.get_ast()
+        stack = stack._parent
+        #print ast
+        if old_cont.should_enter_jit:
+            jitdriver.can_enter_jit(ast=old_ast, stack=stack, val=val, cont=cont)
 
     return val
 
@@ -155,7 +166,7 @@ def affirm(f, msg):
         print msg
         raise NotImplementedError()
 
-def runtime_error(msg):
+def runtime_error(msg, kw=None):
     raise NotImplementedError()
 
 class WrappedException(BaseException):

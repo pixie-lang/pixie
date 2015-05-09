@@ -23,6 +23,9 @@ class InterpretK(Continuation):
         ast = jit.promote(self._c_ast)
         return ast.interpret(val, self._c_locals, stack)
 
+    def get_ast(self):
+        return self._c_ast
+
 class Const(AST):
     _immutable_fields_ = ["_c_val"]
     _type = Type(u"pixie.interpreter.Const")
@@ -73,23 +76,28 @@ class Fn(AST):
         return InterpretedFn(self._c_name, self._c_args, self._c_body), stack
 
 class InterpretedFn(code.BaseCode):
-    _immutable_fields_ = ["_c_arg_names", "_c_locals", "_c_fn_ast"]
+    _immutable_fields_ = ["_c_arg_names", "_c_locals", "_c_fn_ast", "_c_name"]
     def __init__(self, name, arg_names, ast):
         self._c_arg_names = arg_names
+        self._c_name = name
         if name is not nil:
             self._c_locals = Locals(name, self, None)
         else:
             self._c_locals = None
         self._c_fn_ast = ast
 
-    @jit.unroll_safe
     def invoke_k(self, args, stack):
+        return self.invoke_k_with(args, stack, self)
+
+    @jit.unroll_safe
+    def invoke_k_with(self, args, stack, self_fn):
         # TODO: Check arg count
-        locals = jit.promote(self._c_locals)
+        locals = Locals(self._c_name, self_fn, None)
         for idx in range(len(self._c_arg_names)):
             locals = Locals(self._c_arg_names[idx], args[idx], locals)
 
         return nil, stack_cons(stack, InterpretK(self._c_fn_ast, locals))
+
 
 
 class Invoke(AST):
@@ -115,6 +123,9 @@ class InvokeK(Continuation):
         args = val._list[1:]
         return fn.invoke_k(args, stack)
 
+    def get_ast(self):
+        return self._c_ast
+
 
 
 class TailCall(AST):
@@ -134,6 +145,9 @@ class TailCallK(InvokeK):
     should_enter_jit = True
     def __init__(self, ast):
         InvokeK.__init__(self, ast)
+
+    def get_ast(self):
+        return self._c_ast
 
 class ResolveAllK(Continuation):
     _immutable_ = True
@@ -158,6 +172,9 @@ class ResolveAllK(Continuation):
             return Array(self.append_to_acc(val)), stack
 
         return val, stack
+
+    def get_ast(self):
+        return self._c_args[len(self._c_acc)]
 
 
 
@@ -190,6 +207,9 @@ class IfK(Continuation):
             stack = stack_cons(stack, InterpretK(ast._c_then, self._c_locals))
         return nil, stack
 
+    def get_ast(self):
+        return self._c_ast
+
 
 class Do(AST):
     _immutable_fields_ = ["_c_body_asts"]
@@ -199,24 +219,28 @@ class Do(AST):
 
     @jit.unroll_safe
     def interpret(self, val, locals, stack):
-        return val, stack_cons(stack, DoK(self._c_body_asts, locals))
+        return val, stack_cons(stack, DoK(self, self._c_body_asts, locals))
 
 
 class DoK(Continuation):
     _immutable_ = True
-    def __init__(self, do_asts, locals, idx=0):
+    def __init__(self, ast, do_asts, locals, idx=0):
+        self._c_ast = ast
         self._c_locals = locals
         self._c_body_asts = do_asts
         self._c_idx = idx
 
     def call_continuation(self, val, stack):
         if self._c_idx + 1 < len(self._c_body_asts):
-            stack = stack_cons(stack, DoK(self._c_body_asts, self._c_locals, self._c_idx + 1))
+            stack = stack_cons(stack, DoK(self._c_ast, self._c_body_asts, self._c_locals, self._c_idx + 1))
             stack = stack_cons(stack, InterpretK(self._c_body_asts[self._c_idx], self._c_locals))
             return nil, stack
         else:
             stack = stack_cons(stack, InterpretK(self._c_body_asts[self._c_idx], self._c_locals))
             return nil, stack
+
+    def get_ast(self):
+        return self._c_ast
 
 class VDeref(AST):
     _immutable_fields_ = ["_c_var"]
@@ -226,3 +250,4 @@ class VDeref(AST):
 
     def interpret(self, val, locals, stack):
         return self._c_var.deref(), stack
+

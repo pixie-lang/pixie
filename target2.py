@@ -5,16 +5,19 @@ import pixie.vm2.rt as rt
 import pixie.vm2.code as code
 from pixie.vm2.keyword import keyword as kw
 from pixie.vm2.symbol import symbol as sym
+from pixie.vm2.numbers import parse_number
 
 
 rt.init()
+with open("/tmp/pxi.py") as f:
+    pixie_code = eval(f.read())
+
+
 def testit(max):
 
-    with open("/tmp/pxi.py") as f:
-        c = eval(f.read())
 
 
-    return run_stack(None, i.InterpretK(c, None))
+    return run_stack(None, i.InterpretK(pixie_code, None))
 
 #val = testit()
 #print val.int_val(), val
@@ -22,6 +25,7 @@ def testit(max):
 def entry_point():
     #s = rt.wrap(u"Foo")
     from pixie.vm2.string import String
+    v = parse_number(u"1")
 
     s = String(u"Foo")
     max = 10000 #int(args[1])
@@ -87,7 +91,11 @@ def run_debug(argv):
 
 class DebugIFace(JitHookInterface):
     def on_abort(self, reason, jitdriver, greenkey, greenkey_repr, logops, operations):
-        # print "Aborted Trace, reason: ", Counters.counter_names[reason], logops, greenkey_repr
+        print "Aborted Trace, reason: ", Counters.counter_names[reason], logops, greenkey_repr
+        pass
+
+    def before_compile_bridge(self, debug_info):
+        print "Compiling Bridge", debug_info
         pass
 
 import sys, pdb
@@ -115,5 +123,5 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    #run_debug(sys.argv)
-    entry_point()
+    run_debug(sys.argv)
+    #entry_point()

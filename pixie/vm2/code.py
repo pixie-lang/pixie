@@ -93,6 +93,7 @@ def slice_from_start(from_list, count, extra=r_uint(0)):
 class BaseCode(object.Object):
     _immutable_fields_ = ["_meta"]
     def __init__(self):
+        from pixie.vm2.string import String
         assert isinstance(self, BaseCode)
         self._name = u"unknown"
         self._is_macro = False
@@ -185,11 +186,11 @@ class MultiArityFn(BaseCode):
     def get_arities(self):
         return self._arities.keys()
 
-    def invoke(self, args):
-        return self.invoke_with(args, self)
+    def invoke_k(self, args, stack):
+        return self.invoke_k_with(args, stack, self)
 
-    def invoke_with(self, args, self_fn):
-        return self.get_fn(len(args)).invoke_with(args, self_fn)
+    def invoke_k_with(self, args, stack, self_fn):
+        return self.get_fn(len(args)).invoke_k_with(args, stack, self_fn)
 
 
 class NativeFn(BaseCode):
@@ -298,24 +299,25 @@ class VariadicCode(BaseCode):
     def required_arity(self):
         return self._required_arity
 
-    def invoke(self, args):
-        return self.invoke_with(args, self)
+    def invoke_k(self, args, stack):
+        return self.invoke_k_with(args, stack, self)
 
-    def invoke_with(self, args, self_fn):
-        from pixie.vm2.array import array
+    def invoke_k_with(self, args, stack, this_fn):
+        from pixie.vm2.array import Array
         argc = len(args)
         if self._required_arity == 0:
-            return self._code.invoke_with([array(args)], self_fn)
+            return self._code.invoke_k([Array(args)], stack)
         if argc == self._required_arity:
             new_args = resize_list(args, len(args) + 1)
-            new_args[len(args)] = array([])
-            return self._code.invoke_with(new_args, self_fn)
+            new_args[len(args)] = Array([])
+            return self._code.invoke_k_with(new_args, stack, this_fn)
         elif argc > self._required_arity:
             start = slice_from_start(args, self._required_arity, 1)
             rest = slice_to_end(args, self._required_arity)
-            start[self._required_arity] = array(rest)
-            return self._code.invoke_with(start, self_fn)
+            start[self._required_arity] = Array(rest)
+            return self._code.invoke_k_with(start, stack, this_fn)
         affirm(False, u"Got " + unicode(str(argc)) + u" arg(s) need at least " + unicode(str(self._required_arity)))
+        return None, stack
 
 
 class Closure(BaseCode):

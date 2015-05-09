@@ -2,7 +2,7 @@ import pixie.vm2.rt as rt
 from pixie.vm2.object import Object, Type, affirm
 from pixie.vm2.code import extend, as_var, wrap_fn
 from pixie.vm2.primitives import nil, true, false
-from pixie.vm2.numbers import Integer, _add
+from pixie.vm2.numbers import Integer
 #import pixie.vm2.stdlib as proto
 #import pixie.vm2.util as util
 from rpython.rlib.rarithmetic import intmask, r_uint

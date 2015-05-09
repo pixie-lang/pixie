@@ -895,17 +895,3 @@ def _add_exception_info(ex, str, data):
     return ex
 
 
-@as_var("protocol-fn")
-def polymorphic_fn(name, protocol):
-    from pixie.vm2.string import String
-    affirm(isinstance(name, String), u"polymorphic functions must have string names")
-    affirm(isinstance(protocol, code.Protocol), u"must be a protocol")
-
-    return code.PolymorphicFn(name._str, protocol)
-
-
-@as_var("protocol")
-def protocol(name):
-    from pixie.vm2.string import String
-    affirm(isinstance(name, String), u"Protocol names must be strings")
-    return code.Protocol(name._str)

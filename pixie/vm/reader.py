@@ -2,7 +2,7 @@ py_object = object
 import pixie.vm.object as object
 from pixie.vm.object import affirm, runtime_error
 import pixie.vm.code as code
-from pixie.vm.code import as_var
+from pixie.vm.code import as_var, extend
 from pixie.vm.primitives import nil, true, false
 import pixie.vm.numbers as numbers
 from pixie.vm.cons import cons
@@ -17,6 +17,7 @@ from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
 from pixie.vm.persistent_hash_set import EMPTY as EMPTY_SET
 from pixie.vm.persistent_list import EmptyList
 import pixie.vm.compiler as compiler
+import pixie.vm.stdlib as proto
 
 from rpython.rlib.rbigint import rbigint
 from rpython.rlib.rsre import rsre_re as re
@@ -154,6 +155,9 @@ class LinePromise(object.Object):
             return self._str
         return u"".join(self._chrs)
 
+@extend(proto._str, LinePromise)
+def _str(x):
+    return rt.wrap(x.__repr__())
 
 
 class MetaDataReader(PlatformReader):

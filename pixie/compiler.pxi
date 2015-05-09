@@ -16,6 +16,7 @@
 (set-dynamic! (var *env*))
 
 (defmulti analyze-form (fn [x]
+                         (println "Meta --> " (meta x))
                          (cond
                            (nil? x) nil
                            (seq? x) :seq
@@ -40,7 +41,8 @@
    :children '[:statements :ret]
    :env *env*
    :form x
-   :statements (mapv analyze-form (butlast (next x)))
+   :statements (binding [*env* (assoc *env* :tail? false)]
+                 (mapv analyze-form (butlast (next x))))
    :ret (analyze-form (last x))})
 
 (defmethod analyze-seq 'if
@@ -49,7 +51,8 @@
    :children '[:test :then :else]
    :env *env*
    :form form
-   :test (analyze-form test)
+   :test (binding [*env* (assoc *env* :tail? false)]
+           (analyze-form test))
    :then (analyze-form then)
    :else (analyze-form else)})
 
@@ -78,7 +81,9 @@
 
 (defn analyze-fn-body [fn-name acc [args & body]]
   ; TODO: Add support for variadic fns
-  (let [arity (count args)
+  (let [[args variadic?] (let [not& (vec (filter (complement (partial = '&)) args))]
+                           [not& (= '& (last (butlast args)))])
+        arity (count args)
         new-env (assoc-in *env* [:locals fn-name] {:op :binding
                                                    :type :fn-self
                                                    :name fn-name
@@ -100,8 +105,9 @@
                       :env *env*
                       :arity arity
                       :args args
+                      :variadic? variadic?
                       :children '[:body]
-                      :body (binding [*env* new-env]
+                      :body (binding [*env* (assoc new-env :tail? true)]
                               (analyze-form (cons 'do body)))})))
 
 
@@ -118,7 +124,8 @@
                                                    :form binding-form
                                                    :env *env*
                                                    :name name
-                                                   :value (analyze-form binding-form)})]
+                                                   :value (binding [*env* (assoc *env* :tail? false)]
+                                                            (analyze-form binding-form))})]
                                 [(assoc-in new-env [:locals name] binding-ast)
                                  (conj bindings binding-ast)]))
                             [*env* []]
@@ -183,11 +190,14 @@
 
       :else
       {:op :invoke
+       :tail-call (:tail? *env*)
        :children '[:fn :args]
        :form form
        :env *env*
-       :fn (analyze-form sym)
-       :args (mapv analyze-form args)})))
+       :fn (binding [*env* (assoc *env* :tail? false)]
+             (analyze-form sym))
+       :args (binding [*env* (assoc *env* :tail? false)]
+               (mapv analyze-form args))})))
 
 
 (defmethod analyze-form :number
@@ -263,7 +273,8 @@
   "Creates a new (empty) environment"
   []
   {:ns 'pixie.stdlib
-   :vars (atom nil)})
+   :vars (atom nil)
+   :tail? true})
 
 
 (defn analyze [form]
@@ -306,9 +317,29 @@
         :children
         ast))
 
-(defn write! [sb val]
-  (swap! sb conj! val)
-  sb)
+(defn write! [{:keys [code] :as state} val]
+  (swap! code conj! val)
+  state)
+
+(defn add-meta [{:keys [meta-state meta-lines] :as state} ast]
+  (let [m (meta (:form ast))]
+    (if m
+      (let [k [(:line m) (:file m)]
+            id (get @meta-state k)]
+        (if id
+          id
+          (let [id (str "mid" (count @meta-state))]
+            (swap! meta-state assoc k id)
+            (swap! meta-lines conj! (str id " = (u\"" (:line m) "\", \"" (:file m) "\")\n"))
+            id)))
+      "nil")))
+
+(defn meta-str [state ast]
+  (println (:form ast) (meta (:form ast)))
+  (let [m (meta (:form ast))]
+    (if m
+      (str "Meta(" (add-meta state ast) ", " (:line-number m) ", " (:column-number m) ")")
+      "nil")))
 
 (defn offset-spaces [sb off]
   (dotimes [x off]
@@ -319,7 +350,7 @@
                          (:op node)))
 
 (defmethod to-rpython :if
-  [sb offset {:keys [test then else]}]
+  [sb offset {:keys [test then else] :as ast}]
   #_(offset-spaces sb offset)
   (write! sb "i.If(\n")
   (let [offset (inc offset)]
@@ -332,6 +363,9 @@
       (to-rpython sb offset form)
       (write! sb ",\n"))
   (offset-spaces sb offset)
+  (write! sb "meta=")
+  (write! sb (meta-str sb ast))
+
   (write! sb ")")))
 
 (defmulti write-const (fn [sb offset const]
@@ -368,9 +402,9 @@
 
 (defmethod write-const :number
   [sb offset {:keys [form]}]
-  (write! sb "rt.wrap(u\"")
+  (write! sb "rt.wrap(")
   (write! sb (str form))
-  (write! sb "\")"))
+  (write! sb ")"))
 
 (defmethod to-rpython :const
   [sb offset ast]
@@ -380,7 +414,9 @@
 
 (defmethod to-rpython :invoke
   [sb offset ast]
-  (write! sb "i.Invoke(\n")
+  (if (:tail-call ast)
+    (write! sb "i.TailCall(\n")
+    (write! sb "i.Invoke(\n"))
   (let [offset (inc offset)]
     (offset-spaces sb offset)
     (write! sb "args=[\n")
@@ -396,7 +432,7 @@
 
 
 (defmethod to-rpython :do
-  [sb offset {:keys [ret statements]}]
+  [sb offset {:keys [ret statements] :as ast}]
   (write! sb "i.Do(\n")
   (let [offset (inc offset)]
     (offset-spaces sb offset)
@@ -409,16 +445,39 @@
     (offset-spaces sb offset)
     (write! sb "],\n"))
   (offset-spaces sb offset)
+  (write! sb "meta=")
+  (write! sb (meta-str sb ast))
   (write! sb ")"))
 
 
 (defmethod to-rpython :fn
   [sb offset {:keys [name arities]}]
-  (assert (= (count arities) 1))
-  (to-rpython-fn-body sb offset name (nth arities 0)))
+  (if (= (count arities) 1)
+    (to-rpython-fn-body sb offset name (nth arities 0))
+    (do (write! sb (str "i.Invoke([i.Const(code.intern_var(u\"pixie.stdlib\", u\"multi-arity-fn\")), i.Const(rt.wrap(u\"" name "\")),\n"))
+        (offset-spaces sb offset)
+        (let [offset (inc offset)]
+          (doseq [f arities]
+            (when (not (:variadic? f))
+              (offset-spaces sb offset)
+              (write! sb (str "i.Const(rt.wrap(" (count (:args f)) ")), "))
+              (to-rpython-fn-body sb offset name f)
+              (write! sb ",\n")))
+          (offset-spaces sb offset)
+          (let [vfn (first (filter :variadic? arities))]
+            (offset-spaces sb offset)
+            (write! sb (str "i.Const(rt.wrap(-1)), \n"))
+            (offset-spaces sb offset)
+            (to-rpython-fn-body sb offset name vfn)
+            (write! sb "\n")))
+        (offset-spaces sb offset)
+        (write! sb "])"))))
 
 (defn to-rpython-fn-body
-  [sb offset name {:keys [args body]}]
+  [sb offset name {:keys [args body variadic?]}]
+  (when variadic?
+    (write! sb (str "i.Invoke([i.Const(code.intern_var(u\"pixie.stdlib\", u\"variadic-fn\")), i.Const(rt.wrap(" (dec (count args)) ")), \n"))
+    (offset-spaces sb offset))
   (write! sb "i.Fn(args=[")
   (write! sb (->> args
                   (map (fn [name]
@@ -434,7 +493,9 @@
     (to-rpython sb offset body)
     (write! sb ",\n"))
   (offset-spaces sb offset)
-  (write! sb ")"))
+  (write! sb ")")
+  (if variadic?
+    (write! sb "])")))
 
 (defmethod to-rpython :var
   [sb offset {:keys [ns name]}]
@@ -474,7 +535,7 @@
   (write! sb "i.Invoke(args=[\n")
   (let [offset (inc offset)]
     (offset-spaces sb offset)
-    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"array\")),\n")
+    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"array\")),")
     (doseq [item items]
       (offset-spaces sb offset)
       (to-rpython sb offset item)
@@ -483,7 +544,34 @@
     (write! sb "])")))
 
 
-(let [form '(do
+(defn writer-context []
+  {:meta-lines (atom (string-builder))
+   :meta-state (atom {})
+   :code (atom (string-builder))})
+
+(defn finish-context [{:keys [meta-lines code]}]
+  (str (string-builder @meta-lines)
+       "\n \n"
+       (string-builder @code)))
+
+(let [form 
+      '(do (defn +
+             ([] 0)
+             ([x] x)
+             ([x y] (-add x y))
+             ([x y & more]
+              (-apply + (+ x y) more)))
+
+           ((fn c [i max]
+              (if (-lt i max)
+                (c (+ i 1 1) max)
+                max))
+            0 10000))
+      str (finish-context (to-rpython (writer-context) 0 (clean-do (analyze form))))]
+  (print str)
+  (io/spit "/tmp/pxi.py" str))
+
+#_'(do
               (defprotocol ISeq
                 (-first [this])
                 (-next [this]))
@@ -499,7 +587,3 @@
                   (-meta [this]
                     meta))
                 )
-      str (string-builder @(to-rpython (atom (string-builder)) 0 (clean-do (analyze form))))]
-  (print str)
-  (io/spit "/tmp/pxi.py" str))
-

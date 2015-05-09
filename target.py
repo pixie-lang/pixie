@@ -91,7 +91,7 @@ class BatchModeFn(NativeFn):
                     if newline_pos > 0:
                         data = data[newline_pos:]
 
-                rt.load_reader(StringReader(unicode_from_utf8(data)))
+                rt.load_reader(MetaDataReader(StringReader(unicode_from_utf8(data)), unicode(self._file)))
             except WrappedException as ex:
                 print "Error: ", ex._ex.__repr__()
                 os._exit(1)
