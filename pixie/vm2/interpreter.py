@@ -8,10 +8,29 @@ import rpython.rlib.jit as jit
 
 class AST(Object):
     _immutable_fields_ = ["_c_meta"]
-    should_enter_jit = False
     def __init__(self, meta):
         self._c_meta = meta
 
+    def get_short_location(self):
+        if self._c_meta != nil:
+            return self._c_meta.get_short_location()
+        return "<unknown>"
+
+class Meta(Object):
+    _type = Type(u"pixie.stdlib.Meta")
+    _immutable_fields_ = ["_c_column_number", "_c_line_tuple"]
+    def __init__(self, line_tuple, column_number):
+        self._c_column_number = column_number
+        self._c_line_tuple = line_tuple
+
+    def get_short_location(self):
+        (line, file, line_number) = self._c_line_tuple
+
+        return str(file) + " @ " + str(line[:self._c_column_number]) + "^" + str(line[self._c_column_number:])
+
+class PrevASTNil(AST):
+    def __init__(self):
+        AST.__init__(self, nil)
 
 class InterpretK(Continuation):
     _immutable_ = True
@@ -65,25 +84,30 @@ class Lookup(AST):
 
 class Fn(AST):
     _immutable_fields_ = ["_c_name", "_c_args", "_c_body", "_c_closed_overs"]
-    def __init__(self, name, args, body, meta=nil):
+    def __init__(self, name, args, body, closed_overs=[], meta=nil):
         AST.__init__(self, meta)
         self._c_name = name
         self._c_args = args
         self._c_body = body
+        self._c_closed_overs = closed_overs
 
     @jit.unroll_safe
     def interpret(self, _, locals, stack):
-        return InterpretedFn(self._c_name, self._c_args, self._c_body), stack
+        locals_prefix = None
+        for n in self._c_closed_overs:
+            locals_prefix = Locals(n, Locals.get_local(locals, n), locals_prefix)
+
+        return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body), stack
 
 class InterpretedFn(code.BaseCode):
-    _immutable_fields_ = ["_c_arg_names", "_c_locals", "_c_fn_ast", "_c_name"]
-    def __init__(self, name, arg_names, ast):
+    _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name"]
+    def __init__(self, name, arg_names, locals_prefix, ast):
         self._c_arg_names = arg_names
         self._c_name = name
         if name is not nil:
-            self._c_locals = Locals(name, self, None)
+            self._c_locals = Locals(name, self, locals_prefix)
         else:
-            self._c_locals = None
+            self._c_locals = locals_prefix
         self._c_fn_ast = ast
 
     def invoke_k(self, args, stack):
@@ -92,9 +116,10 @@ class InterpretedFn(code.BaseCode):
     @jit.unroll_safe
     def invoke_k_with(self, args, stack, self_fn):
         # TODO: Check arg count
-        locals = Locals(self._c_name, self_fn, None)
-        for idx in range(len(self._c_arg_names)):
-            locals = Locals(self._c_arg_names[idx], args[idx], locals)
+        locals = Locals(jit.promote(self._c_name), self_fn, self._c_locals)
+        arg_names = jit.promote(self._c_arg_names)
+        for idx in range(len(arg_names)):
+            locals = Locals(arg_names[idx], args[idx], locals)
 
         return nil, stack_cons(stack, InterpretK(self._c_fn_ast, locals))
 
@@ -171,7 +196,7 @@ class ResolveAllK(Continuation):
         else:
             return Array(self.append_to_acc(val)), stack
 
-        return val, stack
+        return nil, stack
 
     def get_ast(self):
         return self._c_args[len(self._c_acc)]
@@ -219,7 +244,7 @@ class Do(AST):
 
     @jit.unroll_safe
     def interpret(self, val, locals, stack):
-        return val, stack_cons(stack, DoK(self, self._c_body_asts, locals))
+        return nil, stack_cons(stack, DoK(self, self._c_body_asts, locals))
 
 
 class DoK(Continuation):

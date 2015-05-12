@@ -16,7 +16,6 @@
 (set-dynamic! (var *env*))
 
 (defmulti analyze-form (fn [x]
-                         (println "Meta --> " (meta x))
                          (cond
                            (nil? x) nil
                            (seq? x) :seq
@@ -84,7 +83,13 @@
   (let [[args variadic?] (let [not& (vec (filter (complement (partial = '&)) args))]
                            [not& (= '& (last (butlast args)))])
         arity (count args)
-        new-env (assoc-in *env* [:locals fn-name] {:op :binding
+        new-env (update-in *env* [:locals] (fn [locals]
+                                             (reduce
+                                              (fn [locals [k v]]
+                                                (assoc locals k (assoc v :closed-overs #{k})))
+                                              {}
+                                              locals)))
+        new-env (assoc-in new-env [:locals fn-name] {:op :binding
                                                    :type :fn-self
                                                    :name fn-name
                                                    :form fn-name
@@ -175,10 +180,8 @@
 
 (defmethod analyze-seq :default
   [[sym & args :as form]]
-  (println form)
   (let [resolved (and (symbol? sym)
                       (resolve-in (the-ns (:ns *env*)) sym))]
-    (println "fff" (contains? macro-overrides resolved))
     (cond
       (and resolved
            (contains? macro-overrides resolved))
@@ -230,12 +233,11 @@
   (if-let [local (get-in *env* [:locals x])]
     (if (= (:op local) :local-macro)
       (analyze-form (:replace-with local))
-      local)
+      (assoc local :form x))
     (maybe-var x)))
 
 (defmethod analyze-form :vector
   [x]
-  (println "analyze " x)
   {:op :vector
    :children [:items]
    :items (mapv analyze-form x)
@@ -285,30 +287,51 @@
 
 
 
-(defn walk [post pre selector node]
+(defn walk [pre post selector node]
   (-> (reduce
        (fn [node k]
          (let [v (get node k)
                result (if (or (vector? v)
                               (seq? v))
-                        (mapv (partial walk post pre selector) v)
-                        (walk post pre selector v))]
+                        (mapv (partial walk pre post selector) v)
+                        (walk pre post selector v))]
            (assoc node k result)))
        (pre node)
        (selector node))
       post))
 
 (defn post-walk [f ast]
-  (walk f identity :children ast))
+  (walk identity f :children ast))
 
 (defn clean-do [ast]
   (post-walk
-   (fn [{:keys [op statements ret] :as do}]
-     (println ">-- " op (count statements))
+   (fn [{:keys [op statements ret] :as ast}]
      (if (and (= op :do)
               (= (count statements) 0))
-       (do (println "reducing ") ret)
+       ret
        ast))
+   ast))
+
+(defn child-seq [ast]
+  (mapcat
+   (fn [k]
+     (let [child (get ast k)]
+       (if (or (vector? child)
+               (seq? child))
+         child
+         [child])))
+   (:children ast)))
+
+(defn collect-closed-overs [ast]
+  (post-walk
+   (fn [{:keys [op args env closed-overs] :as ast}]
+     (let [{:keys [locals]} env
+           closed-overs (set (or closed-overs
+                                 (mapcat :closed-overs (child-seq ast))))
+           closed-overs (if (= op :fn-body)
+                          (reduce disj closed-overs args)
+                          closed-overs)]
+       (assoc ast :closed-overs closed-overs)))
    ast))
 
 (defn remove-env [ast]
@@ -324,21 +347,20 @@
 (defn add-meta [{:keys [meta-state meta-lines] :as state} ast]
   (let [m (meta (:form ast))]
     (if m
-      (let [k [(:line m) (:file m)]
+      (let [k [(:line m) (:file m) (:line-number m)]
             id (get @meta-state k)]
         (if id
           id
           (let [id (str "mid" (count @meta-state))]
             (swap! meta-state assoc k id)
-            (swap! meta-lines conj! (str id " = (u\"" (:line m) "\", \"" (:file m) "\")\n"))
+            (swap! meta-lines conj! (str id " = (u\"" (:line m) "\", \"" (:file m) "\", " (:line-number m) ")\n"))
             id)))
       "nil")))
 
 (defn meta-str [state ast]
-  (println (:form ast) (meta (:form ast)))
   (let [m (meta (:form ast))]
     (if m
-      (str "Meta(" (add-meta state ast) ", " (:line-number m) ", " (:column-number m) ")")
+      (str "i.Meta(" (add-meta state ast) ", " (:column-number m) ")")
       "nil")))
 
 (defn offset-spaces [sb off]
@@ -346,7 +368,6 @@
     (write! sb "  ")))
 
 (defmulti to-rpython (fn [sb offset node]
-                       (println (:op node))
                          (:op node)))
 
 (defmethod to-rpython :if
@@ -369,7 +390,6 @@
   (write! sb ")")))
 
 (defmulti write-const (fn [sb offset const]
-                        (println "const " const)
                          (:type const)))
 
 (defmethod write-const :keyword
@@ -426,9 +446,11 @@
         (to-rpython sb offset x)
         (write! sb ",\n")))
     (offset-spaces sb offset)
-    (write! sb "],\n"))
-  (offset-spaces sb offset)
-  (write! sb ")"))
+    (write! sb "],\n")
+    (offset-spaces sb offset)
+    (write! sb "meta=")
+    (write! sb (meta-str sb ast))
+    (write! sb ")")))
 
 
 (defmethod to-rpython :do
@@ -474,19 +496,29 @@
         (write! sb "])"))))
 
 (defn to-rpython-fn-body
-  [sb offset name {:keys [args body variadic?]}]
+  [sb offset name {:keys [args body variadic? closed-overs]}]
+  (println "FN: - " closed-overs)
   (when variadic?
     (write! sb (str "i.Invoke([i.Const(code.intern_var(u\"pixie.stdlib\", u\"variadic-fn\")), i.Const(rt.wrap(" (dec (count args)) ")), \n"))
     (offset-spaces sb offset))
   (write! sb "i.Fn(args=[")
   (write! sb (->> args
                   (map (fn [name]
-                              (str "kw(u\"" name "\")")))
+                         (str "kw(u\"" name "\")")))
                   (interpose ",")
                   (apply str)))
   (write! sb "],name=kw(u\"")
   (write! sb (str name))
-  (write! sb "\"),\n")
+  (write! sb "\"),")
+  (when (not (empty? closed-overs))
+    (write! sb "closed_overs=[")
+    (write! sb (->> closed-overs
+                    (map (fn [name]
+                           (str "kw(u\"" name "\")")))
+                    (interpose ",")
+                    (apply str)))
+    (write! sb "],"))
+  (write! sb "\n")
   (let [offset (inc offset)]
     (offset-spaces sb offset)
     (write! sb "body=")
@@ -498,19 +530,23 @@
     (write! sb "])")))
 
 (defmethod to-rpython :var
-  [sb offset {:keys [ns name]}]
+  [sb offset {:keys [ns name] :as ast}]
   (write! sb "i.VDeref(code.intern_var(")
   (write! sb "u\"")
   (write! sb ns)
   (write! sb "\", u\"")
   (write! sb name)
-  (write! sb "\"))"))
+  (write! sb "\"), meta=")
+  (write! sb (meta-str sb ast))
+  (write! sb ")"))
 
 (defmethod to-rpython :binding
-  [sb offset {:keys [name]}]
+  [sb offset {:keys [name] :as ast}]
   (write! sb "i.Lookup(kw(u\"")
   (write! sb name)
-  (write! sb "\"))"))
+  (write! sb "\"), meta=")
+  (write! sb (meta-str sb ast))
+  (write! sb ")"))
 
 (defmethod to-rpython :def
   [sb offset {:keys [name env val]}]
@@ -552,6 +588,7 @@
 (defn finish-context [{:keys [meta-lines code]}]
   (str (string-builder @meta-lines)
        "\n \n"
+       "code_ast="
        (string-builder @code)))
 
 (let [form 
@@ -564,10 +601,10 @@
 
            ((fn c [i max]
               (if (-lt i max)
-                (c (+ i 1 1) max)
-                max))
+                (c (-add ((fn [] i)) ((fn [] 1))) max)
+                i))
             0 10000))
-      str (finish-context (to-rpython (writer-context) 0 (clean-do (analyze form))))]
+      str (finish-context (to-rpython (writer-context) 0 (collect-closed-overs (clean-do (analyze form)))))]
   (print str)
   (io/spit "/tmp/pxi.py" str))
 

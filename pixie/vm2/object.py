@@ -133,27 +133,31 @@ class StackCell(object):
 def stack_cons(stack, other):
     return StackCell(other, stack)
 
+def get_printable_location(ast, old_ast):
+    return ast.get_short_location()
 
 from rpython.rlib.jit import JitDriver
-jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"])
+jitdriver = JitDriver(greens=["ast", "prev_ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
 
 def run_stack(val, cont, stack=None):
+    from pixie.vm2.interpreter import PrevASTNil
     stack = None
     val = None
     ast = cont.get_ast()
+    prev_ast = PrevASTNil()
     while True:
-        jitdriver.jit_merge_point(ast=ast, stack=stack, val=val, cont=cont)
+        jitdriver.jit_merge_point(ast=ast, prev_ast=prev_ast, stack=stack, val=val, cont=cont)
         val, stack = cont.call_continuation(val, stack)
         if stack is None:
             return val
-        old_cont = cont
-        old_ast = old_cont.get_ast()
+        prev_ast = ast
+        prev_cont = cont
         cont = stack._cont
         ast = cont.get_ast()
         stack = stack._parent
-        #print ast
-        if old_cont.should_enter_jit:
-            jitdriver.can_enter_jit(ast=old_ast, stack=stack, val=val, cont=cont)
+
+        if prev_cont.should_enter_jit:
+            jitdriver.can_enter_jit(ast=ast, prev_ast=prev_ast, stack=stack, val=val, cont=cont)
 
     return val
 

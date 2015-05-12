@@ -2,6 +2,7 @@
 import pixie.vm2.interpreter as i
 from pixie.vm2.object import StackCell, run_stack
 import pixie.vm2.rt as rt
+from pixie.vm2.primitives import nil
 import pixie.vm2.code as code
 from pixie.vm2.keyword import keyword as kw
 from pixie.vm2.symbol import symbol as sym
@@ -10,8 +11,8 @@ from pixie.vm2.numbers import parse_number
 
 rt.init()
 with open("/tmp/pxi.py") as f:
-    pixie_code = eval(f.read())
-
+    exec f.read()
+    pixie_code = code_ast
 
 def testit(max):
 
