@@ -1876,6 +1876,15 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
            (cons f (filter pred r))
            (filter pred r)))))))
 
+(defn remove
+  {:doc "Removes any element from the collection which matches the predicate. The complement of filter."
+   :signatures [[pred] [pred coll]]
+   :added "0.1"}
+  ([pred]
+   (filter (complement pred)))
+  ([pred coll]
+   (filter (complement pred) coll)))
+
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
    :signatures [[] [coll]]
