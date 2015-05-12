@@ -336,7 +336,7 @@ import pixie.vm.rt as rt
 @as_var("read-string")
 def _read_string(s):
     import pixie.vm.reader as reader
-    return reader.read(reader.StringReader(unicode(rt.name(s))), True)
+    return reader.read(reader.MetaDataReader(reader.StringReader(unicode(rt.name(s)))), True)
 
 # XXX seems broken under jit.
 @as_var("eval")

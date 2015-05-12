@@ -1,5 +1,6 @@
 (ns pixie.compiler
-  (:require [pixie.io :as io]))
+  (:require [pixie.io :as io]
+            [pixie.string :as string]))
 
 (def macro-overrides
   {
@@ -43,6 +44,13 @@
    :statements (binding [*env* (assoc *env* :tail? false)]
                  (mapv analyze-form (butlast (next x))))
    :ret (analyze-form (last x))})
+
+(defmethod analyze-seq 'comment
+  [x]
+  {:op :const
+   :type (keyword "nil")
+   :form x
+   :env *env*})
 
 (defmethod analyze-seq 'if
   [[_ test then else :as form]]
@@ -183,6 +191,23 @@
   (let [resolved (and (symbol? sym)
                       (resolve-in (the-ns (:ns *env*)) sym))]
     (cond
+      (and (symbol? sym)
+           (string/starts-with? (name sym) ".-"))
+      (let [sym-kw (keyword (string/substring (name sym) 2))]
+        {:op :invoke
+         :tail-call (:tail? *env*)
+         :children '[:fn :args]
+         :form form
+         :env *env*
+         :fn       {:op :var
+                    :env *env*
+                    :ns (:ns *env*)
+                    :name 'pixie.stdlib/-get-field
+                    :form 'pixie.stdlib/-get-field}
+         :args (binding [*env* (assoc *env* :tail? false)]
+                 (mapv analyze-form (cons sym-kw args)))})
+      
+      
       (and resolved
            (contains? macro-overrides resolved))
       (analyze-form (apply (macro-overrides resolved) args))
@@ -279,9 +304,12 @@
    :tail? true})
 
 
-(defn analyze [form]
-  (binding [*env* (new-env)]
-    (analyze-form form)))
+(defn analyze
+  ([form]
+   (analyze form (new-env)))
+  ([form env]
+    (binding [*env* env]
+      (analyze-form form))))
 
 
 
@@ -368,6 +396,7 @@
     (write! sb "  ")))
 
 (defmulti to-rpython (fn [sb offset node]
+                       (println (:op node) (:form node))
                          (:op node)))
 
 (defmethod to-rpython :if
@@ -591,19 +620,7 @@
        "code_ast="
        (string-builder @code)))
 
-(let [form 
-      '(do (defn +
-             ([] 0)
-             ([x] x)
-             ([x y] (-add x y))
-             ([x y & more]
-              (-apply + (+ x y) more)))
-
-           ((fn c [i max]
-              (if (-lt i max)
-                (c (-add ((fn [] i)) ((fn [] 1))) max)
-                i))
-            0 10000))
+(let [form (read-string (str "(do " (pixie.io/slurp "pixie/bootstrap.pxi") ")"))
       str (finish-context (to-rpython (writer-context) 0 (collect-closed-overs (clean-do (analyze form)))))]
   (print str)
   (io/spit "/tmp/pxi.py" str))

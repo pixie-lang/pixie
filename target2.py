@@ -124,5 +124,5 @@ import rpython.config.translationoption
 print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
-    run_debug(sys.argv)
-    #entry_point()
+    #run_debug(sys.argv)
+    entry_point()
