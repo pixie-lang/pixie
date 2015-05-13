@@ -302,6 +302,9 @@
   (t/assert= (into {} (filter (fn [[_ v]] (odd? v)) {:a 1, :b 2, :c 3, :d 4}))
              {:a 1 :c 3}))
 
+(t/deftest test-remove
+  (t/assert= (remove even? [1 2 3 4 5]) '(1 3 5)))
+
 (t/deftest test-distinct
   (t/assert= (seq (distinct [1 2 3 2 1])) '(1 2 3))
   (t/assert= (vec (distinct) [1 1 2 2 3 3]) [1 2 3])
