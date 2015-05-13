@@ -84,48 +84,88 @@
 (defprotocol IDisposable
   (-dispose! [this]))
 
-(defprotocol IOpaqueObject
+(defprotocol IMessageObject
   (-get-field [this name])
   (-invoke-method [this name args]))
 
-(comment
-  (deftype Cons [first next meta]
-    ISeq
-    (-first [this] first)
-    (-next [this] next)
-    ISeqable
-    (-seq [this] this)
-    IMeta
-    (-meta [this] meta)
-    (-with-meta [this new-meta]
-      (->Cons first next new-meta)))
+;; Math wrappers
 
-  (defn cons [head tail]
-    (->Cons head (seq tail) nil))
+(extend -eq Number -num-eq)
 
-  (defn +
-    ([] 0)
-    ([x] x)
-    ([x y] (-add x y))
-    ([x y & more]
-     (-apply + (+ x y) more))))
+(defn +
+  {:doc "Adds the arguments, returning 0 if no arguments"
+   :signatures [[& args]]
+   :added "0.1"}  
+  ([] 0)
+  ([x] x)
+  ([x y] (-add x y))
+  ([x y & more]
+   (-apply + (+ x y) more)))
+
+(defn -
+  ([] 0)
+  ([x] x)
+  ([x y] (-sub x y))
+  ([x y & more]
+   (-apply - (- x y) more))) 
+
+(defn inc
+  ([x] (+ x 1)))
+
+(defn dec
+  ([x] (- x 1)))
+
+(defn <
+  ([x y] (-lt x y))
+  ([x y & more]
+   (-apply < (< x y) more)))
+
+(defn =
+  {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses
+-eq to perform equality checks."
+   :signatures [[& args]]
+   :added "0.1"}
+  ([x] true)
+  ([x y] (if (identical? x y)
+           true
+           (-eq x y)))
+  ([x y & rest] (if (eq x y)
+                  (apply = y rest)
+                  false)))
+
+
+(deftype Cons [first next meta]
+  ISeq
+  (-first [this] first)
+  (-next [this] next)
+  ISeqable
+  (-seq [this] this)
+  IMeta
+  (-meta [this] meta)
+  (-with-meta [this new-meta]
+    (->Cons first next new-meta)))
+
+(defn cons [head tail]
+  (->Cons head (seq tail) nil))
+
 
 
 ;; PersistentVector
 
-(comment
-  (deftype PersistentVectorNode [edit array])
+(deftype Node [edit array]
+  IMessageObject
+  (-get-field [this name]
+    (get-field this name)))
 
-  (defn persistent-vector-node
-    ([edit]
-     (persistent-vector-node edit (array 32)))
-    ([edit array]
-     (->PersistentVectorNode edit array)))
+(defn new-node
+  ([edit]
+   (new-node edit (array 32)))
+  ([edit array]
+   (->Node edit array)))
 
-  (def EMPTY_NODE (persistent-vector-node nil))
+(def EMPTY-NODE (new-node nil))
 
-  
-)
+
 
 (defn tailoff [this]
   (let [cnt (.-cnt this)]
@@ -145,3 +185,66 @@
                         (:array node)))
                     root
                     shift)))))
+
+(deftype PersistentVector [cnt shift root tail meta]
+  IMessageObject
+  (-get-field [this name]
+    (get-field this name))
+  
+  IPersistentCollection
+  (-conj [this val]
+    (assert (< cnt 0xFFFFFFFF) "Vector too large")
+
+    (if (< (- cnt (tailoff self)) 32)
+      (let [new-tail (array-append tail val)]
+        (->PersistentVector (inc cnt) shift root new-tail meta))
+      (let [tail-node (->Node (.-edit root) tail)]
+        (if (> (bit-shift-right cnt 5) (bit-shift-left 1 shift))
+          (let [new-root (new-node (.-edit root))]
+            (aset new-root 0 root)
+            (aset new-root 1 (new-path (.-edit root) shift tail-node))
+            (->PersistentVector (inc cnt)
+                                (+ shift 5)
+                                new-root
+                                (array val)
+                                meta))
+          (let [new-root (push-tail this shift root tail-node)]
+            (->PersistentVector (inc cnt)
+                                shift
+                                new-root
+                                (array val)
+                                meta))))))
+
+  ICounted
+  (-count [this] cnt))
+
+
+(defn push-tail [this level parent tail-node]
+  (let [subidx (bit-and (bit-shift-right (dec (.-cnt this)) level) 0x01f)
+        ret-array (aclone (.-array parent))
+        node-to-insert (if (= level 5)
+                         tail-node
+                         (let [child (aget (.-array parent) subidx)]
+                           (if (= child nil)
+                             (new-path (.-edit (.-root this))
+                                       (- level 5)
+                                       tail-node)
+                             (push-tail this
+                                        (- level 5)
+                                        child
+                                        tail-node))))]
+    (aset ret-array subidx node-to-insert)
+    (->Node (.-edit parent) node-to-insert)))
+
+(defn new-path [edit level node]
+  (if (= level 0)
+    node
+    (->Node edit
+            (new-path edit (- level 5) node))))
+
+
+(def EMPTY (->PersistentVector nil 0 5 EMPTY-NODE (array 0)))
+
+
+(let [x 4]
+  (+ x 1))

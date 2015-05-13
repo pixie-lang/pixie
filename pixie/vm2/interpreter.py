@@ -201,8 +201,40 @@ class ResolveAllK(Continuation):
     def get_ast(self):
         return self._c_args[len(self._c_acc)]
 
+class Let(AST):
+    _immutable_fields_ = ["_c_names", "_c_bindings", "_c_body"]
+    def __init__(self, names, bindings, body, meta):
+        AST.__init__(self, meta)
+        self._c_names = names
+        self._c_bindings = bindings
+        self._c_body = body
+
+    def interpret(self, _, locals, stack):
+        stack = stack_cons(stack, LetK(self, 0, locals))
+        stack = stack_cons(stack, InterpretK(self._c_bindings[0], locals))
+        return nil, stack
+
+class LetK(Continuation):
+    def __init__(self, ast, idx, locals):
+        self._c_idx = idx
+        self._c_ast = ast
+        self._c_locals = locals
+
+    def call_continuation(self, val, stack):
+        assert isinstance(self._c_ast, Let)
+        new_locals = Locals(self._c_ast._c_names[self._c_idx], val, self._c_locals)
+
+        if self._c_idx + 1 < len(self._c_ast._c_names):
+            stack = stack_cons(stack, LetK(self._c_ast, self._c_idx + 1, new_locals))
+            stack = stack_cons(stack, InterpretK(self._c_ast._c_bindings[self._c_idx + 1], new_locals))
+        else:
+            stack = stack_cons(stack, InterpretK(self._c_ast._c_body, new_locals))
+
+        return nil, stack
 
 
+    def get_ast(self):
+        return self._c_ast
 
 class If(AST):
     _immutable_fields_ = ["_c_test", "_c_then", "_c_else"]

@@ -10,7 +10,69 @@
      `(do (def ~nm (protocol ~(str nm)))
           ~@(map (fn [[x]]
                    `(def ~x (polymorphic-fn ~(str x) ~nm)))
-                 sigs)))})
+                 sigs)))
+
+   (resolve 'deftype)
+   (fn deftype
+     [nm fields & body]
+     (let [ctor-name (symbol (str "->" (name nm)))
+           fields (transduce (map (comp keyword name)) conj fields)
+           field-syms (transduce (map (comp symbol name)) conj fields)
+           mk-body (fn [body]
+                     (let [fn-name (first body)
+                           _ (assert (symbol? fn-name) "protocol override must have a name")
+                           args (second body)
+                           _ (assert (or (vector? args)
+                                         (seq? args)) "protocol override must have arguments")
+                           self-arg (first args)
+                           _ (assert (symbol? self-arg) "protocol override must have at least one `self' argument")
+
+                           rest (next (next body))
+                           body (reduce
+                                 (fn [body f]
+                                   `[(local-macro [~(symbol (name f))
+                                                   (get-field ~self-arg ~(keyword (name f)))]
+                                                  ~@body)])
+                                 rest
+                                 fields)]
+                       `(fn ~(symbol (str fn-name "_" nm)) ~args ~@body)))
+           bodies (reduce
+                   (fn [res body]
+                     (cond
+                       (symbol? body) (cond
+                                        (= body 'Object) [body (second res) (third res)]
+                                        :else [body
+                                               (second res)
+                                               (conj (third res) body)])
+                       (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
+                                     (if (protocol? proto)
+                                       [proto tbs (conj pbs body)]
+                                       [proto (conj tbs body) pbs]))))
+                   [nil [] []]
+                   body)
+           type-bodies (second bodies)
+           proto-bodies (third bodies)
+           all-fields (reduce (fn [r tb] (conj r (keyword (name (first tb))))) fields type-bodies)
+           type-decl `(def ~nm (create-type ~(keyword (name nm)) ~all-fields))
+           inst (gensym)
+           ctor `(defn ~ctor-name ~field-syms
+                   (new ~nm
+                        ~@field-syms
+                        ~@(transduce (map (fn [type-body]
+                                            (mk-body type-body)))
+                                     conj
+                                     type-bodies)))
+           proto-bodies (transduce
+                         (map (fn [body]
+                                (cond
+                                  (symbol? body) `(satisfy ~body ~nm)
+                                  (seq? body) `(extend ~(first body) ~nm ~(mk-body body))
+                                  :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
+                         conj
+                         proto-bodies)]
+       `(do ~type-decl
+            ~ctor
+            ~@proto-bodies)))})
 
 
 (def *env* nil)
@@ -123,6 +185,14 @@
                       :body (binding [*env* (assoc new-env :tail? true)]
                               (analyze-form (cons 'do body)))})))
 
+(defn analyze-let-body
+  [acc [name binding & rest :as form]]
+  {:op :let
+   :form form
+   :children '[:binding :body]
+   :env *env*
+   :name name
+   :body acc})
 
 (defmethod analyze-seq 'let*
   [[_ bindings & body :as form]]
@@ -133,7 +203,7 @@
                               (let [binding-ast (binding [*env* new-env]
                                                   {:op :binding
                                                    :type :let
-                                                   :children [:value]
+                                                   :children '[:value]
                                                    :form binding-form
                                                    :env *env*
                                                    :name name
@@ -145,7 +215,7 @@
                             parted)]
     {:op :let
      :form form
-     :children [:bindings :body]
+     :children '[:bindings :body]
      :bindings bindings
      :env *env*
      :body (binding [*env* new-env]
@@ -159,7 +229,7 @@
    :name nm
    :form form
    :env *env*
-   :children [:val]
+   :children '[:val]
    :val (analyze-form val)})
 
 (defmethod analyze-seq 'quote
@@ -381,7 +451,7 @@
           id
           (let [id (str "mid" (count @meta-state))]
             (swap! meta-state assoc k id)
-            (swap! meta-lines conj! (str id " = (u\"" (:line m) "\", \"" (:file m) "\", " (:line-number m) ")\n"))
+            (swap! meta-lines conj! (str id " = (u\"\"\"" (:line m) "\"\"\", \"" (:file m) "\", " (:line-number m) ")\n"))
             id)))
       "nil")))
 
@@ -396,7 +466,7 @@
     (write! sb "  ")))
 
 (defmulti to-rpython (fn [sb offset node]
-                       (println (:op node) (:form node))
+                       (assert node)
                          (:op node)))
 
 (defmethod to-rpython :if
@@ -516,17 +586,17 @@
               (write! sb ",\n")))
           (offset-spaces sb offset)
           (let [vfn (first (filter :variadic? arities))]
-            (offset-spaces sb offset)
-            (write! sb (str "i.Const(rt.wrap(-1)), \n"))
-            (offset-spaces sb offset)
-            (to-rpython-fn-body sb offset name vfn)
-            (write! sb "\n")))
+            (when vfn
+              (offset-spaces sb offset)
+              (write! sb (str "i.Const(rt.wrap(-1)), \n"))
+              (offset-spaces sb offset)
+              (to-rpython-fn-body sb offset name vfn)
+              (write! sb "\n"))))
         (offset-spaces sb offset)
         (write! sb "])"))))
 
 (defn to-rpython-fn-body
-  [sb offset name {:keys [args body variadic? closed-overs]}]
-  (println "FN: - " closed-overs)
+  [sb offset name {:keys [args body variadic? closed-overs] :as ast}]
   (when variadic?
     (write! sb (str "i.Invoke([i.Const(code.intern_var(u\"pixie.stdlib\", u\"variadic-fn\")), i.Const(rt.wrap(" (dec (count args)) ")), \n"))
     (offset-spaces sb offset))
@@ -608,6 +678,40 @@
     (offset-spaces sb offset)
     (write! sb "])")))
 
+(defmethod to-rpython :let
+  [sb offset {:keys [bindings body] :as ast}]
+  (write! sb "i.Let(names=[")
+  (write! sb (->> bindings
+                  (map (fn [binding]
+                         (str "kw(u\"" (:name binding) "\")")))
+                  (interpose ",")
+                  (apply str)))
+  (write! sb "],\n")
+
+  (offset-spaces sb offset)
+  (write! sb "bindings=[\n")
+  (let [offset (inc offset)]
+    (doseq [{:keys [value]} bindings]
+      (offset-spaces sb offset)
+      (to-rpython sb offset value)
+      (write! sb ",\n"))
+    (offset-spaces sb offset)
+    (write! sb "],\n")
+
+    (offset-spaces sb offset)
+
+    (write! sb "body=")
+    (to-rpython sb offset body)
+    (write! sb ",\n")
+
+    (offset-spaces sb offset)
+    (write! sb "meta=")
+    (write! sb (meta-str sb ast))
+
+
+    (write! sb ")")))
+
+
 
 (defn writer-context []
   {:meta-lines (atom (string-builder))
@@ -624,20 +728,3 @@
       str (finish-context (to-rpython (writer-context) 0 (collect-closed-overs (clean-do (analyze form)))))]
   (print str)
   (io/spit "/tmp/pxi.py" str))
-
-#_'(do
-              (defprotocol ISeq
-                (-first [this])
-                (-next [this]))
-              (defprotocol IMeta
-                (-meta [this]))
-              (deftype Cons [head tail meta]
-                  ISeq
-                  (-first [this]
-                    head)
-                  (-next [this]
-                    tail)
-                  IMeta
-                  (-meta [this]
-                    meta))
-                )

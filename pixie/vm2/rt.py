@@ -5,7 +5,7 @@ from rpython.rlib.objectmodel import specialize, we_are_translated
 
 
 def init():
-    import pixie.vm.code as code
+    import pixie.vm2.code as code
     from pixie.vm2.object import affirm, _type_registry
     from rpython.rlib.rarithmetic import r_uint
     from rpython.rlib.rbigint import rbigint
@@ -14,7 +14,6 @@ def init():
     from pixie.vm2.object import Object
 
 
-    _type_registry.set_registry(code._ns_registry)
 
     def unwrap(fn):
         if isinstance(fn, code.Var) and fn.is_defined() and hasattr(fn.deref(), "_returns"):
@@ -105,28 +104,6 @@ def init():
 
     globals()["int_val"] = int_val
 
-    from pixie.vm.code import _ns_registry, BaseCode, munge
-
-    for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():
-        name = munge(name)
-        if var.is_defined() and isinstance(var.deref(), BaseCode):
-            globals()[name] = unwrap(var)
-        else:
-            globals()[name] = var
-
-    import pixie.vm.bootstrap
-
-    def reinit():
-        for name, var in _ns_registry._registry[u"pixie.stdlib"]._registry.iteritems():
-            name = munge(name)
-            if name in globals():
-                continue
-
-            if var.is_defined() and isinstance(var.deref(), BaseCode):
-                globals()[name] = unwrap(var)
-            else:
-                globals()[name] = var
-
     #f = open("pixie/stdlib.pxi")
     #data = f.read()
     #f.close()
@@ -159,6 +136,8 @@ def init():
     globals()["__inited__"] = True
 
     globals()["is_true"] = lambda x: False if x is false or x is nil or x is None else True
+
+    _type_registry.set_registry(code._ns_registry)
 
     numbers.init()
     code.init()
