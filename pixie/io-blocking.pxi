@@ -1,5 +1,6 @@
 (ns pixie.io-blocking
-  (:require [pixie.streams :as st :refer :all]))
+  (:require [pixie.streams :as st :refer :all]
+            [pixie.io.common :as common]))
 
 
 (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
@@ -14,21 +15,6 @@
 (def popen (ffi-fn libc "popen" [CCharP CCharP] CVoidP))
 (def pclose (ffi-fn libc "pclose" [CVoidP] CInt))
 
-
-
-(def DEFAULT-BUFFER-SIZE 1024)
-
-(defn default-stream-reducer [this f init]
-  (let [buf (buffer DEFAULT-BUFFER-SIZE)
-        rrf (preserving-reduced f)]
-    (loop [acc init]
-      (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-        (if (> read-count 0)
-          (let [result (reduce rrf acc buf)]
-            (if (not (reduced? result))
-              (recur result)
-              @result))
-          acc)))))
 
 (deftype FileStream [fp]
   IInputStream
@@ -50,7 +36,7 @@
     (fclose fp))
   IReduce
   (-reduce [this f init]
-    (default-stream-reducer this f init)))
+    (common/stream-reducer this f init)))
 
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
@@ -105,7 +91,6 @@
            (reduced cnt)
            (+ cnt written)))))))
 
-
 (defn spit [filename val]
   (transduce (map int)
              (file-output-rf filename)
@@ -144,8 +129,7 @@
     (pclose fp))
   IReduce
   (-reduce [this f init]
-    (default-stream-reducer this f init)))
-
+    (common/stream-reducer this f init)))
 
 (defn popen-read
   {:doc "Open a file for reading, returning a IInputStream"
@@ -153,7 +137,6 @@
   [command]
   (assert (string? command) "Command must be a string")
   (->ProcessInputStream (popen command "r")))
-
 
 (defn run-command [command]
   (let [c (->ProcessInputStream (popen command "r"))

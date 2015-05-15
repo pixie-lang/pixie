@@ -2,6 +2,7 @@
   (:require [pixie.streams :as st :refer :all]
             [pixie.streams.utf8 :as utf8]
             [pixie.io-blocking :as io-blocking]
+            [pixie.io.common :as common]
             [pixie.uv :as uv]
             [pixie.stacklets :as st]
             [pixie.ffi :as ffi]
@@ -11,9 +12,6 @@
 (uv/defuvfsfn fs_read [file bufs nbufs offset] :result)
 (uv/defuvfsfn fs_write [file bufs nbufs offset] :result)
 (uv/defuvfsfn fs_close [file] :result)
-
-
-(def DEFAULT-BUFFER-SIZE 1024)
 
 (deftype FileStream [fp offset uvbuf]
   IInputStream
@@ -40,17 +38,7 @@
     (fs_close fp))
   IReduce
   (-reduce [this f init]
-    (let [buf (buffer DEFAULT-BUFFER-SIZE)
-          rrf (preserving-reduced f)]
-      (loop [acc init]
-        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-          (if (> read-count 0)
-            (let [result (reduce rrf acc buf)]
-              (if (not (reduced? result))
-                (recur result)
-                @result))
-            acc))))))
-
+    (common/stream-reducer this f init)))
 
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
@@ -134,13 +122,13 @@
 
 (defn buffered-output-stream
   ([downstream]
-   (buffered-output-stream downstream DEFAULT-BUFFER-SIZE))
+   (buffered-output-stream downstream common/DEFAULT-BUFFER-SIZE))
   ([downstream size]
     (->BufferedOutputStream downstream 0 (buffer size))))
 
 (defn buffered-input-stream
   ([upstream]
-   (buffered-input-stream upstream DEFAULT-BUFFER-SIZE))
+   (buffered-input-stream upstream common/DEFAULT-BUFFER-SIZE))
   ([upstream size]
    (let [b (buffer size)]
      (set-buffer-count! b size)
