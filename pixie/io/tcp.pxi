@@ -1,8 +1,11 @@
 (ns pixie.io.tcp
   (:require [pixie.stacklets :as st]
             [pixie.streams :refer [IInputStream read IOutputStream write]]
+            [pixie.io.common :as common]
             [pixie.uv :as uv]
             [pixie.ffi :as ffi]))
+
+(def DEFAULT-BUFFER-SIZE 1024)
 
 (defrecord TCPServer [ip port on-connect uv-server bind-addr on-connection-cb]
   IDisposable
@@ -55,7 +58,10 @@
   IDisposable
   (-dispose! [this]
     (dispose! uv-write-buf)
-    (uv/uv_close uv-client st/close_cb)))
+    (uv/uv_close uv-client st/close_cb))
+  IReduce
+  (-reduce [this f init]
+    (common/default-stream-reducer this f init)))
 
 (defn launch-tcp-client-from-server [svr]
   (assert (instance? TCPServer svr) "Requires a TCPServer as the first argument")

@@ -39,16 +39,7 @@
 
   IReduce
   (-reduce [this f init]
-    (let [buf (buffer DEFAULT-BUFFER-SIZE)
-          rrf (preserving-reduced f)]
-      (loop [acc init]
-        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-          (if (> read-count 0)
-            (let [result (reduce rrf acc buf)]
-              (if (not (reduced? result))
-                (recur result)
-                @result))
-            acc))))))
+    (common/default-stream-reducer this f init)))
 
 (deftype TTYOutputStream [uv-client uv-write-buf]
   IOutputStream
