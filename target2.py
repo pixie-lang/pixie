@@ -10,7 +10,7 @@ from pixie.vm2.numbers import parse_number
 
 
 rt.init()
-with open("/tmp/pxi.py") as f:
+with open("bootstrap.py") as f:
     exec f.read()
     pixie_code = code_ast
 

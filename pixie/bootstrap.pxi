@@ -92,12 +92,18 @@
   (-invoke-method [this name args]))
 
 
+
 (extend -get-field Object -internal-get-field)
 (extend -str Object (fn [x sb]
-                      (sb (-internal-tostr x))))
+                      (sb (-internal-to-str x))))
 (extend -repr Object (fn [x sb]
                        (sb (-internal-to-repr x))))
 
+
+(extend-type String
+  IObject
+  (-str [this sb]
+    (sb this)))
 
 ;; Math wrappers
 
@@ -192,7 +198,18 @@
    args))
 
 (defn println [& args]
-  (-blocking-println (-apply str args)))
+  (let [sb (-string-builder)
+        add-fn (fn [x]
+                 (-add-to-string-builder sb x))]
+    (loop [idx 0
+           sb sb]
+      (if (< idx (count args))
+        (recur (inc idx)
+               (do (-str (aget args idx) add-fn)
+                   (add-fn " ")
+                 sb))
+        (-blocking-println (-finish-string-builder sb))))
+    nil))
 
 ;;
 
@@ -503,6 +520,7 @@
 
 ;;;
 
+(println 42)
 
 (into [] (range 1000))
 

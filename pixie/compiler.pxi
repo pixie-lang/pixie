@@ -732,4 +732,4 @@
 (let [form (read-string (str "(do " (pixie.io/slurp "pixie/bootstrap.pxi") ")"))
       str (finish-context (to-rpython (writer-context) 0 (collect-closed-overs (clean-do (analyze form)))))]
   (print str)
-  (io/spit "/tmp/pxi.py" str))
+  (io/spit "./bootstrap.py" str))

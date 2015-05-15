@@ -1,4 +1,5 @@
 import rpython.rlib.jit as jit
+from rpython.rlib.objectmodel import we_are_translated
 
 class Object(object):
     """ Base Object for all VM objects
@@ -166,7 +167,9 @@ def run_stack(val, cont, stack=None):
             val, stack = cont.call_continuation(val, stack)
         except BaseException as ex:
             print_stacktrace(cont, stack)
-            #print ex
+            if not we_are_translated():
+                print ex
+                raise
             break
         if stack is None:
             return val
@@ -213,5 +216,6 @@ class WrappedException(BaseException):
         self._ex = ex
 
 def runtime_error(msg, kw=None):
+    print msg
     raise WrappedException(RuntimeException(msg, kw))
 

@@ -1,4 +1,4 @@
-from pixie.vm2.object import Object, Type, Continuation, stack_cons
+from pixie.vm2.object import Object, Type, Continuation, stack_cons, runtime_error
 from pixie.vm2.primitives import nil, false
 from pixie.vm2.array import Array
 import pixie.vm2.code as code
@@ -142,7 +142,12 @@ class InterpretedFn(code.BaseCode):
         # TODO: Check arg count
         locals = jit.promote(self._c_locals)
         locals = Locals(jit.promote(self._c_name), self_fn, locals)
+
         arg_names = jit.promote(self._c_arg_names)
+        if not len(args) == len(arg_names):
+            runtime_error(u"Wrong number args, expected " + unicode(str(len(args))) + u" got " + unicode(str(len(arg_names))),
+                          u"pixie.stdlib.ArityException")
+
         for idx in range(len(arg_names)):
             locals = Locals(arg_names[idx], args[idx], locals)
 
