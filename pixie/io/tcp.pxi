@@ -5,8 +5,6 @@
             [pixie.uv :as uv]
             [pixie.ffi :as ffi]))
 
-(def DEFAULT-BUFFER-SIZE 1024)
-
 (defrecord TCPServer [ip port on-connect uv-server bind-addr on-connection-cb]
   IDisposable
   (-dispose! [this]
@@ -17,51 +15,17 @@
 (deftype TCPStream [uv-client uv-write-buf]
   IInputStream
   (read [this buffer len]
-    (assert (<= (buffer-capacity buffer) len)
-            "Not enough capacity in the buffer")
-    (let [alloc-cb (uv/-prep-uv-buffer-fn buffer len)
-          read-cb (atom nil)]
-      (st/call-cc (fn [k]
-                 (reset! read-cb (ffi/ffi-prep-callback
-                                  uv/uv_read_cb
-                                  (fn [stream nread uv-buf]
-                                    (set-buffer-count! buffer nread)
-                                    (try
-                                      (dispose! alloc-cb)
-                                      (dispose! @read-cb)
-                                      ;(dispose! uv-buf)
-                                      (uv/uv_read_stop stream)
-                                      (st/run-and-process k (or
-                                                             (st/exception-on-uv-error nread)
-                                                             nread))
-                                      (catch ex
-                                          (println ex))))))
-                 (uv/uv_read_start uv-client alloc-cb @read-cb)))))
+    (common/cb-stream-reader uv-client buffer len))
   IOutputStream
   (write [this buffer]
-    (let [write-cb (atom nil)
-          uv_write (uv/uv_write_t)]
-      (ffi/set! uv-write-buf :base buffer)
-      (ffi/set! uv-write-buf :len (count buffer))
-      (st/call-cc
-       (fn [k]
-         (reset! write-cb (ffi/ffi-prep-callback
-                          uv/uv_write_cb
-                          (fn [req status]
-                            (try
-                              (dispose! @write-cb)
-                              ;(uv/uv_close uv_write st/close_cb)
-                              (st/run-and-process k status)
-                              (catch ex
-                                  (println ex))))))
-         (uv/uv_write uv_write uv-client uv-write-buf 1 @write-cb)))))
+    (common/cb-stream-writer uv-client uv-write-buf buffer))
   IDisposable
   (-dispose! [this]
     (dispose! uv-write-buf)
     (uv/uv_close uv-client st/close_cb))
   IReduce
   (-reduce [this f init]
-    (common/default-stream-reducer this f init)))
+    (common/stream-reducer this f init)))
 
 (defn launch-tcp-client-from-server [svr]
   (assert (instance? TCPServer svr) "Requires a TCPServer as the first argument")
@@ -73,8 +37,6 @@
           svr)
       (do (uv/uv_close client nil)
           svr))))
-
-
 
 (defn tcp-server
   "Creates a TCP server on the given ip (as a string) and port (as an integer). Returns a TCPServer that can be

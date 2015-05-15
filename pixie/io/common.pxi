@@ -1,6 +1,9 @@
 (ns pixie.io.common
   "Common functionality for handling IO"
-  (:require [pixie.streams :refer :all]))
+  (:require [pixie.streams :refer :all]
+            [pixie.uv :as uv]
+            [pixie.stacklets :as st]
+            [pixie.ffi :as ffi]))
 
 (def DEFAULT-BUFFER-SIZE 1024)
 
@@ -16,7 +19,7 @@
               @result))
           acc)))))
 
-(defn stream-reader [this buf len]
+(defn cb-stream-reader [uv-client buffer len]
   (assert (<= (buffer-capacity buffer) len)
           "Not enough capacity in the buffer")
   (let [alloc-cb (uv/-prep-uv-buffer-fn buffer len)
@@ -38,8 +41,8 @@
                                           (println ex))))))
                   (uv/uv_read_start uv-client alloc-cb @read-cb)))))
 
-(defn stream-writer 
-  [this buf]
+(defn cb-stream-writer 
+  [uv-client uv-write-buf buffer]
   (let [write-cb (atom nil)
           uv_write (uv/uv_write_t)]
       (ffi/set! uv-write-buf :base buffer)

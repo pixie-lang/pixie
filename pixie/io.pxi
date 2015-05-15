@@ -2,6 +2,7 @@
   (:require [pixie.streams :as st :refer :all]
             [pixie.streams.utf8 :as utf8]
             [pixie.io-blocking :as io-blocking]
+            [pixie.io.common :as common]
             [pixie.uv :as uv]
             [pixie.stacklets :as st]
             [pixie.ffi :as ffi]

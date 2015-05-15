@@ -3,63 +3,26 @@
             [pixie.streams :refer [IInputStream read IOutputStream write]]
             [pixie.uv :as uv]
             [pixie.io :as io]
+            [pixie.io.common :as common]
             [pixie.system :as sys]
             [pixie.ffi :as ffi]))
-
-(def DEFAULT-BUFFER-SIZE 1024)
 
 (deftype TTYInputStream [uv-client uv-write-buf]
   IInputStream
   (read [this buf len]
-    (assert (<= (buffer-capacity buf) len)
-            "Not enough capacity in the buffer")
-    (let [alloc-cb (uv/-prep-uv-buffer-fn buf len)
-          read-cb (atom nil)]
-      (st/call-cc (fn [k]
-                 (reset! read-cb (ffi/ffi-prep-callback
-                                  uv/uv_read_cb
-                                  (fn [stream nread uv-buf]
-                                    (set-buffer-count! buf nread)
-                                    (try
-                                      (dispose! alloc-cb)
-                                      (dispose! @read-cb)
-                                      ;(dispose! uv-buf)
-                                      (uv/uv_read_stop stream)
-                                      (st/run-and-process k (or
-                                                             (st/exception-on-uv-error nread)
-                                                             nread))
-                                      (catch ex
-                                          (println ex))))))
-                 (uv/uv_read_start uv-client alloc-cb @read-cb)))))
-
+    (common/cb-stream-reader uv-client buf len))
   IDisposable
   (-dispose! [this]
     (dispose! uvbuf)
     (fs_close fp))
-
   IReduce
   (-reduce [this f init]
-    (common/default-stream-reducer this f init)))
+    (common/stream-reducer this f init)))
 
 (deftype TTYOutputStream [uv-client uv-write-buf]
   IOutputStream
   (write [this buffer]
-    (let [write-cb (atom nil)
-          uv_write (uv/uv_write_t)]
-      (ffi/set! uv-write-buf :base buffer)
-      (ffi/set! uv-write-buf :len (count buffer))
-      (st/call-cc
-       (fn [k]
-         (reset! write-cb (ffi/ffi-prep-callback
-                          uv/uv_write_cb
-                          (fn [req status]
-                            (try
-                              (dispose! @write-cb)
-                              (st/run-and-process k status)
-                              (catch ex
-                                  (println ex))))))
-         (uv/uv_write uv_write uv-client uv-write-buf 1 @write-cb)))))
-
+    (common/cb-stream-writer uv-client uv-write-buf buffer))
   IDisposable
   (-dispose! [this]
     (dispose! uv-write-buf)
