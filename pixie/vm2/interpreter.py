@@ -16,6 +16,11 @@ class AST(Object):
             return self._c_meta.get_short_location()
         return "<unknown>"
 
+    def get_long_location(self):
+        if self._c_meta != nil:
+            return self._c_meta.get_long_location()
+        return "<unknown>"
+
 class Meta(Object):
     _type = Type(u"pixie.stdlib.Meta")
     _immutable_fields_ = ["_c_column_number", "_c_line_tuple"]
@@ -26,7 +31,26 @@ class Meta(Object):
     def get_short_location(self):
         (line, file, line_number) = self._c_line_tuple
 
-        return str(file) + " @ " + str(line[:self._c_column_number]) + "^" + str(line[self._c_column_number:])
+        cl = self._c_column_number - 1
+        assert cl >= 0
+        return str(file) + " @ " + str(line[:cl]) + "^" + str(line[cl:])
+
+    def get_long_location(self):
+        (line, file, line_number) = self._c_line_tuple
+        ld = []
+        ld.append(str(line))
+        ld.append(" in ")
+        ld.append(str(file))
+        ld.append(" at ")
+        ld.append(str(line_number)+":"+str(self._c_column_number))
+        ld.append("\n")
+        for x in range(self._c_column_number - 1):
+            ld.append(" ")
+        ld.append("^\n")
+
+        return "".join(ld)
+
+
 
 class PrevASTNil(AST):
     def __init__(self):
@@ -116,7 +140,8 @@ class InterpretedFn(code.BaseCode):
     @jit.unroll_safe
     def invoke_k_with(self, args, stack, self_fn):
         # TODO: Check arg count
-        locals = Locals(jit.promote(self._c_name), self_fn, self._c_locals)
+        locals = jit.promote(self._c_locals)
+        locals = Locals(jit.promote(self._c_name), self_fn, locals)
         arg_names = jit.promote(self._c_arg_names)
         for idx in range(len(arg_names)):
             locals = Locals(arg_names[idx], args[idx], locals)
@@ -215,6 +240,7 @@ class Let(AST):
         return nil, stack
 
 class LetK(Continuation):
+    _immutable_ = True
     def __init__(self, ast, idx, locals):
         self._c_idx = idx
         self._c_ast = ast

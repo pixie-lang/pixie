@@ -30,6 +30,21 @@ class Object(object):
     def promote(self):
         return self
 
+    def get_field(self, k):
+        runtime_error(u"Unsupported operation get-field")
+
+    def to_str(self):
+        tp = self.type()
+        assert isinstance(tp, Type)
+        return u"<inst " + tp._name + u">"
+
+    def to_repr(self):
+        tp = self.type()
+        assert isinstance(tp, Type)
+        return u"<inst " + tp._name + u">"
+
+
+
 class TypeRegistry(object):
     def __init__(self):
         self._types = {}
@@ -97,9 +112,9 @@ Object._type = Type(u"pixie.stdlib.Object", None, False)
 Type._type = Type(u"pixie.stdlib.Type")
 
 @jit.elidable_promote()
-def istypeinstance(obj, t):
-    obj_type = obj.type()
-    assert isinstance(obj_type, Type)
+def istypeinstance(obj_type, t):
+    if not isinstance(obj_type, Type):
+        return False
     if obj_type is t:
         return True
     elif obj_type._parent is not None:
@@ -147,7 +162,12 @@ def run_stack(val, cont, stack=None):
     prev_ast = PrevASTNil()
     while True:
         jitdriver.jit_merge_point(ast=ast, prev_ast=prev_ast, stack=stack, val=val, cont=cont)
-        val, stack = cont.call_continuation(val, stack)
+        try:
+            val, stack = cont.call_continuation(val, stack)
+        except BaseException as ex:
+            print_stacktrace(cont, stack)
+            #print ex
+            break
         if stack is None:
             return val
         prev_ast = ast
@@ -161,17 +181,37 @@ def run_stack(val, cont, stack=None):
 
     return val
 
+def stacktrace_for_cont(cont):
+    ast = cont.get_ast()
+    if ast:
+        return ast.get_long_location()
 
+def print_stacktrace(cont, stack):
+    st = []
+    st.append(stacktrace_for_cont(cont))
+    while stack:
+        st.append(stacktrace_for_cont(stack._cont))
+        stack = stack._parent
+    st.reverse()
+    for line in st:
+        print line
 
+class RuntimeException(Object):
+    _type = Type(u"pixie.stdlib.RuntimeException")
+    def __init__(self, msg, kw):
+        self._msg = msg
+        self._kw = kw
 
 ## TODO: fix
 def affirm(f, msg):
     if not f:
         print msg
-        raise NotImplementedError()
-
-def runtime_error(msg, kw=None):
-    raise NotImplementedError()
+        raise WrappedException(RuntimeException(msg, u"pixie.stdlib.AssertionException"))
 
 class WrappedException(BaseException):
-    pass
+    def __init__(self, ex):
+        self._ex = ex
+
+def runtime_error(msg, kw=None):
+    raise WrappedException(RuntimeException(msg, kw))
+

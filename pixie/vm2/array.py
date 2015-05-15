@@ -8,8 +8,12 @@ from pixie.vm2.primitives import nil
 import rpython.rlib.jit as jit
 from rpython.rtyper.lltypesystem import lltype
 from rpython.rlib.rarithmetic import intmask
-
+from pixie.vm2.keyword import keyword
+import pixie.vm2.rt as rt
 UNROLL_IF_SMALLER_THAN = 8
+
+KW_count = keyword(u"count")
+
 
 class Array(object.Object):
     _type = object.Type(u"pixie.stdlib.Array")
@@ -36,16 +40,20 @@ class Array(object.Object):
             init = f.invoke([init, self._list[x]])
         return init
 
+    def get_field(self, k):
+        if k is KW_count:
+            return rt.wrap(len(self._list))
+        return nil
+
 @as_var("array")
 def array__args(lst):
     return Array(lst)
 
-#
-#
-# @extend(proto._count, Array)
-# def _count(self):
-#     assert isinstance(self, Array)
-#     return rt.wrap(len(self._list))
+
+#@extend(proto._count, Array)
+#def _count(self):
+#    assert isinstance(self, Array)
+#    return rt.wrap(len(self._list))
 #
 # @extend(proto._nth, Array)
 # def _nth(self, idx):
@@ -131,10 +139,10 @@ def array__args(lst):
 #     assert isinstance(lst, list)
 #     return Array(lst)
 #
-# @as_var("aget")
-# def aget(self, idx):
-#     assert isinstance(self, Array)
-#     return self._list[idx.int_val()]
+@as_var("aget")
+def aget(self, idx):
+    assert isinstance(self, Array)
+    return self._list[idx.int_val()]
 #
 # @as_var("aset")
 # def aset(self, idx, val):

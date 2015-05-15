@@ -50,18 +50,13 @@
                                        [proto (conj tbs body) pbs]))))
                    [nil [] []]
                    body)
-           type-bodies (second bodies)
-           proto-bodies (third bodies)
-           all-fields (reduce (fn [r tb] (conj r (keyword (name (first tb))))) fields type-bodies)
+           proto-bodies (second bodies)
+           all-fields fields
            type-decl `(def ~nm (create-type ~(keyword (name nm)) ~all-fields))
            inst (gensym)
            ctor `(defn ~ctor-name ~field-syms
                    (new ~nm
-                        ~@field-syms
-                        ~@(transduce (map (fn [type-body]
-                                            (mk-body type-body)))
-                                     conj
-                                     type-bodies)))
+                        ~@field-syms))
            proto-bodies (transduce
                          (map (fn [body]
                                 (cond
@@ -153,6 +148,7 @@
   (let [[args variadic?] (let [not& (vec (filter (complement (partial = '&)) args))]
                            [not& (= '& (last (butlast args)))])
         arity (count args)
+        arity-idx (if variadic? -1 arity)
         new-env (update-in *env* [:locals] (fn [locals]
                                              (reduce
                                               (fn [locals [k v]]
@@ -175,8 +171,8 @@
                                                        :env *env*})))
                  new-env
                  (range (count args)))]
-    (assert (not (acc arity)) (str "Duplicate arity for " (cons args body)))
-    (assoc acc arity {:op :fn-body
+    (assert (not (acc arity-idx)) (str "Duplicate arity for " (cons args body)))
+    (assoc acc arity-idx {:op :fn-body
                       :env *env*
                       :arity arity
                       :args args
@@ -221,6 +217,17 @@
      :body (binding [*env* new-env]
              (analyze-form `(do ~@body)))}))
 
+(defmethod analyze-seq 'loop*
+  [[_ bindings & body]]
+  (let [parted (partition 2 bindings)]
+    (analyze-form `((fn __loop__fn__ ~(mapv first parted)
+                      ~@body)
+                    ~@(mapv second parted)))))
+
+(defmethod analyze-seq 'recur
+  [[_ & args]]
+  (analyze-form `(__loop__fn__ ~@args)))
+
 (defmethod analyze-seq 'def
   [[_ nm val :as form]]
   (swap! (:vars *env*) update-in [(:ns *env*) nm] (fn [x]
@@ -256,6 +263,13 @@
    :env *env*
    :form nil})
 
+(defn keep-meta [new old]
+  (if-let [md (meta old)]
+    (if (satisfies? IMeta new)
+      (with-meta new md)
+      new)
+    new))
+
 (defmethod analyze-seq :default
   [[sym & args :as form]]
   (let [resolved (and (symbol? sym)
@@ -264,27 +278,19 @@
       (and (symbol? sym)
            (string/starts-with? (name sym) ".-"))
       (let [sym-kw (keyword (string/substring (name sym) 2))]
-        {:op :invoke
-         :tail-call (:tail? *env*)
-         :children '[:fn :args]
-         :form form
-         :env *env*
-         :fn       {:op :var
-                    :env *env*
-                    :ns (:ns *env*)
-                    :name 'pixie.stdlib/-get-field
-                    :form 'pixie.stdlib/-get-field}
-         :args (binding [*env* (assoc *env* :tail? false)]
-                 (mapv analyze-form (cons sym-kw args)))})
+        (analyze-form (keep-meta `(-get-field ~@args ~sym-kw)
+                                 form)))
       
       
       (and resolved
            (contains? macro-overrides resolved))
-      (analyze-form (apply (macro-overrides resolved) args))
+      (analyze-form (keep-meta (apply (macro-overrides resolved) args)
+                               form))
       
       (and resolved
            (macro? @resolved))
-      (analyze-form (apply @resolved args))
+      (analyze-form (keep-meta (apply @resolved args)
+                               form))
 
       :else
       {:op :invoke
@@ -471,7 +477,6 @@
 
 (defmethod to-rpython :if
   [sb offset {:keys [test then else] :as ast}]
-  #_(offset-spaces sb offset)
   (write! sb "i.If(\n")
   (let [offset (inc offset)]
     (doseq [[nm form] [[:test test]

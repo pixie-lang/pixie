@@ -250,11 +250,8 @@ class Code(BaseCode):
                           u":pixie.stdlib/InvalidArityException")
 
     def invoke_with(self, args, this_fn):
-        try:
-            return interpret(self, args, self_obj=this_fn)
-        except object.WrappedException as ex:
-            ex._ex._trace.append(object.PixieCodeInfo(self._name))
-            raise
+        return interpret(self, args, self_obj=this_fn)
+
 
     @elidable_promote()
     def get_arity(self):
@@ -345,13 +342,7 @@ class Closure(BaseCode):
         return self.invoke_with(args, self)
 
     def invoke_with(self, args, self_fn):
-        try:
-            return interpret(self, args, self_obj=self_fn)
-        except object.WrappedException as ex:
-            code = self._code
-            assert isinstance(code, Code)
-            ex._ex._trace.append(object.PixieCodeInfo(code._name))
-            raise
+        return interpret(self, args, self_obj=self_fn)
 
     def get_closed_over(self, idx):
         return self._closed_overs[idx]
@@ -728,15 +719,11 @@ class PolymorphicFn(BaseCode):
 
         return promote(fn)
 
-    def invoke(self, args):
+    def invoke_k(self, args, stack):
         affirm(len(args) >= 1, u"Wrong number of args")
         a = args[0].type()
         fn = self.get_protocol_fn(a, self._rev)
-        try:
-            return fn.invoke(args)
-        except object.WrappedException as ex:
-            ex._ex._trace.append(object.PolymorphicCodeInfo(self._name, args[0].type()))
-            raise
+        return fn.invoke_k(args, stack)
 
 
 class DoublePolymorphicFn(BaseCode):
@@ -919,7 +906,7 @@ def wrap_fn(fn, tp=object.Object):
                 try:
                     return fn(args[0], args[1], args[2], args[3])
                 except object.WrappedException as ex:
-                    ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                    #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
             return as_native_fn(wrapped_fn)
 

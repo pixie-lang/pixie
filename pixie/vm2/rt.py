@@ -143,6 +143,23 @@ def init():
     code.init()
 
 
+def unwrap_string(x):
+    from pixie.vm2.string import String
+    from pixie.vm2.object import affirm
+
+    affirm(isinstance(x, String), u"Expected String")
+    assert isinstance(x, String)
+
+    return x._str
+
+def unwrap_keyword(x):
+    from pixie.vm2.keyword import Keyword
+    from pixie.vm2.object import affirm
+
+    affirm(isinstance(x, Keyword), u"Expected Keyword")
+    assert isinstance(x, Keyword)
+
+    return x._str
 
 
 

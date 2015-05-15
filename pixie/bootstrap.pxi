@@ -26,8 +26,8 @@
 (defprotocol IObject
   (-hash [this])
   (-eq [this other])
-  (-str [this])
-  (-repr [this]))
+  (-str [this sbf])
+  (-repr [this sbf]))
 
 (defprotocol IReduce
   (-reduce [this f init]))
@@ -77,6 +77,9 @@
 (defprotocol ITransientCollection
   (-conj! [this x]))
 
+(defprotocol IToTransient
+  (-transient [this x]))
+
 (defprotocol ITransientStack
   (-push! [this x])
   (-pop! [this]))
@@ -87,6 +90,14 @@
 (defprotocol IMessageObject
   (-get-field [this name])
   (-invoke-method [this name args]))
+
+
+(extend -get-field Object -internal-get-field)
+(extend -str Object (fn [x sb]
+                      (sb (-internal-tostr x))))
+(extend -repr Object (fn [x sb]
+                       (sb (-internal-to-repr x))))
+
 
 ;; Math wrappers
 
@@ -120,6 +131,11 @@
   ([x y & more]
    (-apply < (< x y) more)))
 
+(defn >
+  ([x y] (-gt x y))
+  ([x y & more]
+   (-apply > (> x y) more)))
+
 (defn =
   {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses
 -eq to perform equality checks."
@@ -132,6 +148,17 @@
   ([x y & rest] (if (eq x y)
                   (apply = y rest)
                   false)))
+
+(defn conj
+  ([] [])
+  ([coll] coll)
+  ([coll itm] (-conj coll itm))
+  ([coll item & more]
+   (-apply conj (conj x y) more)))
+
+
+(defn count
+  ([coll] (-count coll)))
 
 
 (deftype Cons [first next meta]
@@ -148,7 +175,209 @@
 (defn cons [head tail]
   (->Cons head (seq tail) nil))
 
+;; String Builder
 
+(defn string-builder
+  ([] (-string-builder))
+  ([sb] (-str sb))
+  ([sb x]
+   (if (instance? String x)
+     (-add-to-string-builder x)
+     (-add-to-string-bulder (-str x)))))
+
+(defn str [& args]
+  (transduce
+   (map str)
+   string-builder
+   args))
+
+(defn println [& args]
+  (-blocking-println (-apply str args)))
+
+;;
+
+;; Type Helpers
+
+
+(defn instance?
+  ^{:doc "Checks if x is an instance of t.
+          When t is seqable, checks if x is an instance of
+          any of the types contained therein."
+    :signatures [[t x]]}
+  [t x]
+  (if (-satisfies? ISeqable t)
+    (let [ts (seq t)]
+      (if (not ts) false
+          (if (-instance? (first ts) x)
+            true
+            (instance? (rest ts) x))))
+    (-instance? t x)))
+
+;; End Type Helpers
+
+;; Reduced
+
+(deftype Reduced [x]
+  IDeref
+  (-deref [this] x))
+
+(defn reduced [x]
+  (->Reduced x))
+
+(defn reduced? [x]
+  (instance? Reduced x))
+
+;; End Reduced
+
+;; Satisfies
+
+(defn satisfies?
+  ^{:doc "Checks if x satisfies the protocol p.
+
+                            When p is seqable, checks if x satisfies all of
+                            the protocols contained therein."
+    :signatures [[t x]]}
+  [p x]
+  (if (-satisfies? ISeqable p)
+    (let [ps (seq p)]
+      (if (not ps) true
+          (if (not (-satisfies? (first ps) x))
+            false
+            (satisfies? (rest ps) x))))
+    (-satisfies? p x)))
+
+;; End Satisfies
+
+;; Basic Transducer Support
+
+(defn transduce
+  ([f coll]
+   (let [result (-reduce coll f (f))]
+     (f result)))
+  ([xform rf coll]
+   (let [f (xform rf)
+         result (-reduce coll f (f))]
+     (f result)))
+  ([xform rf init coll]
+   (let [f (xform rf)
+         result (-reduce coll f init)]
+     (f result))))
+
+(defn reduce 
+  ([rf col]
+   (reduce rf (rf) col))
+  ([rf init col]
+   (-reduce col rf init)))
+
+(defn into
+  ^{:doc "Add the elements of `from` to the collection `to`."
+    :signatures [[to from]]
+    :added "0.1"}
+  ([to from]
+   (if (satisfies? IToTransient to)
+     (persistent! (reduce conj! (transient to) from))
+     (reduce conj to from)))
+  ([to xform from]
+   (if (satisfies? IToTransient to)
+     (transduce xform conj! (transient to) from)
+     (transduce xform conj to from))))
+
+(defn map
+  ^{:doc "map - creates a transducer that applies f to every input element"
+    :signatures [[f] [f coll]]
+    :added "0.1"}
+  ([f]
+   (fn [xf]
+     (fn
+       ([] (xf))
+       ([result] (xf result))
+       ([result item] (xf result (f item))))))
+  ([f coll]
+   (lazy-seq*
+    (fn []
+      (let [s (seq coll)]
+        (if s
+          (cons (f (first s))
+                (map f (rest s)))
+          nil)))))
+  ([f & colls]
+   (let [step (fn step [cs]
+                (lazy-seq*
+                 (fn []
+                   (let [ss (map seq cs)]
+                     (if (every? identity ss)
+                       (cons (map first ss) (step (map rest ss)))
+                       nil)))))]
+     (map (fn [args] (apply f args)) (step colls)))))
+
+;; End Basic Transudcer Support
+
+;; Range
+
+(deftype Range [start stop step]
+  IReduce
+  (-reduce [self f init]
+    (loop [i start
+           acc init]
+      (println i)
+      (if (or (and (> step 0) (< i stop))
+              (and (< step 0) (> i stop))
+              (and (= step 0)))
+        (let [acc (f acc i)]
+          (if (reduced? acc)
+            @acc
+            (recur (+ i step) acc)))
+        acc)))
+  ICounted
+  (-count [self]
+    (if (or (and (< start stop) (< step 0))
+            (and (> start stop) (> step 0))
+            (= step 0))
+      0
+      (abs (quot (- start stop) step))))
+  IIndexed
+  (-nth [self idx]
+    (when (or (= start stop 0) (neg? idx))
+      (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))
+    (let [cmp (if (< start stop) < >)
+          val (+ start (* idx step))]
+      (if (cmp val stop)
+        val
+        (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))))
+  (-nth-not-found [self idx not-found]
+    (let [cmp (if (< start stop) < >)
+          val (+ start (* idx step))]
+      (if (cmp val stop)
+        val
+       not-found)))
+  ISeqable
+  (-seq [self]
+    (when (or (and (> step 0) (< start stop))
+              (and (< step 0) (> start stop)))
+      (cons start (lazy-seq* #(range (+ start step) stop step)))))
+  IObject
+  (-str [this sbf]
+    (-str (seq this) sbf))
+  (-repr [this sbf]
+    (-repr (seq this) sbf))
+  (-eq [this sb]))
+
+(def MAX-NUMBER 0xFFFFFFFF) ;; 32 bits ought to be enough for anyone ;-)
+
+(defn range
+  {:doc "Returns a range of numbers."
+   :examples [["(seq (range 3))" nil (0 1 2)]
+              ["(seq (range 3 5))" nil (3 4)]
+              ["(seq (range 0 10 2))" nil (0 2 4 6 8)]
+              ["(seq (range 5 -1 -1))" nil (5 4 3 2 1 0)]]
+   :signatures [[] [stop] [start stop] [start stop step]]
+   :added "0.1"}
+  ([] (->Range 0 MAX-NUMBER 1))
+  ([stop] (->Range 0 stop 1))
+  ([start stop] (->Range start stop 1))
+  ([start stop step] (->Range start stop step)))
+
+;; End Range
 
 ;; PersistentVector
 
@@ -243,8 +472,42 @@
             (new-path edit (- level 5) node))))
 
 
-(def EMPTY (->PersistentVector nil 0 5 EMPTY-NODE (array 0)))
+(def EMPTY (->PersistentVector 0 5 EMPTY-NODE (array 0) nil))
+
+(defn vector-from-array [arr]
+  (if (< (count arr) 32)
+    (->PersistentVector (count arr) 5 EMPTY-NODE arr nil)
+    (into [] arr)))
+
+;; Extend Array
+
+(extend-type Array
+  IPersistentCollection
+  (-conj ([arr itm]
+          (conj (vector-from-array arr) itm)))
+  ICounted
+  (-count ([arr]
+           (.-count arr)))
+
+  IReduce
+  (-reduce [this f init]
+    (loop [idx 0
+           acc init]
+      (if (reduced? acc)
+        @acc
+        (if (< idx (count this))
+          (recur (inc idx)
+                 (f acc (aget this idx)))
+          acc)))))
 
 
-(let [x 4]
-  (+ x 1))
+;;;
+
+
+(into [] (range 1000))
+
+#_(let [v EMPTY]
+  (loop [acc EMPTY
+         i 0]
+    (if (< i 1000)
+      (recur (conj v i) (inc i)))))

@@ -35,6 +35,12 @@ class Integer(Number):
     def type(self):
         return Integer._type
 
+    def to_str(self):
+        return unicode(str(self._int_val))
+
+    def to_repr(self):
+        return unicode(str(self._int_val))
+
 zero_int = Integer(0)
 one_int = Integer(1)
 
