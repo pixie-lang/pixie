@@ -2,10 +2,8 @@
   (:require [pixie.stacklets :as st]
             [pixie.streams :refer [IInputStream read IOutputStream write]]
             [pixie.uv :as uv]
-            [pixie.io :as io]
             [pixie.io.common :as common]
-            [pixie.system :as sys]
-            [pixie.ffi :as ffi]))
+            [pixie.system :as sys]))
 
 (deftype TTYInputStream [uv-client uv-write-buf]
   IInputStream

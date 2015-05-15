@@ -40,7 +40,6 @@
   (-reduce [this f init]
     (common/stream-reducer this f init)))
 
-
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
    :added "0.1"}

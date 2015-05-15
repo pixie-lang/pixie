@@ -91,7 +91,6 @@
            (reduced cnt)
            (+ cnt written)))))))
 
-
 (defn spit [filename val]
   (transduce (map int)
              (file-output-rf filename)
@@ -132,14 +131,12 @@
   (-reduce [this f init]
     (common/stream-reducer this f init)))
 
-
 (defn popen-read
   {:doc "Open a file for reading, returning a IInputStream"
    :added "0.1"}
   [command]
   (assert (string? command) "Command must be a string")
   (->ProcessInputStream (popen command "r")))
-
 
 (defn run-command [command]
   (let [c (->ProcessInputStream (popen command "r"))
