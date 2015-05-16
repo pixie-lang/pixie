@@ -337,6 +337,7 @@
     (loop [i start
            acc init]
       (println i)
+      (println acc)
       (if (or (and (> step 0) (< i stop))
               (and (< step 0) (> i stop))
               (and (= step 0)))
@@ -441,11 +442,13 @@
   (-conj [this val]
     (assert (< cnt 0xFFFFFFFF) "Vector too large")
 
-    (if (< (- cnt (tailoff self)) 32)
+    (if (< (- cnt (tailoff this)) 32)
       (let [new-tail (array-append tail val)]
         (->PersistentVector (inc cnt) shift root new-tail meta))
+      
       (let [tail-node (->Node (.-edit root) tail)]
         (if (> (bit-shift-right cnt 5) (bit-shift-left 1 shift))
+
           (let [new-root (new-node (.-edit root))]
             (aset new-root 0 root)
             (aset new-root 1 (new-path (.-edit root) shift tail-node))
@@ -492,6 +495,8 @@
 (def EMPTY (->PersistentVector 0 5 EMPTY-NODE (array 0) nil))
 
 (defn vector-from-array [arr]
+  (println "Vector for array")
+  (println (count arr))
   (if (< (count arr) 32)
     (->PersistentVector (count arr) 5 EMPTY-NODE arr nil)
     (into [] arr)))
@@ -500,8 +505,9 @@
 
 (extend-type Array
   IPersistentCollection
-  (-conj ([arr itm]
-          (conj (vector-from-array arr) itm)))
+  (-conj [arr itm]
+    (conj (vector-from-array arr) itm))
+  
   ICounted
   (-count ([arr]
            (.-count arr)))
@@ -520,12 +526,23 @@
 
 ;;;
 
-(println 42)
+(into [] (range 4))
 
-(into [] (range 1000))
+(comment
+  (println 42)
 
-#_(let [v EMPTY]
-  (loop [acc EMPTY
-         i 0]
-    (if (< i 1000)
-      (recur (conj v i) (inc i)))))
+  #_(into [] (range 4))
+
+
+  (println ( (fn [x]
+               (assert (< x 0xFFFFFFFF) "Vector too large")
+
+               (if true
+                 11
+                 2)) 0))
+
+  (println ((fn []
+              (if true nil (println 100))
+              11)))
+
+  (println 44))

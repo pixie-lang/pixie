@@ -2,7 +2,7 @@
 import pixie.vm2.interpreter as i
 from pixie.vm2.object import StackCell, run_stack
 import pixie.vm2.rt as rt
-from pixie.vm2.primitives import nil
+from pixie.vm2.primitives import nil, true, false
 import pixie.vm2.code as code
 from pixie.vm2.keyword import keyword as kw
 from pixie.vm2.symbol import symbol as sym

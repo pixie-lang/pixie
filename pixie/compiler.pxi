@@ -75,6 +75,8 @@
 
 (defmulti analyze-form (fn [x]
                          (cond
+                           (identical? x true) :bool
+                           (identical? x false) :bool
                            (nil? x) nil
                            (seq? x) :seq
                            (vector? x) :vector
@@ -249,12 +251,12 @@
    :form val})
 
 (defmethod analyze-seq 'local-macro
-  [[_ [nm replace] body :as form]]
+  [[_ [nm replace] & body :as form]]
   (binding [*env* (assoc-in *env* [:locals nm] {:op :local-macro
                                                 :name nm
                                                 :replace-with replace
                                                 :form form})]
-    (analyze-form body)))
+    (analyze-form (cons 'do body))))
 
 (defmethod analyze-form nil
   [_]
@@ -262,6 +264,13 @@
    :type (keyword "nil")
    :env *env*
    :form nil})
+
+(defmethod analyze-form :bool
+  [form]
+  {:op :const
+   :type :bool
+   :env *env*
+   :form form})
 
 (defn keep-meta [new old]
   (if-let [md (meta old)]
@@ -529,6 +538,12 @@
   (write! sb "rt.wrap(")
   (write! sb (str form))
   (write! sb ")"))
+
+(defmethod write-const :bool
+  [sb offset {:keys [form]}]
+  (if form
+    (write! sb "true")
+    (write! sb "false")))
 
 (defmethod to-rpython :const
   [sb offset ast]

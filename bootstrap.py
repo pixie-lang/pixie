@@ -129,107 +129,131 @@ mid127 = (u"""  (-reduce [self f init]""", "<unknown>", 336)
 mid128 = (u"""           acc init]""", "<unknown>", 338)
 mid129 = (u"""    (loop [i start""", "<unknown>", 337)
 mid130 = (u"""      (println i)""", "<unknown>", 339)
-mid131 = (u"""      (if (or (and (> step 0) (< i stop))""", "<unknown>", 340)
-mid132 = (u"""              (and (< step 0) (> i stop))""", "<unknown>", 341)
-mid133 = (u"""              (and (= step 0)))""", "<unknown>", 342)
-mid134 = (u"""        (let [acc (f acc i)]""", "<unknown>", 343)
-mid135 = (u"""          (if (reduced? acc)""", "<unknown>", 344)
-mid136 = (u"""            @acc""", "<unknown>", 345)
-mid137 = (u"""            (recur (+ i step) acc)))""", "<unknown>", 346)
-mid138 = (u"""        acc)))""", "<unknown>", 347)
-mid139 = (u"""  (-count [self]""", "<unknown>", 349)
-mid140 = (u"""    (if (or (and (< start stop) (< step 0))""", "<unknown>", 350)
-mid141 = (u"""            (and (> start stop) (> step 0))""", "<unknown>", 351)
-mid142 = (u"""            (= step 0))""", "<unknown>", 352)
-mid143 = (u"""      (abs (quot (- start stop) step))))""", "<unknown>", 354)
-mid144 = (u"""  (-nth [self idx]""", "<unknown>", 356)
-mid145 = (u"""    (when (or (= start stop 0) (neg? idx))""", "<unknown>", 357)
-mid146 = (u"""      (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))""", "<unknown>", 358)
-mid147 = (u"""  (-nth-not-found [self idx not-found]""", "<unknown>", 364)
-mid148 = (u"""    (let [cmp (if (< start stop) < >)""", "<unknown>", 365)
-mid149 = (u"""          val (+ start (* idx step))]""", "<unknown>", 366)
-mid150 = (u"""      (if (cmp val stop)""", "<unknown>", 367)
-mid151 = (u"""        val""", "<unknown>", 368)
-mid152 = (u"""       not-found)))""", "<unknown>", 369)
-mid153 = (u"""  (-seq [self]""", "<unknown>", 371)
-mid154 = (u"""    (when (or (and (> step 0) (< start stop))""", "<unknown>", 372)
-mid155 = (u"""              (and (< step 0) (> start stop)))""", "<unknown>", 373)
-mid156 = (u"""      (cons start (lazy-seq* #(range (+ start step) stop step)))))""", "<unknown>", 374)
-mid157 = (u"""  (-str [this sbf]""", "<unknown>", 376)
-mid158 = (u"""    (-str (seq this) sbf))""", "<unknown>", 377)
-mid159 = (u"""  (-repr [this sbf]""", "<unknown>", 378)
-mid160 = (u"""    (-repr (seq this) sbf))""", "<unknown>", 379)
-mid161 = (u"""  (-eq [this sb]))""", "<unknown>", 380)
-mid162 = (u"""  ([] (->Range 0 MAX-NUMBER 1))""", "<unknown>", 392)
-mid163 = (u"""  ([stop] (->Range 0 stop 1))""", "<unknown>", 393)
-mid164 = (u"""  ([start stop step] (->Range start stop step)))""", "<unknown>", 395)
-mid165 = (u"""  ([start stop] (->Range start stop 1))""", "<unknown>", 394)
-mid166 = (u"""(deftype Node [edit array]""", "<unknown>", 401)
-mid167 = (u"""  (-get-field [this name]""", "<unknown>", 403)
-mid168 = (u"""    (get-field this name)))""", "<unknown>", 404)
-mid169 = (u"""   (new-node edit (array 32)))""", "<unknown>", 408)
-mid170 = (u"""   (->Node edit array)))""", "<unknown>", 410)
-mid171 = (u"""(def EMPTY-NODE (new-node nil))""", "<unknown>", 412)
-mid172 = (u"""  (let [cnt (.-cnt this)]""", "<unknown>", 417)
-mid173 = (u"""    (if (< cnt 32)""", "<unknown>", 418)
-mid174 = (u"""      (bit-shift-left (bit-shift-right (dec cnt) 5) 5))))""", "<unknown>", 420)
-mid175 = (u"""      (if (and (<= 0 i) (< i cnt))""", "<unknown>", 423)
-mid176 = (u"""        (if (>= i (tailoff this))""", "<unknown>", 424)
-mid177 = (u"""          tail""", "<unknown>", 425)
-mid178 = (u"""                      (if (> level 0)""", "<unknown>", 427)
-mid179 = (u"""                        (look-deeper (aget (:array node)""", "<unknown>", 428)
-mid180 = (u"""                                           (bit-and (bit-shift-right i level) 0x01f))""", "<unknown>", 429)
-mid181 = (u"""                                     (- level 5))""", "<unknown>", 430)
-mid182 = (u"""                        (:array node)))""", "<unknown>", 431)
-mid183 = (u"""                    root""", "<unknown>", 432)
-mid184 = (u"""                    shift)))))""", "<unknown>", 433)
-mid185 = (u"""          (.-array ((fn look-deeper [node level]""", "<unknown>", 426)
-mid186 = (u"""(deftype PersistentVector [cnt shift root tail meta]""", "<unknown>", 435)
-mid187 = (u"""  (-get-field [this name]""", "<unknown>", 437)
-mid188 = (u"""    (get-field this name))""", "<unknown>", 438)
-mid189 = (u"""  (-conj [this val]""", "<unknown>", 441)
-mid190 = (u"""    (assert (< cnt 0xFFFFFFFF) "Vector too large")""", "<unknown>", 442)
-mid191 = (u"""  (-count [this] cnt))""", "<unknown>", 465)
-mid192 = (u"""  (let [subidx (bit-and (bit-shift-right (dec (.-cnt this)) level) 0x01f)""", "<unknown>", 469)
-mid193 = (u"""        ret-array (aclone (.-array parent))""", "<unknown>", 470)
-mid194 = (u"""        node-to-insert (if (= level 5)""", "<unknown>", 471)
-mid195 = (u"""                         tail-node""", "<unknown>", 472)
-mid196 = (u"""                         (let [child (aget (.-array parent) subidx)]""", "<unknown>", 473)
-mid197 = (u"""                           (if (= child nil)""", "<unknown>", 474)
-mid198 = (u"""                             (new-path (.-edit (.-root this))""", "<unknown>", 475)
-mid199 = (u"""                                       (- level 5)""", "<unknown>", 476)
-mid200 = (u"""                                       tail-node)""", "<unknown>", 477)
-mid201 = (u"""                             (push-tail this""", "<unknown>", 478)
-mid202 = (u"""                                        (- level 5)""", "<unknown>", 479)
-mid203 = (u"""                                        child""", "<unknown>", 480)
-mid204 = (u"""                                        tail-node))))]""", "<unknown>", 481)
-mid205 = (u"""    (aset ret-array subidx node-to-insert)""", "<unknown>", 482)
-mid206 = (u"""    (->Node (.-edit parent) node-to-insert)))""", "<unknown>", 483)
-mid207 = (u"""  (if (= level 0)""", "<unknown>", 486)
-mid208 = (u"""    node""", "<unknown>", 487)
-mid209 = (u"""    (->Node edit""", "<unknown>", 488)
-mid210 = (u"""            (new-path edit (- level 5) node))))""", "<unknown>", 489)
-mid211 = (u"""(def EMPTY (->PersistentVector 0 5 EMPTY-NODE (array 0) nil))""", "<unknown>", 492)
-mid212 = (u"""  (if (< (count arr) 32)""", "<unknown>", 495)
-mid213 = (u"""    (->PersistentVector (count arr) 5 EMPTY-NODE arr nil)""", "<unknown>", 496)
-mid214 = (u"""    (into [] arr)))""", "<unknown>", 497)
-mid215 = (u"""  (-reduce [this f init]""", "<unknown>", 510)
-mid216 = (u"""(extend-type Array""", "<unknown>", 501)
-mid217 = (u"""           acc init]""", "<unknown>", 512)
-mid218 = (u"""    (loop [idx 0""", "<unknown>", 511)
-mid219 = (u"""      (if (reduced? acc)""", "<unknown>", 513)
-mid220 = (u"""        @acc""", "<unknown>", 514)
-mid221 = (u"""        (if (< idx (count this))""", "<unknown>", 515)
-mid222 = (u"""          (recur (inc idx)""", "<unknown>", 516)
-mid223 = (u"""                 (f acc (aget this idx)))""", "<unknown>", 517)
-mid224 = (u"""          acc)))))""", "<unknown>", 518)
-mid225 = (u"""  (-count ([arr]""", "<unknown>", 506)
-mid226 = (u"""           (.-count arr)))""", "<unknown>", 507)
-mid227 = (u"""  (-conj ([arr itm]""", "<unknown>", 503)
-mid228 = (u"""          (conj (vector-from-array arr) itm)))""", "<unknown>", 504)
-mid229 = (u"""(println 42)""", "<unknown>", 523)
-mid230 = (u"""(into [] (range 1000))""", "<unknown>", 525)
-mid231 = (u"""(do ;; This file is used to build what we need to even start running stdlib.pxi""", "<unknown>", 1)
+mid131 = (u"""      (println acc)""", "<unknown>", 340)
+mid132 = (u"""      (if (or (and (> step 0) (< i stop))""", "<unknown>", 341)
+mid133 = (u"""              (and (< step 0) (> i stop))""", "<unknown>", 342)
+mid134 = (u"""              (and (= step 0)))""", "<unknown>", 343)
+mid135 = (u"""        (let [acc (f acc i)]""", "<unknown>", 344)
+mid136 = (u"""          (if (reduced? acc)""", "<unknown>", 345)
+mid137 = (u"""            @acc""", "<unknown>", 346)
+mid138 = (u"""            (recur (+ i step) acc)))""", "<unknown>", 347)
+mid139 = (u"""        acc)))""", "<unknown>", 348)
+mid140 = (u"""  (-count [self]""", "<unknown>", 350)
+mid141 = (u"""    (if (or (and (< start stop) (< step 0))""", "<unknown>", 351)
+mid142 = (u"""            (and (> start stop) (> step 0))""", "<unknown>", 352)
+mid143 = (u"""            (= step 0))""", "<unknown>", 353)
+mid144 = (u"""      (abs (quot (- start stop) step))))""", "<unknown>", 355)
+mid145 = (u"""  (-nth [self idx]""", "<unknown>", 357)
+mid146 = (u"""    (when (or (= start stop 0) (neg? idx))""", "<unknown>", 358)
+mid147 = (u"""      (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))""", "<unknown>", 359)
+mid148 = (u"""    (let [cmp (if (< start stop) < >)""", "<unknown>", 360)
+mid149 = (u"""          val (+ start (* idx step))]""", "<unknown>", 361)
+mid150 = (u"""      (if (cmp val stop)""", "<unknown>", 362)
+mid151 = (u"""        val""", "<unknown>", 363)
+mid152 = (u"""        (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))))""", "<unknown>", 364)
+mid153 = (u"""  (-nth-not-found [self idx not-found]""", "<unknown>", 365)
+mid154 = (u"""    (let [cmp (if (< start stop) < >)""", "<unknown>", 366)
+mid155 = (u"""          val (+ start (* idx step))]""", "<unknown>", 367)
+mid156 = (u"""      (if (cmp val stop)""", "<unknown>", 368)
+mid157 = (u"""        val""", "<unknown>", 369)
+mid158 = (u"""       not-found)))""", "<unknown>", 370)
+mid159 = (u"""  (-seq [self]""", "<unknown>", 372)
+mid160 = (u"""    (when (or (and (> step 0) (< start stop))""", "<unknown>", 373)
+mid161 = (u"""              (and (< step 0) (> start stop)))""", "<unknown>", 374)
+mid162 = (u"""      (cons start (lazy-seq* #(range (+ start step) stop step)))))""", "<unknown>", 375)
+mid163 = (u"""  (-str [this sbf]""", "<unknown>", 377)
+mid164 = (u"""    (-str (seq this) sbf))""", "<unknown>", 378)
+mid165 = (u"""  (-repr [this sbf]""", "<unknown>", 379)
+mid166 = (u"""    (-repr (seq this) sbf))""", "<unknown>", 380)
+mid167 = (u"""  (-eq [this sb]))""", "<unknown>", 381)
+mid168 = (u"""    (analyze-form (cons 'do body))))""", "pixie/compiler.pxi", 259)
+mid169 = (u"""  ([] (->Range 0 MAX-NUMBER 1))""", "<unknown>", 393)
+mid170 = (u"""  ([stop] (->Range 0 stop 1))""", "<unknown>", 394)
+mid171 = (u"""  ([start stop step] (->Range start stop step)))""", "<unknown>", 396)
+mid172 = (u"""  ([start stop] (->Range start stop 1))""", "<unknown>", 395)
+mid173 = (u"""(deftype Node [edit array]""", "<unknown>", 402)
+mid174 = (u"""  (-get-field [this name]""", "<unknown>", 404)
+mid175 = (u"""    (get-field this name)))""", "<unknown>", 405)
+mid176 = (u"""   (new-node edit (array 32)))""", "<unknown>", 409)
+mid177 = (u"""   (->Node edit array)))""", "<unknown>", 411)
+mid178 = (u"""(def EMPTY-NODE (new-node nil))""", "<unknown>", 413)
+mid179 = (u"""  (let [cnt (.-cnt this)]""", "<unknown>", 418)
+mid180 = (u"""    (if (< cnt 32)""", "<unknown>", 419)
+mid181 = (u"""      (bit-shift-left (bit-shift-right (dec cnt) 5) 5))))""", "<unknown>", 421)
+mid182 = (u"""      (if (and (<= 0 i) (< i cnt))""", "<unknown>", 424)
+mid183 = (u"""        (if (>= i (tailoff this))""", "<unknown>", 425)
+mid184 = (u"""          tail""", "<unknown>", 426)
+mid185 = (u"""                      (if (> level 0)""", "<unknown>", 428)
+mid186 = (u"""                        (look-deeper (aget (:array node)""", "<unknown>", 429)
+mid187 = (u"""                                           (bit-and (bit-shift-right i level) 0x01f))""", "<unknown>", 430)
+mid188 = (u"""                                     (- level 5))""", "<unknown>", 431)
+mid189 = (u"""                        (:array node)))""", "<unknown>", 432)
+mid190 = (u"""                    root""", "<unknown>", 433)
+mid191 = (u"""                    shift)))))""", "<unknown>", 434)
+mid192 = (u"""          (.-array ((fn look-deeper [node level]""", "<unknown>", 427)
+mid193 = (u"""(deftype PersistentVector [cnt shift root tail meta]""", "<unknown>", 436)
+mid194 = (u"""  (-get-field [this name]""", "<unknown>", 438)
+mid195 = (u"""    (get-field this name))""", "<unknown>", 439)
+mid196 = (u"""  (-conj [this val]""", "<unknown>", 442)
+mid197 = (u"""    (assert (< cnt 0xFFFFFFFF) "Vector too large")""", "<unknown>", 443)
+mid198 = (u"""    (if (< (- cnt (tailoff this)) 32)""", "<unknown>", 445)
+mid199 = (u"""      (let [new-tail (array-append tail val)]""", "<unknown>", 446)
+mid200 = (u"""        (->PersistentVector (inc cnt) shift root new-tail meta))""", "<unknown>", 447)
+mid201 = (u"""      (let [tail-node (->Node (.-edit root) tail)]""", "<unknown>", 449)
+mid202 = (u"""        (if (> (bit-shift-right cnt 5) (bit-shift-left 1 shift))""", "<unknown>", 450)
+mid203 = (u"""          (let [new-root (new-node (.-edit root))]""", "<unknown>", 452)
+mid204 = (u"""            (aset new-root 0 root)""", "<unknown>", 453)
+mid205 = (u"""            (aset new-root 1 (new-path (.-edit root) shift tail-node))""", "<unknown>", 454)
+mid206 = (u"""            (->PersistentVector (inc cnt)""", "<unknown>", 455)
+mid207 = (u"""                                (+ shift 5)""", "<unknown>", 456)
+mid208 = (u"""                                new-root""", "<unknown>", 457)
+mid209 = (u"""                                (array val)""", "<unknown>", 458)
+mid210 = (u"""          (let [new-root (push-tail this shift root tail-node)]""", "<unknown>", 460)
+mid211 = (u"""            (->PersistentVector (inc cnt)""", "<unknown>", 461)
+mid212 = (u"""                                new-root""", "<unknown>", 463)
+mid213 = (u"""                                (array val)""", "<unknown>", 464)
+mid214 = (u"""  (-count [this] cnt))""", "<unknown>", 468)
+mid215 = (u"""  (let [subidx (bit-and (bit-shift-right (dec (.-cnt this)) level) 0x01f)""", "<unknown>", 472)
+mid216 = (u"""        ret-array (aclone (.-array parent))""", "<unknown>", 473)
+mid217 = (u"""        node-to-insert (if (= level 5)""", "<unknown>", 474)
+mid218 = (u"""                         tail-node""", "<unknown>", 475)
+mid219 = (u"""                         (let [child (aget (.-array parent) subidx)]""", "<unknown>", 476)
+mid220 = (u"""                           (if (= child nil)""", "<unknown>", 477)
+mid221 = (u"""                             (new-path (.-edit (.-root this))""", "<unknown>", 478)
+mid222 = (u"""                                       (- level 5)""", "<unknown>", 479)
+mid223 = (u"""                                       tail-node)""", "<unknown>", 480)
+mid224 = (u"""                             (push-tail this""", "<unknown>", 481)
+mid225 = (u"""                                        (- level 5)""", "<unknown>", 482)
+mid226 = (u"""                                        child""", "<unknown>", 483)
+mid227 = (u"""                                        tail-node))))]""", "<unknown>", 484)
+mid228 = (u"""    (aset ret-array subidx node-to-insert)""", "<unknown>", 485)
+mid229 = (u"""    (->Node (.-edit parent) node-to-insert)))""", "<unknown>", 486)
+mid230 = (u"""  (if (= level 0)""", "<unknown>", 489)
+mid231 = (u"""    node""", "<unknown>", 490)
+mid232 = (u"""    (->Node edit""", "<unknown>", 491)
+mid233 = (u"""            (new-path edit (- level 5) node))))""", "<unknown>", 492)
+mid234 = (u"""(def EMPTY (->PersistentVector 0 5 EMPTY-NODE (array 0) nil))""", "<unknown>", 495)
+mid235 = (u"""  (println "Vector for array")""", "<unknown>", 498)
+mid236 = (u"""  (println (count arr))""", "<unknown>", 499)
+mid237 = (u"""  (if (< (count arr) 32)""", "<unknown>", 500)
+mid238 = (u"""    (->PersistentVector (count arr) 5 EMPTY-NODE arr nil)""", "<unknown>", 501)
+mid239 = (u"""    (into [] arr)))""", "<unknown>", 502)
+mid240 = (u"""  (-reduce [this f init]""", "<unknown>", 516)
+mid241 = (u"""(extend-type Array""", "<unknown>", 506)
+mid242 = (u"""           acc init]""", "<unknown>", 518)
+mid243 = (u"""    (loop [idx 0""", "<unknown>", 517)
+mid244 = (u"""      (if (reduced? acc)""", "<unknown>", 519)
+mid245 = (u"""        @acc""", "<unknown>", 520)
+mid246 = (u"""        (if (< idx (count this))""", "<unknown>", 521)
+mid247 = (u"""          (recur (inc idx)""", "<unknown>", 522)
+mid248 = (u"""                 (f acc (aget this idx)))""", "<unknown>", 523)
+mid249 = (u"""          acc)))))""", "<unknown>", 524)
+mid250 = (u"""  (-count ([arr]""", "<unknown>", 512)
+mid251 = (u"""           (.-count arr)))""", "<unknown>", 513)
+mid252 = (u"""  (-conj [arr itm]""", "<unknown>", 508)
+mid253 = (u"""    (conj (vector-from-array arr) itm))""", "<unknown>", 509)
+mid254 = (u"""(into [] (range 4))""", "<unknown>", 529)
+mid255 = (u"""(do ;; This file is used to build what we need to even start running stdlib.pxi""", "<unknown>", 1)
 
  
 code_ast=i.Do(
@@ -1020,7 +1044,7 @@ code_ast=i.Do(
         i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=i.Meta(mid25, 2)),
         i.VDeref(code.intern_var(u"pixie.stdlib", u"-str"), meta=i.Meta(mid25, 9)),
         i.VDeref(code.intern_var(u"pixie.stdlib", u"Object"), meta=i.Meta(mid25, 14)),
-        i.Fn(args=[kw(u"x"),kw(u"sb")],name=kw(u"fn_348"),
+        i.Fn(args=[kw(u"x"),kw(u"sb")],name=kw(u"fn_353"),
           body=i.TailCall(
             args=[
               i.Lookup(kw(u"sb"), meta=i.Meta(mid26, 24)),
@@ -1040,7 +1064,7 @@ code_ast=i.Do(
         i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=i.Meta(mid27, 2)),
         i.VDeref(code.intern_var(u"pixie.stdlib", u"-repr"), meta=i.Meta(mid27, 9)),
         i.VDeref(code.intern_var(u"pixie.stdlib", u"Object"), meta=i.Meta(mid27, 15)),
-        i.Fn(args=[kw(u"x"),kw(u"sb")],name=kw(u"fn_351"),
+        i.Fn(args=[kw(u"x"),kw(u"sb")],name=kw(u"fn_356"),
           body=i.TailCall(
             args=[
               i.Lookup(kw(u"sb"), meta=i.Meta(mid28, 25)),
@@ -1060,7 +1084,7 @@ code_ast=i.Do(
         i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
         i.VDeref(code.intern_var(u"pixie.stdlib", u"-str"), meta=i.Meta(mid29, 4)),
         i.VDeref(code.intern_var(u"pixie.stdlib", u"String"), meta=i.Meta(mid30, 14)),
-        i.Fn(args=[kw(u"this"),kw(u"sb")],name=kw(u"fn_354"),
+        i.Fn(args=[kw(u"this"),kw(u"sb")],name=kw(u"fn_359"),
           body=i.TailCall(
             args=[
               i.Lookup(kw(u"sb"), meta=i.Meta(mid31, 6)),
@@ -1254,7 +1278,7 @@ code_ast=i.Do(
       i.Const(code.intern_var(u"pixie.stdlib",u"=")),
       i.Invoke([i.Const(code.intern_var(u"pixie.stdlib", u"multi-arity-fn")), i.Const(rt.wrap(u"=")),
               i.Const(rt.wrap(1)), i.Fn(args=[kw(u"x")],name=kw(u"="),
-          body=i.Const(nil),
+          body=i.Const(true),
         ),
         i.Const(rt.wrap(2)), i.Fn(args=[kw(u"x"),kw(u"y")],name=kw(u"="),
           body=i.If(
@@ -1265,7 +1289,7 @@ code_ast=i.Do(
                 i.Lookup(kw(u"y"), meta=i.Meta(mid45, 28)),
               ],
               meta=i.Meta(mid45, 14)),
-            then=i.Const(nil),
+            then=i.Const(true),
             els=i.TailCall(
               args=[
                 i.VDeref(code.intern_var(u"pixie.stdlib", u"-eq"), meta=i.Meta(mid46, 13)),
@@ -1572,7 +1596,7 @@ code_ast=i.Do(
               i.VDeref(code.intern_var(u"pixie.stdlib", u"-string-builder"), meta=i.Meta(mid70, 13)),
             ],
             meta=i.Meta(mid70, 12)),
-          i.Fn(args=[kw(u"x")],name=kw(u"fn_410"),closed_overs=[kw(u"sb")],
+          i.Fn(args=[kw(u"x")],name=kw(u"fn_415"),closed_overs=[kw(u"sb")],
             body=i.TailCall(
               args=[
                 i.VDeref(code.intern_var(u"pixie.stdlib", u"-add-to-string-builder"), meta=i.Meta(mid71, 19)),
@@ -1712,7 +1736,7 @@ code_ast=i.Do(
                     i.Lookup(kw(u"x"), meta=i.Meta(mid83, 38)),
                   ],
                   meta=i.Meta(mid83, 15)),
-                then=i.Const(nil),
+                then=i.Const(true),
                 els=i.TailCall(
                   args=[
                     i.Lookup(kw(u"instance?"), meta=i.Meta(mid84, 14)),
@@ -1837,7 +1861,7 @@ code_ast=i.Do(
                   i.Lookup(kw(u"ps"), meta=i.Meta(mid92, 16)),
                 ],
                 meta=i.Meta(mid92, 11)),
-              then=i.Const(nil),
+              then=i.Const(true),
               els=i.If(
                 test=i.Invoke(
                   args=[
@@ -2080,16 +2104,16 @@ code_ast=i.Do(
       i.Const(code.intern_var(u"pixie.stdlib",u"map")),
       i.Invoke([i.Const(code.intern_var(u"pixie.stdlib", u"multi-arity-fn")), i.Const(rt.wrap(u"map")),
               i.Const(rt.wrap(1)), i.Fn(args=[kw(u"f")],name=kw(u"map"),
-          body=i.Fn(args=[kw(u"xf")],name=kw(u"fn_447"),closed_overs=[kw(u"f")],
-            body=i.Invoke([i.Const(code.intern_var(u"pixie.stdlib", u"multi-arity-fn")), i.Const(rt.wrap(u"fn_451")),
-                          i.Const(rt.wrap(0)), i.Fn(args=[],name=kw(u"fn_451"),closed_overs=[kw(u"xf")],
+          body=i.Fn(args=[kw(u"xf")],name=kw(u"fn_452"),closed_overs=[kw(u"f")],
+            body=i.Invoke([i.Const(code.intern_var(u"pixie.stdlib", u"multi-arity-fn")), i.Const(rt.wrap(u"fn_456")),
+                          i.Const(rt.wrap(0)), i.Fn(args=[],name=kw(u"fn_456"),closed_overs=[kw(u"xf")],
                 body=i.TailCall(
                   args=[
                     i.Lookup(kw(u"xf"), meta=i.Meta(mid112, 13)),
                   ],
                   meta=i.Meta(mid112, 12)),
               ),
-              i.Const(rt.wrap(1)), i.Fn(args=[kw(u"result")],name=kw(u"fn_451"),closed_overs=[kw(u"xf")],
+              i.Const(rt.wrap(1)), i.Fn(args=[kw(u"result")],name=kw(u"fn_456"),closed_overs=[kw(u"xf")],
                 body=i.TailCall(
                   args=[
                     i.Lookup(kw(u"xf"), meta=i.Meta(mid113, 19)),
@@ -2097,7 +2121,7 @@ code_ast=i.Do(
                   ],
                   meta=i.Meta(mid113, 18)),
               ),
-              i.Const(rt.wrap(2)), i.Fn(args=[kw(u"result"),kw(u"item")],name=kw(u"fn_451"),closed_overs=[kw(u"xf"),kw(u"f")],
+              i.Const(rt.wrap(2)), i.Fn(args=[kw(u"result"),kw(u"item")],name=kw(u"fn_456"),closed_overs=[kw(u"xf"),kw(u"f")],
                 body=i.TailCall(
                   args=[
                     i.Lookup(kw(u"xf"), meta=i.Meta(mid114, 24)),
@@ -2118,7 +2142,7 @@ code_ast=i.Do(
           body=i.TailCall(
             args=[
               i.VDeref(code.intern_var(u"pixie.stdlib", u"lazy-seq*"), meta=i.Meta(mid115, 5)),
-              i.Fn(args=[],name=kw(u"fn_452"),closed_overs=[kw(u"map"),kw(u"f"),kw(u"coll")],
+              i.Fn(args=[],name=kw(u"fn_457"),closed_overs=[kw(u"map"),kw(u"f"),kw(u"coll")],
                 body=i.Let(names=[kw(u"s")],
                 bindings=[
                   i.Invoke(
@@ -2174,7 +2198,7 @@ code_ast=i.Do(
               body=i.TailCall(
                 args=[
                   i.VDeref(code.intern_var(u"pixie.stdlib", u"lazy-seq*"), meta=i.Meta(mid120, 18)),
-                  i.Fn(args=[],name=kw(u"fn_454"),closed_overs=[kw(u"step"),kw(u"map"),kw(u"cs")],
+                  i.Fn(args=[],name=kw(u"fn_459"),closed_overs=[kw(u"step"),kw(u"map"),kw(u"cs")],
                     body=i.Let(names=[kw(u"ss")],
                     bindings=[
                       i.Invoke(
@@ -2228,7 +2252,7 @@ code_ast=i.Do(
             body=i.TailCall(
               args=[
                 i.Lookup(kw(u"map"), meta=i.Meta(mid124, 7)),
-                i.Fn(args=[kw(u"args")],name=kw(u"fn_456"),closed_overs=[kw(u"f")],
+                i.Fn(args=[kw(u"args")],name=kw(u"fn_461"),closed_overs=[kw(u"f")],
                   body=i.TailCall(
                     args=[
                       i.VDeref(code.intern_var(u"pixie.stdlib", u"apply"), meta=i.Meta(mid124, 23)),
@@ -2313,13 +2337,19 @@ code_ast=i.Do(
                                 i.Lookup(kw(u"i"), meta=i.Meta(mid130, 16)),
                               ],
                               meta=i.Meta(mid130, 7)),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"println"), meta=i.Meta(mid131, 8)),
+                                i.Lookup(kw(u"acc"), meta=i.Meta(mid131, 16)),
+                              ],
+                              meta=i.Meta(mid131, 7)),
                             i.If(
                               test=i.Let(names=[kw(u"r#__gensym_321")],
                               bindings=[
                                 i.If(
                                   test=i.Invoke(
                                     args=[
-                                      i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid131, 21)),
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid132, 21)),
                                       i.Invoke(
                                         args=[
                                           i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
@@ -2329,11 +2359,11 @@ code_ast=i.Do(
                                         meta=nil),
                                       i.Const(rt.wrap(0)),
                                     ],
-                                    meta=i.Meta(mid131, 20)),
+                                    meta=i.Meta(mid132, 20)),
                                   then=i.Invoke(
                                     args=[
-                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid131, 32)),
-                                      i.Lookup(kw(u"i"), meta=i.Meta(mid131, 34)),
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid132, 32)),
+                                      i.Lookup(kw(u"i"), meta=i.Meta(mid132, 34)),
                                       i.Invoke(
                                         args=[
                                           i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
@@ -2342,9 +2372,9 @@ code_ast=i.Do(
                                         ],
                                         meta=nil),
                                     ],
-                                    meta=i.Meta(mid131, 31)),
+                                    meta=i.Meta(mid132, 31)),
                                   els=i.Const(nil),
-                                  meta=i.Meta(mid131, 15)),
+                                  meta=i.Meta(mid132, 15)),
                                 ],
                                 body=i.If(
                                   test=i.Lookup(kw(u"r#__gensym_321"), meta=nil),
@@ -2354,7 +2384,7 @@ code_ast=i.Do(
                                     i.If(
                                       test=i.Invoke(
                                         args=[
-                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid132, 21)),
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid133, 21)),
                                           i.Invoke(
                                             args=[
                                               i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
@@ -2364,11 +2394,11 @@ code_ast=i.Do(
                                             meta=nil),
                                           i.Const(rt.wrap(0)),
                                         ],
-                                        meta=i.Meta(mid132, 20)),
+                                        meta=i.Meta(mid133, 20)),
                                       then=i.Invoke(
                                         args=[
-                                          i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid132, 32)),
-                                          i.Lookup(kw(u"i"), meta=i.Meta(mid132, 34)),
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid133, 32)),
+                                          i.Lookup(kw(u"i"), meta=i.Meta(mid133, 34)),
                                           i.Invoke(
                                             args=[
                                               i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
@@ -2377,16 +2407,16 @@ code_ast=i.Do(
                                             ],
                                             meta=nil),
                                         ],
-                                        meta=i.Meta(mid132, 31)),
+                                        meta=i.Meta(mid133, 31)),
                                       els=i.Const(nil),
-                                      meta=i.Meta(mid132, 15)),
+                                      meta=i.Meta(mid133, 15)),
                                     ],
                                     body=i.If(
                                       test=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
                                       then=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
                                       els=i.Invoke(
                                         args=[
-                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid133, 21)),
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid134, 21)),
                                           i.Invoke(
                                             args=[
                                               i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
@@ -2396,41 +2426,41 @@ code_ast=i.Do(
                                             meta=nil),
                                           i.Const(rt.wrap(0)),
                                         ],
-                                        meta=i.Meta(mid133, 15)),
+                                        meta=i.Meta(mid134, 15)),
                                       meta=nil),
                                     meta=nil),
                                   meta=nil),
-                                meta=i.Meta(mid131, 11)),
+                                meta=i.Meta(mid132, 11)),
                               then=i.Let(names=[kw(u"acc")],
                               bindings=[
                                 i.Invoke(
                                   args=[
-                                    i.Lookup(kw(u"f"), meta=i.Meta(mid134, 20)),
-                                    i.Lookup(kw(u"acc"), meta=i.Meta(mid134, 22)),
-                                    i.Lookup(kw(u"i"), meta=i.Meta(mid134, 26)),
+                                    i.Lookup(kw(u"f"), meta=i.Meta(mid135, 20)),
+                                    i.Lookup(kw(u"acc"), meta=i.Meta(mid135, 22)),
+                                    i.Lookup(kw(u"i"), meta=i.Meta(mid135, 26)),
                                   ],
-                                  meta=i.Meta(mid134, 19)),
+                                  meta=i.Meta(mid135, 19)),
                                 ],
                                 body=i.If(
                                   test=i.Invoke(
                                     args=[
-                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"reduced?"), meta=i.Meta(mid135, 16)),
-                                      i.Lookup(kw(u"acc"), meta=i.Meta(mid135, 25)),
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"reduced?"), meta=i.Meta(mid136, 16)),
+                                      i.Lookup(kw(u"acc"), meta=i.Meta(mid136, 25)),
                                     ],
-                                    meta=i.Meta(mid135, 15)),
+                                    meta=i.Meta(mid136, 15)),
                                   then=i.TailCall(
                                     args=[
                                       i.VDeref(code.intern_var(u"pixie.stdlib", u"-deref"), meta=nil),
-                                      i.Lookup(kw(u"acc"), meta=i.Meta(mid136, 14)),
+                                      i.Lookup(kw(u"acc"), meta=i.Meta(mid137, 14)),
                                     ],
-                                    meta=i.Meta(mid136, 13)),
+                                    meta=i.Meta(mid137, 13)),
                                   els=i.TailCall(
                                     args=[
                                       i.Lookup(kw(u"pixie.compiler/__loop__fn__"), meta=nil),
                                       i.Invoke(
                                         args=[
-                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid137, 21)),
-                                          i.Lookup(kw(u"i"), meta=i.Meta(mid137, 23)),
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid138, 21)),
+                                          i.Lookup(kw(u"i"), meta=i.Meta(mid138, 23)),
                                           i.Invoke(
                                             args=[
                                               i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
@@ -2439,14 +2469,14 @@ code_ast=i.Do(
                                             ],
                                             meta=nil),
                                         ],
-                                        meta=i.Meta(mid137, 20)),
-                                      i.Lookup(kw(u"acc"), meta=i.Meta(mid137, 31)),
+                                        meta=i.Meta(mid138, 20)),
+                                      i.Lookup(kw(u"acc"), meta=i.Meta(mid138, 31)),
                                     ],
                                     meta=nil),
-                                  meta=i.Meta(mid135, 11)),
-                                meta=i.Meta(mid134, 9)),
-                              els=i.Lookup(kw(u"acc"), meta=i.Meta(mid138, 9)),
-                              meta=i.Meta(mid131, 7)),
+                                  meta=i.Meta(mid136, 11)),
+                                meta=i.Meta(mid135, 9)),
+                              els=i.Lookup(kw(u"acc"), meta=i.Meta(mid139, 9)),
+                              meta=i.Meta(mid132, 7)),
                           ],
                         meta=nil),
                         meta=nil),
@@ -2462,7 +2492,7 @@ code_ast=i.Do(
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-count"), meta=i.Meta(mid139, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-count"), meta=i.Meta(mid140, 4)),
             i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
             i.Fn(args=[kw(u"self")],name=kw(u"-count_Range"),
               body=i.If(
@@ -2471,38 +2501,38 @@ code_ast=i.Do(
                   i.If(
                     test=i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid140, 19)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid141, 19)),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                             i.Const(kw(u"start")),
                           ],
                           meta=nil),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                             i.Const(kw(u"stop")),
                           ],
                           meta=nil),
                       ],
-                      meta=i.Meta(mid140, 18)),
+                      meta=i.Meta(mid141, 18)),
                     then=i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid140, 34)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid141, 34)),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                             i.Const(kw(u"step")),
                           ],
                           meta=nil),
                         i.Const(rt.wrap(0)),
                       ],
-                      meta=i.Meta(mid140, 33)),
+                      meta=i.Meta(mid141, 33)),
                     els=i.Const(nil),
-                    meta=i.Meta(mid140, 13)),
+                    meta=i.Meta(mid141, 13)),
                   ],
                   body=i.If(
                     test=i.Lookup(kw(u"r#__gensym_321"), meta=nil),
@@ -2512,159 +2542,240 @@ code_ast=i.Do(
                       i.If(
                         test=i.Invoke(
                           args=[
-                            i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid141, 19)),
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid142, 19)),
                             i.Invoke(
                               args=[
                                 i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                                i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                                 i.Const(kw(u"start")),
                               ],
                               meta=nil),
                             i.Invoke(
                               args=[
                                 i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                                i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                                 i.Const(kw(u"stop")),
                               ],
                               meta=nil),
                           ],
-                          meta=i.Meta(mid141, 18)),
+                          meta=i.Meta(mid142, 18)),
                         then=i.Invoke(
                           args=[
-                            i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid141, 34)),
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid142, 34)),
                             i.Invoke(
                               args=[
                                 i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                                i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                                 i.Const(kw(u"step")),
                               ],
                               meta=nil),
                             i.Const(rt.wrap(0)),
                           ],
-                          meta=i.Meta(mid141, 33)),
+                          meta=i.Meta(mid142, 33)),
                         els=i.Const(nil),
-                        meta=i.Meta(mid141, 13)),
+                        meta=i.Meta(mid142, 13)),
                       ],
                       body=i.If(
                         test=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
                         then=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
                         els=i.Invoke(
                           args=[
-                            i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid142, 14)),
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid143, 14)),
                             i.Invoke(
                               args=[
                                 i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                                i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                                 i.Const(kw(u"step")),
                               ],
                               meta=nil),
                             i.Const(rt.wrap(0)),
                           ],
-                          meta=i.Meta(mid142, 13)),
+                          meta=i.Meta(mid143, 13)),
                         meta=nil),
                       meta=nil),
                     meta=nil),
-                  meta=i.Meta(mid140, 9)),
+                  meta=i.Meta(mid141, 9)),
                 then=i.Const(rt.wrap(0)),
                 els=i.TailCall(
                   args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"abs"), meta=i.Meta(mid143, 8)),
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"abs"), meta=i.Meta(mid144, 8)),
                     i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"quot"), meta=i.Meta(mid143, 13)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"quot"), meta=i.Meta(mid144, 13)),
                         i.Invoke(
                           args=[
-                            i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid143, 19)),
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid144, 19)),
                             i.Invoke(
                               args=[
                                 i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                                i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                                 i.Const(kw(u"start")),
                               ],
                               meta=nil),
                             i.Invoke(
                               args=[
                                 i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                                i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                                 i.Const(kw(u"stop")),
                               ],
                               meta=nil),
                           ],
-                          meta=i.Meta(mid143, 18)),
+                          meta=i.Meta(mid144, 18)),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid139, 12)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid140, 12)),
                             i.Const(kw(u"step")),
                           ],
                           meta=nil),
                       ],
-                      meta=i.Meta(mid143, 12)),
+                      meta=i.Meta(mid144, 12)),
                   ],
-                  meta=i.Meta(mid143, 7)),
-                meta=i.Meta(mid140, 5)),
+                  meta=i.Meta(mid144, 7)),
+                meta=i.Meta(mid141, 5)),
             ),
           ],
           meta=nil),
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-nth"), meta=i.Meta(mid144, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-nth"), meta=i.Meta(mid145, 4)),
             i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
             i.Fn(args=[kw(u"self"),kw(u"idx")],name=kw(u"-nth_Range"),
-              body=i.If(
-                test=i.Let(names=[kw(u"r#__gensym_320")],
-                bindings=[
-                  i.Invoke(
-                    args=[
-                      i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid145, 16)),
+              body=i.Do(
+                args=[
+                  i.If(
+                    test=i.Let(names=[kw(u"r#__gensym_320")],
+                    bindings=[
                       i.Invoke(
                         args=[
-                          i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                          i.Lookup(kw(u"self"), meta=i.Meta(mid144, 10)),
-                          i.Const(kw(u"start")),
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid146, 16)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid145, 10)),
+                              i.Const(kw(u"start")),
+                            ],
+                            meta=nil),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid145, 10)),
+                              i.Const(kw(u"stop")),
+                            ],
+                            meta=nil),
+                          i.Const(rt.wrap(0)),
                         ],
-                        meta=nil),
-                      i.Invoke(
-                        args=[
-                          i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                          i.Lookup(kw(u"self"), meta=i.Meta(mid144, 10)),
-                          i.Const(kw(u"stop")),
-                        ],
-                        meta=nil),
-                      i.Const(rt.wrap(0)),
-                    ],
-                    meta=i.Meta(mid145, 15)),
-                  ],
-                  body=i.If(
-                    test=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
-                    then=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
-                    els=i.Invoke(
-                      args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"neg?"), meta=i.Meta(mid145, 33)),
-                        i.Lookup(kw(u"idx"), meta=i.Meta(mid145, 38)),
+                        meta=i.Meta(mid146, 15)),
                       ],
-                      meta=i.Meta(mid145, 32)),
-                    meta=nil),
-                  meta=i.Meta(mid145, 11)),
-                then=i.TailCall(
-                  args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"throw"), meta=i.Meta(mid146, 8)),
-                    i.Invoke(args=[
-                      i.Const(code.intern_var(u"pixie.stdlib", u"array")),                      i.Const(kw(u"pixie.stdlib/OutOfRangeException")),
-                      i.Const(rt.wrap(u"Index out of Range")),
-                      ]),
-                  ],
-                  meta=i.Meta(mid146, 7)),
-                els=i.Const(nil),
-                meta=i.Meta(mid145, 5)),
+                      body=i.If(
+                        test=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
+                        then=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
+                        els=i.Invoke(
+                          args=[
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"neg?"), meta=i.Meta(mid146, 33)),
+                            i.Lookup(kw(u"idx"), meta=i.Meta(mid146, 38)),
+                          ],
+                          meta=i.Meta(mid146, 32)),
+                        meta=nil),
+                      meta=i.Meta(mid146, 11)),
+                    then=i.Invoke(
+                      args=[
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"throw"), meta=i.Meta(mid147, 8)),
+                        i.Invoke(args=[
+                          i.Const(code.intern_var(u"pixie.stdlib", u"array")),                          i.Const(kw(u"pixie.stdlib/OutOfRangeException")),
+                          i.Const(rt.wrap(u"Index out of Range")),
+                          ]),
+                      ],
+                      meta=i.Meta(mid147, 7)),
+                    els=i.Const(nil),
+                    meta=i.Meta(mid146, 5)),
+                  i.Let(names=[kw(u"cmp"),kw(u"val")],
+                  bindings=[
+                    i.If(
+                      test=i.Invoke(
+                        args=[
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid148, 20)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid145, 10)),
+                              i.Const(kw(u"start")),
+                            ],
+                            meta=nil),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid145, 10)),
+                              i.Const(kw(u"stop")),
+                            ],
+                            meta=nil),
+                        ],
+                        meta=i.Meta(mid148, 19)),
+                      then=i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid148, 34)),
+                      els=i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid148, 36)),
+                      meta=i.Meta(mid148, 15)),
+                    i.Invoke(
+                      args=[
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid149, 16)),
+                        i.Invoke(
+                          args=[
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid145, 10)),
+                            i.Const(kw(u"start")),
+                          ],
+                          meta=nil),
+                        i.Invoke(
+                          args=[
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"*"), meta=i.Meta(mid149, 25)),
+                            i.Lookup(kw(u"idx"), meta=i.Meta(mid149, 27)),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                i.Lookup(kw(u"self"), meta=i.Meta(mid145, 10)),
+                                i.Const(kw(u"step")),
+                              ],
+                              meta=nil),
+                          ],
+                          meta=i.Meta(mid149, 24)),
+                      ],
+                      meta=i.Meta(mid149, 15)),
+                    ],
+                    body=i.If(
+                      test=i.Invoke(
+                        args=[
+                          i.Lookup(kw(u"cmp"), meta=i.Meta(mid150, 12)),
+                          i.Lookup(kw(u"val"), meta=i.Meta(mid150, 16)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid145, 10)),
+                              i.Const(kw(u"stop")),
+                            ],
+                            meta=nil),
+                        ],
+                        meta=i.Meta(mid150, 11)),
+                      then=i.Lookup(kw(u"val"), meta=i.Meta(mid151, 9)),
+                      els=i.TailCall(
+                        args=[
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u"throw"), meta=i.Meta(mid152, 10)),
+                          i.Invoke(args=[
+                            i.Const(code.intern_var(u"pixie.stdlib", u"array")),                            i.Const(kw(u"pixie.stdlib/OutOfRangeException")),
+                            i.Const(rt.wrap(u"Index out of Range")),
+                            ]),
+                        ],
+                        meta=i.Meta(mid152, 9)),
+                      meta=i.Meta(mid150, 7)),
+                    meta=i.Meta(mid148, 5)),
+                ],
+              meta=nil),
             ),
           ],
           meta=nil),
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-nth-not-found"), meta=i.Meta(mid147, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-nth-not-found"), meta=i.Meta(mid153, 4)),
             i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
             i.Fn(args=[kw(u"self"),kw(u"idx"),kw(u"not-found")],name=kw(u"-nth-not-found_Range"),
               body=i.Let(names=[kw(u"cmp"),kw(u"val")],
@@ -2672,77 +2783,77 @@ code_ast=i.Do(
                 i.If(
                   test=i.Invoke(
                     args=[
-                      i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid148, 20)),
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid154, 20)),
                       i.Invoke(
                         args=[
                           i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                          i.Lookup(kw(u"self"), meta=i.Meta(mid147, 20)),
+                          i.Lookup(kw(u"self"), meta=i.Meta(mid153, 20)),
                           i.Const(kw(u"start")),
                         ],
                         meta=nil),
                       i.Invoke(
                         args=[
                           i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                          i.Lookup(kw(u"self"), meta=i.Meta(mid147, 20)),
+                          i.Lookup(kw(u"self"), meta=i.Meta(mid153, 20)),
                           i.Const(kw(u"stop")),
                         ],
                         meta=nil),
                     ],
-                    meta=i.Meta(mid148, 19)),
-                  then=i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid148, 34)),
-                  els=i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid148, 36)),
-                  meta=i.Meta(mid148, 15)),
+                    meta=i.Meta(mid154, 19)),
+                  then=i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid154, 34)),
+                  els=i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid154, 36)),
+                  meta=i.Meta(mid154, 15)),
                 i.Invoke(
                   args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid149, 16)),
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid155, 16)),
                     i.Invoke(
                       args=[
                         i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                        i.Lookup(kw(u"self"), meta=i.Meta(mid147, 20)),
+                        i.Lookup(kw(u"self"), meta=i.Meta(mid153, 20)),
                         i.Const(kw(u"start")),
                       ],
                       meta=nil),
                     i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"*"), meta=i.Meta(mid149, 25)),
-                        i.Lookup(kw(u"idx"), meta=i.Meta(mid149, 27)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"*"), meta=i.Meta(mid155, 25)),
+                        i.Lookup(kw(u"idx"), meta=i.Meta(mid155, 27)),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid147, 20)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid153, 20)),
                             i.Const(kw(u"step")),
                           ],
                           meta=nil),
                       ],
-                      meta=i.Meta(mid149, 24)),
+                      meta=i.Meta(mid155, 24)),
                   ],
-                  meta=i.Meta(mid149, 15)),
+                  meta=i.Meta(mid155, 15)),
                 ],
                 body=i.If(
                   test=i.Invoke(
                     args=[
-                      i.Lookup(kw(u"cmp"), meta=i.Meta(mid150, 12)),
-                      i.Lookup(kw(u"val"), meta=i.Meta(mid150, 16)),
+                      i.Lookup(kw(u"cmp"), meta=i.Meta(mid156, 12)),
+                      i.Lookup(kw(u"val"), meta=i.Meta(mid156, 16)),
                       i.Invoke(
                         args=[
                           i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                          i.Lookup(kw(u"self"), meta=i.Meta(mid147, 20)),
+                          i.Lookup(kw(u"self"), meta=i.Meta(mid153, 20)),
                           i.Const(kw(u"stop")),
                         ],
                         meta=nil),
                     ],
-                    meta=i.Meta(mid150, 11)),
-                  then=i.Lookup(kw(u"val"), meta=i.Meta(mid151, 9)),
-                  els=i.Lookup(kw(u"not-found"), meta=i.Meta(mid152, 8)),
-                  meta=i.Meta(mid150, 7)),
-                meta=i.Meta(mid148, 5)),
+                    meta=i.Meta(mid156, 11)),
+                  then=i.Lookup(kw(u"val"), meta=i.Meta(mid157, 9)),
+                  els=i.Lookup(kw(u"not-found"), meta=i.Meta(mid158, 8)),
+                  meta=i.Meta(mid156, 7)),
+                meta=i.Meta(mid154, 5)),
             ),
           ],
           meta=nil),
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-seq"), meta=i.Meta(mid153, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-seq"), meta=i.Meta(mid159, 4)),
             i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
             i.Fn(args=[kw(u"self")],name=kw(u"-seq_Range"),
               body=i.If(
@@ -2751,38 +2862,38 @@ code_ast=i.Do(
                   i.If(
                     test=i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid154, 21)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid160, 21)),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                             i.Const(kw(u"step")),
                           ],
                           meta=nil),
                         i.Const(rt.wrap(0)),
                       ],
-                      meta=i.Meta(mid154, 20)),
+                      meta=i.Meta(mid160, 20)),
                     then=i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid154, 32)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid160, 32)),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                             i.Const(kw(u"start")),
                           ],
                           meta=nil),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                            i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                            i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                             i.Const(kw(u"stop")),
                           ],
                           meta=nil),
                       ],
-                      meta=i.Meta(mid154, 31)),
+                      meta=i.Meta(mid160, 31)),
                     els=i.Const(nil),
-                    meta=i.Meta(mid154, 15)),
+                    meta=i.Meta(mid160, 15)),
                   ],
                   body=i.If(
                     test=i.Lookup(kw(u"r#__gensym_320"), meta=nil),
@@ -2790,140 +2901,98 @@ code_ast=i.Do(
                     els=i.If(
                       test=i.Invoke(
                         args=[
-                          i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid155, 21)),
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid161, 21)),
                           i.Invoke(
                             args=[
                               i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                              i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                               i.Const(kw(u"step")),
                             ],
                             meta=nil),
                           i.Const(rt.wrap(0)),
                         ],
-                        meta=i.Meta(mid155, 20)),
+                        meta=i.Meta(mid161, 20)),
                       then=i.Invoke(
                         args=[
-                          i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid155, 32)),
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid161, 32)),
                           i.Invoke(
                             args=[
                               i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                              i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                               i.Const(kw(u"start")),
                             ],
                             meta=nil),
                           i.Invoke(
                             args=[
                               i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                              i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                              i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                               i.Const(kw(u"stop")),
                             ],
                             meta=nil),
                         ],
-                        meta=i.Meta(mid155, 31)),
+                        meta=i.Meta(mid161, 31)),
                       els=i.Const(nil),
-                      meta=i.Meta(mid155, 15)),
+                      meta=i.Meta(mid161, 15)),
                     meta=nil),
-                  meta=i.Meta(mid154, 11)),
+                  meta=i.Meta(mid160, 11)),
                 then=i.TailCall(
                   args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"cons"), meta=i.Meta(mid156, 8)),
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"cons"), meta=i.Meta(mid162, 8)),
                     i.Invoke(
                       args=[
                         i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                        i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                        i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                         i.Const(kw(u"start")),
                       ],
                       meta=nil),
                     i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"lazy-seq*"), meta=i.Meta(mid156, 20)),
-                        i.Fn(args=[],name=kw(u"fn_475"),closed_overs=[kw(u"self")],
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"lazy-seq*"), meta=i.Meta(mid162, 20)),
+                        i.Fn(args=[],name=kw(u"fn_480"),closed_overs=[kw(u"self")],
                           body=i.TailCall(
                             args=[
-                              i.VDeref(code.intern_var(u"pixie.stdlib", u"range"), meta=i.Meta(mid156, 32)),
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"range"), meta=i.Meta(mid162, 32)),
                               i.Invoke(
                                 args=[
-                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid156, 39)),
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid162, 39)),
                                   i.Invoke(
                                     args=[
                                       i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                      i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                                      i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                                       i.Const(kw(u"start")),
                                     ],
                                     meta=nil),
                                   i.Invoke(
                                     args=[
                                       i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                      i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                                      i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                                       i.Const(kw(u"step")),
                                     ],
                                     meta=nil),
                                 ],
-                                meta=i.Meta(mid156, 38)),
+                                meta=i.Meta(mid162, 38)),
                               i.Invoke(
                                 args=[
                                   i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                  i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                                  i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                                   i.Const(kw(u"stop")),
                                 ],
                                 meta=nil),
                               i.Invoke(
                                 args=[
                                   i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                                  i.Lookup(kw(u"self"), meta=i.Meta(mid153, 10)),
+                                  i.Lookup(kw(u"self"), meta=i.Meta(mid159, 10)),
                                   i.Const(kw(u"step")),
                                 ],
                                 meta=nil),
                             ],
-                            meta=i.Meta(mid156, 31)),
+                            meta=i.Meta(mid162, 31)),
                         ),
                       ],
-                      meta=i.Meta(mid156, 19)),
+                      meta=i.Meta(mid162, 19)),
                   ],
-                  meta=i.Meta(mid156, 7)),
+                  meta=i.Meta(mid162, 7)),
                 els=i.Const(nil),
-                meta=i.Meta(mid154, 5)),
-            ),
-          ],
-          meta=nil),
-        i.Invoke(
-          args=[
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-str"), meta=i.Meta(mid157, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
-            i.Fn(args=[kw(u"this"),kw(u"sbf")],name=kw(u"-str_Range"),
-              body=i.TailCall(
-                args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"-str"), meta=i.Meta(mid158, 6)),
-                  i.Invoke(
-                    args=[
-                      i.VDeref(code.intern_var(u"pixie.stdlib", u"seq"), meta=i.Meta(mid158, 12)),
-                      i.Lookup(kw(u"this"), meta=i.Meta(mid158, 16)),
-                    ],
-                    meta=i.Meta(mid158, 11)),
-                  i.Lookup(kw(u"sbf"), meta=i.Meta(mid158, 22)),
-                ],
-                meta=i.Meta(mid158, 5)),
-            ),
-          ],
-          meta=nil),
-        i.Invoke(
-          args=[
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-repr"), meta=i.Meta(mid159, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
-            i.Fn(args=[kw(u"this"),kw(u"sbf")],name=kw(u"-repr_Range"),
-              body=i.TailCall(
-                args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"-repr"), meta=i.Meta(mid160, 6)),
-                  i.Invoke(
-                    args=[
-                      i.VDeref(code.intern_var(u"pixie.stdlib", u"seq"), meta=i.Meta(mid160, 13)),
-                      i.Lookup(kw(u"this"), meta=i.Meta(mid160, 17)),
-                    ],
-                    meta=i.Meta(mid160, 12)),
-                  i.Lookup(kw(u"sbf"), meta=i.Meta(mid160, 23)),
-                ],
                 meta=i.Meta(mid160, 5)),
             ),
           ],
@@ -2931,10 +3000,52 @@ code_ast=i.Do(
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-eq"), meta=i.Meta(mid161, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-str"), meta=i.Meta(mid163, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
+            i.Fn(args=[kw(u"this"),kw(u"sbf")],name=kw(u"-str_Range"),
+              body=i.TailCall(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"-str"), meta=i.Meta(mid164, 6)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"seq"), meta=i.Meta(mid164, 12)),
+                      i.Lookup(kw(u"this"), meta=i.Meta(mid164, 16)),
+                    ],
+                    meta=i.Meta(mid164, 11)),
+                  i.Lookup(kw(u"sbf"), meta=i.Meta(mid164, 22)),
+                ],
+                meta=i.Meta(mid164, 5)),
+            ),
+          ],
+          meta=nil),
+        i.Invoke(
+          args=[
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-repr"), meta=i.Meta(mid165, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
+            i.Fn(args=[kw(u"this"),kw(u"sbf")],name=kw(u"-repr_Range"),
+              body=i.TailCall(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"-repr"), meta=i.Meta(mid166, 6)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"seq"), meta=i.Meta(mid166, 13)),
+                      i.Lookup(kw(u"this"), meta=i.Meta(mid166, 17)),
+                    ],
+                    meta=i.Meta(mid166, 12)),
+                  i.Lookup(kw(u"sbf"), meta=i.Meta(mid166, 23)),
+                ],
+                meta=i.Meta(mid166, 5)),
+            ),
+          ],
+          meta=nil),
+        i.Invoke(
+          args=[
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-eq"), meta=i.Meta(mid167, 4)),
             i.VDeref(code.intern_var(u"pixie.stdlib", u"Range"), meta=i.Meta(mid126, 10)),
             i.Fn(args=[kw(u"this"),kw(u"sb")],name=kw(u"-eq_Range"),
-              body=i.Const(nil),
+              body=i.VDeref(code.intern_var(u"pixie.stdlib", u"do"), meta=i.Meta(mid168, 25)),
             ),
           ],
           meta=nil),
@@ -2953,42 +3064,42 @@ code_ast=i.Do(
               i.Const(rt.wrap(0)), i.Fn(args=[],name=kw(u"range"),
           body=i.TailCall(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid162, 8)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid169, 8)),
               i.Const(rt.wrap(0)),
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"MAX-NUMBER"), meta=i.Meta(mid162, 18)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"MAX-NUMBER"), meta=i.Meta(mid169, 18)),
               i.Const(rt.wrap(1)),
             ],
-            meta=i.Meta(mid162, 7)),
+            meta=i.Meta(mid169, 7)),
         ),
         i.Const(rt.wrap(1)), i.Fn(args=[kw(u"stop")],name=kw(u"range"),
           body=i.TailCall(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid163, 12)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid170, 12)),
               i.Const(rt.wrap(0)),
-              i.Lookup(kw(u"stop"), meta=i.Meta(mid163, 22)),
+              i.Lookup(kw(u"stop"), meta=i.Meta(mid170, 22)),
               i.Const(rt.wrap(1)),
             ],
-            meta=i.Meta(mid163, 11)),
+            meta=i.Meta(mid170, 11)),
         ),
         i.Const(rt.wrap(3)), i.Fn(args=[kw(u"start"),kw(u"stop"),kw(u"step")],name=kw(u"range"),
           body=i.TailCall(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid164, 23)),
-              i.Lookup(kw(u"start"), meta=i.Meta(mid164, 31)),
-              i.Lookup(kw(u"stop"), meta=i.Meta(mid164, 37)),
-              i.Lookup(kw(u"step"), meta=i.Meta(mid164, 42)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid171, 23)),
+              i.Lookup(kw(u"start"), meta=i.Meta(mid171, 31)),
+              i.Lookup(kw(u"stop"), meta=i.Meta(mid171, 37)),
+              i.Lookup(kw(u"step"), meta=i.Meta(mid171, 42)),
             ],
-            meta=i.Meta(mid164, 22)),
+            meta=i.Meta(mid171, 22)),
         ),
         i.Const(rt.wrap(2)), i.Fn(args=[kw(u"start"),kw(u"stop")],name=kw(u"range"),
           body=i.TailCall(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid165, 18)),
-              i.Lookup(kw(u"start"), meta=i.Meta(mid165, 26)),
-              i.Lookup(kw(u"stop"), meta=i.Meta(mid165, 32)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Range"), meta=i.Meta(mid172, 18)),
+              i.Lookup(kw(u"start"), meta=i.Meta(mid172, 26)),
+              i.Lookup(kw(u"stop"), meta=i.Meta(mid172, 32)),
               i.Const(rt.wrap(1)),
             ],
-            meta=i.Meta(mid165, 17)),
+            meta=i.Meta(mid172, 17)),
         ),
               ])]),
     i.Do(
@@ -3015,7 +3126,7 @@ code_ast=i.Do(
             body=i.TailCall(
               args=[
                 i.VDeref(code.intern_var(u"pixie.stdlib", u"new"), meta=nil),
-                i.VDeref(code.intern_var(u"pixie.stdlib", u"Node"), meta=i.Meta(mid166, 10)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"Node"), meta=i.Meta(mid173, 10)),
                 i.Lookup(kw(u"edit"), meta=nil),
                 i.Lookup(kw(u"array"), meta=nil),
               ],
@@ -3024,21 +3135,21 @@ code_ast=i.Do(
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=i.Meta(mid167, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"Node"), meta=i.Meta(mid166, 10)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=i.Meta(mid174, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"Node"), meta=i.Meta(mid173, 10)),
             i.Fn(args=[kw(u"this"),kw(u"name")],name=kw(u"-get-field_Node"),
               body=i.TailCall(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=i.Meta(mid168, 6)),
-                  i.Lookup(kw(u"this"), meta=i.Meta(mid168, 16)),
-                  i.Lookup(kw(u"name"), meta=i.Meta(mid168, 21)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=i.Meta(mid175, 6)),
+                  i.Lookup(kw(u"this"), meta=i.Meta(mid175, 16)),
+                  i.Lookup(kw(u"name"), meta=i.Meta(mid175, 21)),
                 ],
-                meta=i.Meta(mid168, 5)),
+                meta=i.Meta(mid175, 5)),
             ),
           ],
           meta=nil),
       ],
-    meta=i.Meta(mid166, 1)),
+    meta=i.Meta(mid173, 1)),
     i.Invoke(args=[
 # (def pixie.stdlib/new-node)
       i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
@@ -3047,25 +3158,25 @@ code_ast=i.Do(
               i.Const(rt.wrap(1)), i.Fn(args=[kw(u"edit")],name=kw(u"new-node"),
           body=i.TailCall(
             args=[
-              i.Lookup(kw(u"new-node"), meta=i.Meta(mid169, 5)),
-              i.Lookup(kw(u"edit"), meta=i.Meta(mid169, 14)),
+              i.Lookup(kw(u"new-node"), meta=i.Meta(mid176, 5)),
+              i.Lookup(kw(u"edit"), meta=i.Meta(mid176, 14)),
               i.Invoke(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"array"), meta=i.Meta(mid169, 20)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"array"), meta=i.Meta(mid176, 20)),
                   i.Const(rt.wrap(32)),
                 ],
-                meta=i.Meta(mid169, 19)),
+                meta=i.Meta(mid176, 19)),
             ],
-            meta=i.Meta(mid169, 4)),
+            meta=i.Meta(mid176, 4)),
         ),
         i.Const(rt.wrap(2)), i.Fn(args=[kw(u"edit"),kw(u"array")],name=kw(u"new-node"),
           body=i.TailCall(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Node"), meta=i.Meta(mid170, 5)),
-              i.Lookup(kw(u"edit"), meta=i.Meta(mid170, 12)),
-              i.Lookup(kw(u"array"), meta=i.Meta(mid170, 17)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Node"), meta=i.Meta(mid177, 5)),
+              i.Lookup(kw(u"edit"), meta=i.Meta(mid177, 12)),
+              i.Lookup(kw(u"array"), meta=i.Meta(mid177, 17)),
             ],
-            meta=i.Meta(mid170, 4)),
+            meta=i.Meta(mid177, 4)),
         ),
               ])]),
     i.Invoke(args=[
@@ -3074,10 +3185,10 @@ code_ast=i.Do(
       i.Const(code.intern_var(u"pixie.stdlib",u"EMPTY-NODE")),
       i.Invoke(
         args=[
-          i.VDeref(code.intern_var(u"pixie.stdlib", u"new-node"), meta=i.Meta(mid171, 18)),
+          i.VDeref(code.intern_var(u"pixie.stdlib", u"new-node"), meta=i.Meta(mid178, 18)),
           i.Const(nil),
         ],
-        meta=i.Meta(mid171, 17))]),
+        meta=i.Meta(mid178, 17))]),
     i.Invoke(args=[
 # (def pixie.stdlib/tailoff)
       i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
@@ -3088,40 +3199,40 @@ code_ast=i.Do(
           i.Invoke(
             args=[
               i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-              i.Lookup(kw(u"this"), meta=i.Meta(mid172, 20)),
+              i.Lookup(kw(u"this"), meta=i.Meta(mid179, 20)),
               i.Const(kw(u"cnt")),
             ],
-            meta=i.Meta(mid172, 13)),
+            meta=i.Meta(mid179, 13)),
           ],
           body=i.If(
             test=i.Invoke(
               args=[
-                i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid173, 10)),
-                i.Lookup(kw(u"cnt"), meta=i.Meta(mid173, 12)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid180, 10)),
+                i.Lookup(kw(u"cnt"), meta=i.Meta(mid180, 12)),
                 i.Const(rt.wrap(32)),
               ],
-              meta=i.Meta(mid173, 9)),
+              meta=i.Meta(mid180, 9)),
             then=i.Const(rt.wrap(0)),
             els=i.TailCall(
               args=[
-                i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-left"), meta=i.Meta(mid174, 8)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-left"), meta=i.Meta(mid181, 8)),
                 i.Invoke(
                   args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-right"), meta=i.Meta(mid174, 24)),
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-right"), meta=i.Meta(mid181, 24)),
                     i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"dec"), meta=i.Meta(mid174, 41)),
-                        i.Lookup(kw(u"cnt"), meta=i.Meta(mid174, 45)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"dec"), meta=i.Meta(mid181, 41)),
+                        i.Lookup(kw(u"cnt"), meta=i.Meta(mid181, 45)),
                       ],
-                      meta=i.Meta(mid174, 40)),
+                      meta=i.Meta(mid181, 40)),
                     i.Const(rt.wrap(5)),
                   ],
-                  meta=i.Meta(mid174, 23)),
+                  meta=i.Meta(mid181, 23)),
                 i.Const(rt.wrap(5)),
               ],
-              meta=i.Meta(mid174, 7)),
-            meta=i.Meta(mid173, 5)),
-          meta=i.Meta(mid172, 3)),
+              meta=i.Meta(mid181, 7)),
+            meta=i.Meta(mid180, 5)),
+          meta=i.Meta(mid179, 3)),
       )]),
     i.Invoke(args=[
 # (def pixie.stdlib/array-for)
@@ -3132,34 +3243,34 @@ code_ast=i.Do(
           test=i.If(
             test=i.Invoke(
               args=[
-                i.VDeref(code.intern_var(u"pixie.stdlib", u"<="), meta=i.Meta(mid175, 17)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"<="), meta=i.Meta(mid182, 17)),
                 i.Const(rt.wrap(0)),
-                i.Lookup(kw(u"i"), meta=i.Meta(mid175, 22)),
+                i.Lookup(kw(u"i"), meta=i.Meta(mid182, 22)),
               ],
-              meta=i.Meta(mid175, 16)),
+              meta=i.Meta(mid182, 16)),
             then=i.Invoke(
               args=[
-                i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid175, 26)),
-                i.Lookup(kw(u"i"), meta=i.Meta(mid175, 28)),
-                i.Lookup(kw(u"cnt"), meta=i.Meta(mid175, 30)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid182, 26)),
+                i.Lookup(kw(u"i"), meta=i.Meta(mid182, 28)),
+                i.Lookup(kw(u"cnt"), meta=i.Meta(mid182, 30)),
               ],
-              meta=i.Meta(mid175, 25)),
+              meta=i.Meta(mid182, 25)),
             els=i.Const(nil),
-            meta=i.Meta(mid175, 11)),
+            meta=i.Meta(mid182, 11)),
           then=i.If(
             test=i.Invoke(
               args=[
-                i.VDeref(code.intern_var(u"pixie.stdlib", u">="), meta=i.Meta(mid176, 14)),
-                i.Lookup(kw(u"i"), meta=i.Meta(mid176, 17)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u">="), meta=i.Meta(mid183, 14)),
+                i.Lookup(kw(u"i"), meta=i.Meta(mid183, 17)),
                 i.Invoke(
                   args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"tailoff"), meta=i.Meta(mid176, 20)),
-                    i.Lookup(kw(u"this"), meta=i.Meta(mid176, 28)),
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"tailoff"), meta=i.Meta(mid183, 20)),
+                    i.Lookup(kw(u"this"), meta=i.Meta(mid183, 28)),
                   ],
-                  meta=i.Meta(mid176, 19)),
+                  meta=i.Meta(mid183, 19)),
               ],
-              meta=i.Meta(mid176, 13)),
-            then=i.Lookup(kw(u"tail"), meta=i.Meta(mid177, 11)),
+              meta=i.Meta(mid183, 13)),
+            then=i.Lookup(kw(u"tail"), meta=i.Meta(mid184, 11)),
             els=i.TailCall(
               args=[
                 i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
@@ -3169,65 +3280,65 @@ code_ast=i.Do(
                       body=i.If(
                         test=i.Invoke(
                           args=[
-                            i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid178, 28)),
-                            i.Lookup(kw(u"level"), meta=i.Meta(mid178, 30)),
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid185, 28)),
+                            i.Lookup(kw(u"level"), meta=i.Meta(mid185, 30)),
                             i.Const(rt.wrap(0)),
                           ],
-                          meta=i.Meta(mid178, 27)),
+                          meta=i.Meta(mid185, 27)),
                         then=i.TailCall(
                           args=[
-                            i.Lookup(kw(u"look-deeper"), meta=i.Meta(mid179, 26)),
+                            i.Lookup(kw(u"look-deeper"), meta=i.Meta(mid186, 26)),
                             i.Invoke(
                               args=[
-                                i.VDeref(code.intern_var(u"pixie.stdlib", u"aget"), meta=i.Meta(mid179, 39)),
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"aget"), meta=i.Meta(mid186, 39)),
                                 i.Invoke(
                                   args=[
                                     i.Const(kw(u"array")),
-                                    i.Lookup(kw(u"node"), meta=i.Meta(mid179, 52)),
+                                    i.Lookup(kw(u"node"), meta=i.Meta(mid186, 52)),
                                   ],
-                                  meta=i.Meta(mid179, 44)),
+                                  meta=i.Meta(mid186, 44)),
                                 i.Invoke(
                                   args=[
-                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-and"), meta=i.Meta(mid180, 45)),
+                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-and"), meta=i.Meta(mid187, 45)),
                                     i.Invoke(
                                       args=[
-                                        i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-right"), meta=i.Meta(mid180, 54)),
-                                        i.Lookup(kw(u"i"), meta=i.Meta(mid180, 70)),
-                                        i.Lookup(kw(u"level"), meta=i.Meta(mid180, 72)),
+                                        i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-right"), meta=i.Meta(mid187, 54)),
+                                        i.Lookup(kw(u"i"), meta=i.Meta(mid187, 70)),
+                                        i.Lookup(kw(u"level"), meta=i.Meta(mid187, 72)),
                                       ],
-                                      meta=i.Meta(mid180, 53)),
+                                      meta=i.Meta(mid187, 53)),
                                     i.Const(rt.wrap(31)),
                                   ],
-                                  meta=i.Meta(mid180, 44)),
+                                  meta=i.Meta(mid187, 44)),
                               ],
-                              meta=i.Meta(mid179, 38)),
+                              meta=i.Meta(mid186, 38)),
                             i.Invoke(
                               args=[
-                                i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid181, 39)),
-                                i.Lookup(kw(u"level"), meta=i.Meta(mid181, 41)),
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid188, 39)),
+                                i.Lookup(kw(u"level"), meta=i.Meta(mid188, 41)),
                                 i.Const(rt.wrap(5)),
                               ],
-                              meta=i.Meta(mid181, 38)),
+                              meta=i.Meta(mid188, 38)),
                           ],
-                          meta=i.Meta(mid179, 25)),
+                          meta=i.Meta(mid186, 25)),
                         els=i.TailCall(
                           args=[
                             i.Const(kw(u"array")),
-                            i.Lookup(kw(u"node"), meta=i.Meta(mid182, 33)),
+                            i.Lookup(kw(u"node"), meta=i.Meta(mid189, 33)),
                           ],
-                          meta=i.Meta(mid182, 25)),
-                        meta=i.Meta(mid178, 23)),
+                          meta=i.Meta(mid189, 25)),
+                        meta=i.Meta(mid185, 23)),
                     ),
-                    i.Lookup(kw(u"root"), meta=i.Meta(mid183, 21)),
-                    i.Lookup(kw(u"shift"), meta=i.Meta(mid184, 21)),
+                    i.Lookup(kw(u"root"), meta=i.Meta(mid190, 21)),
+                    i.Lookup(kw(u"shift"), meta=i.Meta(mid191, 21)),
                   ],
-                  meta=i.Meta(mid185, 20)),
+                  meta=i.Meta(mid192, 20)),
                 i.Const(kw(u"array")),
               ],
-              meta=i.Meta(mid185, 11)),
-            meta=i.Meta(mid176, 9)),
+              meta=i.Meta(mid192, 11)),
+            meta=i.Meta(mid183, 9)),
           els=i.Const(nil),
-          meta=i.Meta(mid175, 7)),
+          meta=i.Meta(mid182, 7)),
       )]),
     i.Do(
       args=[
@@ -3256,7 +3367,7 @@ code_ast=i.Do(
             body=i.TailCall(
               args=[
                 i.VDeref(code.intern_var(u"pixie.stdlib", u"new"), meta=nil),
-                i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid186, 10)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid193, 10)),
                 i.Lookup(kw(u"cnt"), meta=nil),
                 i.Lookup(kw(u"shift"), meta=nil),
                 i.Lookup(kw(u"root"), meta=nil),
@@ -3268,69 +3379,397 @@ code_ast=i.Do(
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=i.Meta(mid187, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid186, 10)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=i.Meta(mid194, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid193, 10)),
             i.Fn(args=[kw(u"this"),kw(u"name")],name=kw(u"-get-field_PersistentVector"),
               body=i.TailCall(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=i.Meta(mid188, 6)),
-                  i.Lookup(kw(u"this"), meta=i.Meta(mid188, 16)),
-                  i.Lookup(kw(u"name"), meta=i.Meta(mid188, 21)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=i.Meta(mid195, 6)),
+                  i.Lookup(kw(u"this"), meta=i.Meta(mid195, 16)),
+                  i.Lookup(kw(u"name"), meta=i.Meta(mid195, 21)),
                 ],
-                meta=i.Meta(mid188, 5)),
+                meta=i.Meta(mid195, 5)),
             ),
           ],
           meta=nil),
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-conj"), meta=i.Meta(mid189, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid186, 10)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-conj"), meta=i.Meta(mid196, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid193, 10)),
             i.Fn(args=[kw(u"this"),kw(u"val")],name=kw(u"-conj_PersistentVector"),
-              body=i.If(
-                test=i.Invoke(
-                  args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid190, 14)),
-                    i.Invoke(
+              body=i.Do(
+                args=[
+                  i.If(
+                    test=i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                        i.Lookup(kw(u"this"), meta=i.Meta(mid189, 11)),
-                        i.Const(kw(u"cnt")),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid197, 14)),
+                        i.Invoke(
+                          args=[
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                            i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                            i.Const(kw(u"cnt")),
+                          ],
+                          meta=nil),
+                        i.Const(rt.wrap(4294967295)),
+                      ],
+                      meta=i.Meta(mid197, 13)),
+                    then=i.Const(nil),
+                    els=i.Invoke(
+                      args=[
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"throw"), meta=nil),
+                        i.Invoke(args=[
+                          i.Const(code.intern_var(u"pixie.stdlib", u"array")),                          i.Const(kw(u"pixie.stdlib/AssertionException")),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"str"), meta=nil),
+                              i.Const(rt.wrap(u"Assert failed: ")),
+                              i.Const(rt.wrap(u"Vector too large")),
+                            ],
+                            meta=nil),
+                          ]),
                       ],
                       meta=nil),
-                    i.Const(rt.wrap(4294967295)),
-                  ],
-                  meta=i.Meta(mid190, 13)),
-                then=i.Const(nil),
-                els=i.TailCall(
-                  args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"throw"), meta=nil),
-                    i.Invoke(args=[
-                      i.Const(code.intern_var(u"pixie.stdlib", u"array")),                      i.Const(kw(u"pixie.stdlib/AssertionException")),
+                    meta=i.Meta(mid197, 5)),
+                  i.If(
+                    test=i.Invoke(
+                      args=[
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid198, 10)),
+                        i.Invoke(
+                          args=[
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid198, 13)),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                i.Const(kw(u"cnt")),
+                              ],
+                              meta=nil),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"tailoff"), meta=i.Meta(mid198, 20)),
+                                i.Lookup(kw(u"this"), meta=i.Meta(mid198, 28)),
+                              ],
+                              meta=i.Meta(mid198, 19)),
+                          ],
+                          meta=i.Meta(mid198, 12)),
+                        i.Const(rt.wrap(32)),
+                      ],
+                      meta=i.Meta(mid198, 9)),
+                    then=i.Let(names=[kw(u"new-tail")],
+                    bindings=[
                       i.Invoke(
                         args=[
-                          i.VDeref(code.intern_var(u"pixie.stdlib", u"str"), meta=nil),
-                          i.Const(rt.wrap(u"Assert failed: ")),
-                          i.Const(rt.wrap(u"Vector too large")),
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u"array-append"), meta=i.Meta(mid199, 23)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                              i.Const(kw(u"tail")),
+                            ],
+                            meta=nil),
+                          i.Lookup(kw(u"val"), meta=i.Meta(mid199, 41)),
                         ],
-                        meta=nil),
-                      ]),
-                  ],
-                  meta=nil),
-                meta=i.Meta(mid190, 5)),
+                        meta=i.Meta(mid199, 22)),
+                      ],
+                      body=i.TailCall(
+                        args=[
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u"->PersistentVector"), meta=i.Meta(mid200, 10)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"inc"), meta=i.Meta(mid200, 30)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                  i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                  i.Const(kw(u"cnt")),
+                                ],
+                                meta=nil),
+                            ],
+                            meta=i.Meta(mid200, 29)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                              i.Const(kw(u"shift")),
+                            ],
+                            meta=nil),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                              i.Const(kw(u"root")),
+                            ],
+                            meta=nil),
+                          i.Lookup(kw(u"new-tail"), meta=i.Meta(mid200, 50)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                              i.Const(kw(u"meta")),
+                            ],
+                            meta=nil),
+                        ],
+                        meta=i.Meta(mid200, 9)),
+                      meta=i.Meta(mid199, 7)),
+                    els=i.Let(names=[kw(u"tail-node")],
+                    bindings=[
+                      i.Invoke(
+                        args=[
+                          i.VDeref(code.intern_var(u"pixie.stdlib", u"->Node"), meta=i.Meta(mid201, 24)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                  i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                  i.Const(kw(u"root")),
+                                ],
+                                meta=nil),
+                              i.Const(kw(u"edit")),
+                            ],
+                            meta=i.Meta(mid201, 31)),
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                              i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                              i.Const(kw(u"tail")),
+                            ],
+                            meta=nil),
+                        ],
+                        meta=i.Meta(mid201, 23)),
+                      ],
+                      body=i.If(
+                        test=i.Invoke(
+                          args=[
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u">"), meta=i.Meta(mid202, 14)),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-right"), meta=i.Meta(mid202, 17)),
+                                i.Invoke(
+                                  args=[
+                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                    i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                    i.Const(kw(u"cnt")),
+                                  ],
+                                  meta=nil),
+                                i.Const(rt.wrap(5)),
+                              ],
+                              meta=i.Meta(mid202, 16)),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-left"), meta=i.Meta(mid202, 41)),
+                                i.Const(rt.wrap(1)),
+                                i.Invoke(
+                                  args=[
+                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                    i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                    i.Const(kw(u"shift")),
+                                  ],
+                                  meta=nil),
+                              ],
+                              meta=i.Meta(mid202, 40)),
+                          ],
+                          meta=i.Meta(mid202, 13)),
+                        then=i.Let(names=[kw(u"new-root")],
+                        bindings=[
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"new-node"), meta=i.Meta(mid203, 27)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                      i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                      i.Const(kw(u"root")),
+                                    ],
+                                    meta=nil),
+                                  i.Const(kw(u"edit")),
+                                ],
+                                meta=i.Meta(mid203, 36)),
+                            ],
+                            meta=i.Meta(mid203, 26)),
+                          ],
+                          body=i.Do(
+                            args=[
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"aset"), meta=i.Meta(mid204, 14)),
+                                  i.Lookup(kw(u"new-root"), meta=i.Meta(mid204, 19)),
+                                  i.Const(rt.wrap(0)),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                      i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                      i.Const(kw(u"root")),
+                                    ],
+                                    meta=nil),
+                                ],
+                                meta=i.Meta(mid204, 13)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"aset"), meta=i.Meta(mid205, 14)),
+                                  i.Lookup(kw(u"new-root"), meta=i.Meta(mid205, 19)),
+                                  i.Const(rt.wrap(1)),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"new-path"), meta=i.Meta(mid205, 31)),
+                                      i.Invoke(
+                                        args=[
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
+                                          i.Invoke(
+                                            args=[
+                                              i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                              i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                              i.Const(kw(u"root")),
+                                            ],
+                                            meta=nil),
+                                          i.Const(kw(u"edit")),
+                                        ],
+                                        meta=i.Meta(mid205, 40)),
+                                      i.Invoke(
+                                        args=[
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                          i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                          i.Const(kw(u"shift")),
+                                        ],
+                                        meta=nil),
+                                      i.Lookup(kw(u"tail-node"), meta=i.Meta(mid205, 60)),
+                                    ],
+                                    meta=i.Meta(mid205, 30)),
+                                ],
+                                meta=i.Meta(mid205, 13)),
+                              i.TailCall(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"->PersistentVector"), meta=i.Meta(mid206, 14)),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"inc"), meta=i.Meta(mid206, 34)),
+                                      i.Invoke(
+                                        args=[
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                          i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                          i.Const(kw(u"cnt")),
+                                        ],
+                                        meta=nil),
+                                    ],
+                                    meta=i.Meta(mid206, 33)),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid207, 34)),
+                                      i.Invoke(
+                                        args=[
+                                          i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                          i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                          i.Const(kw(u"shift")),
+                                        ],
+                                        meta=nil),
+                                      i.Const(rt.wrap(5)),
+                                    ],
+                                    meta=i.Meta(mid207, 33)),
+                                  i.Lookup(kw(u"new-root"), meta=i.Meta(mid208, 33)),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"array"), meta=i.Meta(mid209, 34)),
+                                      i.Lookup(kw(u"val"), meta=i.Meta(mid209, 40)),
+                                    ],
+                                    meta=i.Meta(mid209, 33)),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                      i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                      i.Const(kw(u"meta")),
+                                    ],
+                                    meta=nil),
+                                ],
+                                meta=i.Meta(mid206, 13)),
+                            ],
+                          meta=nil),
+                          meta=i.Meta(mid203, 11)),
+                        els=i.Let(names=[kw(u"new-root")],
+                        bindings=[
+                          i.Invoke(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"push-tail"), meta=i.Meta(mid210, 27)),
+                              i.Lookup(kw(u"this"), meta=i.Meta(mid210, 37)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                  i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                  i.Const(kw(u"shift")),
+                                ],
+                                meta=nil),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                  i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                  i.Const(kw(u"root")),
+                                ],
+                                meta=nil),
+                              i.Lookup(kw(u"tail-node"), meta=i.Meta(mid210, 53)),
+                            ],
+                            meta=i.Meta(mid210, 26)),
+                          ],
+                          body=i.TailCall(
+                            args=[
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"->PersistentVector"), meta=i.Meta(mid211, 14)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"inc"), meta=i.Meta(mid211, 34)),
+                                  i.Invoke(
+                                    args=[
+                                      i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                      i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                      i.Const(kw(u"cnt")),
+                                    ],
+                                    meta=nil),
+                                ],
+                                meta=i.Meta(mid211, 33)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                  i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                  i.Const(kw(u"shift")),
+                                ],
+                                meta=nil),
+                              i.Lookup(kw(u"new-root"), meta=i.Meta(mid212, 33)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"array"), meta=i.Meta(mid213, 34)),
+                                  i.Lookup(kw(u"val"), meta=i.Meta(mid213, 40)),
+                                ],
+                                meta=i.Meta(mid213, 33)),
+                              i.Invoke(
+                                args=[
+                                  i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
+                                  i.Lookup(kw(u"this"), meta=i.Meta(mid196, 11)),
+                                  i.Const(kw(u"meta")),
+                                ],
+                                meta=nil),
+                            ],
+                            meta=i.Meta(mid211, 13)),
+                          meta=i.Meta(mid210, 11)),
+                        meta=i.Meta(mid202, 9)),
+                      meta=i.Meta(mid201, 7)),
+                    meta=i.Meta(mid198, 5)),
+                ],
+              meta=nil),
             ),
           ],
           meta=nil),
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-count"), meta=i.Meta(mid191, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid186, 10)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-count"), meta=i.Meta(mid214, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"PersistentVector"), meta=i.Meta(mid193, 10)),
             i.Fn(args=[kw(u"this")],name=kw(u"-count_PersistentVector"),
               body=i.TailCall(
                 args=[
                   i.VDeref(code.intern_var(u"pixie.stdlib", u"get-field"), meta=nil),
-                  i.Lookup(kw(u"this"), meta=i.Meta(mid191, 12)),
+                  i.Lookup(kw(u"this"), meta=i.Meta(mid214, 12)),
                   i.Const(kw(u"cnt")),
                 ],
                 meta=nil),
@@ -3338,7 +3777,7 @@ code_ast=i.Do(
           ],
           meta=nil),
       ],
-    meta=i.Meta(mid186, 1)),
+    meta=i.Meta(mid193, 1)),
     i.Invoke(args=[
 # (def pixie.stdlib/push-tail)
       i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
@@ -3348,144 +3787,144 @@ code_ast=i.Do(
         bindings=[
           i.Invoke(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-and"), meta=i.Meta(mid192, 17)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-and"), meta=i.Meta(mid215, 17)),
               i.Invoke(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-right"), meta=i.Meta(mid192, 26)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"bit-shift-right"), meta=i.Meta(mid215, 26)),
                   i.Invoke(
                     args=[
-                      i.VDeref(code.intern_var(u"pixie.stdlib", u"dec"), meta=i.Meta(mid192, 43)),
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"dec"), meta=i.Meta(mid215, 43)),
                       i.Invoke(
                         args=[
                           i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-                          i.Lookup(kw(u"this"), meta=i.Meta(mid192, 54)),
+                          i.Lookup(kw(u"this"), meta=i.Meta(mid215, 54)),
                           i.Const(kw(u"cnt")),
                         ],
-                        meta=i.Meta(mid192, 47)),
+                        meta=i.Meta(mid215, 47)),
                     ],
-                    meta=i.Meta(mid192, 42)),
-                  i.Lookup(kw(u"level"), meta=i.Meta(mid192, 61)),
+                    meta=i.Meta(mid215, 42)),
+                  i.Lookup(kw(u"level"), meta=i.Meta(mid215, 61)),
                 ],
-                meta=i.Meta(mid192, 25)),
+                meta=i.Meta(mid215, 25)),
               i.Const(rt.wrap(31)),
             ],
-            meta=i.Meta(mid192, 16)),
+            meta=i.Meta(mid215, 16)),
           i.Invoke(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"aclone"), meta=i.Meta(mid193, 20)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"aclone"), meta=i.Meta(mid216, 20)),
               i.Invoke(
                 args=[
                   i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-                  i.Lookup(kw(u"parent"), meta=i.Meta(mid193, 36)),
+                  i.Lookup(kw(u"parent"), meta=i.Meta(mid216, 36)),
                   i.Const(kw(u"array")),
                 ],
-                meta=i.Meta(mid193, 27)),
+                meta=i.Meta(mid216, 27)),
             ],
-            meta=i.Meta(mid193, 19)),
+            meta=i.Meta(mid216, 19)),
           i.If(
             test=i.Invoke(
               args=[
-                i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid194, 29)),
-                i.Lookup(kw(u"level"), meta=i.Meta(mid194, 31)),
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid217, 29)),
+                i.Lookup(kw(u"level"), meta=i.Meta(mid217, 31)),
                 i.Const(rt.wrap(5)),
               ],
-              meta=i.Meta(mid194, 28)),
-            then=i.Lookup(kw(u"tail-node"), meta=i.Meta(mid195, 26)),
+              meta=i.Meta(mid217, 28)),
+            then=i.Lookup(kw(u"tail-node"), meta=i.Meta(mid218, 26)),
             els=i.Let(names=[kw(u"child")],
             bindings=[
               i.Invoke(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"aget"), meta=i.Meta(mid196, 39)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"aget"), meta=i.Meta(mid219, 39)),
                   i.Invoke(
                     args=[
                       i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-                      i.Lookup(kw(u"parent"), meta=i.Meta(mid196, 53)),
+                      i.Lookup(kw(u"parent"), meta=i.Meta(mid219, 53)),
                       i.Const(kw(u"array")),
                     ],
-                    meta=i.Meta(mid196, 44)),
-                  i.Lookup(kw(u"subidx"), meta=i.Meta(mid196, 61)),
+                    meta=i.Meta(mid219, 44)),
+                  i.Lookup(kw(u"subidx"), meta=i.Meta(mid219, 61)),
                 ],
-                meta=i.Meta(mid196, 38)),
+                meta=i.Meta(mid219, 38)),
               ],
               body=i.If(
                 test=i.Invoke(
                   args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid197, 33)),
-                    i.Lookup(kw(u"child"), meta=i.Meta(mid197, 35)),
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid220, 33)),
+                    i.Lookup(kw(u"child"), meta=i.Meta(mid220, 35)),
                     i.Const(nil),
                   ],
-                  meta=i.Meta(mid197, 32)),
+                  meta=i.Meta(mid220, 32)),
                 then=i.Invoke(
                   args=[
-                    i.VDeref(code.intern_var(u"pixie.stdlib", u"new-path"), meta=i.Meta(mid198, 31)),
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"new-path"), meta=i.Meta(mid221, 31)),
                     i.Invoke(
                       args=[
                         i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
                         i.Invoke(
                           args=[
                             i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-                            i.Lookup(kw(u"this"), meta=i.Meta(mid198, 56)),
+                            i.Lookup(kw(u"this"), meta=i.Meta(mid221, 56)),
                             i.Const(kw(u"root")),
                           ],
-                          meta=i.Meta(mid198, 48)),
+                          meta=i.Meta(mid221, 48)),
                         i.Const(kw(u"edit")),
                       ],
-                      meta=i.Meta(mid198, 40)),
+                      meta=i.Meta(mid221, 40)),
                     i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid199, 41)),
-                        i.Lookup(kw(u"level"), meta=i.Meta(mid199, 43)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid222, 41)),
+                        i.Lookup(kw(u"level"), meta=i.Meta(mid222, 43)),
                         i.Const(rt.wrap(5)),
                       ],
-                      meta=i.Meta(mid199, 40)),
-                    i.Lookup(kw(u"tail-node"), meta=i.Meta(mid200, 40)),
+                      meta=i.Meta(mid222, 40)),
+                    i.Lookup(kw(u"tail-node"), meta=i.Meta(mid223, 40)),
                   ],
-                  meta=i.Meta(mid198, 30)),
+                  meta=i.Meta(mid221, 30)),
                 els=i.Invoke(
                   args=[
-                    i.Lookup(kw(u"push-tail"), meta=i.Meta(mid201, 31)),
-                    i.Lookup(kw(u"this"), meta=i.Meta(mid201, 41)),
+                    i.Lookup(kw(u"push-tail"), meta=i.Meta(mid224, 31)),
+                    i.Lookup(kw(u"this"), meta=i.Meta(mid224, 41)),
                     i.Invoke(
                       args=[
-                        i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid202, 42)),
-                        i.Lookup(kw(u"level"), meta=i.Meta(mid202, 44)),
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid225, 42)),
+                        i.Lookup(kw(u"level"), meta=i.Meta(mid225, 44)),
                         i.Const(rt.wrap(5)),
                       ],
-                      meta=i.Meta(mid202, 41)),
-                    i.Lookup(kw(u"child"), meta=i.Meta(mid203, 41)),
-                    i.Lookup(kw(u"tail-node"), meta=i.Meta(mid204, 41)),
+                      meta=i.Meta(mid225, 41)),
+                    i.Lookup(kw(u"child"), meta=i.Meta(mid226, 41)),
+                    i.Lookup(kw(u"tail-node"), meta=i.Meta(mid227, 41)),
                   ],
-                  meta=i.Meta(mid201, 30)),
-                meta=i.Meta(mid197, 28)),
-              meta=i.Meta(mid196, 26)),
-            meta=i.Meta(mid194, 24)),
+                  meta=i.Meta(mid224, 30)),
+                meta=i.Meta(mid220, 28)),
+              meta=i.Meta(mid219, 26)),
+            meta=i.Meta(mid217, 24)),
           ],
           body=i.Do(
             args=[
               i.Invoke(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"aset"), meta=i.Meta(mid205, 6)),
-                  i.Lookup(kw(u"ret-array"), meta=i.Meta(mid205, 11)),
-                  i.Lookup(kw(u"subidx"), meta=i.Meta(mid205, 21)),
-                  i.Lookup(kw(u"node-to-insert"), meta=i.Meta(mid205, 28)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"aset"), meta=i.Meta(mid228, 6)),
+                  i.Lookup(kw(u"ret-array"), meta=i.Meta(mid228, 11)),
+                  i.Lookup(kw(u"subidx"), meta=i.Meta(mid228, 21)),
+                  i.Lookup(kw(u"node-to-insert"), meta=i.Meta(mid228, 28)),
                 ],
-                meta=i.Meta(mid205, 5)),
+                meta=i.Meta(mid228, 5)),
               i.TailCall(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"->Node"), meta=i.Meta(mid206, 6)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"->Node"), meta=i.Meta(mid229, 6)),
                   i.Invoke(
                     args=[
                       i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-                      i.Lookup(kw(u"parent"), meta=i.Meta(mid206, 21)),
+                      i.Lookup(kw(u"parent"), meta=i.Meta(mid229, 21)),
                       i.Const(kw(u"edit")),
                     ],
-                    meta=i.Meta(mid206, 13)),
-                  i.Lookup(kw(u"node-to-insert"), meta=i.Meta(mid206, 29)),
+                    meta=i.Meta(mid229, 13)),
+                  i.Lookup(kw(u"node-to-insert"), meta=i.Meta(mid229, 29)),
                 ],
-                meta=i.Meta(mid206, 5)),
+                meta=i.Meta(mid229, 5)),
             ],
           meta=nil),
-          meta=i.Meta(mid192, 3)),
+          meta=i.Meta(mid215, 3)),
       )]),
     i.Invoke(args=[
 # (def pixie.stdlib/new-path)
@@ -3495,33 +3934,33 @@ code_ast=i.Do(
         body=i.If(
           test=i.Invoke(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid207, 8)),
-              i.Lookup(kw(u"level"), meta=i.Meta(mid207, 10)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"="), meta=i.Meta(mid230, 8)),
+              i.Lookup(kw(u"level"), meta=i.Meta(mid230, 10)),
               i.Const(rt.wrap(0)),
             ],
-            meta=i.Meta(mid207, 7)),
-          then=i.Lookup(kw(u"node"), meta=i.Meta(mid208, 5)),
+            meta=i.Meta(mid230, 7)),
+          then=i.Lookup(kw(u"node"), meta=i.Meta(mid231, 5)),
           els=i.TailCall(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Node"), meta=i.Meta(mid209, 6)),
-              i.Lookup(kw(u"edit"), meta=i.Meta(mid209, 13)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"->Node"), meta=i.Meta(mid232, 6)),
+              i.Lookup(kw(u"edit"), meta=i.Meta(mid232, 13)),
               i.Invoke(
                 args=[
-                  i.Lookup(kw(u"new-path"), meta=i.Meta(mid210, 14)),
-                  i.Lookup(kw(u"edit"), meta=i.Meta(mid210, 23)),
+                  i.Lookup(kw(u"new-path"), meta=i.Meta(mid233, 14)),
+                  i.Lookup(kw(u"edit"), meta=i.Meta(mid233, 23)),
                   i.Invoke(
                     args=[
-                      i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid210, 29)),
-                      i.Lookup(kw(u"level"), meta=i.Meta(mid210, 31)),
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"-"), meta=i.Meta(mid233, 29)),
+                      i.Lookup(kw(u"level"), meta=i.Meta(mid233, 31)),
                       i.Const(rt.wrap(5)),
                     ],
-                    meta=i.Meta(mid210, 28)),
-                  i.Lookup(kw(u"node"), meta=i.Meta(mid210, 40)),
+                    meta=i.Meta(mid233, 28)),
+                  i.Lookup(kw(u"node"), meta=i.Meta(mid233, 40)),
                 ],
-                meta=i.Meta(mid210, 13)),
+                meta=i.Meta(mid233, 13)),
             ],
-            meta=i.Meta(mid209, 5)),
-          meta=i.Meta(mid207, 3)),
+            meta=i.Meta(mid232, 5)),
+          meta=i.Meta(mid230, 3)),
       )]),
     i.Invoke(args=[
 # (def pixie.stdlib/EMPTY)
@@ -3529,203 +3968,219 @@ code_ast=i.Do(
       i.Const(code.intern_var(u"pixie.stdlib",u"EMPTY")),
       i.Invoke(
         args=[
-          i.VDeref(code.intern_var(u"pixie.stdlib", u"->PersistentVector"), meta=i.Meta(mid211, 13)),
+          i.VDeref(code.intern_var(u"pixie.stdlib", u"->PersistentVector"), meta=i.Meta(mid234, 13)),
           i.Const(rt.wrap(0)),
           i.Const(rt.wrap(5)),
-          i.VDeref(code.intern_var(u"pixie.stdlib", u"EMPTY-NODE"), meta=i.Meta(mid211, 36)),
+          i.VDeref(code.intern_var(u"pixie.stdlib", u"EMPTY-NODE"), meta=i.Meta(mid234, 36)),
           i.Invoke(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"array"), meta=i.Meta(mid211, 48)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"array"), meta=i.Meta(mid234, 48)),
               i.Const(rt.wrap(0)),
             ],
-            meta=i.Meta(mid211, 47)),
+            meta=i.Meta(mid234, 47)),
           i.Const(nil),
         ],
-        meta=i.Meta(mid211, 12))]),
+        meta=i.Meta(mid234, 12))]),
     i.Invoke(args=[
 # (def pixie.stdlib/vector-from-array)
       i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
       i.Const(code.intern_var(u"pixie.stdlib",u"vector-from-array")),
       i.Fn(args=[kw(u"arr")],name=kw(u"vector-from-array"),
-        body=i.If(
-          test=i.Invoke(
-            args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid212, 8)),
-              i.Invoke(
+        body=i.Do(
+          args=[
+            i.Invoke(
+              args=[
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"println"), meta=i.Meta(mid235, 4)),
+                i.Const(rt.wrap(u"Vector for array")),
+              ],
+              meta=i.Meta(mid235, 3)),
+            i.Invoke(
+              args=[
+                i.VDeref(code.intern_var(u"pixie.stdlib", u"println"), meta=i.Meta(mid236, 4)),
+                i.Invoke(
+                  args=[
+                    i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid236, 13)),
+                    i.Lookup(kw(u"arr"), meta=i.Meta(mid236, 19)),
+                  ],
+                  meta=i.Meta(mid236, 12)),
+              ],
+              meta=i.Meta(mid236, 3)),
+            i.If(
+              test=i.Invoke(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid212, 11)),
-                  i.Lookup(kw(u"arr"), meta=i.Meta(mid212, 17)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid237, 8)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid237, 11)),
+                      i.Lookup(kw(u"arr"), meta=i.Meta(mid237, 17)),
+                    ],
+                    meta=i.Meta(mid237, 10)),
+                  i.Const(rt.wrap(32)),
                 ],
-                meta=i.Meta(mid212, 10)),
-              i.Const(rt.wrap(32)),
-            ],
-            meta=i.Meta(mid212, 7)),
-          then=i.TailCall(
-            args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"->PersistentVector"), meta=i.Meta(mid213, 6)),
-              i.Invoke(
+                meta=i.Meta(mid237, 7)),
+              then=i.TailCall(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid213, 26)),
-                  i.Lookup(kw(u"arr"), meta=i.Meta(mid213, 32)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"->PersistentVector"), meta=i.Meta(mid238, 6)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid238, 26)),
+                      i.Lookup(kw(u"arr"), meta=i.Meta(mid238, 32)),
+                    ],
+                    meta=i.Meta(mid238, 25)),
+                  i.Const(rt.wrap(5)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"EMPTY-NODE"), meta=i.Meta(mid238, 39)),
+                  i.Lookup(kw(u"arr"), meta=i.Meta(mid238, 50)),
+                  i.Const(nil),
                 ],
-                meta=i.Meta(mid213, 25)),
-              i.Const(rt.wrap(5)),
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"EMPTY-NODE"), meta=i.Meta(mid213, 39)),
-              i.Lookup(kw(u"arr"), meta=i.Meta(mid213, 50)),
-              i.Const(nil),
-            ],
-            meta=i.Meta(mid213, 5)),
-          els=i.TailCall(
-            args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"into"), meta=i.Meta(mid214, 6)),
-              i.Invoke(args=[
-                i.Const(code.intern_var(u"pixie.stdlib", u"array")),                ]),
-              i.Lookup(kw(u"arr"), meta=i.Meta(mid214, 14)),
-            ],
-            meta=i.Meta(mid214, 5)),
-          meta=i.Meta(mid212, 3)),
+                meta=i.Meta(mid238, 5)),
+              els=i.TailCall(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"into"), meta=i.Meta(mid239, 6)),
+                  i.Invoke(args=[
+                    i.Const(code.intern_var(u"pixie.stdlib", u"array")),                    ]),
+                  i.Lookup(kw(u"arr"), meta=i.Meta(mid239, 14)),
+                ],
+                meta=i.Meta(mid239, 5)),
+              meta=i.Meta(mid237, 3)),
+          ],
+        meta=nil),
       )]),
     i.Do(
       args=[
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-reduce"), meta=i.Meta(mid215, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"Array"), meta=i.Meta(mid216, 14)),
-            i.Fn(args=[kw(u"this"),kw(u"f"),kw(u"init")],name=kw(u"fn_528"),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-reduce"), meta=i.Meta(mid240, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"Array"), meta=i.Meta(mid241, 14)),
+            i.Fn(args=[kw(u"this"),kw(u"f"),kw(u"init")],name=kw(u"fn_533"),
               body=i.Let(names=[kw(u"idx"),kw(u"acc")],
               bindings=[
                 i.Const(rt.wrap(0)),
-                i.Lookup(kw(u"init"), meta=i.Meta(mid217, 16)),
+                i.Lookup(kw(u"init"), meta=i.Meta(mid242, 16)),
                 ],
                 body=i.TailCall(
                   args=[
                     i.Fn(args=[kw(u"idx"),kw(u"acc")],name=kw(u"pixie.compiler/__loop__fn__"),closed_overs=[kw(u"this"),kw(u"f")],
                       body=i.Let(names=[kw(u"idx"),kw(u"acc")],
                       bindings=[
-                        i.Lookup(kw(u"idx"), meta=i.Meta(mid218, 12)),
-                        i.Lookup(kw(u"acc"), meta=i.Meta(mid217, 12)),
+                        i.Lookup(kw(u"idx"), meta=i.Meta(mid243, 12)),
+                        i.Lookup(kw(u"acc"), meta=i.Meta(mid242, 12)),
                         ],
                         body=i.If(
                           test=i.Invoke(
                             args=[
-                              i.VDeref(code.intern_var(u"pixie.stdlib", u"reduced?"), meta=i.Meta(mid219, 12)),
-                              i.Lookup(kw(u"acc"), meta=i.Meta(mid219, 21)),
+                              i.VDeref(code.intern_var(u"pixie.stdlib", u"reduced?"), meta=i.Meta(mid244, 12)),
+                              i.Lookup(kw(u"acc"), meta=i.Meta(mid244, 21)),
                             ],
-                            meta=i.Meta(mid219, 11)),
+                            meta=i.Meta(mid244, 11)),
                           then=i.TailCall(
                             args=[
                               i.VDeref(code.intern_var(u"pixie.stdlib", u"-deref"), meta=nil),
-                              i.Lookup(kw(u"acc"), meta=i.Meta(mid220, 10)),
+                              i.Lookup(kw(u"acc"), meta=i.Meta(mid245, 10)),
                             ],
-                            meta=i.Meta(mid220, 9)),
+                            meta=i.Meta(mid245, 9)),
                           els=i.If(
                             test=i.Invoke(
                               args=[
-                                i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid221, 14)),
-                                i.Lookup(kw(u"idx"), meta=i.Meta(mid221, 16)),
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid246, 14)),
+                                i.Lookup(kw(u"idx"), meta=i.Meta(mid246, 16)),
                                 i.Invoke(
                                   args=[
-                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid221, 21)),
-                                    i.Lookup(kw(u"this"), meta=i.Meta(mid221, 27)),
+                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid246, 21)),
+                                    i.Lookup(kw(u"this"), meta=i.Meta(mid246, 27)),
                                   ],
-                                  meta=i.Meta(mid221, 20)),
+                                  meta=i.Meta(mid246, 20)),
                               ],
-                              meta=i.Meta(mid221, 13)),
+                              meta=i.Meta(mid246, 13)),
                             then=i.TailCall(
                               args=[
                                 i.Lookup(kw(u"pixie.compiler/__loop__fn__"), meta=nil),
                                 i.Invoke(
                                   args=[
-                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"inc"), meta=i.Meta(mid222, 19)),
-                                    i.Lookup(kw(u"idx"), meta=i.Meta(mid222, 23)),
+                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"inc"), meta=i.Meta(mid247, 19)),
+                                    i.Lookup(kw(u"idx"), meta=i.Meta(mid247, 23)),
                                   ],
-                                  meta=i.Meta(mid222, 18)),
+                                  meta=i.Meta(mid247, 18)),
                                 i.Invoke(
                                   args=[
-                                    i.Lookup(kw(u"f"), meta=i.Meta(mid223, 19)),
-                                    i.Lookup(kw(u"acc"), meta=i.Meta(mid223, 21)),
+                                    i.Lookup(kw(u"f"), meta=i.Meta(mid248, 19)),
+                                    i.Lookup(kw(u"acc"), meta=i.Meta(mid248, 21)),
                                     i.Invoke(
                                       args=[
-                                        i.VDeref(code.intern_var(u"pixie.stdlib", u"aget"), meta=i.Meta(mid223, 26)),
-                                        i.Lookup(kw(u"this"), meta=i.Meta(mid223, 31)),
-                                        i.Lookup(kw(u"idx"), meta=i.Meta(mid223, 36)),
+                                        i.VDeref(code.intern_var(u"pixie.stdlib", u"aget"), meta=i.Meta(mid248, 26)),
+                                        i.Lookup(kw(u"this"), meta=i.Meta(mid248, 31)),
+                                        i.Lookup(kw(u"idx"), meta=i.Meta(mid248, 36)),
                                       ],
-                                      meta=i.Meta(mid223, 25)),
+                                      meta=i.Meta(mid248, 25)),
                                   ],
-                                  meta=i.Meta(mid223, 18)),
+                                  meta=i.Meta(mid248, 18)),
                               ],
                               meta=nil),
-                            els=i.Lookup(kw(u"acc"), meta=i.Meta(mid224, 11)),
-                            meta=i.Meta(mid221, 9)),
-                          meta=i.Meta(mid219, 7)),
+                            els=i.Lookup(kw(u"acc"), meta=i.Meta(mid249, 11)),
+                            meta=i.Meta(mid246, 9)),
+                          meta=i.Meta(mid244, 7)),
                         meta=nil),
                     ),
-                    i.Lookup(kw(u"idx"), meta=i.Meta(mid218, 12)),
-                    i.Lookup(kw(u"acc"), meta=i.Meta(mid217, 12)),
+                    i.Lookup(kw(u"idx"), meta=i.Meta(mid243, 12)),
+                    i.Lookup(kw(u"acc"), meta=i.Meta(mid242, 12)),
                   ],
                   meta=nil),
-                meta=i.Meta(mid218, 5)),
+                meta=i.Meta(mid243, 5)),
             ),
           ],
           meta=nil),
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-count"), meta=i.Meta(mid225, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"Array"), meta=i.Meta(mid216, 14)),
-            i.Fn(args=[kw(u"arr")],name=kw(u"fn_532"),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-count"), meta=i.Meta(mid250, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"Array"), meta=i.Meta(mid241, 14)),
+            i.Fn(args=[kw(u"arr")],name=kw(u"fn_537"),
               body=i.TailCall(
                 args=[
                   i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-                  i.Lookup(kw(u"arr"), meta=i.Meta(mid226, 21)),
+                  i.Lookup(kw(u"arr"), meta=i.Meta(mid251, 21)),
                   i.Const(kw(u"count")),
                 ],
-                meta=i.Meta(mid226, 12)),
+                meta=i.Meta(mid251, 12)),
             ),
           ],
           meta=nil),
         i.Invoke(
           args=[
             i.VDeref(code.intern_var(u"pixie.stdlib", u"extend"), meta=nil),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"-conj"), meta=i.Meta(mid227, 4)),
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"Array"), meta=i.Meta(mid216, 14)),
-            i.Fn(args=[kw(u"arr"),kw(u"itm")],name=kw(u"fn_524"),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"-conj"), meta=i.Meta(mid252, 4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"Array"), meta=i.Meta(mid241, 14)),
+            i.Fn(args=[kw(u"arr"),kw(u"itm")],name=kw(u"fn_529"),
               body=i.TailCall(
                 args=[
-                  i.VDeref(code.intern_var(u"pixie.stdlib", u"conj"), meta=i.Meta(mid228, 12)),
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"conj"), meta=i.Meta(mid253, 6)),
                   i.Invoke(
                     args=[
-                      i.VDeref(code.intern_var(u"pixie.stdlib", u"vector-from-array"), meta=i.Meta(mid228, 18)),
-                      i.Lookup(kw(u"arr"), meta=i.Meta(mid228, 36)),
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"vector-from-array"), meta=i.Meta(mid253, 12)),
+                      i.Lookup(kw(u"arr"), meta=i.Meta(mid253, 30)),
                     ],
-                    meta=i.Meta(mid228, 17)),
-                  i.Lookup(kw(u"itm"), meta=i.Meta(mid228, 41)),
+                    meta=i.Meta(mid253, 11)),
+                  i.Lookup(kw(u"itm"), meta=i.Meta(mid253, 35)),
                 ],
-                meta=i.Meta(mid228, 11)),
+                meta=i.Meta(mid253, 5)),
             ),
           ],
           meta=nil),
       ],
-    meta=i.Meta(mid216, 1)),
+    meta=i.Meta(mid241, 1)),
     i.Invoke(
       args=[
-        i.VDeref(code.intern_var(u"pixie.stdlib", u"println"), meta=i.Meta(mid229, 2)),
-        i.Const(rt.wrap(42)),
-      ],
-      meta=i.Meta(mid229, 1)),
-    i.TailCall(
-      args=[
-        i.VDeref(code.intern_var(u"pixie.stdlib", u"into"), meta=i.Meta(mid230, 2)),
+        i.VDeref(code.intern_var(u"pixie.stdlib", u"into"), meta=i.Meta(mid254, 2)),
         i.Invoke(args=[
           i.Const(code.intern_var(u"pixie.stdlib", u"array")),          ]),
         i.Invoke(
           args=[
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"range"), meta=i.Meta(mid230, 11)),
-            i.Const(rt.wrap(1000)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"range"), meta=i.Meta(mid254, 11)),
+            i.Const(rt.wrap(4)),
           ],
-          meta=i.Meta(mid230, 10)),
+          meta=i.Meta(mid254, 10)),
       ],
-      meta=i.Meta(mid230, 1)),
+      meta=i.Meta(mid254, 1)),
+    i.Const(nil),
   ],
-meta=i.Meta(mid231, 1))
+meta=i.Meta(mid255, 1))
