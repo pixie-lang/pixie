@@ -49,6 +49,9 @@ class Array(object.Object):
 def array__args(lst):
     return Array(lst)
 
+@as_var("make-array")
+def _make_array(size):
+    return Array([nil] * size.int_val())
 
 #@extend(proto._count, Array)
 #def _count(self):
@@ -143,12 +146,13 @@ def array__args(lst):
 def aget(self, idx):
     assert isinstance(self, Array)
     return self._list[idx.int_val()]
-#
-# @as_var("aset")
-# def aset(self, idx, val):
-#     assert isinstance(self, Array)
-#     self._list[idx.int_val()] = val
-#     return val
+
+@as_var("aset")
+def aset(self, idx, val):
+    assert isinstance(self, Array)
+    self._list[idx.int_val()] = val
+    return val
+
 #
 # @as_var("aslice")
 # def aslice(self, offset):

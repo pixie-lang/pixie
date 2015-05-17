@@ -214,7 +214,7 @@ mid212 = (u"""                                new-root""", "<unknown>", 463)
 mid213 = (u"""                                (array val)""", "<unknown>", 464)
 mid214 = (u"""  (-count [this] cnt))""", "<unknown>", 468)
 mid215 = (u"""  (let [subidx (bit-and (bit-shift-right (dec (.-cnt this)) level) 0x01f)""", "<unknown>", 472)
-mid216 = (u"""        ret-array (aclone (.-array parent))""", "<unknown>", 473)
+mid216 = (u"""        ret-array (array-clone (.-array parent))""", "<unknown>", 473)
 mid217 = (u"""        node-to-insert (if (= level 5)""", "<unknown>", 474)
 mid218 = (u"""                         tail-node""", "<unknown>", 475)
 mid219 = (u"""                         (let [child (aget (.-array parent) subidx)]""", "<unknown>", 476)
@@ -252,8 +252,19 @@ mid250 = (u"""  (-count ([arr]""", "<unknown>", 512)
 mid251 = (u"""           (.-count arr)))""", "<unknown>", 513)
 mid252 = (u"""  (-conj [arr itm]""", "<unknown>", 508)
 mid253 = (u"""    (conj (vector-from-array arr) itm))""", "<unknown>", 509)
-mid254 = (u"""(into [] (range 4))""", "<unknown>", 529)
-mid255 = (u"""(do ;; This file is used to build what we need to even start running stdlib.pxi""", "<unknown>", 1)
+mid254 = (u"""  (loop [idx 0]""", "<unknown>", 527)
+mid255 = (u"""    (when (< idx size)""", "<unknown>", 528)
+mid256 = (u"""      (do (aset to (+ to-idx idx) (aget from (+ from-idx idx)))""", "<unknown>", 529)
+mid257 = (u"""          (recur (inc idx))))))""", "<unknown>", 530)
+mid258 = (u"""  (let [new-array (make-array (inc (count arr)))]""", "<unknown>", 533)
+mid259 = (u"""    (array-copy arr 0 new-array 0 (count arr))""", "<unknown>", 534)
+mid260 = (u"""    (aset new-array (count arr) val)""", "<unknown>", 535)
+mid261 = (u"""    new-array))""", "<unknown>", 536)
+mid262 = (u"""  (let [new-array (make-array (count arr))]""", "<unknown>", 539)
+mid263 = (u"""    (array-copy arr 0 new-array 0 (count arr))""", "<unknown>", 540)
+mid264 = (u"""    new-array))""", "<unknown>", 541)
+mid265 = (u"""(into [] (range 40))""", "<unknown>", 545)
+mid266 = (u"""(do ;; This file is used to build what we need to even start running stdlib.pxi""", "<unknown>", 1)
 
  
 code_ast=i.Do(
@@ -3811,14 +3822,14 @@ code_ast=i.Do(
             meta=i.Meta(mid215, 16)),
           i.Invoke(
             args=[
-              i.VDeref(code.intern_var(u"pixie.stdlib", u"aclone"), meta=i.Meta(mid216, 20)),
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"array-clone"), meta=i.Meta(mid216, 20)),
               i.Invoke(
                 args=[
                   i.VDeref(code.intern_var(u"pixie.stdlib", u"-get-field"), meta=nil),
-                  i.Lookup(kw(u"parent"), meta=i.Meta(mid216, 36)),
+                  i.Lookup(kw(u"parent"), meta=i.Meta(mid216, 41)),
                   i.Const(kw(u"array")),
                 ],
-                meta=i.Meta(mid216, 27)),
+                meta=i.Meta(mid216, 32)),
             ],
             meta=i.Meta(mid216, 19)),
           i.If(
@@ -4168,19 +4179,193 @@ code_ast=i.Do(
           meta=nil),
       ],
     meta=i.Meta(mid241, 1)),
+    i.Invoke(args=[
+# (def pixie.stdlib/array-copy)
+      i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
+      i.Const(code.intern_var(u"pixie.stdlib",u"array-copy")),
+      i.Fn(args=[kw(u"from"),kw(u"from-idx"),kw(u"to"),kw(u"to-idx"),kw(u"size")],name=kw(u"array-copy"),
+        body=i.Let(names=[kw(u"idx")],
+        bindings=[
+          i.Const(rt.wrap(0)),
+          ],
+          body=i.TailCall(
+            args=[
+              i.Fn(args=[kw(u"idx")],name=kw(u"pixie.compiler/__loop__fn__"),closed_overs=[kw(u"size"),kw(u"from-idx"),kw(u"to"),kw(u"to-idx"),kw(u"from")],
+                body=i.Let(names=[kw(u"idx")],
+                bindings=[
+                  i.Lookup(kw(u"idx"), meta=i.Meta(mid254, 10)),
+                  ],
+                  body=i.If(
+                    test=i.Invoke(
+                      args=[
+                        i.VDeref(code.intern_var(u"pixie.stdlib", u"<"), meta=i.Meta(mid255, 12)),
+                        i.Lookup(kw(u"idx"), meta=i.Meta(mid255, 14)),
+                        i.Lookup(kw(u"size"), meta=i.Meta(mid255, 18)),
+                      ],
+                      meta=i.Meta(mid255, 11)),
+                    then=i.Do(
+                      args=[
+                        i.Invoke(
+                          args=[
+                            i.VDeref(code.intern_var(u"pixie.stdlib", u"aset"), meta=i.Meta(mid256, 12)),
+                            i.Lookup(kw(u"to"), meta=i.Meta(mid256, 17)),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid256, 21)),
+                                i.Lookup(kw(u"to-idx"), meta=i.Meta(mid256, 23)),
+                                i.Lookup(kw(u"idx"), meta=i.Meta(mid256, 30)),
+                              ],
+                              meta=i.Meta(mid256, 20)),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"aget"), meta=i.Meta(mid256, 36)),
+                                i.Lookup(kw(u"from"), meta=i.Meta(mid256, 41)),
+                                i.Invoke(
+                                  args=[
+                                    i.VDeref(code.intern_var(u"pixie.stdlib", u"+"), meta=i.Meta(mid256, 47)),
+                                    i.Lookup(kw(u"from-idx"), meta=i.Meta(mid256, 49)),
+                                    i.Lookup(kw(u"idx"), meta=i.Meta(mid256, 58)),
+                                  ],
+                                  meta=i.Meta(mid256, 46)),
+                              ],
+                              meta=i.Meta(mid256, 35)),
+                          ],
+                          meta=i.Meta(mid256, 11)),
+                        i.TailCall(
+                          args=[
+                            i.Lookup(kw(u"pixie.compiler/__loop__fn__"), meta=nil),
+                            i.Invoke(
+                              args=[
+                                i.VDeref(code.intern_var(u"pixie.stdlib", u"inc"), meta=i.Meta(mid257, 19)),
+                                i.Lookup(kw(u"idx"), meta=i.Meta(mid257, 23)),
+                              ],
+                              meta=i.Meta(mid257, 18)),
+                          ],
+                          meta=nil),
+                      ],
+                    meta=i.Meta(mid256, 7)),
+                    els=i.Const(nil),
+                    meta=i.Meta(mid255, 5)),
+                  meta=nil),
+              ),
+              i.Lookup(kw(u"idx"), meta=i.Meta(mid254, 10)),
+            ],
+            meta=nil),
+          meta=i.Meta(mid254, 3)),
+      )]),
+    i.Invoke(args=[
+# (def pixie.stdlib/array-append)
+      i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
+      i.Const(code.intern_var(u"pixie.stdlib",u"array-append")),
+      i.Fn(args=[kw(u"arr"),kw(u"val")],name=kw(u"array-append"),
+        body=i.Let(names=[kw(u"new-array")],
+        bindings=[
+          i.Invoke(
+            args=[
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"make-array"), meta=i.Meta(mid258, 20)),
+              i.Invoke(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"inc"), meta=i.Meta(mid258, 32)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid258, 37)),
+                      i.Lookup(kw(u"arr"), meta=i.Meta(mid258, 43)),
+                    ],
+                    meta=i.Meta(mid258, 36)),
+                ],
+                meta=i.Meta(mid258, 31)),
+            ],
+            meta=i.Meta(mid258, 19)),
+          ],
+          body=i.Do(
+            args=[
+              i.Invoke(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"array-copy"), meta=i.Meta(mid259, 6)),
+                  i.Lookup(kw(u"arr"), meta=i.Meta(mid259, 17)),
+                  i.Const(rt.wrap(0)),
+                  i.Lookup(kw(u"new-array"), meta=i.Meta(mid259, 23)),
+                  i.Const(rt.wrap(0)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid259, 36)),
+                      i.Lookup(kw(u"arr"), meta=i.Meta(mid259, 42)),
+                    ],
+                    meta=i.Meta(mid259, 35)),
+                ],
+                meta=i.Meta(mid259, 5)),
+              i.Invoke(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"aset"), meta=i.Meta(mid260, 6)),
+                  i.Lookup(kw(u"new-array"), meta=i.Meta(mid260, 11)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid260, 22)),
+                      i.Lookup(kw(u"arr"), meta=i.Meta(mid260, 28)),
+                    ],
+                    meta=i.Meta(mid260, 21)),
+                  i.Lookup(kw(u"val"), meta=i.Meta(mid260, 33)),
+                ],
+                meta=i.Meta(mid260, 5)),
+              i.Lookup(kw(u"new-array"), meta=i.Meta(mid261, 5)),
+            ],
+          meta=nil),
+          meta=i.Meta(mid258, 3)),
+      )]),
+    i.Invoke(args=[
+# (def pixie.stdlib/array-clone)
+      i.Const(code.intern_var(u"pixie.stdlib", u"set-var-root!")),
+      i.Const(code.intern_var(u"pixie.stdlib",u"array-clone")),
+      i.Fn(args=[kw(u"arr")],name=kw(u"array-clone"),
+        body=i.Let(names=[kw(u"new-array")],
+        bindings=[
+          i.Invoke(
+            args=[
+              i.VDeref(code.intern_var(u"pixie.stdlib", u"make-array"), meta=i.Meta(mid262, 20)),
+              i.Invoke(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid262, 32)),
+                  i.Lookup(kw(u"arr"), meta=i.Meta(mid262, 38)),
+                ],
+                meta=i.Meta(mid262, 31)),
+            ],
+            meta=i.Meta(mid262, 19)),
+          ],
+          body=i.Do(
+            args=[
+              i.Invoke(
+                args=[
+                  i.VDeref(code.intern_var(u"pixie.stdlib", u"array-copy"), meta=i.Meta(mid263, 6)),
+                  i.Lookup(kw(u"arr"), meta=i.Meta(mid263, 17)),
+                  i.Const(rt.wrap(0)),
+                  i.Lookup(kw(u"new-array"), meta=i.Meta(mid263, 23)),
+                  i.Const(rt.wrap(0)),
+                  i.Invoke(
+                    args=[
+                      i.VDeref(code.intern_var(u"pixie.stdlib", u"count"), meta=i.Meta(mid263, 36)),
+                      i.Lookup(kw(u"arr"), meta=i.Meta(mid263, 42)),
+                    ],
+                    meta=i.Meta(mid263, 35)),
+                ],
+                meta=i.Meta(mid263, 5)),
+              i.Lookup(kw(u"new-array"), meta=i.Meta(mid264, 5)),
+            ],
+          meta=nil),
+          meta=i.Meta(mid262, 3)),
+      )]),
     i.Invoke(
       args=[
-        i.VDeref(code.intern_var(u"pixie.stdlib", u"into"), meta=i.Meta(mid254, 2)),
+        i.VDeref(code.intern_var(u"pixie.stdlib", u"into"), meta=i.Meta(mid265, 2)),
         i.Invoke(args=[
           i.Const(code.intern_var(u"pixie.stdlib", u"array")),          ]),
         i.Invoke(
           args=[
-            i.VDeref(code.intern_var(u"pixie.stdlib", u"range"), meta=i.Meta(mid254, 11)),
-            i.Const(rt.wrap(4)),
+            i.VDeref(code.intern_var(u"pixie.stdlib", u"range"), meta=i.Meta(mid265, 11)),
+            i.Const(rt.wrap(40)),
           ],
-          meta=i.Meta(mid254, 10)),
+          meta=i.Meta(mid265, 10)),
       ],
-      meta=i.Meta(mid254, 1)),
+      meta=i.Meta(mid265, 1)),
     i.Const(nil),
   ],
-meta=i.Meta(mid255, 1))
+meta=i.Meta(mid266, 1))

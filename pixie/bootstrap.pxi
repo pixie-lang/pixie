@@ -470,7 +470,7 @@
 
 (defn push-tail [this level parent tail-node]
   (let [subidx (bit-and (bit-shift-right (dec (.-cnt this)) level) 0x01f)
-        ret-array (aclone (.-array parent))
+        ret-array (array-clone (.-array parent))
         node-to-insert (if (= level 5)
                          tail-node
                          (let [child (aget (.-array parent) subidx)]
@@ -523,10 +523,26 @@
                  (f acc (aget this idx)))
           acc)))))
 
+(defn array-copy [from from-idx to to-idx size]
+  (loop [idx 0]
+    (when (< idx size)
+      (do (aset to (+ to-idx idx) (aget from (+ from-idx idx)))
+          (recur (inc idx))))))
+
+(defn array-append [arr val]
+  (let [new-array (make-array (inc (count arr)))]
+    (array-copy arr 0 new-array 0 (count arr))
+    (aset new-array (count arr) val)
+    new-array))
+
+(defn array-clone [arr]
+  (let [new-array (make-array (count arr))]
+    (array-copy arr 0 new-array 0 (count arr))
+    new-array))
 
 ;;;
 
-(into [] (range 4))
+(into [] (range 40))
 
 (comment
   (println 42)

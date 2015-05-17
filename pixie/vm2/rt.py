@@ -51,7 +51,6 @@ def init():
     import pixie.vm2.code as code
     import pixie.vm2.numbers as numbers
     import pixie.vm2.stdlib
-    #import pixie.vm.bits
     #import pixie.vm.interpreter
     #import pixie.vm.atom
     #import pixie.vm.reduced
@@ -141,6 +140,9 @@ def init():
 
     numbers.init()
     code.init()
+
+    import pixie.vm2.bits
+
 
 
 def unwrap_string(x):
