@@ -767,6 +767,7 @@ there's a value associated with the key. Use `some` for checking for values."
    :examples [["((comp inc first) [41 2 3])" nil 42]]
    :signatures [[f] [f & fs]]
    :added "0.1"}
+  ([] identity)
   ([f] f)
   ([f1 f2]
      (fn [& args]
