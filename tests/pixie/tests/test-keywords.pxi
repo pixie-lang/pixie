@@ -14,6 +14,14 @@
   (t/assert= (namespace :cat/dog) "cat")
   (t/assert= (namespace ::foo) "pixie.tests.test-keywords"))
 
+(t/deftest fqd-keywords
+  (t/assert-throws? (read-string "::x/bar"))
+  (t/assert-throws? (read-string "::a.b/foo"))
+  (refer-ns 'my.other.ns 'my.fake.core 'fake)
+  (binding [*ns* (the-ns 'my.other.ns)]
+    (t/assert= :my.fake.core/foo (read-string "::fake/foo"))
+    (t/assert= :my.fake.core/foo (read-string "::my.fake.core/foo"))
+    (t/assert-throws? (read-string "::f/foo"))))
 
 (t/deftest keyword-equality
   (t/assert= :foo/bar :foo/bar)
