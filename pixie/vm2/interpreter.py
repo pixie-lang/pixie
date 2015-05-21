@@ -63,7 +63,7 @@ class InterpretK(Continuation):
         self._c_locals = locals
 
     def call_continuation(self, val, stack):
-        ast = jit.promote(self._c_ast)
+        ast = self._c_ast
         return ast.interpret(val, self._c_locals, stack)
 
     def get_ast(self):
@@ -77,7 +77,7 @@ class Const(AST):
         self._c_val = val
 
     def interpret(self, _, locals, stack):
-        return jit.promote(self._c_val), stack
+        return self._c_val, stack
 
 class Locals(object):
     _immutable_ = True
@@ -124,8 +124,9 @@ class Fn(AST):
         return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body), stack
 
 class InterpretedFn(code.BaseCode):
-    _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name"]
+    _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_arg_names"]
     def __init__(self, name, arg_names, locals_prefix, ast):
+        code.BaseCode.__init__(self)
         self._c_arg_names = arg_names
         self._c_name = name
         if name is not nil:
@@ -140,16 +141,15 @@ class InterpretedFn(code.BaseCode):
     @jit.unroll_safe
     def invoke_k_with(self, args, stack, self_fn):
         # TODO: Check arg count
-        locals = jit.promote(self._c_locals)
-        locals = Locals(jit.promote(self._c_name), self_fn, locals)
+        locals = self._c_locals
+        locals = Locals(self._c_name, self_fn, locals)
 
-        arg_names = jit.promote(self._c_arg_names)
-        if not len(args) == len(arg_names):
-            runtime_error(u"Wrong number args, expected " + unicode(str(len(args))) + u" got " + unicode(str(len(arg_names))),
+        if not len(args) == len(self._c_arg_names):
+            runtime_error(u"Wrong number args, expected " + unicode(str(len(args))) + u" got " + unicode(str(len(self._c_arg_names))),
                           u"pixie.stdlib.ArityException")
 
-        for idx in range(len(arg_names)):
-            locals = Locals(arg_names[idx], args[idx], locals)
+        for idx in range(len(self._c_arg_names)):
+            locals = Locals(self._c_arg_names[idx], args[idx], locals)
 
         return nil, stack_cons(stack, InterpretK(self._c_fn_ast, locals))
 
@@ -338,4 +338,56 @@ class VDeref(AST):
 
     def interpret(self, val, locals, stack):
         return self._c_var.deref(), stack
+
+
+from rpython.rlib.jit import JitDriver
+from rpython.rlib.objectmodel import we_are_translated
+def get_printable_location(ast):
+    return ast.get_short_location()
+
+jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
+
+def run_stack(val, cont, stack=None):
+    stack = None
+    val = None
+    ast = cont.get_ast()
+    while True:
+        jitdriver.jit_merge_point(ast=ast, stack=stack, val=val, cont=cont)
+        try:
+            val, stack = cont.call_continuation(val, stack)
+            ast = cont.get_ast()
+        except BaseException as ex:
+            print_stacktrace(cont, stack)
+            if not we_are_translated():
+                print ex
+                raise
+            break
+
+        if stack:
+            cont = stack._cont
+            stack = stack._parent
+        else:
+            break
+
+        if cont.should_enter_jit:
+            jitdriver.can_enter_jit(ast=ast, stack=stack, val=val, cont=cont)
+
+    return val
+
+def stacktrace_for_cont(cont):
+    ast = cont.get_ast()
+    if ast:
+        return ast.get_long_location()
+
+def print_stacktrace(cont, stack):
+    st = []
+    st.append(stacktrace_for_cont(cont))
+    while stack:
+        st.append(stacktrace_for_cont(stack._cont))
+        stack = stack._parent
+    st.reverse()
+    for line in st:
+        print line
+
+
 

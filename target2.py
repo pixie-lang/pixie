@@ -1,6 +1,7 @@
 
 import pixie.vm2.interpreter as i
-from pixie.vm2.object import StackCell, run_stack
+from pixie.vm2.interpreter import run_stack
+from pixie.vm2.object import StackCell
 import pixie.vm2.rt as rt
 from pixie.vm2.primitives import nil, true, false
 import pixie.vm2.code as code
@@ -33,7 +34,7 @@ def entry_point():
 
     val = testit(max)
     print val
-    return val
+    return 43
 
 ## JIT STUFF
 
@@ -93,6 +94,9 @@ def run_debug(argv):
 class DebugIFace(JitHookInterface):
     def on_abort(self, reason, jitdriver, greenkey, greenkey_repr, logops, operations):
         print "Aborted Trace, reason: ", Counters.counter_names[reason], logops, greenkey_repr
+        #from rpython.rlib.objectmodel import we_are_translated
+        #import pdb; pdb.set_trace()
+        #exit(0)
         pass
 
     def before_compile_bridge(self, debug_info):
@@ -111,7 +115,7 @@ def jitpolicy(driver):
 def target(*args):
     import pixie.vm.rt as rt
     driver = args[0]
-    driver.exe_name = "pixie-vm"
+    driver.exe_name = "pixie-vm2"
     rt.__config__ = args[0].config
 
 

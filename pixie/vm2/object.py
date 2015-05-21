@@ -149,55 +149,8 @@ class StackCell(object):
 def stack_cons(stack, other):
     return StackCell(other, stack)
 
-def get_printable_location(ast, old_ast):
-    return ast.get_short_location()
 
-from rpython.rlib.jit import JitDriver
-jitdriver = JitDriver(greens=["ast", "prev_ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
 
-def run_stack(val, cont, stack=None):
-    from pixie.vm2.interpreter import PrevASTNil
-    stack = None
-    val = None
-    ast = cont.get_ast()
-    prev_ast = PrevASTNil()
-    while True:
-        jitdriver.jit_merge_point(ast=ast, prev_ast=prev_ast, stack=stack, val=val, cont=cont)
-        try:
-            val, stack = cont.call_continuation(val, stack)
-        except BaseException as ex:
-            print_stacktrace(cont, stack)
-            if not we_are_translated():
-                print ex
-                raise
-            break
-        if stack is None:
-            return val
-        prev_ast = ast
-        prev_cont = cont
-        cont = stack._cont
-        ast = cont.get_ast()
-        stack = stack._parent
-
-        if prev_cont.should_enter_jit:
-            jitdriver.can_enter_jit(ast=ast, prev_ast=prev_ast, stack=stack, val=val, cont=cont)
-
-    return val
-
-def stacktrace_for_cont(cont):
-    ast = cont.get_ast()
-    if ast:
-        return ast.get_long_location()
-
-def print_stacktrace(cont, stack):
-    st = []
-    st.append(stacktrace_for_cont(cont))
-    while stack:
-        st.append(stacktrace_for_cont(stack._cont))
-        stack = stack._parent
-    st.reverse()
-    for line in st:
-        print line
 
 class RuntimeException(Object):
     _type = Type(u"pixie.stdlib.RuntimeException")

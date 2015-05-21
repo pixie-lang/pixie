@@ -7,9 +7,9 @@
    (resolve 'defprotocol)
    (fn
      [nm & sigs]
-     `(do (def ~nm (protocol ~(str nm)))
+     `(do (def ~nm (~'pixie.stdlib/protocol ~(str nm)))
           ~@(map (fn [[x]]
-                   `(def ~x (polymorphic-fn ~(str x) ~nm)))
+                   `(def ~x (~'pixie.stdlib/polymorphic-fn ~(str x) ~nm)))
                  sigs)))
 
    (resolve 'deftype)
@@ -52,7 +52,9 @@
                    body)
            proto-bodies (second bodies)
            all-fields fields
-           type-decl `(def ~nm (create-type ~(keyword (name nm)) ~all-fields))
+           type-nm (str (:ns *env*) "." (name nm))
+           type-decl `(def ~nm (create-type ~(keyword type-nm)
+                                            ~all-fields))
            inst (gensym)
            ctor `(defn ~ctor-name ~field-syms
                    (new ~nm
@@ -61,7 +63,9 @@
                          (map (fn [body]
                                 (cond
                                   (symbol? body) `(satisfy ~body ~nm)
-                                  (seq? body) `(extend ~(first body) ~nm ~(mk-body body))
+                                  (seq? body) `(extend ~(first body)
+                                                 ~(symbol (str (:ns *env*) "/" nm))
+                                                 ~(mk-body body))
                                   :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
                          conj
                          proto-bodies)]
@@ -250,6 +254,13 @@
            :else :unknown)
    :form val})
 
+(defmethod analyze-seq 'in-ns
+  [[_ nsp]]
+  (set! (var *env*) (assoc *env* :ns (symbol (name nsp))))
+  (in-ns nsp)
+  (in-ns :pixie.compiler)
+  (analyze-form nil))
+
 (defmethod analyze-seq 'local-macro
   [[_ [nm replace] & body :as form]]
   (binding [*env* (assoc-in *env* [:locals nm] {:op :local-macro
@@ -281,18 +292,22 @@
 
 (defmethod analyze-seq :default
   [[sym & args :as form]]
-  (let [resolved (and (symbol? sym)
-                      (resolve-in (the-ns (:ns *env*)) sym))]
+  (let [resolved (try (and (symbol? sym)
+                           (resolve-in (the-ns (:ns *env*)) sym))
+                      (catch :pixie.stdlib/AssertionException ex
+                          nil))]
+    (println sym resolved [ (if resolved
+                              (namespace resolved))]
+             (:ns *env*)
+             (contains? macro-overrides resolved))
     (cond
       (and (symbol? sym)
            (string/starts-with? (name sym) ".-"))
       (let [sym-kw (keyword (string/substring (name sym) 2))]
-        (analyze-form (keep-meta `(-get-field ~@args ~sym-kw)
+        (analyze-form (keep-meta `(~'pixie.stdlib/-get-field ~@args ~sym-kw)
                                  form)))
       
-      
-      (and resolved
-           (contains? macro-overrides resolved))
+      (contains? macro-overrides resolved)
       (analyze-form (keep-meta (apply (macro-overrides resolved) args)
                                form))
       
@@ -355,8 +370,20 @@
    :env *env*})
 
 (defn maybe-var [x]
-  (let [resolved (resolve-in (the-ns (:ns *env*)) x)]
+  (let [namesp (the-ns (:ns *env*))
+        resolved (try
+                   (resolve-in namesp x)
+                   (catch :pixie.stdlib/AssertionException ex
+                     nil))]
+    (println x (namespace x) (name x))
     (cond
+      (namespace x)
+      {:op :var
+       :env *env*
+       :ns (symbol (namespace x))
+       :name (symbol (name x))
+       :form x}
+      
       (get-in @(:vars *env*) [(:ns *env*) x])
       {:op :var
        :env *env*

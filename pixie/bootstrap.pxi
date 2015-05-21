@@ -94,11 +94,17 @@
 
 
 (extend -get-field Object -internal-get-field)
-(extend -str Object (fn [x sb]
-                      (sb (-internal-to-str x))))
-(extend -repr Object (fn [x sb]
-                       (sb (-internal-to-repr x))))
 
+
+(extend-type Object
+  (-str [x sb]
+    (sb (-internal-to-str x)))
+  
+  (-repr  [x sb]
+    (sb (-internal-to-repr x)))
+
+  (-eq [this other]
+    false))
 
 (extend-type String
   IObject
@@ -142,6 +148,22 @@
   ([x y & more]
    (-apply > (> x y) more)))
 
+
+(defn <=
+  ([x] true)
+  ([x y] (-lte x y))
+  ([x y & rest] (if (-lte x y)
+                  (apply <= y rest)
+                  false)))
+
+(defn >=
+  ([x] true)
+  ([x y] (-gte x y))
+  ([x y & rest] (if (-gte x y)
+                  (apply >= y rest)
+                  false)))
+
+
 (defn =
   {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses
 -eq to perform equality checks."
@@ -161,6 +183,15 @@
   ([coll itm] (-conj coll itm))
   ([coll item & more]
    (-apply conj (conj x y) more)))
+
+
+(defn nth
+  {:doc "Returns the element at the idx.  If the index is not found it will return an error.
+         However, if you specify a not-found parameter, it will substitute that instead"
+   :signatures [[coll idx] [coll idx not-found]]
+   :added "0.1"}
+  ([coll idx] (-nth coll idx))
+  ([coll idx not-found] (-nth-not-found coll idx not-found)))
 
 
 (defn count
@@ -331,13 +362,13 @@
 
 ;; Range
 
+(in-ns :pixie.stdlib.range)
+
 (deftype Range [start stop step]
   IReduce
   (-reduce [self f init]
     (loop [i start
            acc init]
-      (println i)
-      (println acc)
       (if (or (and (> step 0) (< i stop))
               (and (< step 0) (> i stop))
               (and (= step 0)))
@@ -378,9 +409,12 @@
     (-str (seq this) sbf))
   (-repr [this sbf]
     (-repr (seq this) sbf))
-  (-eq [this sb]))
+  (-eq [this sb]
+    nil))
 
 (def MAX-NUMBER 0xFFFFFFFF) ;; 32 bits ought to be enough for anyone ;-)
+
+(in-ns :pixie.stdlib)
 
 (defn range
   {:doc "Returns a range of numbers."
@@ -390,10 +424,10 @@
               ["(seq (range 5 -1 -1))" nil (5 4 3 2 1 0)]]
    :signatures [[] [stop] [start stop] [start stop step]]
    :added "0.1"}
-  ([] (->Range 0 MAX-NUMBER 1))
-  ([stop] (->Range 0 stop 1))
-  ([start stop] (->Range start stop 1))
-  ([start stop step] (->Range start stop step)))
+  ([] (pixie.stdlib.range/->Range 0 MAX-NUMBER 1))
+  ([stop] (pixie.stdlib.range/->Range 0 stop 1))
+  ([start stop] (pixie.stdlib.range/->Range start stop 1))
+  ([start stop step] (pixie.stdlib.range/->Range start stop step)))
 
 ;; End Range
 
@@ -406,7 +440,7 @@
 
 (defn new-node
   ([edit]
-   (new-node edit (array 32)))
+   (new-node edit (make-array 32)))
   ([edit array]
    (->Node edit array)))
 
@@ -420,18 +454,19 @@
       0
       (bit-shift-left (bit-shift-right (dec cnt) 5) 5))))
 
-(defn array-for [this i cnt root shift tail]
-      (if (and (<= 0 i) (< i cnt))
-        (if (>= i (tailoff this))
-          tail
-          (.-array ((fn look-deeper [node level]
-                      (if (> level 0)
-                        (look-deeper (aget (:array node)
-                                           (bit-and (bit-shift-right i level) 0x01f))
-                                     (- level 5))
-                        (:array node)))
-                    root
-                    shift)))))
+(defn array-for [this i]
+  (if (and (<= 0 i) (< i (.-cnt this)))
+    (if (>= i (tailoff this))
+      (.-tail this)
+      (loop [node (.-root this)
+             level (.-shift this)]
+        (if (> level 0)
+          (recur (aget (.-array node)
+                       (bit-and (bit-shift-right i level) 0x01f))
+                 (- level 5))
+          (.-array node))))
+    (throw [:pixie.stdlib/IndexOutOfRangeException
+            "Index out of range"])))
 
 (deftype PersistentVector [cnt shift root tail meta]
   IMessageObject
@@ -449,9 +484,10 @@
       (let [tail-node (->Node (.-edit root) tail)]
         (if (> (bit-shift-right cnt 5) (bit-shift-left 1 shift))
 
-          (let [new-root (new-node (.-edit root))]
-            (aset new-root 0 root)
-            (aset new-root 1 (new-path (.-edit root) shift tail-node))
+          (let [new-root (new-node (.-edit root))
+                new-root-arr (.-array new-root)]
+            (aset new-root-arr 0 root)
+            (aset new-root-arr 1 (new-path (.-edit root) shift tail-node))
             (->PersistentVector (inc cnt)
                                 (+ shift 5)
                                 new-root
@@ -463,9 +499,69 @@
                                 new-root
                                 (array val)
                                 meta))))))
+  IIndexed
+  (-nth [self i]
+    (if (and (<= 0 i)
+             (< i cnt))
+      (let [node (array-for self i)]
+        (aget node (bit-and i 0x01F)))
+      (throw [:pixie.stdlib/IndexOutOfRange
+              (str "Index out of range, got " i " only have " cnt)])))
+ 
+  (-nth-not-found [self i not-found]
+    (if (and (<= 0 i)
+             (< i cnt))
+      (let [node (array-for self i)]
+        (aget node (bit-and i 0x01F)))
+      not-found))
+
+  
+
+  ILookup
+  (-get [this val]
+    (-nth-not-found self val nil))
+  
 
   ICounted
-  (-count [this] cnt))
+  (-count [this] cnt)
+
+  IPop
+  (-pop [this]
+    (assert (!= cnt) "Can't pop an empty vector")
+
+    (if (== cnt 1)
+      EMPTY
+      (if (> (- cnt (tailoff this)) 1)
+        (let [size (dec (count tail))
+              new-tail (array-resize size)]
+          (->PersistentVector (dec cnt)
+                              shift
+                              root
+                              new-tail
+                              meta))
+        (let [new-tail (array-for this (- cnt 2))
+              new-root (pop-tail shift root)]
+          (cond
+            (nil? new-root)
+            (->PersisentVector (dec cnt)
+                               shift
+                               EMPTY-NODE
+                               new-tail
+                               meta)
+            (and (> shift 5)
+                 (nil? (aget (.-array new-root) 1)))
+            (->PersistentVector (dec cnt)
+                                (- shift 5)
+                                (aget (.-array new-root) 0)
+                                new-tail
+                                meta)
+
+            :else
+            (->PersistentVector (dec cnt)
+                                shift
+                                new-root
+                                new-tail
+                                meta)))))))
 
 
 (defn push-tail [this level parent tail-node]
@@ -483,20 +579,44 @@
                                         child
                                         tail-node))))]
     (aset ret-array subidx node-to-insert)
-    (->Node (.-edit parent) node-to-insert)))
+    (->Node (.-edit parent) ret-array)))
+
+(defn pop-tail [this level node]
+  (let [sub-idx (bit-and (bit-shift-right (dec (.-cnt)) level) 0x01F)]
+    (cond
+      (> level 5)
+      (let [new-child (pop-tail (- level 5)
+                                (aget (.-array node) sub-idx))]
+        (if (or (nil? new-child)
+                (= sub-idx 0))
+          nil
+          (let [root (.-root this)
+                ret (->Node (.-edit root)
+                            (.-array node))]
+            (aset (.-array ret) sub-idx new-child)
+            ret)))
+      
+      (= sub-idx 0)
+      nil
+
+      :else
+      (let [root (.-root this)
+            ret (->Node (.-edit root)
+                        (aclone (.-array node)))]
+        (aset (.-array ret) nil)
+        ret))))
 
 (defn new-path [edit level node]
   (if (= level 0)
     node
-    (->Node edit
-            (new-path edit (- level 5) node))))
+    (let [nnode (new-node edit)]
+      (aset (.-array nnode) 0 (new-path edit (- level 5) node))
+      nnode)))
 
 
 (def EMPTY (->PersistentVector 0 5 EMPTY-NODE (array 0) nil))
 
 (defn vector-from-array [arr]
-  (println "Vector for array")
-  (println (count arr))
   (if (< (count arr) 32)
     (->PersistentVector (count arr) 5 EMPTY-NODE arr nil)
     (into [] arr)))
@@ -542,7 +662,19 @@
 
 ;;;
 
-(into [] (range 40))
+(let [MAX 1024
+      v (into [] (range MAX))]
+  (dotimes [x MAX]
+    (println x)
+    (assert (= x (nth v x)))))
+
+#_(let [arr1 (make-array 32)
+      arr2 (make-array 32)]
+  (dotimes [x 3000]
+    (array-copy arr1 0 arr2 0 (count arr1))))
+
+#_(dotimes [x 10000]
+  (dotimes [y 5]))
 
 (comment
   (println 42)

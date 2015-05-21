@@ -91,7 +91,7 @@ def slice_from_start(from_list, count, extra=r_uint(0)):
 
 
 class BaseCode(object.Object):
-    _immutable_fields_ = ["_meta"]
+    _immutable_fields_ = ["_meta", "_name"]
     def __init__(self):
         from pixie.vm2.string import String
         assert isinstance(self, BaseCode)
@@ -147,7 +147,7 @@ def join_last(words, sep):
 class MultiArityFn(BaseCode):
     _type = object.Type(u"pixie.stdlib.MultiArityFn")
 
-    _immutable_fields_ = ["_arities[*]", "_required_arity", "_rest_fn"]
+    _immutable_fields_ = ["_arities[*]", "_required_arity", "_rest_fn", "_name"]
 
     def type(self):
         return MultiArityFn._type
@@ -164,15 +164,23 @@ class MultiArityFn(BaseCode):
         return MultiArityFn(self._name, self._arities, self._required_arity, self._rest_fn, meta)
 
     @elidable_promote()
-    def get_fn(self, arity):
+    def _get_fn(self, arity):
         f = self._arities.get(arity, None)
         if f is not None:
             return f
         if self._rest_fn is not None and arity >= self._required_arity:
             return self._rest_fn
 
+        return None
+
+    @jit.unroll_safe
+    def get_fn(self, arity):
+        fn = self._get_fn(arity)
+        if fn:
+            return fn
+
         acc = []
-        sorted = TimSort(self.get_arities()) 
+        sorted = TimSort(self.get_arities())
         sorted.sort()
         for x in sorted.list:
             acc.append(unicode(str(x)))
@@ -182,6 +190,9 @@ class MultiArityFn(BaseCode):
 
         runtime_error(u"Wrong number of arguments " + unicode(str(arity)) + u" for function '" + unicode(self._name) + u"'. Expected " + join_last(acc, u"or"),
                       u"pixie.stdlib/InvalidArityException")
+
+
+
 
     def get_arities(self):
         return self._arities.keys()
@@ -464,7 +475,9 @@ class Var(BaseCode):
                     return self.get_root(self._rev)
         else:
             val = self.get_root(self._rev)
-            affirm(val is not undefined, u"Var " + self._name + u" is undefined")
+            if val is undefined:
+                pass
+            affirm(val is not undefined, u"Var " + self._ns + u"/" + self._name + u" is undefined")
             return val
 
     def is_defined(self):
@@ -771,41 +784,6 @@ class DoublePolymorphicFn(BaseCode):
         b = args[1].type()
         fn = self.get_fn(a, b, self._rev)
         return fn.invoke_k(args, stack)
-
-
-# class ElidableFn(object.Object):
-#     _type = object.Type(u"pixie.stdlib.ElidableFn")
-#     __immutable_fields__ = ["_boxed_fn"]
-#     def type(self):
-#         return ElidableFn._type
-#
-#     def __init__(self, boxed_fn):
-#         self._boxed_fn = boxed_fn
-#
-#     @elidable
-#     def _elidable_invoke_0(self, fn):
-#         return self._boxed_fn.invoke([])
-#
-#     @elidable
-#     def _elidable_invoke_1(self, fn, arg0):
-#         return self._boxed_fn.invoke([arg0])
-#
-#     @elidable
-#     def _elidable_invoke_2(self, fn, arg0, arg1):
-#         return self._boxed_fn.invoke([arg0, arg1])
-#
-#
-#     def invoke(self, args):
-#         largs = jit.promote(len(args))
-#         fn = self._boxed_fn.promote()
-#         if largs == 0:
-#             return self._elidable_invoke_0(fn).promote()
-#         elif largs == 1:
-#             return self._elidable_invoke_1(fn, args[0].promote()).promote()
-#         elif largs == 2:
-#             return self._elidable_invoke_2(fn, args[0].promote(), args[1].promote()).promote()
-#         affirm(False, u"Too many args to Elidable Fn")
-
 
 def munge(s):
     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")

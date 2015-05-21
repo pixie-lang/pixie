@@ -29,9 +29,6 @@ class Integer(Number):
     def r_uint_val(self):
         return r_uint(self._int_val)
 
-    def promote(self):
-        return Integer(jit.promote(self._int_val))
-
     def type(self):
         return Integer._type
 
