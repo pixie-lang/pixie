@@ -392,6 +392,15 @@
   (t/assert= (set (keys (ns-map 'foo)))
              #{'bar 'baz}))
 
+(t/deftest test-ns-aliases
+  (in-ns :ns-to-require)
+  (in-ns :my-fake-ns)
+  (require ns-to-require :as some-alias)
+  (in-ns :pixie.tests.test-stdlib)
+  (t/assert= {'some-alias (the-ns 'ns-to-require)
+              'pixie.stdlib (the-ns 'pixie.stdlib)}
+             (ns-aliases (the-ns 'my-fake-ns))))
+
 (t/deftest test-while
   (t/assert=  (while (pos? 0) true ) nil)
   (t/assert=  (while (pos? 0) false) nil)
