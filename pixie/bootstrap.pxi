@@ -177,6 +177,18 @@
                   (apply = y rest)
                   false)))
 
+(defn not
+  [x]
+  (if x false true))
+
+(defn not=
+  ([& args]
+   (not (-apply = args))))
+
+(defn nil?
+  [x]
+  (identical? x nil))
+
 (defn conj
   ([] [])
   ([coll] coll)
@@ -184,6 +196,9 @@
   ([coll item & more]
    (-apply conj (conj x y) more)))
 
+(defn pop
+  ([] [])
+  ([coll] (-pop coll)))
 
 (defn nth
   {:doc "Returns the element at the idx.  If the index is not found it will return an error.
@@ -433,6 +448,8 @@
 
 ;; PersistentVector
 
+(in-ns :pixie.stdlib.persistent-vector)
+
 (deftype Node [edit array]
   IMessageObject
   (-get-field [this name]
@@ -527,20 +544,20 @@
 
   IPop
   (-pop [this]
-    (assert (!= cnt) "Can't pop an empty vector")
+    (assert (not= cnt 0) "Can't pop an empty vector")
 
-    (if (== cnt 1)
+    (if (= cnt 1)
       EMPTY
       (if (> (- cnt (tailoff this)) 1)
         (let [size (dec (count tail))
-              new-tail (array-resize size)]
+              new-tail (array-resize tail size)]
           (->PersistentVector (dec cnt)
                               shift
                               root
                               new-tail
                               meta))
         (let [new-tail (array-for this (- cnt 2))
-              new-root (pop-tail shift root)]
+              new-root (pop-tail this shift root)]
           (cond
             (nil? new-root)
             (->PersisentVector (dec cnt)
@@ -561,7 +578,30 @@
                                 shift
                                 new-root
                                 new-tail
-                                meta)))))))
+                                meta))))))
+
+  IAssociative
+  (-assoc [this k v]
+    (assert (int? k) "Vectors expect ints as keys")
+    (if (and (>= idx 0)
+             (< idx cnt))
+      (if (>= idx (tail-off this))
+        (let [new-tail (array-clone tail)]
+          (aset new-tail (bit-and idx 0x01f) val)
+          (->PersistentVector cnt shift root new-tail meta))
+        (->PersistentVector cnt shift (do-assoc shift root idx val) tail meta))
+      (if (= idx cnt)
+        (-conj this val)
+        (throw [:pixie.stdlib/IndexOutOfRange
+                "Can only assoc to the end or the contents of a vector"])))))
+
+(defn do-assoc [lvl node idx val]
+  (let [new-array (array-clone (.-array node))
+        ret (if (= lvl 0)
+              (aset new-array (bit-and idx 0x01f) val)
+              (let [sub-idx (bit-and (bit-shift-right idx lvl) 0x01f)]
+                (aset new-array sub-idx (do-assoc (- lvl 5) (aget (.-array node) idx val)))))]
+    (->Node (.-edit node) new-array)))
 
 
 (defn push-tail [this level parent tail-node]
@@ -582,10 +622,11 @@
     (->Node (.-edit parent) ret-array)))
 
 (defn pop-tail [this level node]
-  (let [sub-idx (bit-and (bit-shift-right (dec (.-cnt)) level) 0x01F)]
+  (let [sub-idx (bit-and (bit-shift-right (dec (.-cnt this)) level) 0x01F)]
     (cond
       (> level 5)
-      (let [new-child (pop-tail (- level 5)
+      (let [new-child (pop-tail this
+                                (- level 5)
                                 (aget (.-array node) sub-idx))]
         (if (or (nil? new-child)
                 (= sub-idx 0))
@@ -602,8 +643,8 @@
       :else
       (let [root (.-root this)
             ret (->Node (.-edit root)
-                        (aclone (.-array node)))]
-        (aset (.-array ret) nil)
+                        (array-clone (.-array node)))]
+        (aset (.-array ret) sub-idx nil)
         ret))))
 
 (defn new-path [edit level node]
@@ -620,6 +661,8 @@
   (if (< (count arr) 32)
     (->PersistentVector (count arr) 5 EMPTY-NODE arr nil)
     (into [] arr)))
+
+(in-ns :pixie.stdlib)
 
 ;; Extend Array
 
@@ -660,37 +703,17 @@
     (array-copy arr 0 new-array 0 (count arr))
     new-array))
 
+(defn array-resize [arr size]
+  (let [new-array (make-array size)]
+    (array-copy arr 0 new-array 0 size)
+    new-array))
+
 ;;;
 
-(let [MAX 1024
-      v (into [] (range MAX))]
-  (dotimes [x MAX]
-    (println x)
-    (assert (= x (nth v x)))))
 
-#_(let [arr1 (make-array 32)
-      arr2 (make-array 32)]
-  (dotimes [x 3000]
-    (array-copy arr1 0 arr2 0 (count arr1))))
-
-#_(dotimes [x 10000]
-  (dotimes [y 5]))
-
-(comment
-  (println 42)
-
-  #_(into [] (range 4))
-
-
-  (println ( (fn [x]
-               (assert (< x 0xFFFFFFFF) "Vector too large")
-
-               (if true
-                 11
-                 2)) 0))
-
-  (println ((fn []
-              (if true nil (println 100))
-              11)))
-
-  (println 44))
+(println (count (reduce
+               (fn [acc _]
+                 (pop acc))
+               
+               (into [] (range 1024))
+               (range 1024))))

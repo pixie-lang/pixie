@@ -305,7 +305,7 @@
 (comment (extend -reduce Array indexed-reduce))
 
 (extend -reduce Buffer indexed-reduce)
-(extend -reduce String indexed-reduce)
+#_(extend -reduce String indexed-reduce)
 
 (extend -str Bool
   (fn [x]

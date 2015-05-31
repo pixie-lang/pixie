@@ -27,7 +27,6 @@
   (-dispose! [this]
     (dispose! out)))
 
-
 (deftype UTF8InputStream [in bad-char]
   IUTF8InputStream
   (read-char [this]
@@ -68,11 +67,15 @@
   [o]
   (->UTF8OutputStream o))
 
-(defn utf8-output-stream-rf [output-stream]
-  (let [fp (utf8-output-stream output-stream)]
-    (fn ([] 0)
-      ([_] (dispose! fp))
-      ([_ chr]
-       (assert (char? chr))
-       (write-char fp chr)
-       nil))))
+(defn utf8-output-stream-rf
+  ([output-stream]
+   (utf8-output-stream-rf output-stream true))
+  ([output-stream dispose?]
+   (let [fp (utf8-output-stream output-stream)]
+     (fn ([] 0)
+       ([_] (when dispose?
+              (dispose! fp)))
+       ([_ chr]
+        (assert (char? chr))
+        (write-char fp chr)
+        nil)))))

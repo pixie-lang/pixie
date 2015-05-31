@@ -13,7 +13,7 @@
 (uv/defuvfsfn fs_close [file] :result)
 
 
-(def DEFAULT-BUFFER-SIZE 1024)
+(def DEFAULT-BUFFER-SIZE (* 32 1024))
 
 (deftype FileStream [fp offset uvbuf]
   IInputStream
@@ -62,7 +62,7 @@
 
 (defn read-line
   "Read one line from input-stream for each invocation.
-   nil when all lines have been read"
+kl   nil when all lines have been read"
   [input-stream]
   (let [line-feed (into #{} (map int [\newline \return]))
         buf (buffer 1)]
@@ -100,7 +100,7 @@
   (-dispose! [this]
     (fclose fp)))
 
-(deftype BufferedOutputStream [downstream idx buffer]
+(deftype BufferedOutputStream [downstream idx buffer disposed?]
   IByteOutputStream
   (write-byte [this val]
     (pixie.ffi/pack! buffer idx CUInt8 val)
@@ -111,6 +111,8 @@
       (set-field! this :idx 0)))
   IDisposable
   (-dispose! [this]
+    (assert (not disposed?) "Can't dispose twice!")
+    (set-field! this :disposed? true)
     (set-buffer-count! buffer idx)
     (write downstream buffer))
   IFlushableStream
@@ -136,7 +138,7 @@
   ([downstream]
    (buffered-output-stream downstream DEFAULT-BUFFER-SIZE))
   ([downstream size]
-    (->BufferedOutputStream downstream 0 (buffer size))))
+    (->BufferedOutputStream downstream 0 (buffer size) false)))
 
 (defn buffered-input-stream
   ([upstream]
@@ -164,24 +166,33 @@
 
 (defn spit 
   "Writes the content to output. Output must be a file or an IOutputStream."
-  [output content]
-  (cond
-    (string? output)
-    (transduce (map identity)
-               (-> output
-                   open-write
-                   buffered-output-stream
-                   utf8/utf8-output-stream-rf)
-               (str content))
-    
-    (satisfies? IOutputStream output)
-    (transduce (map identity)
-               (-> output
-                   buffered-output-stream
-                   utf8/utf8-output-stream-rf)
-               (str content))
-    
-    :else (throw "Expected a string or IOutputStream")))
+  ([output content]
+   (spit output content true))
+  ([output content dispose?]
+   (cond
+     (string? output)
+     (transduce (map identity)
+                (-> output
+                    open-write
+                    buffered-output-stream
+                    (utf8/utf8-output-stream-rf dispose?))
+                (str content))
+     
+     (satisfies? IOutputStream output)
+     (transduce (map identity)
+                (-> output
+                    buffered-output-stream
+                    (utf8/utf8-output-stream-rf dispose?))
+                (str content))
+
+     (satisfies? IByteOutputStream output)
+     (transduce (map identity)
+                (-> output
+                    (utf8/utf8-output-stream-rf dispose?))
+                (str content))
+     
+     :else (throw [:pixie.stdlib/InvalidInputException
+                   "Expected a string or IOutputStream"]))))
 
 (defn slurp 
   "Reads in the contents of input. Input must be a filename or an IInputStream"

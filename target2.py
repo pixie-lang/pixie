@@ -24,7 +24,7 @@ def testit(max):
 #val = testit()
 #print val.int_val(), val
 
-def entry_point():
+def entry_point(args):
     #s = rt.wrap(u"Foo")
     from pixie.vm2.string import String
     v = parse_number(u"1")
@@ -129,4 +129,4 @@ print rpython.config.translationoption.get_combined_translation_config()
 
 if __name__ == "__main__":
     #run_debug(sys.argv)
-    entry_point()
+    entry_point([])

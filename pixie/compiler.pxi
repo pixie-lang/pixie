@@ -1,6 +1,8 @@
 (ns pixie.compiler
   (:require [pixie.io :as io]
-            [pixie.string :as string]))
+            [pixie.string :as string]
+            [pixie.time :refer [time]]
+            [pixie.pxic-writer :as pxic-writer]))
 
 (def macro-overrides
   {
@@ -296,10 +298,6 @@
                            (resolve-in (the-ns (:ns *env*)) sym))
                       (catch :pixie.stdlib/AssertionException ex
                           nil))]
-    (println sym resolved [ (if resolved
-                              (namespace resolved))]
-             (:ns *env*)
-             (contains? macro-overrides resolved))
     (cond
       (and (symbol? sym)
            (string/starts-with? (name sym) ".-"))
@@ -375,7 +373,6 @@
                    (resolve-in namesp x)
                    (catch :pixie.stdlib/AssertionException ex
                      nil))]
-    (println x (namespace x) (name x))
     (cond
       (namespace x)
       {:op :var
@@ -479,6 +476,80 @@
         identity
         :children
         ast))
+
+(defn convert-defs [ast]
+  (walk (fn [{:keys [op name env val form] :as ast}]
+          (if (= op :def)
+            {:op :invoke
+             :form form
+             :env env
+             :children '[:args]
+             :args [{:op :var
+                     :ns "pixie.stdlib"
+                     :name "set-var-root!"}
+                    {:op :var
+                     :ns (:ns env)
+                     :name name
+                     :form name}
+                    val]}
+
+            ast))
+        identity
+        :children
+        ast))
+
+(defn pass-for [ast op-for f]
+  (walk (fn [{:keys [op] :as ast}]
+          (if (= op op-for)
+            (f ast)
+            ast))
+        identity
+        :children
+        ast))
+
+(defn convert-fns [ast]
+  (pass-for ast :fn
+            (fn [{:keys [name arities form env]}]
+              (if (= (count arities) 1)
+                (convert-fn-body (first arities))
+                {:op :invoke
+                 :form form
+                 :env env
+                 :children '[:args]
+                 :args (concat [{:op :var
+                                 :ns "pixie.stdlib"
+                                 :name "multi-arity-fn"
+                                 :env env
+                                 :form 'multi-arity-fn}
+                                {:op :const
+                                 :form name
+                                 :env env}]
+                               (mapcat
+                                (fn [{:keys [args variadic?] :as body}]
+                                  [{:op :const
+                                    :form (if variadic?
+                                            -1
+                                            (count args))
+                                    :env env}
+                                   (convert-fn-body body)])
+                                arities))}))))
+
+(defn convert-fn-body [{:keys [variadic? args body form env] :as ast}]
+  (if variadic?
+    {:op :invoke
+     :form form
+     :env env
+     :children '[:args]
+     :args [{:op :var
+             :ns "pixie.stdlib"
+             :name "variadic-fn"
+             :form 'variadic-fn
+             :env :env}
+            {:op :const
+             :form (dec (count args))
+             :env env}
+            (convert-fn-body (dissoc ast :variadic?))]}
+    (assoc ast :op :fn-body)))
 
 (defn write! [{:keys [code] :as state} val]
   (swap! code conj! val)
@@ -771,7 +842,19 @@
        "code_ast="
        (string-builder @code)))
 
-(let [form (read-string (str "(do " (pixie.io/slurp "pixie/bootstrap.pxi") ")"))
-      str (finish-context (to-rpython (writer-context) 0 (collect-closed-overs (clean-do (analyze form)))))]
-  (print str)
-  (io/spit "./bootstrap.py" str))
+(println "Reading")
+(let [form (time (read-string (str "(do " (pixie.io/slurp "pixie/bootstrap.pxi") ")")))
+      _ (println "Compiling")
+      ast (time (analyze form))
+      _ (println "Passes")
+      ast (time (convert-fns (convert-defs (collect-closed-overs (clean-do ast)))))
+      _ (println "To String")
+      ;str (time (finish-context (to-rpython (writer-context) 0 ast)))
+      os (-> "/tmp/bootstrap.pxic"
+             io/open-write
+             io/buffered-output-stream)]
+  (binding [pxic-writer/*cache* (pxic-writer/writer-cache os)]
+    (time (pxic-writer/write-object os ast)))
+  #_(print str)
+  (dispose! os)
+  (println "done"))
