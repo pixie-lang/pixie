@@ -31,29 +31,40 @@
 (deftype UTF8InputStream [in bad-char]
   IUTF8InputStream
   (read-char [this]
-    (let [ch (int (read-byte in))
-          [n bytes error?] (cond
-                            (>= 0x7F ch) [ch 1]
-                            (= 0xC0 (bit-and ch 0xE0)) [(bit-and ch 31) 2 false]
-                            (= 0xE0 (bit-and ch 0xF0)) [(bit-and ch 15) 3 false]
-                            (= 0xF0 (bit-and ch 0xF8)) [(bit-and ch 7) 4 false]
-                            (= 0xF8 (bit-and ch 0xF8)) [(bit-and ch 3) 5 true]
-                            (= 0xFC (bit-and ch 0xFE)) [(bit-and ch 1) 6 true]
-                            :else [n 1 true])]
-      (loop [i (dec bytes)
-             n n]
-        (if (pos? i)
-          (recur (dec i)
-                 (bit-or (bit-shift-left n 6)
-                         (bit-and (read-byte in) 0x3F)))
-          (if error?
-            (if bad-char
-              bad-char
-              (throw (str "Invalid UTF8 character decoded: " n)))
-            (char n))))))
+    (when-let [byte (read-byte in)]
+      (let [ch (int byte)
+            [n bytes error?] (cond
+                               (>= 0x7F ch) [ch 1]
+                               (= 0xC0 (bit-and ch 0xE0)) [(bit-and ch 31) 2 false]
+                               (= 0xE0 (bit-and ch 0xF0)) [(bit-and ch 15) 3 false]
+                               (= 0xF0 (bit-and ch 0xF8)) [(bit-and ch 7) 4 false]
+                               (= 0xF8 (bit-and ch 0xF8)) [(bit-and ch 3) 5 true]
+                               (= 0xFC (bit-and ch 0xFE)) [(bit-and ch 1) 6 true]
+                               :else [n 1 true])]
+        (loop [i (dec bytes)
+               n n]
+          (if (pos? i)
+            (recur (dec i)
+                   (bit-or (bit-shift-left n 6)
+                           (bit-and (read-byte in) 0x3F)))
+            (if error?
+              (if bad-char
+                bad-char
+                (throw [::invalid-character (str "Invalid UTF8 character decoded: " n)]))
+              (char n)))))))
   IDisposable
   (-dispose! [this]
-    (dispose! in)))
+    (dispose! in))
+  IReduce
+  (-reduce [this f init]
+    (let [rrf (preserving-reduced f)]
+      (loop [acc init]
+        (if-let [char (read-char this)]
+          (let [result (rrf acc (int char))]
+            (if (not (reduced? result))
+              (recur result)
+              @result))
+          acc)))))
 
 (defn utf8-input-stream
   "Creates a UTF8 decoder that reads characters from the given IByteInputStream. If a bad character is found
