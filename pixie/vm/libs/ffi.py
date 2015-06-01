@@ -119,7 +119,7 @@ class FFIFn(object.Object):
         return exb, tokens
 
     def get_ret_val_from_buffer(self, exb):
-        offset_p = rffi.ptradd(exb, jit.promote(self._cd.exchange_result_libffi))
+        offset_p = rffi.ptradd(exb, jit.promote(self._cd.exchange_result))
         ret_val = self._ret_type.ffi_get_value(offset_p)
         return ret_val
 
@@ -804,7 +804,6 @@ def prep_ffi_call__args(args):
 
 import sys
 
-BIG_ENDIAN = sys.byteorder == 'big'
 USE_C_LIBFFI_MSVC = getattr(clibffi, 'USE_C_LIBFFI_MSVC', False)
 
 
@@ -869,16 +868,6 @@ class CifDescrBuilder(py_object):
         exchange_offset = rffi.sizeof(rffi.VOIDP) * nargs
         exchange_offset = self.align_arg(exchange_offset)
         cif_descr.exchange_result = exchange_offset
-        cif_descr.exchange_result_libffi = exchange_offset
-
-        if BIG_ENDIAN and self.fresult.is_primitive_integer:
-            # For results of precisely these types, libffi has a
-            # strange rule that they will be returned as a whole
-            # 'ffi_arg' if they are smaller.  The difference
-            # only matters on big-endian.
-            if self.fresult.size < SIZE_OF_FFI_ARG:
-                diff = SIZE_OF_FFI_ARG - self.fresult.size
-                cif_descr.exchange_result += diff
 
         # then enough room for the result, rounded up to sizeof(ffi_arg)
         exchange_offset += max(rffi.getintfield(self.rtype, 'c_size'),
