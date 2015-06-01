@@ -231,7 +231,7 @@
 
 (defn throw-on-error [result]
   (if (neg? result)
-    (throw (str "UV Error: " (uv_err_name result)))
+    (throw [::UVException (str "UV Error: " (uv_err_name result))])
     result))
 
 (defmacro defuvfsfn

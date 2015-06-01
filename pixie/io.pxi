@@ -79,7 +79,7 @@
             _ (pixie.ffi/set! uvbuf :len (- (count buffer) buffer-offset))
             write-count (fs_write fp uvbuf 1 offset)]
         (when (neg? write-count)
-          (throw (uv/uv_err_name read-count)))
+          (throw [::FileOutputStreamException (uv/uv_err_name read-count)]))
         (set-field! this :offset (+ offset write-count))
         (if (< (+ buffer-offset write-count) (count buffer))
           (recur (+ buffer-offset write-count))
@@ -136,7 +136,7 @@
 
 (defn throw-on-error [result]
   (when (neg? result)
-    (throw (uv/uv_err_name result)))
+    (throw [::UVException (uv/uv_err_name result)]))
   result)
 
 (defn open-write
@@ -169,7 +169,7 @@
                    utf8/utf8-output-stream-rf)
                (str content))
     
-    :else (throw "Expected a string or IOutputStream")))
+    :else (throw [::Exception "Expected a string or IOutputStream"])))
 
 (defn slurp 
   "Reads in the contents of input. Input must be a filename or an IInputStream"
@@ -177,7 +177,7 @@
   (let [stream (cond
                  (string? input) (open-read input)
                  (satisfies? IInputStream input) input
-                 :else (throw "Expected a string or an IInputStream"))
+                 :else (throw [:pixie.io/Exception "Expected a string or an IInputStream"]))
         result (transduce
                  (map char)
                  string-builder
