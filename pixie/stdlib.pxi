@@ -2430,3 +2430,8 @@ Calling this function on something that is not ISeqable returns a seq with that 
        (loop* ~(vec (interleave binding-syms binding-syms))
               (let ~(vec (interleave bindings binding-syms))
                 ~@body)))))
+
+(extend -str Namespace
+  (fn [v] (str "<Namespace " (name v) ">")))
+
+(extend -repr Namespace -str)

@@ -540,7 +540,7 @@ class Namespace(object.Object):
 
         self._registry[name] = var
         return var
-
+    
     def include_stdlib(self):
         stdlib = _ns_registry.find_or_make(u"pixie.stdlib")
         self.add_refer(stdlib, refer_all=True)
