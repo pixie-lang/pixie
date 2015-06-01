@@ -23,7 +23,7 @@
     (cond
      (= idx 0) val
      (= idx 1) cfn
-     :else (throw "Index out of range")))
+     :else (throw [::OutOfRangeException "Index out of range"])))
   (-nth-not-found [this idx not-found]
     (cond
      (= idx 0) val

@@ -36,7 +36,7 @@
     (reset! stacklet-loop-h h)
     (-set-current-var-frames nil frames)
     (if (instance? ThrowException val)
-      (throw (:ex val))
+      (throw [::Exception (:ex val)])
       val)))
 
 (defn -run-later [f]
