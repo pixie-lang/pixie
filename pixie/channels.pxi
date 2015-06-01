@@ -46,7 +46,7 @@
             (b/empty-buffer? puts))
       nil
       (let [[val cfn] (b/remove! puts)]
-        (if (cancelled? cfn)
+        (if (canceled? cfn)
           (recur)
           (do (st/-run-later (partial cfn true))
               (b/add! buffer val)
