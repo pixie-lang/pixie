@@ -70,6 +70,8 @@
   (->WriterCache os {}))
 
 (defn write-raw-string [os str]
+  (assert (not= str "nil"))
+  (assert (string? str) "Expected String")
   (write-int-raw os (count str))
   (spit os str false))
 
@@ -224,7 +226,7 @@
                         (write-tag os KEYWORD)
                         (if (namespace this)
                           (write-raw-string os (str (namespace this) "/" (name this)))
-                          (write-raw-string os (str this))))))
+                          (write-raw-string os (name this))))))
 
   Symbol
   (-write-object [this os]
@@ -234,7 +236,7 @@
                         (write-tag os SYMBOL)
                         (if (namespace this)
                           (write-raw-string os (str (namespace this) "/" (name this)))
-                          (write-raw-string os (str this))))))
+                          (write-raw-string os (name this))))))
 
   Integer
   (-write-object [this os]

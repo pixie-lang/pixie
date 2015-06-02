@@ -372,35 +372,44 @@
         resolved (try
                    (resolve-in namesp x)
                    (catch :pixie.stdlib/AssertionException ex
-                     nil))]
-    (cond
-      (namespace x)
-      {:op :var
-       :env *env*
-       :ns (symbol (namespace x))
-       :name (symbol (name x))
-       :form x}
-      
-      (get-in @(:vars *env*) [(:ns *env*) x])
-      {:op :var
-       :env *env*
-       :ns (:ns *env*)
-       :name x
-       :form x}
-      
-     resolved
-      {:op :var
-       :env *env*
-       :ns (namespace resolved)
-       :name (name resolved)
-       :form x}
+                     nil))
+        result (cond
+                 (namespace x)
+                 {:op :var
+                  :env *env*
+                  :ns (symbol (namespace x))
+                  :name (symbol (name x))
+                  :form x}
+                 
+                 (get-in @(:vars *env*) [(:ns *env*) x])
+                 {:op :var
+                  :env *env*
+                  :ns (:ns *env*)
+                  :name x
+                  :form x}
 
-      :else
-      {:op :var
-       :env *env*
-       :ns (name (:ns *env*))
-       :name (name x)
-       :form x})))
+                 ;; Hack until we get proper refers
+                 (get-in @(:vars *env*) ['pixie.stdlib x])
+                 {:op :var
+                  :env *env*
+                  :ns 'pixie.stdlib
+                  :name x
+                  :form x}
+
+                 resolved
+                 {:op :var
+                  :env *env*
+                  :ns (namespace resolved)
+                  :name (name resolved)
+                  :form x}
+
+                 :else
+                 {:op :var
+                  :env *env*
+                  :ns (name (:ns *env*))
+                  :name (name x)
+                  :form x})]
+    result))
 
 
 ;; ENV Functions
@@ -409,7 +418,7 @@
   "Creates a new (empty) environment"
   []
   {:ns 'pixie.stdlib
-   :vars (atom nil)
+   :vars (atom {'pixie.stdlib {'array true}})
    :tail? true})
 
 
@@ -530,27 +539,27 @@
   (pass-for :fn
             (fn [{:keys [name arities form env]}]
               (if (= (count arities) 1)
-                (convert-fn-body (first arities))
+                (convert-fn-body name (first arities))
                 (make-invoke-var-ast
                  "pixie.stdlib"
                  "multi-arity-fn"
-                 (concat [{:op :const
-                           :form (str name)
-                           :env env}]
-                         (mapcat
-                          (fn [{:keys [args variadic?] :as body}]
-                            [{:op :const
-                              :form (if variadic?
-                                      -1
-                                      (count args))
-                              :env env}
-                             (convert-fn-body body)])
-                          arities))
+                 (vec (concat [{:op :const
+                                :form (pixie.stdlib/name name)
+                                :env env}]
+                              (mapcat
+                               (fn [{:keys [args variadic?] :as body}]
+                                 [{:op :const
+                                   :form (if variadic?
+                                           -1
+                                           (count args))
+                                   :env env}
+                                  (convert-fn-body name body)])
+                               arities)))
                  form
                  env)))))
 
 
-(defn convert-fn-body [{:keys [variadic? args body form env] :as ast}]
+(defn convert-fn-body [name {:keys [variadic? args body form env] :as ast}]
   (if variadic?
     (make-invoke-var-ast
      "pixie.stdlib"
@@ -558,10 +567,12 @@
      [{:op :const
        :form (dec (count args))
        :env env}
-      (convert-fn-body (dissoc ast :variadic?))]
+      (convert-fn-body name (dissoc ast :variadic?))]
      form
      env)
-    (assoc ast :op :fn-body)))
+    (assoc ast
+           :op :fn-body
+           :name name)))
 
 (def convert-vectors
   (pass-for :vector
