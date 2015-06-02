@@ -8,15 +8,13 @@ import pixie.vm2.code as code
 from pixie.vm2.keyword import keyword as kw
 from pixie.vm2.symbol import symbol as sym
 from pixie.vm2.numbers import parse_number
-
+from pixie.vm2.pxic_reader import read_file
 
 rt.init()
-with open("bootstrap.py") as f:
-    exec f.read()
-    pixie_code = code_ast
 
 def testit(max):
 
+    pixie_code = read_file("/tmp/bootstrap.pxic")
 
 
     return run_stack(None, i.InterpretK(pixie_code, None))
@@ -33,7 +31,6 @@ def entry_point(args):
     max = 10000 #int(args[1])
 
     val = testit(max)
-    print val
     return 43
 
 ## JIT STUFF

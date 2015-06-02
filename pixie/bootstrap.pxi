@@ -709,11 +709,3 @@
     new-array))
 
 ;;;
-
-
-(println (count (reduce
-               (fn [acc _]
-                 (pop acc))
-               
-               (into [] (range 1024))
-               (range 1024))))

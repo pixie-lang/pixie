@@ -23,24 +23,24 @@
    :FLOAT
    :INT-STRING
    :STRING
-   :AST
    :TRUE
    :FALSE
    :NIL
    :VAR
    :KEYWORD
    :SYMBOL
-   :NEW-CACHED-OBJECT])
-
-
-(defbytecodes
-  [:DO
+   :NEW-CACHED-OBJECT
+   :DO
    :INVOKE
    :VAR
    :CONST
    :FN
    :LOOKUP
-   :IF])
+   :IF
+   :LET
+   :META
+   :LINE-META
+   :VAR-CONST])
 
 (def *cache* nil)
 (set-dynamic! (var *cache*))
@@ -57,13 +57,10 @@
 (deftype WriterCache [os cache]
   IWriterCache
   (write-cached-obj [this val wfn]
-    (println "Cache" (cache val) val)
     (if-let [idx (cache val)]
       (do (write-tag os CACHED-OBJECT)
-          (write-int-raw os idx)
-          (println "Wrote cached"))
+          (write-int-raw os idx))
       (let [idx (count cache)]
-        (println "writing uncached")
         (set-field! this :cache (assoc cache val idx))
         (write-tag os NEW-CACHED-OBJECT)
         (apply wfn val)))))
@@ -74,7 +71,6 @@
 
 (defn write-raw-string [os str]
   (write-int-raw os (count str))
-  (println "spit " str)
   (spit os str false))
 
 (defn write-int-raw [os i]
@@ -93,6 +89,17 @@
     (do (write-byte os INT-STRING)
         (write-raw-string os (str i)))))
 
+(defn write-meta [os ast]
+  (let [m (meta (:form ast))]
+    (if m
+      (write-object os {:op :meta
+                        :line {:op :line-meta
+                               :line (str (:line m))
+                               :file (:file m)
+                               :line-number (:line-number m)}
+                        :column-number (:column-number m)})
+      (write-object os nil))))
+
 (defn write-tag [os tag]
   (write-byte os tag))
 
@@ -103,43 +110,48 @@
                       (:op ast)))
 
 (defmethod write-ast :do
-  [os {:keys [statements ret]}]
-  (write-tag os AST)
+  [os {:keys [statements ret] :as ast}]
   (write-tag os DO)
   (write-int-raw os (inc (count statements)))
   (doseq [statement statements]
     (write-object os statement))
-  (write-object os ret))
+  (write-object os ret)
+  (write-meta os ast))
 
 (defmethod write-ast :invoke
-  [os {:keys [args]}]
-  (write-tag os AST)
+  [os {:keys [fn args] :as ast}]
   (write-tag os INVOKE)
-  (write-int-raw os (count args))
+  (write-int-raw os (inc (count args)))
+  (write-object os fn)
   (doseq [arg args]
-    (write-object os arg)))
+    (write-object os arg))
+  (write-meta os ast))
 
 (defmethod write-ast :var
   [os {:keys [ns name]}]
   (write-cached-obj *cache*
-                    [ns name]
-                    (fn [ns name]
-                      (write-tag os AST)
+                    [:deref ns name]
+                    (fn [_ ns name]
                       (write-tag os VAR)
+                      (write-raw-string os (str ns))
+                      (write-raw-string os (str name)))))
+
+(defmethod write-ast :var-const
+  [os {:keys [ns name]}]
+  (write-cached-obj *cache*
+                    [:const ns name]
+                    (fn [_ ns name]
+                      (write-tag os VAR-CONST)
                       (write-raw-string os (str ns))
                       (write-raw-string os (str name)))))
 
 (defmethod write-ast :const
   [os {:keys [form]}]
-  (write-cached-obj *cache*
-                    [form]
-                    (fn [form]
-                      (write-tag os CONST)
-                      (write-object os form))))
+  (write-tag os CONST)
+  (write-object os form))
 
 (defmethod write-ast :fn-body
-  [os {:keys [name args closed-overs body]}]
-  (write-tag os AST)
+  [os {:keys [name args closed-overs body] :as ast}]
   (write-tag os FN)
   (write-raw-string os (str name))
   (write-int-raw os (count args))
@@ -148,41 +160,67 @@
   (write-int-raw os (count closed-overs))
   (doseq [co closed-overs]
     (write-object os (keyword (str co))))
-  (write-object os body))
+  (write-object os body)
+  (write-meta os ast))
 
 (defmethod write-ast :binding
-  [os {:keys [name]}]
-  (write-tag os AST)
+  [os {:keys [name] :as ast}]
   (write-tag os LOOKUP)
-  (write-object os (keyword (pixie.stdlib/name name))))
+  (write-object os (keyword (pixie.stdlib/name name)))
+  (write-meta os ast))
 
 (defmethod write-ast :if
-  [os {:keys [test then else]}]
-  (write-tag os AST)
+  [os {:keys [test then else] :as ast}]
   (write-tag os IF)
   (write-object os test)
   (write-object os then)
-  (write-object os else))
+  (write-object os else)
+  (write-meta os ast))
+
+(defmethod write-ast :let
+  [os {:keys [bindings body] :as ast}]
+  (write-tag os LET)
+  (write-int-raw os (count bindings))
+  (doseq [{:keys [name value]} bindings]
+    (write-object os name)
+    (write-object os value))
+  (write-object os body)
+  (write-meta os ast))
+
+(defmethod write-ast :meta
+  [os {:keys [line column-number]}]
+  (write-tag os META)
+  (write-object os line)
+  (write-int-raw os column-number))
+
+(defmethod write-ast :line-meta
+  [os ast]
+  (write-cached-obj *cache*
+                    [:line-meta ast]
+                    (fn [_ {:keys [line file line-number]}]
+                      (write-tag os LINE-META)
+                      (write-raw-string os file)
+                      (write-raw-string os line)
+                      (write-int-raw os line-number))))
 
 (extend-protocol IPxicObject
   IMap
   (-write-object [this os]
-    (println (keys this))
     (write-ast os this))
 
   String
   (-write-object [this os]
     (write-cached-obj *cache*
-                      [this]
-                      (fn [this]
+                      [:string this]
+                      (fn [_ this]
                         (write-tag os STRING)
                         (write-raw-string os this))))
 
   Keyword
   (-write-object [this os]
     (write-cached-obj *cache*
-                      [this]
-                      (fn [this]
+                      [:keyword this]
+                      (fn [_ this]
                         (write-tag os KEYWORD)
                         (if (namespace this)
                           (write-raw-string os (str (namespace this) "/" (name this)))
@@ -191,8 +229,8 @@
   Symbol
   (-write-object [this os]
     (write-cached-obj *cache*
-                      [this]
-                      (fn [this]
+                      [:symbol this]
+                      (fn [_ this]
                         (write-tag os SYMBOL)
                         (if (namespace this)
                           (write-raw-string os (str (namespace this) "/" (name this)))

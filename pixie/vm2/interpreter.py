@@ -19,7 +19,7 @@ class AST(Object):
     def get_long_location(self):
         if self._c_meta != nil:
             return self._c_meta.get_long_location()
-        return "<unknown>"
+        return "<unknown of " + str(self) + ">"
 
 class Meta(Object):
     _type = Type(u"pixie.stdlib.Meta")
@@ -233,7 +233,7 @@ class ResolveAllK(Continuation):
 
 class Let(AST):
     _immutable_fields_ = ["_c_names", "_c_bindings", "_c_body"]
-    def __init__(self, names, bindings, body, meta):
+    def __init__(self, names, bindings, body, meta=nil):
         AST.__init__(self, meta)
         self._c_names = names
         self._c_bindings = bindings

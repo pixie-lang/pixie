@@ -459,17 +459,16 @@
          [child])))
    (:children ast)))
 
-(defn collect-closed-overs [ast]
-  (post-walk
-   (fn [{:keys [op args env closed-overs] :as ast}]
-     (let [{:keys [locals]} env
-           closed-overs (set (or closed-overs
-                                 (mapcat :closed-overs (child-seq ast))))
-           closed-overs (if (= op :fn-body)
-                          (reduce disj closed-overs args)
-                          closed-overs)]
-       (assoc ast :closed-overs closed-overs)))
-   ast))
+(def collect-closed-overs
+  (fn [{:keys [op args env closed-overs] :as ast}]
+    (let [{:keys [locals]} env
+          closed-overs (set (or closed-overs
+                                (mapcat :closed-overs (child-seq ast))))
+          closed-overs (if (= op :fn-body)
+                         (reduce disj closed-overs args)
+                         closed-overs)]
+      (assoc ast :closed-overs closed-overs)))
+  ast)
 
 (defn remove-env [ast]
   (walk #(dissoc % :env)
@@ -477,379 +476,122 @@
         :children
         ast))
 
-(defn convert-defs [ast]
-  (walk (fn [{:keys [op name env val form] :as ast}]
-          (if (= op :def)
-            {:op :invoke
-             :form form
-             :env env
-             :children '[:args]
-             :args [{:op :var
-                     :ns "pixie.stdlib"
-                     :name "set-var-root!"}
-                    {:op :var
-                     :ns (:ns env)
-                     :name name
-                     :form name}
-                    val]}
+(defn make-invoke-ast [fn args form env]
+  {:op :invoke
+   :children '[:fn :args]
+   :form form
+   :env env
+   :fn fn
+   :args args})
 
-            ast))
-        identity
-        :children
-        ast))
+(defn make-var-ast [ns name env]
+  {:op :var
+   :ns ns
+   :name name
+   :env env
+   :form (symbol (pixie.stdlib/name name))})
 
-(defn pass-for [ast op-for f]
-  (walk (fn [{:keys [op] :as ast}]
-          (if (= op op-for)
-            (f ast)
-            ast))
-        identity
-        :children
-        ast))
+(defn make-var-const-ast [ns name env]
+  {:op :var-const
+   :ns ns
+   :name name
+   :env env
+   :form (symbol (pixie.stdlib/name name))})
 
-(defn convert-fns [ast]
-  (pass-for ast :fn
+(defn make-invoke-var-ast [ns name args form env]
+  (make-invoke-ast
+   (make-var-ast ns name env)
+   args
+   form
+   env))
+
+(def convert-defs
+  (fn [{:keys [op name env val form] :as ast}]
+    (if (= op :def)
+      (make-invoke-var-ast
+       "pixie.stdlib"
+       "set-var-root!"
+       [(make-var-const-ast (:ns env) name env)
+        val]
+       form
+       env)
+      ast))
+  identity
+  :children
+  ast)
+
+(defn pass-for [op-for f]
+  (fn [{:keys [op] :as ast}]
+    (if (= op op-for)
+      (f ast)
+      ast)))
+
+(def convert-fns
+  (pass-for :fn
             (fn [{:keys [name arities form env]}]
               (if (= (count arities) 1)
                 (convert-fn-body (first arities))
-                {:op :invoke
-                 :form form
-                 :env env
-                 :children '[:args]
-                 :args (concat [{:op :var
-                                 :ns "pixie.stdlib"
-                                 :name "multi-arity-fn"
-                                 :env env
-                                 :form 'multi-arity-fn}
-                                {:op :const
-                                 :form name
-                                 :env env}]
-                               (mapcat
-                                (fn [{:keys [args variadic?] :as body}]
-                                  [{:op :const
-                                    :form (if variadic?
-                                            -1
-                                            (count args))
-                                    :env env}
-                                   (convert-fn-body body)])
-                                arities))}))))
+                (make-invoke-var-ast
+                 "pixie.stdlib"
+                 "multi-arity-fn"
+                 (concat [{:op :const
+                           :form (str name)
+                           :env env}]
+                         (mapcat
+                          (fn [{:keys [args variadic?] :as body}]
+                            [{:op :const
+                              :form (if variadic?
+                                      -1
+                                      (count args))
+                              :env env}
+                             (convert-fn-body body)])
+                          arities))
+                 form
+                 env)))))
+
 
 (defn convert-fn-body [{:keys [variadic? args body form env] :as ast}]
   (if variadic?
-    {:op :invoke
-     :form form
-     :env env
-     :children '[:args]
-     :args [{:op :var
-             :ns "pixie.stdlib"
-             :name "variadic-fn"
-             :form 'variadic-fn
-             :env :env}
-            {:op :const
-             :form (dec (count args))
-             :env env}
-            (convert-fn-body (dissoc ast :variadic?))]}
+    (make-invoke-var-ast
+     "pixie.stdlib"
+     "variadic-fn"
+     [{:op :const
+       :form (dec (count args))
+       :env env}
+      (convert-fn-body (dissoc ast :variadic?))]
+     form
+     env)
     (assoc ast :op :fn-body)))
 
-(defn write! [{:keys [code] :as state} val]
-  (swap! code conj! val)
-  state)
+(def convert-vectors
+  (pass-for :vector
+            (fn [{:keys [items form env]}]
+              (make-invoke-var-ast
+               "pixie.stdlib"
+               "array"
+               items
+               form
+               env))))
 
-(defn add-meta [{:keys [meta-state meta-lines] :as state} ast]
-  (let [m (meta (:form ast))]
-    (if m
-      (let [k [(:line m) (:file m) (:line-number m)]
-            id (get @meta-state k)]
-        (if id
-          id
-          (let [id (str "mid" (count @meta-state))]
-            (swap! meta-state assoc k id)
-            (swap! meta-lines conj! (str id " = (u\"\"\"" (:line m) "\"\"\", \"" (:file m) "\", " (:line-number m) ")\n"))
-            id)))
-      "nil")))
+(defn run-passes [ast]
+  (walk identity
+        (comp
+         convert-vectors
+         convert-fns
+         (comp convert-defs
+               collect-closed-overs
+               clean-do))
+        :children
+        ast))
 
-(defn meta-str [state ast]
-  (let [m (meta (:form ast))]
-    (if m
-      (str "i.Meta(" (add-meta state ast) ", " (:column-number m) ")")
-      "nil")))
-
-(defn offset-spaces [sb off]
-  (dotimes [x off]
-    (write! sb "  ")))
-
-(defmulti to-rpython (fn [sb offset node]
-                       (assert node)
-                         (:op node)))
-
-(defmethod to-rpython :if
-  [sb offset {:keys [test then else] :as ast}]
-  (write! sb "i.If(\n")
-  (let [offset (inc offset)]
-    (doseq [[nm form] [[:test test]
-                       [:then then]
-                       [:els else]]]
-      (offset-spaces sb offset)
-      (write! sb (name nm))
-      (write! sb "=")
-      (to-rpython sb offset form)
-      (write! sb ",\n"))
-  (offset-spaces sb offset)
-  (write! sb "meta=")
-  (write! sb (meta-str sb ast))
-
-  (write! sb ")")))
-
-(defmulti write-const (fn [sb offset const]
-                         (:type const)))
-
-(defmethod write-const :keyword
-  [sb offset {:keys [form]}]
-  (write! sb "kw(u\"")
-  (when (namespace form)
-    (write! sb (namespace form))
-    (write! sb "/"))
-  (write! sb (name form))
-  (write! sb "\")"))
-
-(defmethod write-const (keyword "nil")
-  [sb offset _]
-  (write! sb "nil"))
-
-(defmethod write-const :symbol
-  [sb offset {:keys [form]}]
-  (write! sb "sym(u\"")
-  (when (namespace form)
-    (write! sb (namespace form))
-    (write! sb "/"))
-  (write! sb (name form))
-  (write! sb "\")"))
-
-(defmethod write-const :string
-  [sb offset {:keys [form]}]
-  (write! sb "rt.wrap(u\"")
-  (write! sb form)
-  (write! sb "\")"))
-
-(defmethod write-const :number
-  [sb offset {:keys [form]}]
-  (write! sb "rt.wrap(")
-  (write! sb (str form))
-  (write! sb ")"))
-
-(defmethod write-const :bool
-  [sb offset {:keys [form]}]
-  (if form
-    (write! sb "true")
-    (write! sb "false")))
-
-(defmethod to-rpython :const
-  [sb offset ast]
-  (write! sb "i.Const(")
-  (write-const sb offset ast)
-  (write! sb ")"))
-
-(defmethod to-rpython :invoke
-  [sb offset ast]
-  (if (:tail-call ast)
-    (write! sb "i.TailCall(\n")
-    (write! sb "i.Invoke(\n"))
-  (let [offset (inc offset)]
-    (offset-spaces sb offset)
-    (write! sb "args=[\n")
-    (let [offset (inc offset)]
-      (doseq [x `(~(:fn ast) ~@(:args ast))]
-        (offset-spaces sb offset)
-        (to-rpython sb offset x)
-        (write! sb ",\n")))
-    (offset-spaces sb offset)
-    (write! sb "],\n")
-    (offset-spaces sb offset)
-    (write! sb "meta=")
-    (write! sb (meta-str sb ast))
-    (write! sb ")")))
-
-
-(defmethod to-rpython :do
-  [sb offset {:keys [ret statements] :as ast}]
-  (write! sb "i.Do(\n")
-  (let [offset (inc offset)]
-    (offset-spaces sb offset)
-    (write! sb "args=[\n")
-    (let [offset (inc offset)]
-      (doseq [x `(~@statements ~ret)]
-        (offset-spaces sb offset)
-        (to-rpython sb offset x)
-        (write! sb ",\n")))
-    (offset-spaces sb offset)
-    (write! sb "],\n"))
-  (offset-spaces sb offset)
-  (write! sb "meta=")
-  (write! sb (meta-str sb ast))
-  (write! sb ")"))
-
-
-(defmethod to-rpython :fn
-  [sb offset {:keys [name arities]}]
-  (if (= (count arities) 1)
-    (to-rpython-fn-body sb offset name (nth arities 0))
-    (do (write! sb (str "i.Invoke([i.Const(code.intern_var(u\"pixie.stdlib\", u\"multi-arity-fn\")), i.Const(rt.wrap(u\"" name "\")),\n"))
-        (offset-spaces sb offset)
-        (let [offset (inc offset)]
-          (doseq [f arities]
-            (when (not (:variadic? f))
-              (offset-spaces sb offset)
-              (write! sb (str "i.Const(rt.wrap(" (count (:args f)) ")), "))
-              (to-rpython-fn-body sb offset name f)
-              (write! sb ",\n")))
-          (offset-spaces sb offset)
-          (let [vfn (first (filter :variadic? arities))]
-            (when vfn
-              (offset-spaces sb offset)
-              (write! sb (str "i.Const(rt.wrap(-1)), \n"))
-              (offset-spaces sb offset)
-              (to-rpython-fn-body sb offset name vfn)
-              (write! sb "\n"))))
-        (offset-spaces sb offset)
-        (write! sb "])"))))
-
-(defn to-rpython-fn-body
-  [sb offset name {:keys [args body variadic? closed-overs] :as ast}]
-  (when variadic?
-    (write! sb (str "i.Invoke([i.Const(code.intern_var(u\"pixie.stdlib\", u\"variadic-fn\")), i.Const(rt.wrap(" (dec (count args)) ")), \n"))
-    (offset-spaces sb offset))
-  (write! sb "i.Fn(args=[")
-  (write! sb (->> args
-                  (map (fn [name]
-                         (str "kw(u\"" name "\")")))
-                  (interpose ",")
-                  (apply str)))
-  (write! sb "],name=kw(u\"")
-  (write! sb (str name))
-  (write! sb "\"),")
-  (when (not (empty? closed-overs))
-    (write! sb "closed_overs=[")
-    (write! sb (->> closed-overs
-                    (map (fn [name]
-                           (str "kw(u\"" name "\")")))
-                    (interpose ",")
-                    (apply str)))
-    (write! sb "],"))
-  (write! sb "\n")
-  (let [offset (inc offset)]
-    (offset-spaces sb offset)
-    (write! sb "body=")
-    (to-rpython sb offset body)
-    (write! sb ",\n"))
-  (offset-spaces sb offset)
-  (write! sb ")")
-  (if variadic?
-    (write! sb "])")))
-
-(defmethod to-rpython :var
-  [sb offset {:keys [ns name] :as ast}]
-  (write! sb "i.VDeref(code.intern_var(")
-  (write! sb "u\"")
-  (write! sb ns)
-  (write! sb "\", u\"")
-  (write! sb name)
-  (write! sb "\"), meta=")
-  (write! sb (meta-str sb ast))
-  (write! sb ")"))
-
-(defmethod to-rpython :binding
-  [sb offset {:keys [name] :as ast}]
-  (write! sb "i.Lookup(kw(u\"")
-  (write! sb name)
-  (write! sb "\"), meta=")
-  (write! sb (meta-str sb ast))
-  (write! sb ")"))
-
-(defmethod to-rpython :def
-  [sb offset {:keys [name env val]}]
-  (write! sb "i.Invoke(args=[\n")
-  (write! sb (str "# (def " (:ns env) "/" name ")\n"))
-  (let [offset (inc offset)]
-    (offset-spaces sb offset)
-    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"set-var-root!\")),\n")
-    (offset-spaces sb offset)
-    (write! sb "i.Const(code.intern_var(u\"")
-    (write! sb (:ns env))
-    (write! sb "\",u\"")
-    (write! sb name)
-    (write! sb "\")),\n")
-    (offset-spaces sb offset)
-    (to-rpython sb offset val)
-    (write! sb "])")
-    ))
-
-(defmethod to-rpython :vector
-  [sb offset {:keys [items]}]
-  (write! sb "i.Invoke(args=[\n")
-  (let [offset (inc offset)]
-    (offset-spaces sb offset)
-    (write! sb "i.Const(code.intern_var(u\"pixie.stdlib\", u\"array\")),")
-    (doseq [item items]
-      (offset-spaces sb offset)
-      (to-rpython sb offset item)
-      (write! sb ",\n"))
-    (offset-spaces sb offset)
-    (write! sb "])")))
-
-(defmethod to-rpython :let
-  [sb offset {:keys [bindings body] :as ast}]
-  (write! sb "i.Let(names=[")
-  (write! sb (->> bindings
-                  (map (fn [binding]
-                         (str "kw(u\"" (:name binding) "\")")))
-                  (interpose ",")
-                  (apply str)))
-  (write! sb "],\n")
-
-  (offset-spaces sb offset)
-  (write! sb "bindings=[\n")
-  (let [offset (inc offset)]
-    (doseq [{:keys [value]} bindings]
-      (offset-spaces sb offset)
-      (to-rpython sb offset value)
-      (write! sb ",\n"))
-    (offset-spaces sb offset)
-    (write! sb "],\n")
-
-    (offset-spaces sb offset)
-
-    (write! sb "body=")
-    (to-rpython sb offset body)
-    (write! sb ",\n")
-
-    (offset-spaces sb offset)
-    (write! sb "meta=")
-    (write! sb (meta-str sb ast))
-
-
-    (write! sb ")")))
-
-
-
-(defn writer-context []
-  {:meta-lines (atom (string-builder))
-   :meta-state (atom {})
-   :code (atom (string-builder))})
-
-(defn finish-context [{:keys [meta-lines code]}]
-  (str (string-builder @meta-lines)
-       "\n \n"
-       "code_ast="
-       (string-builder @code)))
 
 (println "Reading")
 (let [form (time (read-string (str "(do " (pixie.io/slurp "pixie/bootstrap.pxi") ")")))
       _ (println "Compiling")
       ast (time (analyze form))
       _ (println "Passes")
-      ast (time (convert-fns (convert-defs (collect-closed-overs (clean-do ast)))))
+      ast (time (run-passes ast))
       _ (println "To String")
-      ;str (time (finish-context (to-rpython (writer-context) 0 ast)))
       os (-> "/tmp/bootstrap.pxic"
              io/open-write
              io/buffered-output-stream)]
