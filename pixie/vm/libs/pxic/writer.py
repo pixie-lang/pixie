@@ -4,7 +4,7 @@ from rpython.rlib.runicode import unicode_encode_utf_8
 from pixie.vm.string import String
 from pixie.vm.keyword import Keyword
 from pixie.vm.symbol import Symbol
-from pixie.vm.numbers import Integer, Float
+from pixie.vm.numbers import Integer, BigInteger, Float
 from pixie.vm.code import Code, Var, NativeFn, Namespace
 from pixie.vm.primitives import nil, true, false
 from pixie.vm.reader import LinePromise
@@ -245,6 +245,8 @@ def write_object(obj, wtr):
         write_string(rt.name(obj), wtr)
     elif isinstance(obj, Integer):
         write_int(obj.int_val(), wtr)
+    elif isinstance(obj, BigInteger):
+        write_int(obj.bigint_val(), wtr)
     elif isinstance(obj, Float):
         write_float(obj.float_val(), wtr)
     elif isinstance(obj, Code):
