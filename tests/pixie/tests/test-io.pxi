@@ -37,6 +37,67 @@
     (io/seek f (- (position f) 6))
     (t/assert= (io/read-line f) "line.")))
 
+(t/deftest test-buffered-input-streams
+  (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt"))]
+    (t/assert= (char (io/read-byte f)) \T)
+    (t/assert= (char (io/read-byte f)) \h)
+    (t/assert= (char (io/read-byte f)) \i)
+    (t/assert= (char (io/read-byte f)) \s)))
+
+(t/deftest test-buffered-input-streams-seek
+  ;; We use a buffer size of 4 because the test file isn't huge and i am terrible at
+  ;; counting characters...
+  (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt") 4)]
+    ;; Read the first word 'This'
+    (t/assert= (position f) 0)
+    (t/assert= (char (io/read-byte f)) \T)
+    (t/assert= (position f) 1)
+    (t/assert= (char (io/read-byte f)) \h)
+    (t/assert= (position f) 2)
+    (t/assert= (char (io/read-byte f)) \i)
+    (t/assert= (position f) 3)
+    (t/assert= (char (io/read-byte f)) \s)
+    (t/assert= (position f) 4)
+
+    ;; Back to start of file (this is a seek with in the buffer)
+    (rewind f)
+
+    ;; Should read the first word again
+    (t/assert= (char (io/read-byte f)) \T)
+    (t/assert= (position f) 1)
+    (t/assert= (char (io/read-byte f)) \h)
+    (t/assert= (position f) 2)
+    (t/assert= (char (io/read-byte f)) \i)
+    (t/assert= (position f) 3)
+    (t/assert= (char (io/read-byte f)) \s)
+    (t/assert= (position f) 4)
+
+    ;; Skip the space (we will have caused a seek upstream)
+    (seek f 5)
+
+    ;; Read 'is'
+    (t/assert= (position f) 5)
+    (t/assert= (char (io/read-byte f)) \i)
+    (t/assert= (position f) 6)
+    (t/assert= (char (io/read-byte f)) \s)
+    (t/assert= (position f) 7)
+
+    ;; Jump ahead to 'file' (another seek upstream)
+    (seek f 15)
+    (t/assert= (position f) 15)
+    (t/assert= (char (io/read-byte f)) \f)
+    (t/assert= (position f) 16)
+    (t/assert= (char (io/read-byte f)) \i)
+    (t/assert= (position f) 17)
+    (t/assert= (char (io/read-byte f)) \l)
+    (t/assert= (position f) 18)
+    (t/assert= (char (io/read-byte f)) \e)
+
+    ;; Another seek with in a buffer
+    (seek f 16)
+    (t/assert= (position f) 16)
+    (t/assert= (char (io/read-byte f)) \i)))
+
 (t/deftest test-slurp-spit
   (let [val (vec (range 1280))]
     (io/spit "test.tmp" val)
