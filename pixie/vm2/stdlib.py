@@ -5,6 +5,7 @@ from pixie.vm2.primitives import nil, true, false
 import pixie.vm2.code as code
 import pixie.vm2.array as array
 from rpython.rlib.rarithmetic import r_uint
+import pixie.vm2.interpreter as interpreter
 import rpython.rlib.jit as jit
 
 @as_var("set-var-root!")
@@ -74,6 +75,13 @@ def _extend(proto_fn, tp, fn):
 def _variadic_fn(required_arity, fn):
     arity = required_arity.int_val()
     return code.VariadicCode(required_arity=arity, code=fn)
+
+@as_var("-effect-fn")
+def _variadic_fn(inner_fn):
+
+    return interpreter.EffectFunction(inner_fn)
+
+as_var("-with-handler")(interpreter.WithHandler())
 
 @as_var("multi-arity-fn")
 def _multi_arity_fn__args(args):
@@ -173,3 +181,4 @@ def _add_to_string_builder(sb, x):
 @as_var("-finish-string-builder")
 def _finish_string_builder(sb):
     return rt.wrap(sb.to_str())
+

@@ -228,13 +228,13 @@
 (defmethod analyze-seq 'loop*
   [[_ bindings & body]]
   (let [parted (partition 2 bindings)]
-    (analyze-form `((fn __loop__fn__ ~(mapv first parted)
+    (analyze-form `((fn ~'__loop__fn__ ~(mapv first parted)
                       ~@body)
                     ~@(mapv second parted)))))
 
 (defmethod analyze-seq 'recur
   [[_ & args]]
-  (analyze-form `(__loop__fn__ ~@args)))
+  (analyze-form `(~'__loop__fn__ ~@args)))
 
 (defmethod analyze-seq 'def
   [[_ nm val :as form]]
@@ -301,9 +301,10 @@
     (cond
       (and (symbol? sym)
            (string/starts-with? (name sym) ".-"))
-      (let [sym-kw (keyword (string/substring (name sym) 2))]
-        (analyze-form (keep-meta `(~'pixie.stdlib/-get-field ~@args ~sym-kw)
-                                 form)))
+      (let [sym-kw (keyword (string/substring (name sym) 2))
+            result (analyze-form (keep-meta `(~'pixie.stdlib/-get-field ~@args ~sym-kw)
+                                     form))]
+        result)
       
       (contains? macro-overrides resolved)
       (analyze-form (keep-meta (apply (macro-overrides resolved) args)

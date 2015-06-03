@@ -80,6 +80,9 @@
 (defprotocol IToTransient
   (-transient [this x]))
 
+(defprotocol ITransient
+  (-persistent! [this]))
+
 (defprotocol ITransientStack
   (-push! [this x])
   (-pop! [this]))
@@ -593,7 +596,14 @@
       (if (= idx cnt)
         (-conj this val)
         (throw [:pixie.stdlib/IndexOutOfRange
-                "Can only assoc to the end or the contents of a vector"])))))
+                "Can only assoc to the end or the contents of a vector"]))))
+
+  IToTransient
+  (-transient [this]
+    (->TransientVector cnt shift
+                       (editable-root root)
+                       (editable-tail tail)
+                       meta)))
 
 (defn do-assoc [lvl node idx val]
   (let [new-array (array-clone (.-array node))
@@ -662,6 +672,70 @@
     (->PersistentVector (count arr) 5 EMPTY-NODE arr nil)
     (into [] arr)))
 
+
+;; Transient Vector
+
+#_(deftype Edited [])
+(def edited ::edited)
+
+
+(deftype TransientVector [cnt shift root tail meta]
+  IMessageObject
+  (-get-field [this field]
+    (get-field this field))
+
+  ITransientCollection
+  (-conj! [this val]
+    (ensure-editable this)
+    (let [i cnt]
+      (if (< (- i (tail-off this) 32))
+        (do (aset tail (bit-and i 0x01F) val)
+            (set-field! this :cnt (inc cnt))
+            this)
+        (let [tail-node (->Node (.-edit root) tail)]
+          (set-field! this :tail (make-array 32))
+          (aset tail 0 val)
+          (if (> (bit-shift-right cnt 5)
+                 (bit-shift-left 1 shift))
+            (let [root-array (make-array 32)]
+              (aset root-array 0 root)
+              (aset root-array 1 (new-path (.-edit root) shift tail-node))
+              (set-field! this :shift (+ shift 5))
+              (set-field! this :root new-root)
+              (set-field! this :cnt (inc cnt))
+              this)
+            (do (set-field this :root (push-tail-transient shift root tail-node))
+                (set-field this :cnt (inc cnt))
+                this))))))
+
+  ITransient
+  (-persistent! [this]
+    (ensure-editable this)
+    (let [trimmed (make-array (- cnt (tail-off self)))]
+      (array-copy tail 0 trimmed 0 (count trimmed))
+      (->PersistentVector cnt shift root trimmed)))
+  
+)
+
+
+(defn editable-root [node]
+  (->Node edited (array-clone (.-array node))))
+
+(defn ensure-editable [node]
+  (assert (not (nil? (.-edit node)))
+          "Transient used after call to persist!"))
+
+(defn ensure-node-editable [this node]
+  (let [root (.-root this)]
+    (if (identical? (.-edit node) (.-edit root))
+      node
+      (->Node (.-edit root) (.-array node)))))
+
+(defn editable-tail [tail]
+  (let [ret (make-array 32)]
+    (acopy tail 0 ret 0 (count tail))
+    ret))
+
 (in-ns :pixie.stdlib)
 
 ;; Extend Array
@@ -709,3 +783,15 @@
     new-array))
 
 ;;;
+
+
+(def decide (-effect-fn (fn [h k]
+                          (println "Calling.." h)
+                          [(k 41)
+                           (k 42)])))
+(println true)
+(-with-handler :foo
+               (fn []
+                 
+                 (println (decide :foo))
+                 ))

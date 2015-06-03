@@ -1,7 +1,8 @@
-from pixie.vm2.object import Object, Type, Continuation, stack_cons, runtime_error
+from pixie.vm2.object import Object, Type, Continuation, stack_cons, runtime_error, affirm
 from pixie.vm2.primitives import nil, false
 from pixie.vm2.array import Array
 import pixie.vm2.code as code
+from pixie.vm2.keyword import Keyword
 from pixie.vm2.code import BaseCode
 
 import rpython.rlib.jit as jit
@@ -82,6 +83,7 @@ class Const(AST):
 class Locals(object):
     _immutable_ = True
     def __init__(self, name, value, next):
+        assert isinstance(name, Keyword)
         self._c_value = value
         self._c_name = name
         self._c_next = next
@@ -99,6 +101,7 @@ class Locals(object):
 class Lookup(AST):
     _immutable_fields_ = ["_c_name"]
     def __init__(self, name, meta=nil):
+        assert isinstance(name, Keyword)
         AST.__init__(self, meta)
         self._c_name = name
 
@@ -126,6 +129,7 @@ class Fn(AST):
 class InterpretedFn(code.BaseCode):
     _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_arg_names"]
     def __init__(self, name, arg_names, locals_prefix, ast):
+        assert isinstance(name, Keyword)
         code.BaseCode.__init__(self)
         self._c_arg_names = arg_names
         self._c_name = name
@@ -388,6 +392,103 @@ def print_stacktrace(cont, stack):
     st.reverse()
     for line in st:
         print line
+
+
+
+## Handler code
+
+
+class WithHandler(code.BaseCode):
+    def __init__(self):
+        BaseCode.__init__(self)
+
+    def invoke_k(self, args, stack):
+        affirm(len(args) == 2, u"-with-handler takes one argument")
+        handler = args[0]
+        fn = args[1]
+
+        stack = stack_cons(stack, Handler(handler))
+        return fn.invoke_k([], stack)
+
+
+
+class Handler(Continuation):
+    _immutable_ = True
+    def __init__(self, handler):
+        self._handler = handler
+
+    def handler(self):
+        return self._handler
+
+    def get_ast(self):
+        return None
+
+class DelimitedContinuation(code.NativeFn):
+    _immutable_fields_ = ["_slice[*]"]
+    def __init__(self, slice):
+        self._slice = slice
+
+    @jit.unroll_safe
+    def invoke_k(self, args, stack):
+        affirm(len(args) == 1, u"Delmited continuations only take one argument")
+        for x in range(len(self._slice)):
+            stack = stack_cons(stack, self._slice[x])
+        return args[0], stack
+
+class EffectFunction(code.BaseCode):
+    def __init__(self, inner_fn):
+        BaseCode.__init__(self)
+        self._inner_fn = inner_fn
+
+    def invoke_k(self, args, stack):
+        affirm(len(args) >= 1, u"Effect functions require at least one argument")
+        handler = args[0]
+
+        stack, slice = self.slice_stack(stack, handler)
+
+        new_args = self.append_args(args, DelimitedContinuation(slice))
+
+        return self._inner_fn.invoke_k(new_args, stack)
+
+
+    @jit.unroll_safe
+    def append_args(self, args, val):
+        new_args = [None] * (len(args) + 1)
+        for x in range(len(args)):
+            new_args[x] = args[x]
+
+        new_args[(len(args))] = val
+
+        return new_args
+
+    @jit.unroll_safe
+    def slice_stack(self, orig_stack, handler):
+
+        size = 0
+        stack = orig_stack
+        while True:
+            if stack is None:
+                ## No hander found
+                size = -1
+                break
+
+            if isinstance(stack._cont, Handler) and stack._cont.handler() is handler:
+                break
+
+            size += 1
+            stack = stack._parent
+
+        slice = [None] * size
+
+        stack = orig_stack
+        for x in range(size - 1, -1, -1):
+            slice[x] = stack._cont
+            stack = stack._parent
+
+        return stack, slice
+
+
+
 
 
 

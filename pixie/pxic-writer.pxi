@@ -45,6 +45,9 @@
 (def *cache* nil)
 (set-dynamic! (var *cache*))
 
+(def *old-meta* nil)
+(set-dynamic! (var *old-meta*))
+
 
 (defprotocol IWriterCache
   (write-cached-obj [this val wfn]))
@@ -92,7 +95,8 @@
         (write-raw-string os (str i)))))
 
 (defn write-meta [os ast]
-  (let [m (meta (:form ast))]
+  (let [m (or (meta (:form ast))
+              *old-meta*)]
     (if m
       (write-object os {:op :meta
                         :line {:op :line-meta
@@ -184,7 +188,7 @@
   (write-tag os LET)
   (write-int-raw os (count bindings))
   (doseq [{:keys [name value]} bindings]
-    (write-object os name)
+    (write-object os (keyword (pixie.stdlib/name name)))
     (write-object os value))
   (write-object os body)
   (write-meta os ast))
@@ -254,4 +258,8 @@
 
 
 (defn write-object [os ast]
-  (-write-object ast os))
+  (binding [*old-meta* (or (and
+                            (map? ast)
+                            (meta (:form ast)))
+                           *old-meta*)]
+    (-write-object ast os)))
