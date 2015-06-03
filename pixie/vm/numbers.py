@@ -1,7 +1,7 @@
 import pixie.vm.object as object
 from pixie.vm.object import affirm
 from pixie.vm.primitives import true, false
-from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.rarithmetic import r_uint, ovfcheck
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
 from pixie.vm.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
@@ -116,9 +116,26 @@ def {pfn}_{ty1}_{ty2}(a, b):
     return {wrap_start}a.{conv1}() {op} b.{conv2}(){wrap_end}
 """
 
+ovf_op_template = """@extend({pfn}, {ty1}._type, {ty2}._type)
+def {pfn}_{ty1}_{ty2}(a, b):
+    assert isinstance(a, {ty1}) and isinstance(b, {ty2})
+    try:
+        z = ovfcheck(a.{conv1}() {op} b.{conv2}())
+        return {wrap_start}z{wrap_end}
+    except OverflowError:
+        z = rbigint.fromint(a.{conv1}()).{method_op}(rbigint.fromint(b.{conv2}()))
+        return {wrap_start}z{wrap_end}
+"""
+
 def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap_end = ")"):
     tp = num_op_template.format(pfn=pfn, ty1=ty1.__name__, ty2=ty2.__name__,
                                 conv1=conv1, op=op, conv2=conv2,
+                                wrap_start=wrap_start, wrap_end=wrap_end)
+    exec tp
+
+def extend_ovf_op(pfn, ty1, ty2, conv1, op, method_op, conv2, wrap_start = "rt.wrap(", wrap_end = ")"):
+    tp = ovf_op_template.format(pfn=pfn, ty1=ty1.__name__, ty2=ty2.__name__,
+                                conv1=conv1, op=op, method_op=method_op, conv2=conv2,
                                 wrap_start=wrap_start, wrap_end=wrap_end)
     exec tp
 
@@ -133,7 +150,14 @@ def define_num_ops():
             for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
                 if op == "_div" and c1 == Integer and c2 == Integer:
                     continue
-                extend_num_op(op, c1, c2, conv1, sym, conv2)
+                elif op == "_add" and c1 == Integer and c2 == Integer:
+                    extend_ovf_op(op, c1, c2, conv1, sym, "add", conv2)
+                elif op == "_sub" and c1 == Integer and c2 == Integer:
+                    extend_ovf_op(op, c1, c2, conv1, sym, "sub", conv2)
+                elif op == "_mul" and c1 == Integer and c2 == Integer:
+                    extend_ovf_op(op, c1, c2, conv1, sym, "mul", conv2)
+                else:
+                    extend_num_op(op, c1, c2, conv1, sym, conv2)
             if c1 != Integer or c2 != Integer:
                     extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
                     extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
@@ -157,9 +181,10 @@ def define_bigint_ops():
                 continue
             for (pfn, op) in [("_add", "add"), ("_sub", "sub"), ("_mul", "mul"), ("_div", "div"),
                               ("_num_eq", "eq"), ("_lt", "lt"), ("_gt", "gt"), ("_lte", "le"), ("_gte", "ge")]:
+
                 code = bigint_ops_tmpl.format(pfn=pfn, op=op,
-                                              ty1=c1.__name__, conv1=conv1, get1=get1,
-                                              ty2=c2.__name__, conv2=conv2, get2=get2)
+                        ty1=c1.__name__, conv1=conv1, get1=get1,
+                        ty2=c2.__name__, conv2=conv2, get2=get2)
                 exec code
 
 define_bigint_ops()

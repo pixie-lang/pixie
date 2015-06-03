@@ -62,3 +62,14 @@
   (t/assert= Integer (type (quot 7/2 3/7)))
   (t/assert= Float (type (quot 7/2 3.0))))
 
+(t/deftest test-big-int-eq
+  (t/assert (-num-eq 1N 1))
+  (t/assert (-num-eq 1 1N))
+  ;(t/assert= 1N 1) this fails, should it?
+  (t/assert= 1 1N))
+
+(t/deftest test-promotion
+  (t/assert= BigInteger (type (reduce * 1 (range 1 100))))
+  (t/assert (-num-eq 1000000000000000000000N (* 10000000 
+                                                10000000 
+                                                10000000))))
