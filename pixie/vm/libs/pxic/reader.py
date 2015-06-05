@@ -4,7 +4,7 @@ from rpython.rlib.runicode import str_decode_utf_8
 from pixie.vm.string import String
 from pixie.vm.keyword import Keyword, keyword
 from pixie.vm.symbol import Symbol, symbol
-from pixie.vm.numbers import Integer, Float
+from pixie.vm.numbers import Integer, Float, BigInteger
 from pixie.vm.code import Code, Var, NativeFn, Namespace, intern_var
 import pixie.vm.code as code
 from pixie.vm.primitives import nil, true, false
@@ -13,6 +13,7 @@ from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
 from pixie.vm.persistent_list import create_from_list
 from pixie.vm.reader import LinePromise
 from rpython.rlib.rarithmetic import r_uint, intmask
+from rpython.rlib.rbigint import rbigint
 from pixie.vm.libs.pxic.util import read_handlers
 import pixie.vm.rt as rt
 
@@ -172,6 +173,8 @@ def read_obj(rdr):
         return read_namespace(rdr)
     elif tag == INT_STRING:
         return Integer(int(read_raw_string(rdr)))
+    elif tag == BIGINT_STRING:
+        return BigInteger(rbigint.fromstr(str(read_raw_string(rdr))))
 
 
     elif tag == NEW_CACHED_OBJ:

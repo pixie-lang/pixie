@@ -10,6 +10,7 @@ from pixie.vm.primitives import nil, true, false
 from pixie.vm.reader import LinePromise
 from rpython.rlib.objectmodel import specialize
 from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.rbigint import rbigint
 import pixie.vm.rt as rt
 
 MAX_INT32 = r_uint(1 << 31)
@@ -106,6 +107,11 @@ def write_int(i, wtr):
     else:
         wtr.write(chr(INT_STRING))
         write_string_raw(unicode(str(i)), wtr)
+
+def write_bigint(i, wtr):
+    # TODO implement a non string BIGINT writer
+    wtr.write(chr(BIGINT_STRING))
+    write_string_raw(unicode(i.str()), wtr)
 
 def write_float(f, wtr):
     write_tag(FLOAT, wtr)
@@ -246,7 +252,7 @@ def write_object(obj, wtr):
     elif isinstance(obj, Integer):
         write_int(obj.int_val(), wtr)
     elif isinstance(obj, BigInteger):
-        write_int(obj.bigint_val(), wtr)
+        write_bigint(obj.bigint_val(), wtr)
     elif isinstance(obj, Float):
         write_float(obj.float_val(), wtr)
     elif isinstance(obj, Code):
