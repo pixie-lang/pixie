@@ -95,6 +95,10 @@
   (-invoke-method [this name args]))
 
 
+(defprotocol IEffect
+  (-effect-val [this v])
+  (-effect-return [this v]))
+
 
 (extend -get-field Object -internal-get-field)
 
@@ -133,7 +137,20 @@
   ([x] x)
   ([x y] (-sub x y))
   ([x y & more]
-   (-apply - (- x y) more))) 
+   (-apply - (- x y) more)))
+
+(defn *
+  ([] 1)
+  ([x] x)
+  ([x y] (-mul x y))
+  ([x y & args]
+      (reduce -mul (-mul x y) args)))
+
+(defn /
+  ([x] (-div 1 x))
+  ([x y] (-div x y))
+  ([x y & args]
+      (reduce -div (-div x y) args)))
 
 (defn inc
   ([x] (+ x 1)))
@@ -180,6 +197,17 @@
                   (apply = y rest)
                   false)))
 
+;; Base functions
+
+(defn hash
+  [this]
+  (-hash this))
+
+(defn identity
+  ^{:doc "The identity function. Returns its argument."
+        :added "0.1"}
+  ([x & _] x))
+
 (defn not
   [x]
   (if x false true))
@@ -193,15 +221,61 @@
   (identical? x nil))
 
 (defn conj
+  {:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
+   :signatures [[] [coll] [coll item] [coll item & args]]
+   :added "0.1"}
   ([] [])
   ([coll] coll)
   ([coll itm] (-conj coll itm))
   ([coll item & more]
    (-apply conj (conj x y) more)))
 
+
+(defn conj!
+  {:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
+   :signatures [[] [coll] [coll item] [coll item & args]]
+   :added "0.1"}
+  ([] (-transient []))
+  ([coll] (-persistent! coll))
+  ([coll item] (-conj! coll item))
+  ([coll item & args]
+   (reduce -conj! (-conj! coll item) args)))
+
+(defn disj
+  {:doc "Removes elements from the collection."
+   :signatures [[] [coll] [coll item]]
+   :added "0.1"}
+  ([] [])
+  ([coll] coll)
+  ([coll item] (-disj coll item))
+  ([coll item & items]
+   (reduce -disj (-disj coll item) items)))
+
 (defn pop
+  {:doc "Pops elements off a stack."
+   :signatures [[] [coll] [coll item] [coll item & args]]
+   :added "0.1"}
   ([] [])
   ([coll] (-pop coll)))
+
+(defn push
+  {:doc "Push an element on to a stack."
+   :signatures [[] [coll] [coll item] [coll item & args]]
+   :added "0.1"}
+  ([coll x] (-push coll x)))
+
+(defn pop!
+  {:doc "Pops elements off a transient stack."
+   :signatures [[] [coll] [coll item] [coll item & args]]
+   :added "0.1"}
+  ([coll] (-pop! coll)))
+
+(def push!
+  {:doc "Push an element on to a transient stack."
+   :signatures [[] [coll] [coll item] [coll item & args]]
+   :added "0.1"}
+  ([coll x] (-push! coll x)))
+
 
 (defn nth
   {:doc "Returns the element at the idx.  If the index is not found it will return an error.
@@ -262,24 +336,100 @@
 
 ;;
 
-;; Type Helpers
+;; Hashing Functions
+
+(in-ns :pixie.stdlib.hashing)
 
 
-(defn instance?
-  ^{:doc "Checks if x is an instance of t.
-          When t is seqable, checks if x is an instance of
-          any of the types contained therein."
-    :signatures [[t x]]}
-  [t x]
-  (if (-satisfies? ISeqable t)
-    (let [ts (seq t)]
-      (if (not ts) false
-          (if (-instance? (first ts) x)
-            true
-            (instance? (rest ts) x))))
-    (-instance? t x)))
+(def seed 0)
+(def C1 (size-t 0xcc9e2d51))
+(def C2 (size-t 0x1b873593))
+(def LONG-BIT (size-t 32))
+(def MASK-32 (size-t 0xFFFFFFFF))
 
-;; End Type Helpers
+(defn mask-32 [x]
+  (bit-and x MASK-32))
+
+(defn rotr [value shift]
+  (let [value (size-t value)
+        shift (size-t shift)]
+    (bit-or (bit-shift-left value shift)
+            (bit-shift-right value (- LONG-BIT shift)))))
+
+(defn rotl [value shift]
+  (let [value (size-t value)
+        shift (size-t shift)]
+    (println (type value) (type LONG-BIT) (type shift) (type (- LONG-BIT shift)))
+    (bit-or (bit-shift-right value shift)
+            (bit-shift-left value (- LONG-BIT shift)))))
+
+(defn mix-k1 [k1]
+  (let [k1 (* k1 C1)
+        k1 (rotl k1 15)
+        k1 (* k1 C2)]
+    k1))
+
+(defn mix-h1 [h1 k1]
+  (let [h1 (bit-xor h1 k1)
+        h1 (rotr h1 13)
+        h1 (+ (* h1 5) 0xe6546b64)]
+    h1))
+
+
+(defn fmix [h1 length]
+  (let [h1 (bit-xor h1 length)
+        h1 (bit-xor h1 (bit-shift-right h1 16))
+        h1 (* h1 0x85ebca6b)
+        h1 (bit-xor h1 (bit-shift-right h1 13))
+        h1 (* h1 0xc2b2ae35)
+        h1 (bit-xor h1 (bit-shift-right h1 16))]
+    h1))
+
+
+(defn mix-coll-hash [hash count]
+  (let [h1 seed
+        k1 (mix-k1 hash)
+        h1 (mix-h1 h1 k1)]
+    (fmix h1 count)))
+
+(deftype HashingState [n hash]
+  IMessageObject
+  (-get-field [this field]
+    (get-field this field)))
+
+(defn unordered-hashing-rf
+  ([] (->HashingState (size-t 0) (size-t 1)))
+  ([acc]
+   (mix-coll-hash (.-hash acc)
+                  (.-n acc)))
+  ([acc itm]
+   (set-field! acc :n (inc (.-n acc)))
+   (set-field! acc :hash (+ (.-hash acc)
+                            (hash itm)))))
+
+(defn ordered-hashing-rf
+  ([] (->HashingState 0 1))
+  ([acc]
+   (mix-coll-hash (.-hash acc)
+                  (.-n acc)))
+  ([acc itm]
+   (set-field! acc :n (inc (.-n acc)))
+   (set-field! acc :hash (+ (* (size-t 31) (.-hash acc))
+                            (hash itm)))))
+
+
+
+(defn hash-int [input]
+  (if (= input 0)
+    0
+    (let [k1 (mix-k1 input)
+          h1 (mix-h1 seed k1)]
+      (fmix h1 4))))
+
+(in-ns :pixie.stdlib)
+
+;; End Hashing Functions
+
 
 ;; Reduced
 
@@ -294,25 +444,6 @@
   (instance? Reduced x))
 
 ;; End Reduced
-
-;; Satisfies
-
-(defn satisfies?
-  ^{:doc "Checks if x satisfies the protocol p.
-
-                            When p is seqable, checks if x satisfies all of
-                            the protocols contained therein."
-    :signatures [[t x]]}
-  [p x]
-  (if (-satisfies? ISeqable p)
-    (let [ps (seq p)]
-      (if (not ps) true
-          (if (not (-satisfies? (first ps) x))
-            false
-            (satisfies? (rest ps) x))))
-    (-satisfies? p x)))
-
-;; End Satisfies
 
 ;; Basic Transducer Support
 
@@ -331,7 +462,7 @@
 
 (defn reduce 
   ([rf col]
-   (reduce rf (rf) col))
+   (rf (reduce rf (rf) col)))
   ([rf init col]
    (-reduce col rf init)))
 
@@ -376,7 +507,107 @@
                        nil)))))]
      (map (fn [args] (apply f args)) (step colls)))))
 
+
+(defn interpose
+  ^{:doc "Returns a transducer that inserts `val` in between elements of a collection."
+    :signatures [[val] [val coll]]
+    :added "0.1"}
+  ([val] (fn [xf]
+           (let [first? (atom true)]
+             (fn
+               ([] (xf))
+               ([result] (xf result))
+               ([result item] (if @first?
+                                (do (reset! first? false)
+                                    (xf result item))
+                                (xf (xf result val) item)))))))
+  ([val coll]
+   (transduce (interpose val) conj coll)))
+
+
+(def preserving-reduced
+  (fn preserving-reduced [rf]
+    (fn pr-inner [a b]
+      (let [ret (rf a b)]
+        (if (reduced? ret)
+          (reduced ret)
+          ret)))))
+
+(defn cat
+  {:doc "A transducer that concatenates elements of a collection."
+   :added "0.1"}
+  [rf]
+  (let [rrf (preserving-reduced rf)]
+    (fn cat-inner
+      ([] (rf))
+      ([result] (rf result))
+      ([result input]
+       (reduce rrf result input)))))
+
+(defn mapcat
+  {:doc "Maps f over the elements of coll and concatenates the result"
+   :added "0.1"}
+  ([f]
+   (comp (map f) cat))
+  ([f coll]
+   (transduce (mapcat f) conj coll)))
+
+
 ;; End Basic Transudcer Support
+
+;; Type Checks
+
+(defn instance? [t x]
+  {:doc "Checks if x is an instance of t.
+
+                           When t is seqable, checks if x is an instance of
+                           any of the types contained therein."
+   :signatures [[t x]]}
+  (if (-satisfies? ISeqable t)
+    (let [ts (seq t)]
+      (if (not ts) false
+          (if (-instance? (first ts) x)
+            true
+            (instance? (rest ts) x))))
+    (-instance? t x)))
+
+(defn satisfies?   [p x]
+  ^{:doc "Checks if x satisfies the protocol p.
+
+                            When p is seqable, checks if x satisfies all of
+                            the protocols contained therein."
+    :signatures [[t x]]}
+  (if (-satisfies? ISeqable p)
+    (let [ps (seq p)]
+      (if (not ps) true
+          (if (not (-satisfies? (first ps) x))
+            false
+            (satisfies? (rest ps) x))))
+    (-satisfies? p x)))
+
+
+(defn true? [v] (identical? v true))
+(defn false? [v] (identical? v false))
+
+(defn number? [v] (instance? Number v))
+(defn integer? [v] (instance? Integer v))
+(defn float? [v] (instance? Float v))
+(defn ratio? [v] (instance? Ratio v))
+
+(defn char? [v] (instance? Character v))
+(defn string? [v] (instance? String v))
+(defn keyword? [v] (instance? Keyword v))
+
+(defn list? [v] (instance? [PersistentList Cons] v))
+(defn set? [v] (instance? PersistentHashSet v))
+(defn map? [v] (satisfies? IMap v))
+(defn fn? [v] (satisfies? IFn v))
+
+(defn indexed? [v] (satisfies? IIndexed v))
+(defn counted? [v] (satisfies? ICounted v))
+
+
+;; End Type Checks
 
 ;; Range
 
@@ -449,6 +680,57 @@
 
 ;; End Range
 
+(in-ns :pixie.stdlib)
+
+
+;; Extend Array
+
+(extend-type Array
+  IPersistentCollection
+  (-conj [arr itm]
+    (conj (pixie.stdlib.persistent-vector/vector-from-array arr) itm))
+  
+  ICounted
+  (-count ([arr]
+           (.-count arr)))
+
+  IReduce
+  (-reduce [this f init]
+    (loop [idx 0
+           acc init]
+      (if (reduced? acc)
+        @acc
+        (if (< idx (count this))
+          (recur (inc idx)
+                 (f acc (aget this idx)))
+          acc)))))
+
+(defn array-copy [from from-idx to to-idx size]
+  (loop [idx 0]
+    (when (< idx size)
+      (do (aset to (+ to-idx idx) (aget from (+ from-idx idx)))
+          (recur (inc idx))))))
+
+(defn array-append [arr val]
+  (let [new-array (make-array (inc (count arr)))]
+    (array-copy arr 0 new-array 0 (count arr))
+    (aset new-array (count arr) val)
+    new-array))
+
+(defn array-clone [arr]
+  (let [new-array (make-array (count arr))]
+    (array-copy arr 0 new-array 0 (count arr))
+    new-array))
+
+(defn array-resize [arr size]
+  (let [new-array (make-array size)]
+    (array-copy arr 0 new-array 0 size)
+    new-array))
+
+;;;
+
+
+
 ;; PersistentVector
 
 (in-ns :pixie.stdlib.persistent-vector)
@@ -489,6 +771,12 @@
             "Index out of range"])))
 
 (deftype PersistentVector [cnt shift root tail meta]
+  IObject
+  (-hash [this]
+    (reduce
+     pixie.stdlib.hashing/ordered-hashing-rf
+     this))
+  
   IMessageObject
   (-get-field [this name]
     (get-field this name))
@@ -603,7 +891,25 @@
     (->TransientVector cnt shift
                        (editable-root root)
                        (editable-tail tail)
-                       meta)))
+                       meta))
+
+  IReduce
+  (-reduce [this f init]
+    ((fn outer-loop [i acc]
+       (if (< i cnt)
+         (let [array (array-for this i)]
+           ((fn inner-loop [i j acc]
+              (if (< j (count array))
+                (let [acc (f acc (aget array j))]
+                  (if (reduced? acc)
+                    @acc
+                    (inner-loop (inc i)
+                                (inc j)
+                                acc)))
+                (outer-loop i acc)))
+            i 0 acc))
+         acc))
+     0 init)))
 
 (defn do-assoc [lvl node idx val]
   (let [new-array (array-clone (.-array node))
@@ -713,9 +1019,7 @@
     (ensure-editable this)
     (let [trimmed (make-array (- cnt (tail-off self)))]
       (array-copy tail 0 trimmed 0 (count trimmed))
-      (->PersistentVector cnt shift root trimmed)))
-  
-)
+      (->PersistentVector cnt shift root trimmed))))
 
 
 (defn editable-root [node]
@@ -738,60 +1042,69 @@
 
 (in-ns :pixie.stdlib)
 
-;; Extend Array
 
-(extend-type Array
-  IPersistentCollection
-  (-conj [arr itm]
-    (conj (vector-from-array arr) itm))
+
+
+;; Extend Core Types
+
+(extend -invoke Code -invoke)
+(extend -invoke NativeFn -invoke)
+(extend -invoke VariadicCode -invoke)
+(extend -invoke MultiArityFn -invoke)
+(extend -invoke Closure -invoke)
+(extend -invoke Var -invoke)
+(extend -invoke PolymorphicFn -invoke)
+(extend -invoke DoublePolymorphicFn -invoke)
+
+;(extend -reduce Cons seq-reduce)
+;(extend -reduce PersistentList seq-reduce)
+;(extend -reduce LazySeq seq-reduce)
+
+
+
+;(extend -reduce Buffer indexed-reduce)
+
+(extend -str Bool
+  (fn [x]
+    (if x
+      "true"
+      "false")))
+(extend -repr Bool -str)
+
+(extend-type Nil
+  IObject
+  (-str [this f]
+    (f "nil"))
+  (-repr [this f]
+    (f "nil"))
+  (-hash [this]
+    1000000)
+  (-eq [this other]
+    (identical? this other))
   
-  ICounted
-  (-count ([arr]
-           (.-count arr)))
+  IDeref
+  (-deref [this]
+    nil)
 
   IReduce
   (-reduce [this f init]
-    (loop [idx 0
-           acc init]
-      (if (reduced? acc)
-        @acc
-        (if (< idx (count this))
-          (recur (inc idx)
-                 (f acc (aget this idx)))
-          acc)))))
-
-(defn array-copy [from from-idx to to-idx size]
-  (loop [idx 0]
-    (when (< idx size)
-      (do (aset to (+ to-idx idx) (aget from (+ from-idx idx)))
-          (recur (inc idx))))))
-
-(defn array-append [arr val]
-  (let [new-array (make-array (inc (count arr)))]
-    (array-copy arr 0 new-array 0 (count arr))
-    (aset new-array (count arr) val)
-    new-array))
-
-(defn array-clone [arr]
-  (let [new-array (make-array (count arr))]
-    (array-copy arr 0 new-array 0 (count arr))
-    new-array))
-
-(defn array-resize [arr size]
-  (let [new-array (make-array size)]
-    (array-copy arr 0 new-array 0 size)
-    new-array))
-
-;;;
+    init))
 
 
-(def decide (-effect-fn (fn [h k]
-                          (println "Calling.." h)
-                          [(k 41)
-                           (k 42)])))
-(println true)
-(-with-handler :foo
-               (fn []
-                 
-                 (println (decide :foo))
-                 ))
+(extend -with-meta Nil (fn [self _] nil))
+(extend -contains-key Nil (fn [_ _] false))
+
+(extend -hash Integer pixie.stdlib.hashing/hash-int)
+
+(extend -eq Integer -num-eq)
+(extend -eq Float -num-eq)
+(extend -eq Ratio -num-eq)
+
+;; End Extend Core Types
+
+
+(println (hash (into [] (range 3))))
+;;(println (hash (into [] [1 2 0])))
+
+(println (type (+ 2 1)))
+

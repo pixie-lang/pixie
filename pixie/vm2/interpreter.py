@@ -436,6 +436,11 @@ class DelimitedContinuation(code.NativeFn):
         return args[0], stack
 
 class EffectFunction(code.BaseCode):
+    _type = Type(u"pixie.stdlib.EffectFn")
+
+    def type(self):
+        return EffectFunction._type
+
     def __init__(self, inner_fn):
         BaseCode.__init__(self)
         self._inner_fn = inner_fn

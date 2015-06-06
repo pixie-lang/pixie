@@ -2429,3 +2429,23 @@ Calling this function on something that is not ISeqable returns a seq with that 
        (loop* ~(vec (interleave binding-syms binding-syms))
               (let ~(vec (interleave bindings binding-syms))
                 ~@body)))))
+
+
+(defmacro with-handler [[h handler] & body]
+  `(let [~h ~handler]
+            (~'pixie.stdlib/-effect-return
+             ~h
+             (~'pixie.stdlib/-with-handler
+              ~h
+              (fn []
+                (~'pixie.stdlib/-effect-val
+                 ~h
+                 (do ~@body)))))))
+
+(defmacro defeffect
+  [nm & sigs]
+  `(do (def ~nm (~'pixie.stdlib/protocol ~(str nm)))
+       ~@(map (fn [[x]]
+                `(def ~x (~'pixie.stdlib/-effect-fn
+                          (~'pixie.stdlib/polymorphic-fn ~(str x) ~nm))))
+              sigs)))

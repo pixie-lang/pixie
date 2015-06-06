@@ -88,6 +88,8 @@ def init():
             return String(unicode(x))
         if isinstance(x, Object):
             return x
+        if isinstance(x, r_uint):
+            return numbers.SizeT(x)
         if x is None:
             return nil
 

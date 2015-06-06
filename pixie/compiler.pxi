@@ -419,7 +419,8 @@
   "Creates a new (empty) environment"
   []
   {:ns 'pixie.stdlib
-   :vars (atom {'pixie.stdlib {'array true}})
+   :vars (atom {'pixie.stdlib {'array true
+                               'size-t true}})
    :tail? true})
 
 

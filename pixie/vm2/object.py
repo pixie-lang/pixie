@@ -77,6 +77,7 @@ class TypeRegistry(object):
     def get_by_name(self, nm, default=None):
         return self._types.get(nm, default)
 
+
 _type_registry = TypeRegistry()
 
 def get_type_by_name(nm):
@@ -108,6 +109,13 @@ class Type(Object):
 
     def subclasses(self):
         return self._subclasses
+
+    def to_str(self):
+        return u"<type " + self._name + u">"
+
+    def to_repr(self):
+        return u"<type " + self._name + u">"
+
 
 Object._type = Type(u"pixie.stdlib.Object", None, False)
 Type._type = Type(u"pixie.stdlib.Type")

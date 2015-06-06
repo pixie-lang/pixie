@@ -73,7 +73,6 @@
   (->WriterCache os {}))
 
 (defn write-raw-string [os str]
-  (assert (not= str "nil"))
   (assert (string? str) "Expected String")
   (write-int-raw os (count str))
   (spit os str false))
@@ -254,7 +253,12 @@
 
   Nil
   (-write-object [this os]
-    (write-tag os NIL)))
+    (write-tag os NIL))
+
+  Object
+  (-write-object [this os]
+    (throw [:pixie.stdlib/IllegalArgumentException
+            (str "Can't write " this)])))
 
 
 (defn write-object [os ast]

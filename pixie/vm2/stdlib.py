@@ -1,5 +1,6 @@
 import pixie.vm2.rt as rt
 from pixie.vm2.code import as_var, Var, list_copy, NativeFn
+from pixie.vm2.numbers import SizeT
 from pixie.vm2.object import affirm, Type, runtime_error
 from pixie.vm2.primitives import nil, true, false
 import pixie.vm2.code as code
@@ -64,6 +65,9 @@ def protocol(name):
 
 @as_var("extend")
 def _extend(proto_fn, tp, fn):
+    if isinstance(proto_fn, interpreter.EffectFunction):
+        proto_fn = proto_fn._inner_fn
+
     if not isinstance(proto_fn, code.PolymorphicFn):
         runtime_error(u"Fist argument to extend should be a PolymorphicFn not a " + proto_fn.type().name())
 
@@ -182,3 +186,11 @@ def _add_to_string_builder(sb, x):
 def _finish_string_builder(sb):
     return rt.wrap(sb.to_str())
 
+@as_var("size-t")
+def size_t(i):
+    return SizeT(i.int_val())
+
+
+@as_var("type")
+def type(x):
+    return x.type()

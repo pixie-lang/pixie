@@ -1,7 +1,7 @@
 import pixie.vm2.object as object
 from pixie.vm2.object import affirm
 from pixie.vm2.primitives import true, false
-from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.rarithmetic import r_uint, intmask
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
 from pixie.vm2.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
@@ -15,6 +15,8 @@ class Number(object.Object):
 
     def type(self):
         return Number._type
+
+
 
 class Integer(Number):
     _type = object.Type(u"pixie.stdlib.Integer", Number._type)
@@ -37,6 +39,28 @@ class Integer(Number):
 
     def to_repr(self):
         return unicode(str(self._int_val))
+
+class SizeT(Integer):
+    _type = object.Type(u"pixie.stdlib.SizeT", Integer._type)
+    _immutable_fields_ = ["_ruint_val"]
+
+    def __init__(self, val):
+        self._ruint_val = r_uint(val)
+
+    def r_uint_val(self):
+        return self._ruint_val
+
+    def int_val(self):
+        return intmask(self._ruint_val)
+
+    def type(self):
+        return self._type
+
+    def to_str(self):
+        return unicode(str(self._ruint_val))
+
+    def to_repr(self):
+        return unicode(str(self._ruint_val))
 
 zero_int = Integer(0)
 one_int = Integer(1)
@@ -130,7 +154,7 @@ extend_num_op("_rem", Integer, Integer, "int_val", "%", "int_val")
 
 def define_num_ops():
     # maybe define get_val() instead of using tuples?
-    num_classes = [(Integer, "int_val"), (Float, "float_val")]
+    num_classes = [(SizeT, "r_uint_val"), (Integer, "int_val"), (Float, "float_val")]
     for (c1, conv1) in num_classes:
         for (c2, conv2) in num_classes:
             for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
