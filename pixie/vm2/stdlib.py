@@ -188,7 +188,7 @@ def _finish_string_builder(sb):
 
 @as_var("size-t")
 def size_t(i):
-    return SizeT(i.int_val())
+    return SizeT(i.r_uint_val())
 
 
 @as_var("type")

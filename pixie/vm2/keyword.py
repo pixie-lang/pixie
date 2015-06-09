@@ -32,6 +32,9 @@ class Keyword(Object):
                 self._w_ns = rt.wrap(s[0])
                 self._w_name = rt.wrap(u"/".join(s[1:]))
 
+    def __repr__(self):
+        return u":" + self._str
+
 
 class KeywordCache(object):
     def __init__(self):

@@ -6,6 +6,7 @@ from pixie.vm2.keyword import Keyword
 from pixie.vm2.code import BaseCode
 
 import rpython.rlib.jit as jit
+from pixie.vm2.debugger import expose
 
 class AST(Object):
     _immutable_fields_ = ["_c_meta"]
@@ -57,6 +58,7 @@ class PrevASTNil(AST):
     def __init__(self):
         AST.__init__(self, nil)
 
+@expose("_c_ast", "_c_locals")
 class InterpretK(Continuation):
     _immutable_ = True
     def __init__(self, ast, locals):
@@ -70,6 +72,7 @@ class InterpretK(Continuation):
     def get_ast(self):
         return self._c_ast
 
+@expose("_c_val")
 class Const(AST):
     _immutable_fields_ = ["_c_val"]
     _type = Type(u"pixie.interpreter.Const")
@@ -80,6 +83,7 @@ class Const(AST):
     def interpret(self, _, locals, stack):
         return self._c_val, stack
 
+@expose("_c_value", "_c_name", "_c_next")
 class Locals(object):
     _immutable_ = True
     def __init__(self, name, value, next):
@@ -334,6 +338,7 @@ class DoK(Continuation):
     def get_ast(self):
         return self._c_ast
 
+@expose("_c_var")
 class VDeref(AST):
     _immutable_fields_ = ["_c_var"]
     def __init__(self, var, meta=nil):
@@ -351,7 +356,7 @@ def get_printable_location(ast):
 
 jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
 
-def run_stack(val, cont, stack=None):
+def run_stack(val, cont, stack=None, enter_debug=True):
     stack = None
     val = None
     ast = cont.get_ast()
@@ -361,6 +366,9 @@ def run_stack(val, cont, stack=None):
             val, stack = cont.call_continuation(val, stack)
             ast = cont.get_ast()
         except BaseException as ex:
+            if enter_debug:
+                from pixie.vm2.debugger import debug
+                #debug(cont, stack, val)
             print_stacktrace(cont, stack)
             if not we_are_translated():
                 print ex

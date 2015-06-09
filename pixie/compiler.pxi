@@ -102,13 +102,14 @@
 
 (defmethod analyze-seq 'do
   [x]
-  {:op :do
-   :children '[:statements :ret]
-   :env *env*
-   :form x
-   :statements (binding [*env* (assoc *env* :tail? false)]
-                 (mapv analyze-form (butlast (next x))))
-   :ret (analyze-form (last x))})
+  (let [statement-asts (binding [*env* (assoc *env* :tail? false)]
+                         (mapv analyze-form (butlast (next x))))]
+    {:op :do
+     :children '[:statements :ret]
+     :env *env*
+     :form x
+     :statements statement-asts
+     :ret (analyze-form (last x))}))
 
 (defmethod analyze-seq 'comment
   [x]
@@ -420,7 +421,8 @@
   []
   {:ns 'pixie.stdlib
    :vars (atom {'pixie.stdlib {'array true
-                               'size-t true}})
+                               'size-t true
+                               'bit-count32 true}})
    :tail? true})
 
 

@@ -2,7 +2,7 @@ from pixie.vm2.code import as_var
 from pixie.vm2.object import affirm
 
 from pixie.vm2.numbers import SizeT, Integer
-from rpython.rlib.rarithmetic import intmask
+from rpython.rlib.rarithmetic import intmask, r_uint
 
 import pixie.vm2.rt as rt
 
@@ -10,27 +10,35 @@ def to_sizet(x):
     if isinstance(x, SizeT):
         return x
     if isinstance(x, Integer):
-        return SizeT(x.r_uint_val())
+        return SizeT(r_uint(x.r_uint_val()))
 
     affirm(False, u"Expected something that can be converted to a SizeT")
+
+@as_var("bit-count32")
+def bit_count(i):
+    i = to_sizet(i).r_uint_val()
+    i = i - ((i >> 1) & r_uint(0x55555555))
+    i = (i & r_uint(0x33333333)) + ((i >> 2) & r_uint(0x33333333))
+    return SizeT((((i + (i >> 4) & r_uint(0xF0F0F0F)) * r_uint(0x1010101)) & r_uint(0xffffffff)) >> 24)
+
 
 @as_var("bit-clear")
 def bit_clear(x, n):
     x = to_sizet(x)
     n = to_sizet(n)
-    return rt.wrap(x.r_uint_val() & ~(1 << n.r_uint_val()))
+    return rt.wrap(x.r_uint_val() & ~(r_uint(1) << n.r_uint_val()))
 
 @as_var("bit-set")
 def bit_set(x, n):
     x = to_sizet(x)
     n = to_sizet(n)
-    return rt.wrap(x.r_uint_val() | (1 << n.r_uint_val()))
+    return rt.wrap(x.r_uint_val() | (r_uint(1) << n.r_uint_val()))
 
 @as_var("bit-flip")
 def bit_flip(x, n):
     x = to_sizet(x)
     n = to_sizet(n)
-    return rt.wrap(x.r_uint_val() ^ (1 << n.r_uint_val()))
+    return rt.wrap(x.r_uint_val() ^ (r_uint(1) << n.r_uint_val()))
 
 @as_var("bit-not")
 def bit_not(x):
@@ -41,7 +49,7 @@ def bit_not(x):
 def bit_test(x, n):
     x = to_sizet(x)
     n = to_sizet(n)
-    return rt.wrap((x.r_uint_val() & (1 << n.r_uint_val())) != 0)
+    return rt.wrap((x.r_uint_val() & (r_uint(1) << n.r_uint_val())) != r_uint(0))
 
 @as_var("bit-and")
 def bit_and(x, y):
@@ -84,7 +92,7 @@ def bit_shift_right(x, n):
 def unsigned_bit_shift_right(x, n):
     x = to_sizet(x)
     n = to_sizet(n)
-    return rt.wrap(intmask(x.r_ur_uint_val() >> n.r_uint_val()))
+    return rt.wrap(intmask(x.r_uint_val() >> n.r_uint_val()))
 
 digits = "0123456789abcdefghijklmnopqrstuvwxyz"
 

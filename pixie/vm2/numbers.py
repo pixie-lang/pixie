@@ -4,7 +4,7 @@ from pixie.vm2.primitives import true, false
 from rpython.rlib.rarithmetic import r_uint, intmask
 from rpython.rlib.rbigint import rbigint
 import rpython.rlib.jit as jit
-from pixie.vm2.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn
+from pixie.vm2.code import DoublePolymorphicFn, extend, Protocol, as_var, wrap_fn, munge
 #from pixie.vm.libs.pxic.util import add_marshall_handlers
 import pixie.vm2.rt as rt
 
@@ -137,59 +137,123 @@ _num_eq.set_default_fn(wrap_fn(lambda a, b: false))
 #as_var("MAX-NUMBER")(Integer(100000)) # TODO: set this to a real max number
 
 
-num_op_template = """@extend({pfn}, {ty1}._type, {ty2}._type)
-def {pfn}_{ty1}_{ty2}(a, b):
-    assert isinstance(a, {ty1}) and isinstance(b, {ty2})
-    return {wrap_start}a.{conv1}() {op} b.{conv2}(){wrap_end}
+# Ordering of conversions. If a given function is called with two numbers of different
+# types, then the type lower on this list will always be upconverted before the opration is
+# performed.
+
+number_orderings = [Integer, SizeT, BigInteger, Float]
+
+# Given a value of a certain type, how do we convert it to the *primitive* of another type?
+# Notice that conversions for a type to itself must exist, this is then the simple upwrap case.
+conversion_templates = {Integer: {Integer: "{x}.int_val()",
+                                  SizeT: "{x}.r_uint_val()",
+                                  Float: "float({x}.int_val())",
+                                  BigInteger: "rbigint.fromint({x}.int_val())"},
+                        SizeT:   {SizeT:"{x}.r_uint_val()",
+                                  Float:"float({x}.int_val())",
+                                  BigInteger:"rbigint.fromint({x}.int_val())"},
+                        BigInteger: {BigInteger: "{x}.bigint_val()",
+                                     Float: "{x}.bigint_val().tofloat()"},
+                        Float:   {Float: "{x}.float_val()"}}
+
+# Given an operation and a type, how do we perform that operation?
+
+operations = {"-add": {Integer: "{x} + {y}",
+                       SizeT: "{x} + {y}",
+                       BigInteger: "{x}.add({y})",
+                       Float: "{x} + {y}"},
+              "-sub": {Integer: "{x} - {y}",
+                       SizeT: "{x} - {y}",
+                       BigInteger: "{x}.sub({y})",
+                       Float: "{x} - {y}"},
+              "-mul": {Integer: "{x} * {y}",
+                       SizeT: "{x} * {y}",
+                       BigInteger: "{x}.mul({y})",
+                       Float: "{x} * {y}"},
+              "-div": {Integer: "{x} / {y}",
+                       SizeT: "{x} / {y}",
+                       BigInteger: "{x}.div({y})",
+                       Float: "{x} / {y}"},
+              "-gt": {Integer: "{x} > {y}",
+                       SizeT: "{x} > {y}",
+                       BigInteger: "{x}.gt({y})",
+                       Float: "{x} > {y}"},
+
+              "-lt": {Integer: "{x} < {y}",
+                       SizeT: "{x} < {y}",
+                       BigInteger: "{x}.lt({y})",
+                       Float: "{x} < {y}"},
+
+              "-gte": {Integer: "{x} >= {y}",
+                       SizeT: "{x} >= {y}",
+                       BigInteger: "{x}.ge({y})",
+                       Float: "{x} >= {y}"},
+
+              "-lte": {Integer: "{x} <= {y}",
+                       SizeT: "{x} <= {y}",
+                       BigInteger: "{x}.le({y})",
+                       Float: "{x} <= {y}"},
+
+              "-num-eq": {Integer: "{x} == {y}",
+                       SizeT: "{x} == {y}",
+                       BigInteger: "{x}.eq({y})",
+                       Float: "{x} == {y}"},
+              }
+
+# These functions return bool and so should always be returned via rt.wrap
+binop_names = {"-gt", "-lt", "-gte", "-lte", "-num-eq"}
+
+# How do we wrap primitives?
+wrappers = {Integer: "rt.wrap({x})",
+            SizeT: "SizeT({x})",
+            BigInteger: "rt.wrap({x})",
+            Float: "rt.wrap({x})"}
+
+
+
+op_template = """
+@extend({pfn}, {t1}._type, {t2}._type)
+def {pfn}_{t1}_{t2}(x, y):
+    return {result}
 """
 
-def extend_num_op(pfn, ty1, ty2, conv1, op, conv2, wrap_start = "rt.wrap(", wrap_end = ")"):
-    tp = num_op_template.format(pfn=pfn, ty1=ty1.__name__, ty2=ty2.__name__,
-                                conv1=conv1, op=op, conv2=conv2,
-                                wrap_start=wrap_start, wrap_end=wrap_end)
-    exec tp
+def get_rank(t1):
+    for idx, tp in enumerate(number_orderings):
+        if tp == t1:
+            return idx
 
-extend_num_op("_quot", Integer, Integer, "int_val", "/", "int_val")
-extend_num_op("_rem", Integer, Integer, "int_val", "%", "int_val")
+    assert False, str(t1) + " not found"
 
-def define_num_ops():
-    # maybe define get_val() instead of using tuples?
-    num_classes = [(SizeT, "r_uint_val"), (Integer, "int_val"), (Float, "float_val")]
-    for (c1, conv1) in num_classes:
-        for (c2, conv2) in num_classes:
-            for (op, sym) in [("_add", "+"), ("_sub", "-"), ("_mul", "*"), ("_div", "/")]:
-                if op == "_div" and c1 == Integer and c2 == Integer:
-                    continue
-                extend_num_op(op, c1, c2, conv1, sym, conv2)
-            if c1 != Integer or c2 != Integer:
-                    extend_num_op("_rem", c1, c2, conv1, ",", conv2, wrap_start = "rt.wrap(math.fmod(", wrap_end = "))")
-                    extend_num_op("_quot", c1, c2, conv1, "/", conv2, wrap_start = "rt.wrap(math.floor(", wrap_end = "))")
-            for (op, sym) in [("_num_eq", "=="), ("_lt", "<"), ("_gt", ">"), ("_lte", "<="), ("_gte", ">=")]:
-                extend_num_op(op, c1, c2, conv1, sym, conv2,
-                              wrap_start = "true if ", wrap_end = " else false")
 
-define_num_ops()
+def make_num_op(pfn, t1, t2):
+    t1rank = get_rank(t1)
+    t2rank = get_rank(t2)
 
-bigint_ops_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
-def _{pfn}_{ty1}_{ty2}(a, b):
-    assert isinstance(a, {ty1}) and isinstance(b, {ty2})
-    return rt.wrap({conv1}(a.{get1}()).{op}({conv2}(b.{get2}())))
-"""
+    if t1rank >= t2rank:
+        t1_conv = t1
+        t2_conv = t1
+    else:
+        t1_conv = t2
+        t2_conv = t2
 
-def define_bigint_ops():
-    num_classes = [(Integer, "rbigint.fromint", "int_val"), (BigInteger, "", "bigint_val")]
-    for (c1, conv1, get1) in num_classes:
-        for (c2, conv2, get2) in num_classes:
-            if c1 == Integer and c2 == Integer:
-                continue
-            for (pfn, op) in [("_add", "add"), ("_sub", "sub"), ("_mul", "mul"), ("_div", "div"),
-                              ("_num_eq", "eq"), ("_lt", "lt"), ("_gt", "gt"), ("_lte", "le"), ("_gte", "ge")]:
-                code = bigint_ops_tmpl.format(pfn=pfn, op=op,
-                                              ty1=c1.__name__, conv1=conv1, get1=get1,
-                                              ty2=c2.__name__, conv2=conv2, get2=get2)
-                exec code
+    wrapper = wrappers[t1_conv] if pfn not in binop_names else "rt.wrap({x})"
 
-define_bigint_ops()
+    result = wrapper.format(x=operations[pfn][t1_conv].format(x=conversion_templates[t1][t1_conv].format(x="x"),
+                                                              y=conversion_templates[t2][t2_conv].format(x="y")))
+
+    templated = op_template.format(pfn=munge(pfn),
+                                   t1=str(t1._type._name.split(".")[-1]),
+                                   t2=str(t2._type._name.split(".")[-1]),
+                                   result=result)
+
+    return templated
+
+for pfn in operations:
+    for t1 in number_orderings:
+        for t2 in number_orderings:
+            exec make_num_op(pfn, t1, t2)
+
+
 
 def gcd(u, v):
     while v != 0:

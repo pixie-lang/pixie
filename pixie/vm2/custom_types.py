@@ -3,11 +3,27 @@ import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm2.code import as_var
 from pixie.vm2.numbers import Integer, Float
-from pixie.vm2.keyword import Keyword
+from pixie.vm2.keyword import Keyword, keyword
 from pixie.vm2.array import Array
 import pixie.vm2.rt as rt
 
 MAX_FIELDS = 32
+
+
+def make_ctor_fn(type_name, field_names):
+    """Constructs a function that will contsruct a Custom type with the given type name
+       and field names. The resulting function should be called with a list of Objects."""
+
+    slots = {}
+    for idx, val in enumerate(field_names):
+        slots[keyword(val)] = idx
+
+    type = CustomType(type_name, slots)
+
+    def ctor(itms):
+        return new_inst(type, itms)
+
+    return ctor
 
 
 class CustomType(Type):
@@ -144,6 +160,12 @@ set_field_by_idx_template = """
             self._custom_field{c} = val
 """
 
+get_list_template = """
+    def get_list(self):
+        return {d}
+
+"""
+
 def gen_ct_class_code():
     acc = ""
     for x in range(MAX_FIELDS + 1):
@@ -162,6 +184,7 @@ def gen_ct_class_code():
         for y in range(x):
             acc += set_field_by_idx_template.format(c=y)
 
+        acc += get_list_template.format(d="[" + ", ".join(map(lambda x: "self._custom_field" + str(x), range(x))) + "]")
 
 
     #print acc
