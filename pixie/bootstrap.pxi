@@ -756,6 +756,36 @@
 
 ;; End Atom
 
+;; Map Entry
+
+
+
+(deftype MapEntry [k v meta]
+  IMapEntry
+  (-key [this]
+    k)
+  (-val [this]
+    v)
+  
+  IIndexed
+  (-nth [this idx]
+    (cond
+      (= idx 0) k
+      (= idx 1) v
+      :else (throw [:pixie.stdlib/IndexError
+                    "Index out of Range"])))
+  
+  (-nth-not-found [this idx not-found]
+    (cond
+      (= idx 0) k
+      (= idx 1) v
+      :else not-found)))
+
+(defn map-entry [k v]
+  (->MapEntry k v nil))
+
+;; End Map Entry
+
 
 ;; PersistentVector
 
@@ -1084,6 +1114,9 @@
 
 (in-ns :pixie.stdlib.persistent-hash-map)
 
+(def MASK-32 0xFFFFFFFF)
+
+
 (defprotocol INode
   (-assoc-inode [this shift hash-val key val added-leaf])
   (-find [self shift hash-val key not-found])
@@ -1094,11 +1127,12 @@
   (bit-and (bit-shift-right hash shift) 0x01f))
 
 (defn bitpos [hash shift]
-  (bit-and (bit-shift-left 1 (mask hash shift)) 0xFFFFFFFF))
+  (bit-and (bit-shift-left 1 (mask hash shift)) MASK-32))
 
 (defn index [this bit]
   (bit-count32 (bit-and (.-bitmap this)
                         (dec bit))))
+
 
 (deftype BitmapIndexedNode [edit bitmap array]
   IMessageObject
@@ -1115,7 +1149,7 @@
           (if (nil? key-or-null)
             (let [n (-assoc-inode val-or-node
                                   (+ shift 5)
-                                  (bit-and hash-val 0xFFFFFFFF)
+                                  (bit-and hash-val MASK-32)
                                   key
                                   val
                                   added-leaf)]
@@ -1176,8 +1210,8 @@
               (array-copy array (* 2 idx) new-array (* 2 (inc idx)) (* 2 (- n idx)))
               (->BitmapIndexedNode nil (bit-or bitmap bit) new-array)))))))
 
-  (-find [self shift has-val key not-found]
-    (let [bit (bitpos has-val shift)]
+  (-find [self shift hash-val key not-found]
+    (let [bit (bitpos hash-val shift)]
       (if (= (bit-and bitmap bit) 0)
         not-found
         (let [idx (index self bit)
@@ -1187,9 +1221,28 @@
             (-find val-or-node (+ 5 shift) hash-val key not-found)
             (if (= key key-or-null)
               val-or-node
-              not-found)))))))
+              not-found))))))
+  
+  (-reduce-inode [this f init]
+    (loop [x 0
+           acc init]
+      (if (< x (count array))
+        (let [key-or-nil (aget array x)
+              val-or-node (aget array (inc x))
+              acc (if (and (nil? key-or-nil)
+                           (not (nil? val-or-node)))
+                    (-reduce-inode val-or-node f acc)
+                    (f acc (map-entry key-or-nil val-or-node)))]
+          (if (reduced? acc)
+            acc
+            (recur (+ 2 x) acc)))
+        acc))))
 
 (def BitmapIndexedNode-EMPTY (->BitmapIndexedNode nil (size-t 0) []))
+
+(defn ann [x]
+  (assert x)
+  x)
 
 (deftype ArrayNode [edit cnt array]
   INode
@@ -1208,11 +1261,11 @@
                                                   val
                                                   added-leaf)))
         (let [n (-assoc-inode node
-                              (+ 5 shift)
-                              hash-val
-                              key
-                              val
-                              added-leaf)]
+                            (+ 5 shift)
+                            hash-val
+                            key
+                            val
+                            added-leaf)]
           (if (identical? n node)
             this
             (->ArrayNode nil cnt (clone-and-set array idx n)))))))
@@ -1225,7 +1278,20 @@
                (+ shift 5)
                hash-val
                key
-               not-found)))))
+               not-found))))
+
+  (-reduce-inode [this f init]
+    (loop [x 0
+           acc init]
+      (if (< x (count array))
+        (let [node (aget array x)]
+          (if (not (nil? node))
+            (let [acc (-reduce-inode node f acc)]
+              (if (reduced? acc)
+                acc
+                (recur (inc x) acc)))
+            (recur (inc x) acc)))
+        acc))))
 
 (deftype PersistentHashMap [cnt root has-nil? nil-val meta]
   IAssociative
@@ -1240,7 +1306,7 @@
             added-leaf (atom false)
             new-root (-assoc-inode new-root
                                    0
-                                   (bit-and (hash key) 0xFFFFFFFF)
+                                   (bit-and (hash key) MASK-32)
                                    key
                                    val
                                    added-leaf)]
@@ -1252,12 +1318,39 @@
                                new-root
                                has-nil?
                                nil-val
-                               meta))))))
+                               meta)))))
+
+  ILookup
+  (-get [this key not-found]
+    (if (nil? key)
+      (if has-nil?
+        nil-val
+        not-found)
+      (if (nil? root)
+        not-found
+        (-find root 0
+               (bit-and (hash key) MASK-32)
+               key
+               not-found))))
+
+  IReduce
+  (-reduce [this f init]
+    (let [acc (if has-nil?
+                (f init nil-val)
+                init)]
+      (if (reduced? acc)
+        @acc
+        (if root
+          (let [acc (-reduce-inode root f acc)]
+            (if (reduced? acc)
+              @acc
+              acc))
+          acc)))))
 
 (def EMPTY (->PersistentHashMap (size-t 0) nil false nil nil))
 
 (defn create-node [shift key1 val1 key2hash key2 val2]
-  (let [key1hash (bit-and (pixie.stdlib/hash key1) 0xFFFFFFFF)]
+  (let [key1hash (bit-and (pixie.stdlib/hash key1) MASK-32)]
     (if (= key1hash key2hash)
       (->HashCollisionNode nil key1hash [key1 val1 key2 val2])
       (let [added-leaf (atom false)]
@@ -1267,7 +1360,7 @@
 
 (defn clone-and-set [array i a]
   (let [clone (array-clone array)]
-    (aset array i a)
+    (aset clone i a)
     clone))
 
 (defn clone-and-set2 [array i a j b]
@@ -1298,10 +1391,10 @@
 ;(extend -reduce Buffer indexed-reduce)
 
 (extend -str Bool
-  (fn [x]
+  (fn [x sb]
     (if x
-      "true"
-      "false")))
+      (sb "true")
+      (sb "false"))))
 (extend -repr Bool -str)
 
 (extend-type Nil
@@ -1336,8 +1429,16 @@
 ;; End Extend Core Types
 
 
-(reduce
- (fn [acc x]
-   (-assoc acc x x))
- pixie.stdlib.persistent-hash-map/EMPTY
- (range 100))
+(println (reduce
+          (fn [acc [k v]]
+            (+ acc v))
+          0
+          (reduce
+           (fn [acc x]
+             (-assoc acc x x))
+           pixie.stdlib.persistent-hash-map/EMPTY
+           (range 100)))
+         (reduce
+          +
+          (range 100)))
+

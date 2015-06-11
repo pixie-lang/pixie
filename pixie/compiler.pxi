@@ -235,6 +235,7 @@
 
 (defmethod analyze-seq 'recur
   [[_ & args]]
+  
   (analyze-form `(~'__loop__fn__ ~@args)))
 
 (defmethod analyze-seq 'def
