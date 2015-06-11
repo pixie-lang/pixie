@@ -40,7 +40,8 @@
    :LET
    :META
    :LINE-META
-   :VAR-CONST])
+   :VAR-CONST
+   :CHAR])
 
 (def *cache* nil)
 (set-dynamic! (var *cache*))
@@ -255,6 +256,11 @@
   (-write-object [this os]
     (write-tag os NIL))
 
+  Character
+  (-write-object [this os]
+    (write-tag os CHAR)
+    (write-raw-string os (str this)))
+
   Object
   (-write-object [this os]
     (throw [:pixie.stdlib/IllegalArgumentException
@@ -262,6 +268,7 @@
 
 
 (defn write-object [os ast]
+
   (binding [*old-meta* (or (and
                             (map? ast)
                             (meta (:form ast)))

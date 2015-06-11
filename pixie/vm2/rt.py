@@ -71,6 +71,7 @@ def init():
     #import pixie.vm.threads
     #import pixie.vm.string_builder
     #import pixie.vm.stacklet
+    import pixie.vm2.jit_tables
 
     @specialize.argtype(0)
     def wrap(x):

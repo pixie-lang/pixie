@@ -89,6 +89,7 @@
                            (symbol? x) :symbol
                            (number? x) :number
                            (string? x) :string
+                           (char? x) :char
                            (keyword? x) :keyword)))
 
 (defmulti analyze-seq (fn [x]
@@ -235,7 +236,7 @@
 
 (defmethod analyze-seq 'recur
   [[_ & args]]
-  
+  ()
   (analyze-form `(~'__loop__fn__ ~@args)))
 
 (defmethod analyze-seq 'def
@@ -350,6 +351,13 @@
    :form x
    :env *env*})
 
+(defmethod analyze-form :char
+  [x]
+  {:op :const
+   :type :char
+   :form x
+   :env *env*})
+
 (defmethod analyze-form :seq
   [x]
   (analyze-seq x))
@@ -423,7 +431,9 @@
   {:ns 'pixie.stdlib
    :vars (atom {'pixie.stdlib {'array true
                                'size-t true
-                               'bit-count32 true}})
+                               'bit-count32 true
+                               'contains-table true
+                               'switch-table true}})
    :tail? true})
 
 
@@ -431,25 +441,28 @@
   ([form]
    (analyze form (new-env)))
   ([form env]
-    (binding [*env* env]
-      (analyze-form form))))
+   (if *env*
+     (analyze-form form)
+     (binding [*env* env]
+       (analyze-form form)))))
 
 
 
 
 
 (defn walk [pre post selector node]
-  (-> (reduce
-       (fn [node k]
-         (let [v (get node k)
-               result (if (or (vector? v)
-                              (seq? v))
-                        (mapv (partial walk pre post selector) v)
-                        (walk pre post selector v))]
-           (assoc node k result)))
-       (pre node)
-       (selector node))
-      post))
+  (let [walk-fn (partial walk pre post selector)]
+    (-> (reduce
+         (fn [node k]
+           (let [v (get node k)
+                 result (if (or (vector? v)
+                                (seq? v))
+                          (mapv walk-fn v)
+                          (walk-fn v))]
+             (assoc node k result)))
+         (pre node)
+         (selector node))
+        post)))
 
 (defn post-walk [f ast]
   (walk identity f :children ast))
@@ -592,27 +605,64 @@
 (defn run-passes [ast]
   (walk identity
         (comp
-         convert-vectors
-         convert-fns
-         (comp convert-defs
-               collect-closed-overs
-               clean-do))
+         persistent!
+         (comp convert-vectors
+               convert-fns
+               (comp convert-defs
+                     collect-closed-overs
+                     (comp clean-do
+                           #_transient))))
         :children
         ast))
 
+(defn read-and-compile [form env]
+  (let [ast (analyze form env)
+        ast (run-passes ast)]
+    ast))
 
-(println "Reading")
-(let [form (time (read-string (str "(do " (pixie.io/slurp "pixie/bootstrap.pxi") ")")))
-      _ (println "Compiling")
-      ast (time (analyze form))
-      _ (println "Passes")
-      ast (time (run-passes ast))
-      _ (println "To String")
-      os (-> "/tmp/bootstrap.pxic"
-             io/open-write
-             io/buffered-output-stream)]
-  (binding [pxic-writer/*cache* (pxic-writer/writer-cache os)]
-    (time (pxic-writer/write-object os ast)))
-  #_(print str)
-  (dispose! os)
-  (println "done"))
+#_(defn compile-file [from to]
+  (println "Reading")
+  (let [form (time (read-string (str "(do " (pixie.io/slurp from) ")")))
+        _ (println "Compiling")
+        ast (time (analyze form))
+        _ (println "Passes")
+        ast (time (run-passes ast))
+        _ (println "To String")
+        os (-> to
+               io/open-write
+               io/buffered-output-stream)]
+    (binding [pxic-writer/*cache* (pxic-writer/writer-cache os)]
+      (time (pxic-writer/write-object os ast)))
+    #_(print str)
+    (dispose! os)
+    (println "done")))
+
+(defn compile-file [from os]
+  (let [forms (read-string (str "[" (io/slurp from) "]"))
+        form-count (atom 0)
+        total-count (atom 0)]
+    (doseq [form forms]
+          (swap! form-count inc)
+          (swap! total-count inc)
+          (when (= @form-count 10)
+            (println from (int (* 100 (/ @total-count (count forms)))) "% in" (:ns *env*))
+            (reset! form-count 0))
+          
+          (let [ast (read-and-compile form env)]
+            (pxic-writer/write-object os ast)))))
+
+(defn compile-files [files to]
+  (let [os (-> to
+               io/open-write
+               io/buffered-output-stream)
+                env (new-env)
+]
+    (binding [*env* env]
+      (binding [pxic-writer/*cache* (pxic-writer/writer-cache os)]
+        (doseq [file files]
+          (compile-file file os))))
+    (dispose! os)))
+
+(time (compile-files ["pixie/bootstrap.pxi"
+                      "pixie/reader.pxi"]
+                     "/tmp/bootstrap.pxic"))

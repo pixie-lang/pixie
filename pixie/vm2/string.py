@@ -6,6 +6,7 @@ from pixie.vm2.numbers import Integer
 #import pixie.vm2.stdlib as proto
 #import pixie.vm2.util as util
 from rpython.rlib.rarithmetic import intmask, r_uint
+import rpython.rlib.jit as jit
 #from pixie.vm2.libs.pxic.util import add_marshall_handlers
 
 class String(Object):
@@ -72,20 +73,46 @@ class String(Object):
 #         return false
 #     return true if self._str == v._str else false
 #
-# class Character(Object):
-#     _type = Type(u"pixie.stdlib.Character")
-#     _immutable_fields_ = ["_char_val"]
-#
-#     def type(self):
-#         return Character._type
-#
-#     def __init__(self, i):
-#         assert isinstance(i, int)
-#         self._char_val = i
-#
-#     def char_val(self):
-#         return self._char_val
-#
+class Character(Object):
+    _type = Type(u"pixie.stdlib.Character")
+    _immutable_fields_ = ["_char_val"]
+
+    def type(self):
+        return Character._type
+
+    def __init__(self, i):
+        assert isinstance(i, int)
+        self._char_val = i
+
+    def char_val(self):
+        return self._char_val
+
+class CharCache(object):
+    def __init__(self):
+        self._char_cache = {}
+        self._rev = 0
+
+    @jit.elidable_promote()
+    def intern_inner(self, ival, rev):
+        return self._char_cache.get(ival, None)
+
+    def intern(self, ival):
+        v = self.intern_inner(ival, self._rev)
+        if not v:
+            v = Character(ival)
+            self._char_cache[ival] = v
+            self._rev += 1
+
+        return v
+
+char_cache = CharCache()
+
+@as_var("char")
+def char(val):
+    affirm(isinstance(val, Integer), u"First argument must be an Integer")
+    return char_cache.intern(val.int_val())
+
+
 # @wrap_fn
 # def write_char(obj):
 #     assert isinstance(obj, Character)

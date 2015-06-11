@@ -289,6 +289,52 @@
 (defn count
   ([coll] (-count coll)))
 
+(defn assoc
+  {:doc "Associates the key with the value in the collection"
+   :signatures [[m] [m k v] [m k v & kvs]]
+   :added "0.1"}
+  ([m] m)
+  ([m k v]
+     (-assoc m k v))
+  ([m k v & rest]
+     (apply assoc (-assoc m k v) rest)))
+
+(defn key [m]
+  (-key m))
+
+(defn val [m]
+  (-val m))
+
+(defn apply [f & args]
+  (let [last-itm (last args)
+        but-last-cnt (dec (count args))
+        arg-array (make-array (+ but-last-cnt
+                                 (count last-itm)))
+        _ (array-copy args 0 arg-array 0 but-last-cnt)
+        idx (reduce
+             (fn [idx itm]
+               (aset arg-array idx itm)
+               (inc idx))
+             but-last-cnt
+             last-itm)]
+    (-apply f arg-array)))
+
+(defn last [coll]
+  (println "LAST " (type coll))
+  (if (vector? coll)
+    (nth coll (dec (count coll)))
+    (loop [coll coll]
+      (if-let [v (next coll)]
+        v
+        (first coll)))))
+
+(defn butlast [coll]
+  (loop [res []
+         coll coll]
+    (if (next coll)
+      (recur (conj res (first coll))
+             (next coll))
+      (seq res))))
 
 (deftype Cons [first next meta]
   ISeq
@@ -604,6 +650,7 @@
 
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
+(defn vector? [v] (satisfies? IVector v))
 
 
 ;; End Type Checks
@@ -684,10 +731,25 @@
 
 ;; Extend Array
 
+(satisfy IVector Array)
+
 (extend-type Array
   IPersistentCollection
   (-conj [arr itm]
     (conj (pixie.stdlib.persistent-vector/vector-from-array arr) itm))
+
+  IIndexed
+  (-nth [this idx]
+    (if (and (<= 0 idx)
+             (< idx (count this)))
+      (aget this idx)
+      (throw [:pixie.stdlib/IndexOutOfRangeException
+              "Index out of range"])))
+  (-nth-not-found [this idx not-found]
+    (if (and (<= 0 idx)
+             (< idx (count this)))
+      (aget this idx)
+      not-found))
   
   ICounted
   (-count ([arr]
@@ -1293,13 +1355,51 @@
             (recur (inc x) acc)))
         acc))))
 
-(deftype PersistentHashMap [cnt root has-nil? nil-val meta]
+(deftype PersistentHashMap [cnt root has-nil? nil-val hash-val meta]
+  IObject
+  (-hash [this]
+    (if hash-val
+      hash-val
+      (do (set-field! this :hash-val
+                      (transduce cat
+                                 pixie.stdlib.hashing/unordered-hash-reducing-fn
+                                 this))
+          hash-val)))
+  
+  (-str [this sb]
+    (sb "{")
+    (let [not-first (atom false)]
+      (reduce
+       (fn [_ x]
+         (if @not-first
+           (sb " ")
+           (reset! not-first true))
+         (-str (key x) sb)
+         (sb " ")
+         (-str (val x) sb))
+       nil
+       this))
+    (sb "}"))
+  
+  IMeta
+  (-meta [this]
+    meta)
+
+  IWithMeta
+  (-with-meta [this new-meta]
+    (->PersistentHashMap cnt root has-nil? nil-val hash-val new-meta))
+
+  IEmpty
+  (-empty [this]
+    (-with-meta pixie.stdlib.persistent-hash-map/EMPTY
+                meta))
+  
   IAssociative
   (-assoc [this key val]
     (if (nil? key)
       (if (identical? val nil-val)
         this
-        (->PersistentHashMap cnt root true key))
+        (->PersistentHashMap cnt root true val nil meta))
       (let [new-root (if (nil? root)
                        BitmapIndexedNode-EMPTY
                        root)
@@ -1318,6 +1418,7 @@
                                new-root
                                has-nil?
                                nil-val
+                               nil
                                meta)))))
 
   ILookup
@@ -1347,7 +1448,7 @@
               acc))
           acc)))))
 
-(def EMPTY (->PersistentHashMap (size-t 0) nil false nil nil))
+(def EMPTY (->PersistentHashMap (size-t 0) nil false nil nil nil))
 
 (defn create-node [shift key1 val1 key2hash key2 val2]
   (let [key1hash (bit-and (pixie.stdlib/hash key1) MASK-32)]
@@ -1370,6 +1471,16 @@
     clone))
 
 (in-ns :pixie.stdlib)
+
+(defn hashmap [& args]
+  (loop [idx 0
+         acc pixie.stdlib.persistent-hash-map/EMPTY]
+    (if (< idx (count args))
+      (do (assert (> (- (count args) idx) 1) "hashmap requires even number of args")
+          (recur (+ 2 idx)
+                 (assoc acc (nth args idx) (nth args (inc idx)))))
+      acc)))
+
 ;; End Persistent Hash Map
 ;; Extend Core Types
 
@@ -1429,16 +1540,60 @@
 ;; End Extend Core Types
 
 
-(println (reduce
-          (fn [acc [k v]]
-            (+ acc v))
-          0
-          (reduce
-           (fn [acc x]
-             (-assoc acc x x))
-           pixie.stdlib.persistent-hash-map/EMPTY
-           (range 100)))
-         (reduce
-          +
-          (range 100)))
+;; Multimethod stuff
+#_(comment
+
+
+(deftype MultiMethod [name dispatch-fn default-val methods]
+  IFn
+  (-invoke [self & args]
+    (let [dispatch-val (apply dispatch-fn args)
+          method (if (contains? @methods dispatch-val)
+                   (get @methods dispatch-val)
+                   (get @methods default-val))
+          _ (assert method (str "no method defined for " dispatch-val " on " name))]
+      (try
+        (apply method args)
+        (catch ex
+            (throw (add-exception-info ex (str "In multimethod "
+                                               name
+                                               " dispatching on "
+                                               dispatch-val
+                                               "\n") args)))))))
+
+(defmacro defmulti
+  {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
+   :examples [["(defmulti greet first)"]
+              ["(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"]
+              ["(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"]
+              ["(greet [:hi \"Jane\"])" nil "Hi, Jane!"]]
+   :signatures [[name dispatch-fn & options]]
+   :added "0.1"}
+  [name & args]
+  (let [[meta args] (if (string? (first args))
+                      [{:doc (first args)} (next args)]
+                      [{} args])
+        [meta args] (if (map? (first args))
+                      [(merge meta (first args)) (next args)]
+                      [meta args])
+        dispatch-fn (first args)
+        options (apply hashmap (next args))]
+    `(def ~name (->MultiMethod ~(str name) ~dispatch-fn ~(get options :default :default) (atom {})))))
+
+(defmacro defmethod
+  {:doc "Define a method of a multimethod. See `(doc defmulti)` for details."
+   :signatures [[name dispatch-val [param*] & body]]
+   :added "0.1"}
+  [name dispatch-val params & body]
+  `(do
+     (let [methods (.methods ~name)]
+       (swap! methods
+              assoc
+              ~dispatch-val (fn ~params
+                              ~@body))
+       ~name)))
+)
+
+;; End Multimethods
+
 

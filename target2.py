@@ -8,13 +8,17 @@ import pixie.vm2.code as code
 from pixie.vm2.keyword import keyword as kw
 from pixie.vm2.symbol import symbol as sym
 from pixie.vm2.numbers import parse_number
-from pixie.vm2.pxic_reader import read_file
+from pixie.vm2.pxic_reader import read_file, read_object, Reader
 
 rt.init()
 
 def testit(max):
+    rdr = Reader("/tmp/bootstrap.pxic")
+    while True:
+        obj = read_object(rdr)
+        run_stack(None, i.InterpretK(obj, None))
 
-    pixie_code = read_file("/tmp/bootstrap.pxic")
+    #pixie_code = read_file("/tmp/bootstrap.pxic")
 
 
     return run_stack(None, i.InterpretK(pixie_code, None))
