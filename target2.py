@@ -15,13 +15,15 @@ rt.init()
 def testit(max):
     rdr = Reader("/tmp/bootstrap.pxic")
     while True:
-        obj = read_object(rdr)
+        try:
+            obj = read_object(rdr)
+        except EOFError:
+            break
         run_stack(None, i.InterpretK(obj, None))
 
+    return None
     #pixie_code = read_file("/tmp/bootstrap.pxic")
-
-
-    return run_stack(None, i.InterpretK(pixie_code, None))
+    #return run_stack(None, i.InterpretK(pixie_code, None))
 
 #val = testit()
 #print val.int_val(), val

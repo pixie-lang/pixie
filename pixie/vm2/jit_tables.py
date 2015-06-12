@@ -12,13 +12,13 @@ class SwitchTable(Object):
     def type(self):
         return SwitchTable._type
 
-    def __init__(self, dict):
-        self._switch_table = dict
+    def __init__(self, d):
+        self._switch_table = d
 
 
     @jit.elidable_promote()
     def lookup(self, itm):
-        return self._switch_table(itm, nil)
+        return self._switch_table.get(itm, nil)
 
     def invoke_k(self, args, stack):
         affirm(len(args) == 1, u"SwitchTables should be called with one arg")
@@ -28,10 +28,10 @@ class SwitchTable(Object):
 
 @as_var("switch-table")
 def swith_table__args(args):
-    affirm(len(args) / 2 == 0, u"Even number of args should be passed to switch-table")
     idx = 0
     acc = {}
     while idx < len(args):
+        affirm(idx + 1 < len(args), u"Even number of args should be passed to switch-table")
         acc[args[idx]] = args[idx + 1]
         idx += 2
 
@@ -50,7 +50,7 @@ class ContainsTable(Object):
 
     @jit.elidable_promote()
     def lookup(self, itm):
-        return rt.wrap(itm in self._swith_table)
+        return rt.wrap(itm in self._switch_table)
 
     def invoke_k(self, args, stack):
         affirm(len(args) == 1, u"ContainsTables should be called with one arg")

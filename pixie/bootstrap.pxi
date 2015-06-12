@@ -336,6 +336,8 @@
              (next coll))
       (seq res))))
 
+;; Cons and List
+
 (deftype Cons [first next meta]
   ISeq
   (-first [this] first)
@@ -349,6 +351,45 @@
 
 (defn cons [head tail]
   (->Cons head (seq tail) nil))
+
+
+(deftype List [head tail cnt hash-val meta]
+  ISeq
+  (-first [this] first)
+  (-next [this] next)
+
+  ICounted
+  (-count [this] cnt)
+
+  ISeqable
+  (-seq [this] this)
+
+  IMeta
+  (-meta [this] meta)
+  (-with-meta [this new-meta]
+    (->List head tail cnt hash-val meta))
+
+  IPersistentCollection
+  (-conj [this val]
+    (->List val this (inc cnt) nil nil)))
+
+
+(defn list [& args]
+  (loop [acc nil
+         idx (dec (count args))
+         cnt 0]
+    (if (pos? idx)
+      (recur (->List (nth args idx)
+                     acc
+                     cnt
+                     nil
+                     nil)
+             (dec idx)
+             (inc cnt))
+      acc)))
+
+(defn vector [& args]
+  (vector-from-array args))
 
 ;; String Builder
 
@@ -728,6 +769,29 @@
 
 (in-ns :pixie.stdlib)
 
+;; Extend String
+
+(extend-type String
+  IIndexed
+  (-nth [self idx]
+    (-str-nth self idx))
+
+  ICounted
+  (-count [self]
+    (-str-len self))
+
+  IReduce
+  (-reduce [self f init]
+    (loop [acc init
+           idx 0]
+      (if (< idx (count self))
+        (if (reduced? acc)
+          @acc
+          (recur (f acc (nth self idx))
+                 (inc idx)))
+        acc))))
+
+;; End Extend String
 
 ;; Extend Array
 

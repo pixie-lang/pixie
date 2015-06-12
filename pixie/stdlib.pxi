@@ -2316,7 +2316,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 (defn mapv
   ([f col]
-   (transduce (map f) conj col)))
+   (transduce (map f) conj! col)))
 
 (defn macroexpand-1
   {:doc "If form is a macro call, returns the expanded form. Does nothing if not a macro call."
@@ -2449,3 +2449,21 @@ Calling this function on something that is not ISeqable returns a seq with that 
                 `(def ~x (~'pixie.stdlib/-effect-fn
                           (~'pixie.stdlib/polymorphic-fn ~(str x) ~nm))))
               sigs)))
+
+
+(extend -transient PersistentHashMap
+  (fn [m]
+    (reduce
+     (fn [acc [k v]]
+       (add-to-dict-map acc k v))
+     (new-dict-map)
+     m)))
+
+(extend -persistent! PersistentHashMap identity)
+
+(extend -persistent! DictMap dict-map-to-phm)
+(extend -assoc DictMap add-to-dict-map)
+(extend -conj DictMap (fn [m [k v]]
+                        (assoc m k v)))
+(extend -val-at DictMap (fn [m k _]
+                          (get-from-dict-map m k)))

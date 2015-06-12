@@ -16,7 +16,10 @@ class Reader(object):
         self._file.close()
 
     def read(self):
-        return ord(self._file.read(1)[0])
+        try:
+            return ord(self._file.read(1)[0])
+        except IndexError:
+            raise EOFError
 
     def get_cache_idx(self):
         idx = len(self._cache)

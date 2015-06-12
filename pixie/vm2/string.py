@@ -18,6 +18,22 @@ class String(Object):
     def __init__(self, s):
         #assert isinstance(s, unicode)
         self._str = s
+
+
+@as_var("-str-len")
+def str_len(self):
+    assert isinstance(self, String)
+    return rt.wrap(len(self._str))
+
+@as_var("-str-nth")
+def str_len(self, idx):
+    assert isinstance(self, String)
+    i = idx.int_val()
+    return char_cache.intern(ord(self._str[i]))
+
+
+
+
 #
 #
 # @extend(proto._str, String)
@@ -87,6 +103,19 @@ class Character(Object):
     def char_val(self):
         return self._char_val
 
+
+    def to_str(self):
+        assert isinstance(self, Character)
+        return rt.wrap(u"" + unichr(self.char_val()))
+
+    def to_repr(self):
+        assert isinstance(self, Character)
+        cv = self.char_val()
+        if cv < 128:
+            return rt.wrap(u"\\"+unicode(chr(cv)))
+        hexv = rt.name(rt.bit_str(rt.wrap(self.char_val()), rt.wrap(4)))
+        return rt.wrap(u"\\u" + u"0" * (4 - len(hexv)) + hexv)
+
 class CharCache(object):
     def __init__(self):
         self._char_cache = {}
@@ -104,6 +133,7 @@ class CharCache(object):
             self._rev += 1
 
         return v
+
 
 char_cache = CharCache()
 
