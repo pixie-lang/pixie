@@ -13,7 +13,7 @@ from pixie.vm2.pxic_reader import read_file, read_object, Reader
 rt.init()
 
 def testit(max):
-    rdr = Reader("/tmp/bootstrap.pxic")
+    rdr = Reader("./bootstrap.pxic")
     while True:
         try:
             obj = read_object(rdr)

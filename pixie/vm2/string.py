@@ -106,15 +106,16 @@ class Character(Object):
 
     def to_str(self):
         assert isinstance(self, Character)
-        return rt.wrap(u"" + unichr(self.char_val()))
+        return u"" + unichr(self.char_val())
 
     def to_repr(self):
         assert isinstance(self, Character)
         cv = self.char_val()
         if cv < 128:
-            return rt.wrap(u"\\"+unicode(chr(cv)))
-        hexv = rt.name(rt.bit_str(rt.wrap(self.char_val()), rt.wrap(4)))
-        return rt.wrap(u"\\u" + u"0" * (4 - len(hexv)) + hexv)
+            return u"\\"+unicode(chr(cv))
+        return u"FIXME"
+        #hexv = rt.name(rt.bit_str(rt.wrap(self.char_val()), rt.wrap(4)))
+        #return rt.wrap(u"\\u" + u"0" * (4 - len(hexv)) + hexv)
 
 class CharCache(object):
     def __init__(self):

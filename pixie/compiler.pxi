@@ -236,7 +236,7 @@
 
 (defmethod analyze-seq 'recur
   [[_ & args]]
-  ()
+  (assert (:tail? *env*) "Can only recur at tail position")
   (analyze-form `(~'__loop__fn__ ~@args)))
 
 (defmethod analyze-seq 'def
@@ -433,7 +433,9 @@
                                'size-t true
                                'bit-count32 true
                                'contains-table true
-                               'switch-table true}})
+                               'switch-table true
+                               '-add-to-string-builder true
+                               '-parse-number true}})
    :tail? true})
 
 
@@ -665,4 +667,4 @@
 
 (time (compile-files ["pixie/bootstrap.pxi"
                       "pixie/reader.pxi"]
-                     "/tmp/bootstrap.pxic"))
+                     "./bootstrap.pxic"))

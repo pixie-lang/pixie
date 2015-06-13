@@ -286,6 +286,10 @@
   ([coll idx not-found] (-nth-not-found coll idx not-found)))
 
 
+(defn has-meta?
+  [x]
+  (satisfies? IMeta x))
+
 (defn count
   ([coll] (-count coll)))
 
@@ -388,24 +392,25 @@
              (inc cnt))
       acc)))
 
-(defn vector [& args]
-  (vector-from-array args))
 
 ;; String Builder
 
 (defn string-builder
   ([] (-string-builder))
-  ([sb] (-str sb))
+  ([sb] (-internal-to-str sb))
   ([sb x]
    (if (instance? String x)
      (-add-to-string-builder x)
-     (-add-to-string-bulder (-str x)))))
+     (-str x (fn [x]
+               (-add-to-string-builder sb x))))))
 
-(defn str [& args]
-  (transduce
-   (map str)
+(defn str
+  [& args]
+  (reduce
    string-builder
    args))
+
+
 
 (defn println [& args]
   (let [sb (-string-builder)
@@ -962,6 +967,19 @@
                  this)]
         (set-field! this :hash-val val)
         val)))
+
+  (-str [this sb]
+    (sb "[")
+    (let [not-first (atom false)]
+      (reduce
+       (fn [_ x]
+         (if @not-first
+           (sb " ")
+           (reset! not-first true))
+         (-str x sb))
+       nil
+       this))
+    (sb "]"))  
   
   
   IMessageObject
@@ -1600,6 +1618,10 @@
 (extend -eq Integer -num-eq)
 (extend -eq Float -num-eq)
 (extend -eq Ratio -num-eq)
+
+(defn vector [& args]
+  (pixie.stdlib.persistent-vector/vector-from-array args))
+
 
 ;; End Extend Core Types
 
