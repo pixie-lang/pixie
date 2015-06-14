@@ -552,6 +552,11 @@ returns true"
 (defn rem [num div]
   (-rem num div))
 
+(defn rand-int
+  {:doc "random integer between 0 (inclusive) and n (exclusive)"}
+  [n]
+  (rem (rand) n))
+
 (defn =
   {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses
 -eq to perform equality checks."
@@ -945,6 +950,16 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (extend -hash MapEntry
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+(defn select-keys
+  {:doc "Produces a map with only the values in m contained in key-seq"}
+  [m key-seq]
+  (with-meta
+    (transduce
+     (comp (filter (fn [k] (contains? m k)))
+           (map (fn [k] [k (get m k)])))
+     conj {} key-seq)
+    (meta m)))
 
 (defn keys
   {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
@@ -1410,6 +1425,10 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 (defn nil? [x]
   (identical? x nil))
+
+(defn some? [x]
+  {:doc "true if x is not nil"}
+  (not (nil? x)))
 
 (defn fnil [f else]
   (fn [x & args]
