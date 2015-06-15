@@ -540,10 +540,21 @@ class Namespace(object.Object):
 
         self._registry[name] = var
         return var
-
+    
     def include_stdlib(self):
         stdlib = _ns_registry.find_or_make(u"pixie.stdlib")
         self.add_refer(stdlib, refer_all=True)
+    
+    def resolve_ns(self, ns_alias):
+        refer = self._refers.get(ns_alias, None)
+        resolved_ns = None
+        if refer is not None:
+            resolved_ns = refer._namespace
+        if resolved_ns is None:
+            resolved_ns = _ns_registry.get(ns_alias, None)
+        if resolved_ns is None:
+            affirm(False, u"Unable to resolve namespace: " + ns_alias + u" inside namespace " + self._name)
+        return resolved_ns
 
     def resolve(self, s, use_refers=True):
         import pixie.vm.symbol as symbol
@@ -552,14 +563,7 @@ class Namespace(object.Object):
         name = rt.name(s)
 
         if ns is not None:
-            refer = self._refers.get(ns, None)
-            resolved_ns = None
-            if refer is not None:
-                resolved_ns = refer._namespace
-            if resolved_ns is None:
-                resolved_ns = _ns_registry.get(ns, None)
-            if resolved_ns is None:
-                affirm(False, u"Unable to resolve namespace: " + ns + u" inside namespace " + self._name)
+            resolved_ns = self.resolve_ns(ns)
         else:
             resolved_ns = self
 

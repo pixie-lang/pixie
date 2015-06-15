@@ -2,6 +2,7 @@
   (:require [pixie.streams :as st :refer :all]
             [pixie.streams.utf8 :as utf8]
             [pixie.io-blocking :as io-blocking]
+            [pixie.io.common :as common]
             [pixie.uv :as uv]
             [pixie.stacklets :as st]
             [pixie.ffi :as ffi]
@@ -11,7 +12,6 @@
 (uv/defuvfsfn fs_read [file bufs nbufs offset] :result)
 (uv/defuvfsfn fs_write [file bufs nbufs offset] :result)
 (uv/defuvfsfn fs_close [file] :result)
-
 
 (def DEFAULT-BUFFER-SIZE (* 32 1024))
 
@@ -40,17 +40,7 @@
     (fs_close fp))
   IReduce
   (-reduce [this f init]
-    (let [buf (buffer DEFAULT-BUFFER-SIZE)
-          rrf (preserving-reduced f)]
-      (loop [acc init]
-        (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-          (if (> read-count 0)
-            (let [result (reduce rrf acc buf)]
-              (if (not (reduced? result))
-                (recur result)
-                @result))
-            acc))))))
-
+    (common/stream-reducer this f init)))
 
 (defn open-read
   {:doc "Open a file for reading, returning a IInputStream"
@@ -91,7 +81,7 @@ kl   nil when all lines have been read"
             _ (pixie.ffi/set! uvbuf :len (- (count buffer) buffer-offset))
             write-count (fs_write fp uvbuf 1 offset)]
         (when (neg? write-count)
-          (throw (uv/uv_err_name read-count)))
+          (throw [::FileOutputStreamException (uv/uv_err_name read-count)]))
         (set-field! this :offset (+ offset write-count))
         (if (< (+ buffer-offset write-count) (count buffer))
           (recur (+ buffer-offset write-count))
@@ -136,13 +126,13 @@ kl   nil when all lines have been read"
 
 (defn buffered-output-stream
   ([downstream]
-   (buffered-output-stream downstream DEFAULT-BUFFER-SIZE))
+   (buffered-output-stream downstream common/DEFAULT-BUFFER-SIZE))
   ([downstream size]
     (->BufferedOutputStream downstream 0 (buffer size) false)))
 
 (defn buffered-input-stream
   ([upstream]
-   (buffered-input-stream upstream DEFAULT-BUFFER-SIZE))
+   (buffered-input-stream upstream common/DEFAULT-BUFFER-SIZE))
   ([upstream size]
    (let [b (buffer size)]
      (set-buffer-count! b size)
@@ -150,7 +140,7 @@ kl   nil when all lines have been read"
 
 (defn throw-on-error [result]
   (when (neg? result)
-    (throw (uv/uv_err_name result)))
+    (throw [::UVException (uv/uv_err_name result)]))
   result)
 
 (defn open-write
@@ -166,6 +156,7 @@ kl   nil when all lines have been read"
 
 (defn spit 
   "Writes the content to output. Output must be a file or an IOutputStream."
+<<<<<<< HEAD
   ([output content]
    (spit output content true))
   ([output content dispose?]
@@ -193,6 +184,26 @@ kl   nil when all lines have been read"
      
      :else (throw [:pixie.stdlib/InvalidInputException
                    "Expected a string or IOutputStream"]))))
+=======
+  [output content]
+  (cond
+    (string? output)
+    (transduce (map identity)
+               (-> output
+                   open-write
+                   buffered-output-stream
+                   utf8/utf8-output-stream-rf)
+               (str content))
+    
+    (satisfies? IOutputStream output)
+    (transduce (map identity)
+               (-> output
+                   buffered-output-stream
+                   utf8/utf8-output-stream-rf)
+               (str content))
+    
+    :else (throw [::Exception "Expected a string or IOutputStream"])))
+>>>>>>> master
 
 (defn slurp 
   "Reads in the contents of input. Input must be a filename or an IInputStream"
@@ -200,7 +211,7 @@ kl   nil when all lines have been read"
   (let [stream (cond
                  (string? input) (open-read input)
                  (satisfies? IInputStream input) input
-                 :else (throw "Expected a string or an IInputStream"))
+                 :else (throw [:pixie.io/Exception "Expected a string or an IInputStream"]))
         result (transduce
                  (map char)
                  string-builder

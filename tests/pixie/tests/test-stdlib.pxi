@@ -189,6 +189,16 @@
     (t/assert= (set (vals v)) #{1 2 3})
     (t/assert= (transduce (vals) conj! v) (vals v))))
 
+(t/deftest test-select-keys
+  (let [m ^{:k :v} {:a 1 :b 2}]
+    (t/assert= (select-keys m [:a :b]) m)
+    (t/assert= :v
+               (-> (select-keys m [:a])
+                   meta
+                   :k))
+    (t/assert= (select-keys m [:a :not-found]) {:a 1})
+    (t/assert= (select-keys m nil) {})
+    (t/assert= (select-keys {} [:a]) {})))
 
 (t/deftest test-empty
   (t/assert= (empty '(1 2 3)) '())
@@ -273,6 +283,10 @@
   (t/assert= (every? even? []) true)
   (t/assert= (every? odd? []) true))
 
+(t/deftest test-rand-int
+  (let [vs (repeatedly 10 #(rand-int 4))]
+    (t/assert (every? #(and (>= % 0) (< % 4)) vs))))
+
 (t/deftest test-some
   (t/assert= (some even? [2 4 6 8]) true)
   (t/assert= (some odd?  [2 4 6 8]) false)
@@ -301,6 +315,9 @@
   (t/assert= (seq (filter (fn [x] false) [1 2 3 4])) nil)
   (t/assert= (into {} (filter (fn [[_ v]] (odd? v)) {:a 1, :b 2, :c 3, :d 4}))
              {:a 1 :c 3}))
+
+(t/deftest test-remove
+  (t/assert= (remove even? [1 2 3 4 5]) '(1 3 5)))
 
 (t/deftest test-distinct
   (t/assert= (seq (distinct [1 2 3 2 1])) '(1 2 3))
@@ -388,6 +405,15 @@
   (in-ns :pixie.tests.test-stdlib)
   (t/assert= (set (keys (ns-map 'foo)))
              #{'bar 'baz}))
+
+(t/deftest test-ns-aliases
+  (in-ns :ns-to-require)
+  (in-ns :my-fake-ns)
+  (require ns-to-require :as some-alias)
+  (in-ns :pixie.tests.test-stdlib)
+  (t/assert= {'some-alias (the-ns 'ns-to-require)
+              'pixie.stdlib (the-ns 'pixie.stdlib)}
+             (ns-aliases (the-ns 'my-fake-ns))))
 
 (t/deftest test-while
   (t/assert=  (while (pos? 0) true ) nil)

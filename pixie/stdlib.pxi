@@ -552,6 +552,11 @@ returns true"
 (defn rem [num div]
   (-rem num div))
 
+(defn rand-int
+  {:doc "random integer between 0 (inclusive) and n (exclusive)"}
+  [n]
+  (rem (rand) n))
+
 (defn =
   {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses
 -eq to perform equality checks."
@@ -945,6 +950,16 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (extend -hash MapEntry
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+(defn select-keys
+  {:doc "Produces a map with only the values in m contained in key-seq"}
+  [m key-seq]
+  (with-meta
+    (transduce
+     (comp (filter (fn [k] (contains? m k)))
+           (map (fn [k] [k (get m k)])))
+     conj {} key-seq)
+    (meta m)))
 
 (defn keys
   {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
@@ -1411,6 +1426,10 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defn nil? [x]
   (identical? x nil))
 
+(defn some? [x]
+  {:doc "true if x is not nil"}
+  (not (nil? x)))
+
 (defn fnil [f else]
   (fn [x & args]
     (apply f (if (nil? x) else x) args)))
@@ -1876,6 +1895,15 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
          (if (pred f)
            (cons f (filter pred r))
            (filter pred r)))))))
+
+(defn remove
+  {:doc "Removes any element from the collection which matches the predicate. The complement of filter."
+   :signatures [[pred] [pred coll]]
+   :added "0.1"}
+  ([pred]
+   (filter (complement pred)))
+  ([pred coll]
+   (filter (complement pred) coll)))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
@@ -2430,6 +2458,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
               (let ~(vec (interleave bindings binding-syms))
                 ~@body)))))
 
+<<<<<<< HEAD
 
 (defmacro with-handler [[h handler] & body]
   `(let [~h ~handler]
@@ -2467,3 +2496,8 @@ Calling this function on something that is not ISeqable returns a seq with that 
                         (assoc m k v)))
 (extend -val-at DictMap (fn [m k _]
                           (get-from-dict-map m k)))
+
+(extend -str Namespace
+  (fn [v] (str "<Namespace " (name v) ">")))
+
+(extend -repr Namespace -str)

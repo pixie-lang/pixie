@@ -337,21 +337,24 @@ class QuoteReader(ReaderHandler):
         return cons(symbol(u"quote"), cons(itm))
 
 class KeywordReader(ReaderHandler):
+    def fqd(self, itm):
+        ns_alias = rt.namespace(itm)
+        current_nms = rt.ns.deref()
+
+        if ns_alias is None:
+            return keyword(rt.name(itm), rt.name(current_nms))
+        else:
+            ns_fqd = current_nms.resolve_ns(ns_alias)
+            return keyword(rt.name(itm), rt.name(ns_fqd))
+
     def invoke(self, rdr, ch):
-        nms = u""
         ch = rdr.read()
         if ch == u":":
             itm = read_inner(rdr, True)
-            nms = rt.name(rt.ns.deref())
+            return self.fqd(itm)
         else:
             rdr.unread()
             itm = read_inner(rdr, True)
-
-        affirm(isinstance(itm, Symbol), u"Can't keyword quote a non-symbol")
-        if nms:
-            affirm(rt.namespace(itm) is None, u"Kewyword cannot have two namespaces")
-            return keyword(rt.name(itm), nms)
-        else:
             return keyword(rt.name(itm), rt.namespace(itm))
 
 class LiteralStringReader(ReaderHandler):

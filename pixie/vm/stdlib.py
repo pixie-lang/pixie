@@ -553,6 +553,26 @@ def ns_map(ns):
 
     return nil
 
+@as_var("ns-aliases")
+def ns_aliases(ns):
+    from pixie.vm.code import Namespace
+    from pixie.vm.symbol import Symbol
+    affirm(isinstance(ns, Namespace) or isinstance(ns, Symbol), u"ns must be a symbol or a namespace")
+
+    if isinstance(ns, Symbol):
+        ns = rt.the_ns(ns)
+        if ns is nil:
+            return nil
+
+    if isinstance(ns, Namespace):
+        m = rt.hashmap()
+        for alias in ns._refers:
+            refered_ns = ns._refers[alias]._namespace
+            m = rt.assoc(m, rt.symbol(rt.wrap(alias)), refered_ns)
+        return m
+
+    return nil
+
 @as_var("refer-ns")
 def refer(ns, refer, alias):
     from pixie.vm.symbol import Symbol
