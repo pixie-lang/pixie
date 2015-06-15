@@ -189,6 +189,16 @@
     (t/assert= (set (vals v)) #{1 2 3})
     (t/assert= (transduce (vals) conj! v) (vals v))))
 
+(t/deftest test-select-keys
+  (let [m ^{:k :v} {:a 1 :b 2}]
+    (t/assert= (select-keys m [:a :b]) m)
+    (t/assert= :v
+               (-> (select-keys m [:a])
+                   meta
+                   :k))
+    (t/assert= (select-keys m [:a :not-found]) {:a 1})
+    (t/assert= (select-keys m nil) {})
+    (t/assert= (select-keys {} [:a]) {})))
 
 (t/deftest test-empty
   (t/assert= (empty '(1 2 3)) '())
@@ -272,6 +282,10 @@
   (t/assert= (every? even? [2 3 6 8]) false)
   (t/assert= (every? even? []) true)
   (t/assert= (every? odd? []) true))
+
+(t/deftest test-rand-int
+  (let [vs (repeatedly 10 #(rand-int 4))]
+    (t/assert (every? #(and (>= % 0) (< % 4)) vs))))
 
 (t/deftest test-some
   (t/assert= (some even? [2 4 6 8]) true)
