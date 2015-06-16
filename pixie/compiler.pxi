@@ -2,7 +2,9 @@
   (:require [pixie.io :as io]
             [pixie.string :as string]
             [pixie.time :refer [time]]
-            [pixie.pxic-writer :as pxic-writer]))
+            [pixie.pxic-writer :as pxic-writer]
+            [pixie.ast :refer :all]))
+
 
 (def macro-overrides
   {
@@ -105,30 +107,23 @@
   [x]
   (let [statement-asts (binding [*env* (assoc *env* :tail? false)]
                          (mapv analyze-form (butlast (next x))))]
-    {:op :do
-     :children '[:statements :ret]
-     :env *env*
-     :form x
-     :statements statement-asts
-     :ret (analyze-form (last x))}))
+    (->Do statement-asts
+          (analyze-form (last x))
+          x
+          *env*)))
 
 (defmethod analyze-seq 'comment
   [x]
-  {:op :const
-   :type (keyword "nil")
-   :form x
-   :env *env*})
+  (->Const x *env*))
 
 (defmethod analyze-seq 'if
   [[_ test then else :as form]]
-  {:op :if
-   :children '[:test :then :else]
-   :env *env*
-   :form form
-   :test (binding [*env* (assoc *env* :tail? false)]
+  (->If (binding [*env* (assoc *env* :tail? false)]
            (analyze-form test))
-   :then (analyze-form then)
-   :else (analyze-form else)})
+        (analyze-form then)
+        (analyze-form else)
+        form
+        *env*))
 
 
 (defmethod analyze-seq 'fn*
@@ -145,60 +140,35 @@
                          (partial analyze-fn-body name)
                          {}
                          arities)]
-    {:op :fn
-     :env *env*
-     :form form
-     :name name
-     :children '[:arities]
-     :arities (vals analyzed-bodies)}
-    ))
+    (->Fn name
+          (vals analyzed-bodies)
+          form
+          *env*)))
 
-(defn analyze-fn-body [fn-name acc [args & body]]
-  ; TODO: Add support for variadic fns
+(defn add-local [env type bind-name]
+  (assoc-in env [:locals bind-name] (->Binding type bind-name bind-name *env*)))
+
+(defn analyze-fn-body [fn-name acc [args & body :as form]]
   (let [[args variadic?] (let [not& (vec (filter (complement (partial = '&)) args))]
                            [not& (= '& (last (butlast args)))])
         arity (count args)
         arity-idx (if variadic? -1 arity)
-        new-env (update-in *env* [:locals] (fn [locals]
-                                             (reduce
-                                              (fn [locals [k v]]
-                                                (assoc locals k (assoc v :closed-overs #{k})))
-                                              {}
-                                              locals)))
-        new-env (assoc-in new-env [:locals fn-name] {:op :binding
-                                                   :type :fn-self
-                                                   :name fn-name
-                                                   :form fn-name
-                                                   :env *env*})
+        new-env (add-local *env* :fn-self fn-name)
         new-env (reduce
-                 (fn [acc idx]
-                   (let [arg-name (nth args idx)]
-                     (assoc-in acc [:locals arg-name] {:op :binding
-                                                       :type :arg
-                                                       :idx idx
-                                                       :name arg-name
-                                                       :form arg-name
-                                                       :env *env*})))
+                 (fn [acc arg-name]
+                   (add-local acc :arg arg-name))
                  new-env
-                 (range (count args)))]
+                 args)]
     (assert (not (acc arity-idx)) (str "Duplicate arity for " (cons args body)))
-    (assoc acc arity-idx {:op :fn-body
-                      :env *env*
-                      :arity arity
-                      :args args
-                      :variadic? variadic?
-                      :children '[:body]
-                      :body (binding [*env* (assoc new-env :tail? true)]
-                              (analyze-form (cons 'do body)))})))
-
-(defn analyze-let-body
-  [acc [name binding & rest :as form]]
-  {:op :let
-   :form form
-   :children '[:binding :body]
-   :env *env*
-   :name name
-   :body acc})
+    (assoc acc arity-idx (->FnBody fn-name
+                                   arity
+                                   args
+                                   nil
+                                   variadic?
+                                   (binding [*env* (assoc new-env :tail? true)]
+                                     (analyze-form (cons 'do body)))
+                                   form
+                                   *env*))))
 
 (defmethod analyze-seq 'let*
   [[_ bindings & body :as form]]
@@ -207,25 +177,20 @@
         [new-env bindings] (reduce
                             (fn [[new-env bindings] [name binding-form]]
                               (let [binding-ast (binding [*env* new-env]
-                                                  {:op :binding
-                                                   :type :let
-                                                   :children '[:value]
-                                                   :form binding-form
-                                                   :env *env*
-                                                   :name name
-                                                   :value (binding [*env* (assoc *env* :tail? false)]
-                                                            (analyze-form binding-form))})]
+                                                  (->LetBinding name
+                                                                (binding [*env* (assoc *env* :tail? false)]
+                                                                  (analyze-form binding-form))
+                                                                binding-form
+                                                                *env*))]
                                 [(assoc-in new-env [:locals name] binding-ast)
                                  (conj bindings binding-ast)]))
                             [*env* []]
                             parted)]
-    {:op :let
-     :form form
-     :children '[:bindings :body]
-     :bindings bindings
-     :env *env*
-     :body (binding [*env* new-env]
-             (analyze-form `(do ~@body)))}))
+    (->Let bindings
+           (binding [*env* new-env]
+             (analyze-form `(do ~@body)))
+           form
+           *env*)))
 
 (defmethod analyze-seq 'loop*
   [[_ bindings & body]]
@@ -243,12 +208,11 @@
   [[_ nm val :as form]]
   (swap! (:vars *env*) update-in [(:ns *env*) nm] (fn [x]
                                           (or x :def)))
-  {:op :def
-   :name nm
-   :form form
-   :env *env*
-   :children '[:val]
-   :val (analyze-form val)})
+  (->Def
+   nm
+   (analyze-form val)
+   form
+   *env*))
 
 (defmethod analyze-seq 'quote
   [[_ val]]
@@ -276,17 +240,11 @@
 
 (defmethod analyze-form nil
   [_]
-  {:op :const
-   :type (keyword "nil")
-   :env *env*
-   :form nil})
+  (->Const nil *env*))
 
 (defmethod analyze-form :bool
   [form]
-  {:op :const
-   :type :bool
-   :env *env*
-   :form form})
+  (->Const form *env*))
 
 (defn keep-meta [new old]
   (if-let [md (meta old)]
@@ -300,13 +258,13 @@
   (let [resolved (try (and (symbol? sym)
                            (resolve-in (the-ns (:ns *env*)) sym))
                       (catch :pixie.stdlib/AssertionException ex
-                          nil))]
+                        nil))]
     (cond
       (and (symbol? sym)
            (string/starts-with? (name sym) ".-"))
       (let [sym-kw (keyword (string/substring (name sym) 2))
             result (analyze-form (keep-meta `(~'pixie.stdlib/-get-field ~@args ~sym-kw)
-                                     form))]
+                                            form))]
         result)
       
       (contains? macro-overrides resolved)
@@ -319,44 +277,30 @@
                                form))
 
       :else
-      {:op :invoke
-       :tail-call (:tail? *env*)
-       :children '[:fn :args]
-       :form form
-       :env *env*
-       :fn (binding [*env* (assoc *env* :tail? false)]
-             (analyze-form sym))
-       :args (binding [*env* (assoc *env* :tail? false)]
-               (mapv analyze-form args))})))
+      (->Invoke (binding [*env* (assoc *env* :tail? false)]
+                  (analyze-form sym))
+                (binding [*env* (assoc *env* :tail? false)]
+                  (mapv analyze-form args))
+                (:tail? *env*)
+                form
+                *env*))))
 
 
 (defmethod analyze-form :number
   [x]
-  {:op :const
-   :type :number
-   :form x
-   :env *env*})
+  (->Const x *env*))
 
 (defmethod analyze-form :keyword
   [x]
-  {:op :const
-   :type :keyword
-   :form x
-   :env *env*})
+  (->Const x *env*))
 
 (defmethod analyze-form :string
   [x]
-  {:op :const
-   :type :string
-   :form x
-   :env *env*})
+  (->Const x *env*))
 
 (defmethod analyze-form :char
   [x]
-  {:op :const
-   :type :char
-   :form x
-   :env *env*})
+  (->Const x *env*))
 
 (defmethod analyze-form :seq
   [x]
@@ -372,11 +316,9 @@
 
 (defmethod analyze-form :vector
   [x]
-  {:op :vector
-   :children [:items]
-   :items (mapv analyze-form x)
-   :form x
-   :env *env*})
+  (->Vector (mapv analyze-form x)
+            x
+            *env*))
 
 (defn maybe-var [x]
   (let [namesp (the-ns (:ns *env*))
@@ -386,40 +328,35 @@
                      nil))
         result (cond
                  (namespace x)
-                 {:op :var
-                  :env *env*
-                  :ns (symbol (namespace x))
-                  :name (symbol (name x))
-                  :form x}
+                 (->Var (symbol (namespace x))
+                        (symbol (name x))
+                        x
+                        *env*)
                  
                  (get-in @(:vars *env*) [(:ns *env*) x])
-                 {:op :var
-                  :env *env*
-                  :ns (:ns *env*)
-                  :name x
-                  :form x}
+                 (->Var (:ns *env*)
+                        x
+                        x
+                        *env*)
 
                  ;; Hack until we get proper refers
                  (get-in @(:vars *env*) ['pixie.stdlib x])
-                 {:op :var
-                  :env *env*
-                  :ns 'pixie.stdlib
-                  :name x
-                  :form x}
-
+                 (->Var 'pixie.stdlib
+                        x
+                        x
+                        *env*)
+                 
                  resolved
-                 {:op :var
-                  :env *env*
-                  :ns (namespace resolved)
-                  :name (name resolved)
-                  :form x}
-
+                 (->Var (namespace resolved)
+                        (name resolved)
+                        x
+                        *env*)
+                 
                  :else
-                 {:op :var
-                  :env *env*
-                  :ns (name (:ns *env*))
-                  :name (name x)
-                  :form x})]
+                 (->Var (name (:ns *env*))
+                        (name x)
+                        x
+                        *env*))]
     result))
 
 
@@ -428,15 +365,17 @@
 (defn new-env
   "Creates a new (empty) environment"
   []
-  {:ns 'pixie.stdlib
-   :vars (atom {'pixie.stdlib {'array true
-                               'size-t true
-                               'bit-count32 true
-                               'contains-table true
-                               'switch-table true
-                               '-add-to-string-builder true
-                               '-parse-number true}})
-   :tail? true})
+  (->Env
+   'pixie.stdlib
+   (atom {'pixie.stdlib {'array true
+                         'size-t true
+                         'bit-count32 true
+                         'contains-table true
+                         'switch-table true
+                         '-add-to-string-builder true
+                         '-parse-number true}})
+   {}
+   true))
 
 
 (defn analyze
@@ -447,7 +386,6 @@
      (analyze-form form)
      (binding [*env* env]
        (analyze-form form)))))
-
 
 
 
@@ -467,16 +405,8 @@
         post)))
 
 (defn post-walk [f ast]
-  (walk identity f :children ast))
+  (walk identity f children-keys ast))
 
-(defn clean-do [ast]
-  (post-walk
-   (fn [{:keys [op statements ret] :as ast}]
-     (if (and (= op :do)
-              (= (count statements) 0))
-       ret
-       ast))
-   ast))
 
 (defn child-seq [ast]
   (mapcat
@@ -486,18 +416,21 @@
                (seq? child))
          child
          [child])))
-   (:children ast)))
+   (children-keys ast)))
 
-(def collect-closed-overs
-  (fn [{:keys [op args env closed-overs] :as ast}]
-    (let [{:keys [locals]} env
-          closed-overs (set (or closed-overs
-                                (mapcat :closed-overs (child-seq ast))))
-          closed-overs (if (= op :fn-body)
-                         (reduce disj closed-overs args)
-                         closed-overs)]
-      (assoc ast :closed-overs closed-overs)))
-  ast)
+;; Collect Closed Overs
+
+
+(defn collect-closed-overs [ast]
+  (let [closed-overs (set (or (get-closed-overs ast)
+                              (mapcat get-closed-overs (child-seq ast))))
+        closed-overs (if (instance? FnBody ast)
+                       (reduce disj closed-overs (:args ast))
+                       closed-overs)]
+    (assoc-closed-overs ast closed-overs)))
+
+
+;; End Collect Closed Overs
 
 (defn remove-env [ast]
   (walk #(dissoc % :env)
@@ -505,121 +438,15 @@
         :children
         ast))
 
-(defn make-invoke-ast [fn args form env]
-  {:op :invoke
-   :children '[:fn :args]
-   :form form
-   :env env
-   :fn fn
-   :args args})
-
-(defn make-var-ast [ns name env]
-  {:op :var
-   :ns ns
-   :name name
-   :env env
-   :form (symbol (pixie.stdlib/name name))})
-
-(defn make-var-const-ast [ns name env]
-  {:op :var-const
-   :ns ns
-   :name name
-   :env env
-   :form (symbol (pixie.stdlib/name name))})
-
-(defn make-invoke-var-ast [ns name args form env]
-  (make-invoke-ast
-   (make-var-ast ns name env)
-   args
-   form
-   env))
-
-(def convert-defs
-  (fn [{:keys [op name env val form] :as ast}]
-    (if (= op :def)
-      (make-invoke-var-ast
-       "pixie.stdlib"
-       "set-var-root!"
-       [(make-var-const-ast (:ns env) name env)
-        val]
-       form
-       env)
-      ast))
-  identity
-  :children
-  ast)
-
-(defn pass-for [op-for f]
-  (fn [{:keys [op] :as ast}]
-    (if (= op op-for)
-      (f ast)
-      ast)))
-
-(def convert-fns
-  (pass-for :fn
-            (fn [{:keys [name arities form env]}]
-              (if (= (count arities) 1)
-                (convert-fn-body name (first arities))
-                (make-invoke-var-ast
-                 "pixie.stdlib"
-                 "multi-arity-fn"
-                 (vec (concat [{:op :const
-                                :form (pixie.stdlib/name name)
-                                :env env}]
-                              (mapcat
-                               (fn [{:keys [args variadic?] :as body}]
-                                 [{:op :const
-                                   :form (if variadic?
-                                           -1
-                                           (count args))
-                                   :env env}
-                                  (convert-fn-body name body)])
-                               arities)))
-                 form
-                 env)))))
-
-
-(defn convert-fn-body [name {:keys [variadic? args body form env] :as ast}]
-  (if variadic?
-    (make-invoke-var-ast
-     "pixie.stdlib"
-     "variadic-fn"
-     [{:op :const
-       :form (dec (count args))
-       :env env}
-      (convert-fn-body name (dissoc ast :variadic?))]
-     form
-     env)
-    (assoc ast
-           :op :fn-body
-           :name name)))
-
-(def convert-vectors
-  (pass-for :vector
-            (fn [{:keys [items form env]}]
-              (make-invoke-var-ast
-               "pixie.stdlib"
-               "array"
-               items
-               form
-               env))))
 
 (defn run-passes [ast]
   (walk identity
-        (comp
-         persistent!
-         (comp convert-vectors
-               convert-fns
-               (comp convert-defs
-                     collect-closed-overs
-                     (comp clean-do
-                           #_transient))))
-        :children
+        identity #_simplify-ast
+        children-keys
         ast))
 
 (defn read-and-compile [form env]
-  (let [ast (analyze form env)
-        ast (run-passes ast)]
+  (let [ast (analyze form env)]
     ast))
 
 #_(defn compile-file [from to]
