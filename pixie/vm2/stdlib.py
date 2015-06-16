@@ -162,6 +162,34 @@ def _internal_to_str(x):
 def _internal_to_repr(x):
     return rt.wrap(x.to_repr())
 
+@as_var("-internal-get-ns")
+def _internal_get_ns(x):
+    return rt.wrap(x.get_ns())
+
+@as_var("-internal-get-name")
+def _internal_get_name(x):
+    return rt.wrap(x.get_name())
+
+@as_var("-internal-get-hash")
+def _internal_get_name(x):
+    return rt.wrap(x.get_hash())
+
+
+@as_var("-internal-store-hash")
+def _internal_store_hash(x, h):
+    x.store_hash(h.r_uint_val())
+    return nil
+
+@as_var("-internal-int")
+def _internal_int(x):
+    return rt.wrap(x.int_val())
+
+@as_var("-internal-set-hash")
+def _internal_sett_hash(x, hash_val):
+    x.set_hash(hash_val.int_val())
+    return x
+
+
 @as_var("-blocking-println")
 def _blocking_println(x):
     print rt.unwrap_string(x)
@@ -194,3 +222,44 @@ def size_t(i):
 @as_var("type")
 def type(x):
     return x.type()
+
+
+@as_var("the-ns")
+def the_ns(ns_name):
+    affirm(ns_name.get_ns() is None, u"the-ns takes a un-namespaced symbol")
+
+    return code._ns_registry.get(ns_name.get_name(), nil)
+
+
+@as_var("load-ns")
+def load_ns(filename):
+    import pixie.vm2.string as string
+    import pixie.vm2.symbol as symbol
+    import os.path as path
+
+    if isinstance(filename, symbol.Symbol):
+        affirm(filename.get_ns() is None, u"load-file takes a un-namespaced symbol")
+        filename_str = filename.get_name().replace(u".", u"/") + u".pxi"
+
+        loaded_ns = code._ns_registry.get(filename.get_name(), None)
+        if loaded_ns is not None:
+            return loaded_ns
+    else:
+        affirm(isinstance(filename, string.String), u"Filename must be string")
+        filename_str = filename.get_name
+
+    paths = rt.deref(rt.deref(rt.load_paths))
+    f = None
+    for x in range(rt.count(paths)):
+        path_x = rt.nth(paths, rt.wrap(x))
+        affirm(isinstance(path_x, string.String), u"Contents of load-paths must be strings")
+        full_path = path.join(str(rt.name(path_x)), str(filename_str))
+        if path.isfile(full_path):
+            f = full_path
+            break
+
+    if f is None:
+        affirm(False, u"File '" + rt.name(filename) + u"' does not exist in any directory found in load-paths")
+    else:
+        rt.load_file(rt.wrap(f))
+    return nil

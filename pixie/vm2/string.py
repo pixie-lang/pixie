@@ -103,6 +103,8 @@ class Character(Object):
     def char_val(self):
         return self._char_val
 
+    def int_val(self):
+        return self._char_val
 
     def to_str(self):
         assert isinstance(self, Character)

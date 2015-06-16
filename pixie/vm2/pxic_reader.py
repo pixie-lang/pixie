@@ -58,7 +58,8 @@ bytecodes = ["CACHED_OBJECT",
              "META",
              "LINE_META",
              "VAR_CONST",
-             "CHAR"]
+             "CHAR",
+             "VECTOR"]
 
 for idx, x in enumerate(bytecodes):
     globals()[x] = idx
@@ -221,6 +222,14 @@ def read_object(os):
     elif tag == CHAR:
         str = read_raw_string(os)
         return char_cache.intern(ord(str[0]))
+
+    elif tag == VECTOR:
+        cnt = read_raw_int(os)
+        lst = [None] * cnt
+        for x in range(cnt):
+            lst[x] = read_object(os)
+
+        return Array(lst)
 
     raise AssertionError("No valid handler for TAG " + bytecodes[tag])
 

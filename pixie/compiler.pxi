@@ -216,12 +216,7 @@
 
 (defmethod analyze-seq 'quote
   [[_ val]]
-  {:op :const
-   :type (cond
-           (symbol? val) :symbol
-           (string? val) :string
-           :else :unknown)
-   :form val})
+  (->Const val *env*))
 
 (defmethod analyze-seq 'in-ns
   [[_ nsp]]
@@ -493,5 +488,7 @@
     (dispose! os)))
 
 (time (compile-files ["pixie/bootstrap.pxi"
+                      "pixie/streams.pxi"
+                      "pixie/io-blocking.pxi"
                       "pixie/reader.pxi"]
                      "./bootstrap.pxic"))

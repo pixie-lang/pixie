@@ -42,7 +42,8 @@
    :META
    :LINE-META
    :VAR-CONST
-   :CHAR])
+   :CHAR
+   :VECTOR])
 
 (def *cache* nil)
 (set-dynamic! (var *cache*))
@@ -238,7 +239,12 @@
     (write-object os ret)
     (write-meta os ast))
 
-
+  IVector
+  (-write-object [this os]
+    (write-tag os VECTOR)
+    (write-int-raw os (count this))
+    (doseq [item this]
+      (write-object os item)))
   
   String
   (-write-object [this os]

@@ -151,6 +151,10 @@ def init():
 def unwrap_string(x):
     from pixie.vm2.string import String
     from pixie.vm2.object import affirm
+    from pixie.vm2.primitives import nil
+
+    if x is None or x is nil:
+        return None
 
     affirm(isinstance(x, String), u"Expected String")
     assert isinstance(x, String)

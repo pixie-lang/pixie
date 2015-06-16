@@ -197,6 +197,28 @@
                   (apply = y rest)
                   false)))
 
+(defn pos?
+  {:doc "Returns true if x is greater than zero"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
+  (> x 0))
+
+(defn neg?
+  {:doc "Returns true if x is less than zero"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
+  (< x 0))
+
+(defn zero?
+  {:doc "Returns true if x is equal to zero"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
+  (= x 0))
+
+
 ;; Base functions
 
 (defn hash
@@ -517,6 +539,26 @@
           h1 (mix-h1 seed k1)]
       (fmix h1 4))))
 
+(defn hash-unencoded-chars [u]
+  (let [h1 (loop [i 1
+                  h1 seed]
+             (if (< i (count u))
+               (let [k1 (bit-or (int (nth u (dec i)))
+                                (int (nth u i)))
+                     k1 (mix-k1 k1)
+                     h1 (mix-h1 h1 k1)]
+                 (recur (+ 2 i)
+                        h1))
+               h1))
+        h1 (if (= (bit-and (count u) 1) 1)
+             (let [k1 (int (nth u (dec (count u))))
+                   k1 (mix-k1 k1)
+                   _ (println h1 k1 (type h1) (type k1))
+                   h1 (bit-xor h1 k1)]
+               h1)
+             h1)]
+    (fmix h1 (* 2 (count u)))))
+
 (in-ns :pixie.stdlib)
 
 ;; End Hashing Functions
@@ -697,6 +739,19 @@
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
 (defn vector? [v] (satisfies? IVector v))
+
+(defn int
+  {:doc "Converts a number to an integer."
+   :since "0.1"}
+  [x]
+  (cond
+   (integer? x) x
+   (float? x) (lround (floor x))
+   (ratio? x) (int (/ (float (numerator x)) (float (denominator x))))
+   (char? x) (-internal-int x)
+   :else (throw
+          [:pixie.stdlib/ConversionException
+           (throw (str "Can't convert a value of type " (type x) " to an Integer"))])))
 
 
 ;; End Type Checks
@@ -1285,6 +1340,7 @@
   
   INode
   (-assoc-inode [this shift hash-val key val added-leaf]
+    (println "inode "  key val (hash key) (hash val) (= key val))
     (let [bit (bitpos hash-val shift)
           idx (index this bit)]
       (if (not= (bit-and bitmap bit) 0)
@@ -1575,6 +1631,37 @@
 (extend -invoke PolymorphicFn -invoke)
 (extend -invoke DoublePolymorphicFn -invoke)
 
+(extend -name Keyword -internal-get-name)
+(extend -namespace Keyword -internal-get-ns)
+(extend -hash Keyword (fn [x]
+                        (println x)
+                        (let [v (-internal-get-hash x)]
+                          (if (zero? v)
+                            (let [h (pixie.stdlib.hashing/hash-unencoded-chars (str x))]
+                              (-internal-store-hash x h)
+                              h)
+                            v))))
+
+
+
+(extend -name Symbol -internal-get-name)
+(extend -namespace Symbol -internal-get-ns)
+(extend -hash Symbol (fn [x]
+                        (println x)
+                        (let [v (-internal-get-hash x)]
+                          (if (zero? v)
+                            (let [h (pixie.stdlib.hashing/hash-unencoded-chars (str x))]
+                              (-internal-store-hash x h)
+                              h)
+                            v))))
+
+(extend -name String identity)
+(extend -namespace String (fn [x] nil))
+
+
+
+
+
 ;(extend -reduce Cons seq-reduce)
 ;(extend -reduce PersistentList seq-reduce)
 ;(extend -reduce LazySeq seq-reduce)
@@ -1625,6 +1712,55 @@
 
 ;; End Extend Core Types
 
+;; NS functions
+
+(defn refer
+  {:doc "Refer to the specified vars from a namespace directly.
+
+Supported filters:
+  :rename   refer to the given vars under a different name
+  :exclude  don't refer the given vars
+  :refer
+    :all    refer all vars
+    :refer  refer only the given vars
+    :only   same as refer
+
+user => (refer 'pixie.string :refer :all)
+user => (refer 'pixie.string :only '(index-of starts-with? ends-with?))
+user => (refer 'pixie.string :rename '{index-of find})
+user => (refer 'pixie.string :exclude '(substring))"
+   :added "0.1"}
+  [ns-sym & filters]
+  (let [ns (or (the-ns ns-sym) (throw [:pixie.stdlib/NamespaceNotFoundException
+                                       (str "No such namespace: " ns-sym)]))
+        filters (apply hashmap filters)
+        nsmap (ns-map ns)
+        rename (or (:rename filters) {})
+        exclude (set (:exclude filters))
+        refers (if (= :all (:refer filters))
+                 (keys nsmap)
+                 (or (:refer filters) (:only filters)))]
+    (when (and refers (not (satisfies? ISeqable refers)))
+      (throw [:pixie.stdlib/InvalidArgumentException
+              ":only/:refer must be a collection of symbols"]))
+    (when-let [as (:as filters)]
+      (refer-ns *ns* ns-sym as))
+    (loop [syms (seq refers)]
+      (if (not syms)
+        nil
+        (do
+          (let [sym (first syms)]
+            (when-not (exclude sym)
+              (let [v (nsmap sym)]
+                (when-not v
+                  (throw [:pixie.stdlib/SymbolNotFoundException
+                          (str sym "does not exist")]))
+                (refer-symbol *ns* (or (rename sym) sym) v))))
+          (recur (next syms)))))
+    nil))
+
+
+;; End NS Functions
 
 ;; Multimethod stuff
 #_(comment

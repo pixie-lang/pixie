@@ -83,6 +83,9 @@ class Const(AST):
     def interpret(self, _, locals, stack):
         return self._c_val, stack
 
+    def gather_locals(self):
+        return {}
+
 @expose("_c_value", "_c_name", "_c_next")
 class Locals(object):
     _immutable_ = True
@@ -91,6 +94,8 @@ class Locals(object):
         self._c_value = value
         self._c_name = name
         self._c_next = next
+
+
 
     @staticmethod
     @jit.unroll_safe
@@ -112,6 +117,8 @@ class Lookup(AST):
     def interpret(self, _, locals, stack):
         return Locals.get_local(locals, self._c_name), stack
 
+    def gather_locals(self):
+        return {self._c_name: self._c_name}
 
 class Fn(AST):
     _immutable_fields_ = ["_c_name", "_c_args", "_c_body", "_c_closed_overs"]
@@ -120,7 +127,22 @@ class Fn(AST):
         self._c_name = name
         self._c_args = args
         self._c_body = body
-        self._c_closed_overs = closed_overs
+
+        glocals = self._c_body.gather_locals()
+        for x in self._c_args:
+            if x in glocals:
+                del glocals[x]
+
+        self._c_closed_overs = list(glocals.iterkeys())
+
+    def gather_locals(self):
+        glocals = {}
+
+        for x in self._c_closed_overs:
+            glocals[x] = x
+
+        return glocals
+
 
     @jit.unroll_safe
     def interpret(self, _, locals, stack):
@@ -168,6 +190,13 @@ class Invoke(AST):
     def __init__(self, args, meta=nil):
         AST.__init__(self, meta)
         self._c_args = args
+
+    def gather_locals(self):
+        glocals = {}
+        for x in self._c_args:
+            glocals = merge_dicts(glocals, x.gather_locals())
+
+        return glocals
 
     def interpret(self, _, locals, stack):
         stack = stack_cons(stack, InvokeK(self))
@@ -247,6 +276,14 @@ class Let(AST):
         self._c_bindings = bindings
         self._c_body = body
 
+    def gather_locals(self):
+        glocals = {}
+        for x in self._c_bindings:
+            glocals = merge_dicts(glocals, x.gather_locals())
+
+        glocals = merge_dicts(glocals, self._c_body.gather_locals())
+        return glocals
+
     def interpret(self, _, locals, stack):
         stack = stack_cons(stack, LetK(self, 0, locals))
         stack = stack_cons(stack, InterpretK(self._c_bindings[0], locals))
@@ -288,6 +325,12 @@ class If(AST):
         stack = stack_cons(stack, InterpretK(self._c_test, locals))
         return nil, stack
 
+    def gather_locals(self):
+        glocals = self._c_test.gather_locals()
+        glocals = merge_dicts(glocals, self._c_then.gather_locals())
+        glocals = merge_dicts(glocals, self._c_else.gather_locals())
+        return glocals
+
 class IfK(Continuation):
     _immutable_ = True
     def __init__(self, ast, locals):
@@ -316,6 +359,13 @@ class Do(AST):
     @jit.unroll_safe
     def interpret(self, val, locals, stack):
         return nil, stack_cons(stack, DoK(self, self._c_body_asts, locals))
+
+    def gather_locals(self):
+        glocals = {}
+        for x in self._c_body_asts:
+            glocals = merge_dicts(glocals, x.gather_locals())
+
+        return glocals
 
 
 class DoK(Continuation):
@@ -347,6 +397,9 @@ class VDeref(AST):
 
     def interpret(self, val, locals, stack):
         return self._c_var.deref(), stack
+
+    def gather_locals(self):
+        return {}
 
 
 from rpython.rlib.jit import JitDriver
@@ -500,6 +553,11 @@ class EffectFunction(code.BaseCode):
 
         return stack, slice
 
+
+def merge_dicts(a, b):
+    z = a.copy()
+    z.update(b)
+    return z
 
 
 

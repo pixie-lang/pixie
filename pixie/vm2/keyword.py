@@ -5,7 +5,7 @@ from pixie.vm2.string import String
 from pixie.vm.code import extend, as_var
 import pixie.vm.rt as rt
 #import pixie.vm.util as util
-from rpython.rlib.rarithmetic import intmask
+from rpython.rlib.rarithmetic import intmask, r_uint
 
 
 class Keyword(Object):
@@ -14,7 +14,7 @@ class Keyword(Object):
         self._str = name
         self._w_name = None
         self._w_ns = None
-        self._hash = 0
+        self._hash = r_uint(0)
 
     def type(self):
         return Keyword._type
@@ -34,6 +34,19 @@ class Keyword(Object):
 
     def __repr__(self):
         return u":" + self._str
+
+    def to_str(self):
+        return u":" + self._str
+
+    def to_repr(self):
+        return u":" + self._str
+
+    def store_hash(self, hash):
+        self._hash = hash
+
+    def get_hash(self):
+        return self._hash
+
 
 
 class KeywordCache(object):

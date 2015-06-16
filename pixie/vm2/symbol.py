@@ -4,7 +4,7 @@ from pixie.vm2.code import extend, as_var
 from pixie.vm2.string import String
 import pixie.vm2.rt as rt
 #import pixie.vm2.util as util
-from rpython.rlib.rarithmetic import intmask
+from rpython.rlib.rarithmetic import intmask, r_uint
 
 
 class Symbol(object.Object):
@@ -14,7 +14,7 @@ class Symbol(object.Object):
         self._str = s
         self._w_name = None
         self._w_ns = None
-        self._hash = 0
+        self._hash = r_uint(0)
         self._meta = meta
 
     def type(self):
@@ -48,6 +48,17 @@ class Symbol(object.Object):
         return rt.unwrap_string(self._w_ns)
 
 
+    def to_str(self):
+        return self._str
+
+    def to_repr(self):
+        return self._str
+
+    def store_hash(self, hash):
+        self._hash = hash
+
+    def get_hash(self):
+        return self._hash
 
 def symbol(s):
     return Symbol(s)
