@@ -191,10 +191,10 @@
       rules)))
 
 (defmacro parser
-  "(parser nm inherits & rules)
-  Defines a new parser named `nm` that inherits from zero or more other parsers defined ion `inherits`. Rules are pairs
-  of names and rules that will be assigned to those names. Names are inherited from parent parsers in the order they are
-  defined."
+  "(parser inherits & rules)
+  Creates a parser that inherits from zero or more other parsers defined in `inherits`. Rules are pairs
+  of names and rules that will be assigned to those names. Names are inherited from parent parsers in the
+  order they are defined."
   [inherits & rules]
   (let [parted (apply merge
                       (conj (mapv (fn [sym]
@@ -303,7 +303,7 @@
     fail))
 
 (defn one-of
-  "Deines a parser that succeeds if the value being parsed is found in v"
+  "Defines a parser that succeeds if the value being parsed is found in v"
   [v]
   (parse-if (partial contains? v)))
 
