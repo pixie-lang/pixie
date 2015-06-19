@@ -1253,45 +1253,6 @@ Creates new maps if the keys are not present."
          ~ctor
          ~@proto-bodies)))
 
-(defmacro defrecord
-  {:doc "Define a record type.
-
-Similar to `deftype`, but supports construction from a map using `map->Type`
-and implements IAssociative, ILookup and IObject."
-   :added "0.1"}
-  [nm fields & body]
-  (let [ctor-name (symbol (str "->" (name nm)))
-        map-ctor-name (symbol (str "map" (name ctor-name)))
-        fields (transduce (map (comp keyword name)) conj fields)
-        type-from-map `(defn ~map-ctor-name [m]
-                         (apply ~ctor-name (map #(get m %) ~fields)))
-        default-bodies ['IAssociative
-                        `(-assoc [self k v]
-                                 (let [m (reduce #(assoc %1 %2 (. self %2)) {} ~fields)]
-                                   (~map-ctor-name (assoc m k v))))
-                        `(-contains-key [self k]
-                                        (contains? ~(set fields) k))
-                        `(-dissoc [self k]
-                                  (throw [:pixie.stdlib/NotImplementedException
-                                          "dissoc is not supported on defrecords"]))
-                        'ILookup
-                        `(-val-at [self k not-found]
-                                  (if (contains? ~(set fields) k)
-                                    (. self k)
-                                    not-found))
-                        'IObject
-                        `(-str [self]
-                               (str "<" ~(name nm) " " (reduce #(assoc %1 %2 (. self %2)) {} ~fields) ">"))
-                        `(-eq [self other]
-                              (and (instance? ~nm other)
-                                   ~@(map (fn [field]
-                                            `(= (. self ~field) (. other ~field)))
-                                          fields)))
-                        `(-hash [self]
-                                (throw [:pixie.stdlib/NotImplementedException "not implemented"]))]
-        deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
-    `(do ~type-from-map
-         ~deftype-decl)))
 
 (defn print
   {:doc "Prints the arguments, seperated by spaces."
@@ -2454,3 +2415,61 @@ Calling this function on something that is not ISeqable returns a seq with that 
   (fn [v] (str "<Namespace " (name v) ">")))
 
 (extend -repr Namespace -str)
+
+
+(defn -make-record-assoc-body [cname fields]
+  (let [k-sym (gensym "k")
+        v-sym (gensym "v")
+        this-sym (gensym "this")
+        result `(-assoc [~this-sym ~k-sym ~v-sym]
+                 (case ~k-sym
+                   ~@(mapcat
+                      (fn [k]
+                        [k `(~cname ~@(mapv (fn [x]
+                                             (if (= x k)
+                                               v-sym
+                                               `(get-field ~this-sym ~x)))
+                                           fields))])
+                      fields)
+                   (throw [:pixie.stdlib/NotImplementedException
+                           (str "Can't assoc to a unknown field: " ~k-sym)])))]
+    result))
+
+(defmacro defrecord
+  {:doc "Define a record type.
+
+Similar to `deftype`, but supports construction from a map using `map->Type`
+and implements IAssociative, ILookup and IObject."
+   :added "0.1"}
+  [nm field-syms & body]
+  (let [ctor-name (symbol (str "->" (name nm)))
+        map-ctor-name (symbol (str "map" (name ctor-name)))
+        fields (transduce (map (comp keyword name)) conj field-syms)
+        type-from-map `(defn ~map-ctor-name [m]
+                         (apply ~ctor-name (map #(get m %) ~fields)))
+        default-bodies ['IAssociative
+                        (-make-record-assoc-body ctor-name fields)
+                        `(-contains-key [self k]
+                                        (contains? ~(set fields) k))
+                        `(-dissoc [self k]
+                                  (throw [:pixie.stdlib/NotImplementedException
+                                          "dissoc is not supported on defrecords"]))
+                        'ILookup
+                        `(-val-at [self k not-found]
+                                  (if (contains? ~(set fields) k)
+                                    (. self k)
+                                    not-found))
+                        'IObject
+                        `(-str [self]
+                               (str "<" ~(name nm) " " (reduce #(assoc %1 %2 (. self %2)) {} ~fields) ">"))
+                        `(-eq [self other]
+                              (and (instance? ~nm other)
+                                   ~@(map (fn [field]
+                                            `(= (. self ~field) (. other ~field)))
+                                          fields)))
+                        `(-hash [self]
+                                (hash [~@field-syms]))]
+        deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
+    `(do ~type-from-map
+         ~deftype-decl)))
+

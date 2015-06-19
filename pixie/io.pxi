@@ -152,24 +152,32 @@
 
 (defn spit 
   "Writes the content to output. Output must be a file or an IOutputStream."
-  [output content]
-  (cond
-    (string? output)
-    (transduce (map identity)
-               (-> output
-                   open-write
-                   buffered-output-stream
-                   utf8/utf8-output-stream-rf)
-               (str content))
-    
-    (satisfies? IOutputStream output)
-    (transduce (map identity)
-               (-> output
-                   buffered-output-stream
-                   utf8/utf8-output-stream-rf)
-               (str content))
-    
-    :else (throw [::Exception "Expected a string or IOutputStream"])))
+  ([output content]
+   (spit output content true))
+  ([output content dispose?]
+    (cond
+      (string? output)
+      (transduce (map identity)
+                 (-> output
+                     open-write
+                     buffered-output-stream
+                     utf8/utf8-output-stream-rf)
+                 (str content))
+      
+      (satisfies? IOutputStream output)
+      (transduce (map identity)
+                 (-> output
+                     buffered-output-stream
+                     utf8/utf8-output-stream-rf)
+                 (str content))
+
+      (satisfies? IByteOutputStream output)
+      (transduce (map identity)
+                 (-> output
+                     utf8/utf8-output-stream-rf)
+                 (str content))    
+      
+      :else (throw [::Exception "Expected a string or IOutputStream"]))))
 
 (defn slurp 
   "Reads in the contents of input. Input must be a filename or an IInputStream"

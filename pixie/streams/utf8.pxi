@@ -25,7 +25,7 @@
        :else (assert false (str "Cannot encode a UTF8 character of code " ch)))))
   IDisposable
   (-dispose! [this]
-    (dispose! out)))
+    nil))
 
 
 (deftype UTF8InputStream [in bad-char]
@@ -53,7 +53,7 @@
             (char n))))))
   IDisposable
   (-dispose! [this]
-    (dispose! in)))
+    nil))
 
 (defn utf8-input-stream
   "Creates a UTF8 decoder that reads characters from the given IByteInputStream. If a bad character is found
