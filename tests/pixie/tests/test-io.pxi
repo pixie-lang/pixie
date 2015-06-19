@@ -40,4 +40,6 @@
     (io/spit "test.tmp" val)
     (t/assert= val (read-string (io/slurp "test.tmp"))))
   (t/assert-throws? (io/slurp 1))
-  (t/assert-throws? (io/slurp :foo)))
+  (t/assert-throws? (io/slurp :foo))
+  (t/assert= "I love 🍺 . This is a thumbs up 👍\n" 
+             (io/slurp "tests/pixie/tests/test-io-utf8.txt")))

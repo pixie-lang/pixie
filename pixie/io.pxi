@@ -113,9 +113,10 @@
     (when (= idx (count buffer))
       (set-field! this :idx 0)
       (read upstream buffer (buffer-capacity buffer)))
-    (let [val (nth buffer idx)]
-      (set-field! this :idx (inc idx))
-      val))
+    (when (pos? (count buffer))
+      (let [val (nth buffer idx)]
+        (set-field! this :idx (inc idx))
+        val)))
   IDisposable
   (-dispose! [this]
     (dispose! buffer)))
@@ -181,7 +182,9 @@
         result (transduce
                  (map char)
                  string-builder
-                 stream)]
+                 (-> stream
+                     buffered-input-stream
+                     utf8/utf8-input-stream))]
       (dispose! stream)
       result))
 
