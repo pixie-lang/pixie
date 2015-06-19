@@ -553,3 +553,7 @@
  (t/assert= 5050 (reduce + (range 101)))
  (t/assert= 3628800 (reduce * (range 1 11)))
  (t/assert= 5051 (reduce + 1 (range 101))))
+
+(t/deftest test-comp
+  (t/assert= 5 ((comp inc inc inc inc) 1))
+  (t/assert= :xyz ((comp) :xyz)))
