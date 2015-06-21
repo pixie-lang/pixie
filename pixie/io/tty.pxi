@@ -9,7 +9,7 @@
 (deftype TTYInputStream [uv-client]
   IInputStream
   (read [this buf len]
-    (uv/cb-stream-reader uv-client buf len))
+    (uv-common/cb-stream-reader uv-client buf len))
   IDisposable
   (-dispose! [this]
     (uv/uv_close uv-client st/close_cb))

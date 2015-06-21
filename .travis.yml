@@ -17,7 +17,7 @@ script:
   - make run_built_tests
 
 before_install:
-  - sudo apt-get install libffi-dev libedit-dev libboost-all-dev
+        - sudo apt-get install libffi-dev libedit-dev libboost-all-dev zlib1g-dev zlib-bin
 
 notifications:
   irc: "chat.freenode.net#pixie-lang"

@@ -100,12 +100,15 @@
   IDisposable
   (-dispose! [this]
     (set-buffer-count! buffer idx)
-    (write downstream buffer))
+    (write downstream buffer)
+    (flush this))
   IFlushableStream
   (flush [this]
     (set-buffer-count! buffer idx)
     (set-field! this :idx 0)
-    (write downstream buffer)))
+    (write downstream buffer)
+    (when (satisfies? IFlushableStream downstream)
+      (flush downstream))))
 
 (deftype BufferedInputStream [upstream idx buffer]
   IByteInputStream

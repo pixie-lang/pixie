@@ -680,11 +680,16 @@ class CFunctionType(object.Type):
         runtime_error(u"Cannot get a callback value via FFI")
 
     def ffi_set_value(self, ptr, val):
-        affirm(isinstance(val, CCallback), u"Can only encode CCallbacks as function pointers")
-
-
-        casted = rffi.cast(rffi.VOIDPP, ptr)
-        casted[0] = val.get_raw_closure()
+        if isinstance(val, CCallback):
+            casted = rffi.cast(rffi.VOIDPP, ptr)
+            casted[0] = val.get_raw_closure()
+        elif val is nil:
+            casted = rffi.cast(rffi.VOIDPP, ptr)
+            casted[0] = rffi.cast(rffi.VOIDP, 0)
+        else:
+            frm_name = rt.name(rt.str(val.type()))
+            to_name = rt.name(rt.str(self))
+            affirm(False, u"Cannot encode " + frm_name + u" as " + to_name)
 
         return None
 
@@ -751,8 +756,8 @@ def c_struct(name, size, spec):
         offset = rt.nth(row, rt.wrap(2))
 
         affirm(isinstance(nm, Keyword), u"c-struct field names must be keywords")
-        if not isinstance(tp, CType):
-            runtime_error(u"c-struct field types must be c types, got: " + rt.name(rt.str(tp)))
+        #if not isinstance(tp, CType):
+        #    runtime_error(u"c-struct field types must be c types, got: " + rt.name(rt.str(tp)))
 
         d[nm] = (tp, offset.int_val())
 
