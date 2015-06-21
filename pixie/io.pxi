@@ -86,7 +86,7 @@
           write-count))))
   IDisposable
   (-dispose! [this]
-    (fclose fp)))
+    (fs_close fp)))
 
 (deftype BufferedOutputStream [downstream idx buffer]
   IByteOutputStream
