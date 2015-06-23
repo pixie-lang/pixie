@@ -10,11 +10,17 @@ class Object(object):
         affirm(False, u".type isn't overloaded")
 
     @jit.unroll_safe
-    def invoke(self, args):
-        #TODO: fix
-        runtime_error(u"bad invoke")
-        #import pixie.vm.stdlib as stdlib
-        #return stdlib.invoke_other(self, args)
+    def invoke_k(self, args, stack):
+        from pixie.vm2.code import intern_var
+        var = intern_var(u"pixie.stdlib", u"-invoke")
+
+        new_args = [None] * (len(args) + 1)
+
+        new_args[0] = self
+        for x in range(len(args)):
+            new_args[x + 1] = args[x]
+
+        return var.deref().invoke_k(new_args, stack)
 
     def int_val(self):
         affirm(False,  u"Expected Number, not " + self.type().name())

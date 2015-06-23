@@ -75,10 +75,10 @@
 (defn writer-cache [os]
   (->WriterCache os {}))
 
-(defn write-raw-string [os str]
-  (assert (string? str) "Expected String")
-  (write-int-raw os (count str))
-  (spit os str false))
+(defn write-raw-string [os s]
+  (assert (string? s) (str "Expected String, got " str))
+  (write-int-raw os (count s))
+  (spit os s false))
 
 (defn write-int-raw [os i]
   (if (<= 0 i MAX_INT32)
@@ -98,8 +98,9 @@
 
 (defn write-meta [os ast]
   (let [m (or (meta (:form ast))
+              (:meta (:env ast))
               *old-meta*)]
-    (if m
+    (if (and m (:file m))
       (write-object os (ast/->Meta
                         (ast/->LineMeta
                          (str (:line m))
@@ -213,19 +214,17 @@
                         (write-raw-string os (str name)))))
 
   ast/Var
-  (-write-object [{:keys [ns name]} os]
-    (write-cached-obj *cache*
-                      [:deref ns name]
-                      (fn [_ ns name]
-                        (write-tag os VAR)
-                        (write-raw-string os (str ns))
-                        (write-raw-string os (str name)))))  
+  (-write-object [{:keys [ns var-name] :as ast} os]
+    (write-tag os VAR)
+    (write-raw-string os (str ns))
+    (write-object os var-name)
+    (write-meta os ast))  
   
   ast/Invoke
-  (-write-object [{:keys [fn args] :as ast} os]
+  (-write-object [{:keys [args] :as ast} os]
     (write-tag os INVOKE)
     (write-int-raw os (inc (count args)))
-    (write-object os fn)
+    (write-object os (:fn ast))
     (doseq [arg args]
       (write-object os arg))
     (write-meta os ast))
@@ -307,7 +306,8 @@
 (defn write-object [os ast]
 
   (binding [*old-meta* (or (and
-                            (map? ast)
-                            (meta (:form ast)))
+                            (satisfies? ast/IAst ast)
+                            (or (meta (:form ast))
+                                (:meta (:env ast))))
                            *old-meta*)]
     (-write-object (simplify ast) os)))

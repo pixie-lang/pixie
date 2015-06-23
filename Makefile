@@ -2,7 +2,7 @@ all: help
 
 EXTERNALS=externals
 
-PYTHON ?= pypy
+PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 
@@ -66,7 +66,7 @@ run:
 
 
 run_interactive:
-	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) target.py pixie/compiler.pxi
 
 run_interactive2:
 	@PYTHONPATH=$(PYTHONPATH) pypy target2.py

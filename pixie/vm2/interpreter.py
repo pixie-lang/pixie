@@ -1,4 +1,5 @@
 from pixie.vm2.object import Object, Type, Continuation, stack_cons, runtime_error, affirm
+from pixie.vm2.code import ns_registry
 from pixie.vm2.primitives import nil, false
 from pixie.vm2.array import Array
 import pixie.vm2.code as code
@@ -133,7 +134,14 @@ class Fn(AST):
             if x in glocals:
                 del glocals[x]
 
-        self._c_closed_overs = list(glocals.iterkeys())
+
+        closed_overs = [None] * len(glocals)
+        idx = 0
+        for k in glocals:
+            closed_overs[idx] = glocals[k]
+            idx += 1
+
+        self._c_closed_overs = closed_overs
 
     def gather_locals(self):
         glocals = {}
@@ -390,13 +398,25 @@ class DoK(Continuation):
 
 @expose("_c_var")
 class VDeref(AST):
-    _immutable_fields_ = ["_c_var"]
-    def __init__(self, var, meta=nil):
+    _immutable_fields_ = ["_c_in_ns", "_c_var_name"]
+    def __init__(self, in_ns, var_name, meta=nil):
         AST.__init__(self, meta)
-        self._c_var = var
+        self._c_in_ns = in_ns
+        self._c_var_ns = var_name.get_ns()
+        self._c_var_name = var_name.get_name()
 
     def interpret(self, val, locals, stack):
-        return self._c_var.deref(), stack
+        ns = ns_registry.find_or_make(self._c_in_ns)
+        if ns is None:
+            runtime_error(u"Namespace " + self._c_in_ns + u" is not found",
+                          u"pixie.stdlib/UndefinedNamespace")
+
+        var = ns.resolve_in_ns_ex(self._c_var_ns, self._c_var_name)
+        if var is not None:
+            return var.deref(), stack
+        else:
+            runtime_error(u"Var " + self._c_var_name + u" is undefined in " + self._c_in_ns,
+                          u"pixie.stdlib/UndefinedVar")
 
     def gather_locals(self):
         return {}

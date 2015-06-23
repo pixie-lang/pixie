@@ -305,7 +305,7 @@
 (comment (extend -reduce Array indexed-reduce))
 
 (extend -reduce Buffer indexed-reduce)
-#_(extend -reduce String indexed-reduce)
+(extend -reduce String indexed-reduce)
 
 (extend -str Bool
   (fn [x]
@@ -1311,11 +1311,12 @@ Creates new maps if the keys are not present."
   (assert (= (count binding) 2) "expected a binding and a collection")
   (let [b (first binding)
         s (second binding)]
-    `(loop [s# (seq ~s)]
-       (if s#
-         (let [~b (first s#)]
-           ~@body
-           (recur (next s#)))))))
+    `(reduce
+      (fn [acc# ~b]
+        ~@body
+        nil)
+      nil
+      ~s)))
 
 (defmacro doc
   {:doc "Returns the documentation of the given value."
@@ -2448,14 +2449,6 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 (extend -persistent! PersistentHashMap identity)
 
-(extend -persistent! DictMap dict-map-to-phm)
-(extend -assoc DictMap add-to-dict-map)
-(extend -conj DictMap (fn [m [k v]]
-                        (assoc m k v)))
-(extend -conj! DictMap (fn [m [k v]]
-                        (assoc m k v)))
-(extend -val-at DictMap (fn [m k _]
-                          (get-from-dict-map m k)))
 
 (extend -str Namespace
   (fn [v] (str "<Namespace " (name v) ">")))

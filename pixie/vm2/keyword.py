@@ -2,8 +2,8 @@ from pixie.vm2.object import Object, Type
 from pixie.vm2.primitives import nil
 from pixie.vm2.string import String
 #import pixie.vm.stdlib as proto
-from pixie.vm.code import extend, as_var
-import pixie.vm.rt as rt
+from pixie.vm2.code import extend, as_var
+import pixie.vm2.rt as rt
 #import pixie.vm.util as util
 from rpython.rlib.rarithmetic import intmask, r_uint
 
@@ -43,6 +43,14 @@ class Keyword(Object):
 
     def store_hash(self, hash):
         self._hash = hash
+
+    def get_name(self):
+        self.init_names()
+        return rt.unwrap_string(self._w_name)
+
+    def get_ns(self):
+        self.init_names()
+        return rt.unwrap_string(self._w_ns)
 
     def get_hash(self):
         return self._hash

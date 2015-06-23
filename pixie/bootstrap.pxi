@@ -99,6 +99,7 @@
   (-effect-val [this v])
   (-effect-return [this v]))
 
+(-run-external-extends)
 
 (extend -get-field Object -internal-get-field)
 
@@ -307,6 +308,19 @@
   ([coll idx] (-nth coll idx))
   ([coll idx not-found] (-nth-not-found coll idx not-found)))
 
+(defn name
+  [x] (-name x))
+
+(defn namespace
+  [x] (-namespace x))
+
+
+(defn dispose!
+  "Finalizes use of the object by cleaning up resources used by the object"
+  [x]
+  (-dispose! x)
+  nil)
+
 
 (defn has-meta?
   [x]
@@ -346,7 +360,6 @@
     (-apply f arg-array)))
 
 (defn last [coll]
-  (println "LAST " (type coll))
   (if (vector? coll)
     (nth coll (dec (count coll)))
     (loop [coll coll]
@@ -422,7 +435,7 @@
   ([sb] (-internal-to-str sb))
   ([sb x]
    (if (instance? String x)
-     (-add-to-string-builder x)
+     (-add-to-string-builder sb x)
      (-str x (fn [x]
                (-add-to-string-builder sb x))))))
 
@@ -553,7 +566,6 @@
         h1 (if (= (bit-and (count u) 1) 1)
              (let [k1 (int (nth u (dec (count u))))
                    k1 (mix-k1 k1)
-                   _ (println h1 k1 (type h1) (type k1))
                    h1 (bit-xor h1 k1)]
                h1)
              h1)]
@@ -1340,7 +1352,6 @@
   
   INode
   (-assoc-inode [this shift hash-val key val added-leaf]
-    (println "inode "  key val (hash key) (hash val) (= key val))
     (let [bit (bitpos hash-val shift)
           idx (index this bit)]
       (if (not= (bit-and bitmap bit) 0)
@@ -1634,7 +1645,6 @@
 (extend -name Keyword -internal-get-name)
 (extend -namespace Keyword -internal-get-ns)
 (extend -hash Keyword (fn [x]
-                        (println x)
                         (let [v (-internal-get-hash x)]
                           (if (zero? v)
                             (let [h (pixie.stdlib.hashing/hash-unencoded-chars (str x))]
@@ -1642,12 +1652,17 @@
                               h)
                             v))))
 
+(extend -invoke Keyword (fn
+                          ([this o]
+                           (-get o this nil))
+                          ([this o not-found]
+                            (-get o this not-found))))
+
 
 
 (extend -name Symbol -internal-get-name)
 (extend -namespace Symbol -internal-get-ns)
 (extend -hash Symbol (fn [x]
-                        (println x)
                         (let [v (-internal-get-hash x)]
                           (if (zero? v)
                             (let [h (pixie.stdlib.hashing/hash-unencoded-chars (str x))]
@@ -1668,7 +1683,22 @@
 
 
 
-;(extend -reduce Buffer indexed-reduce)
+;; Buffer
+
+(extend -reduce Buffer
+        (fn [b f init]
+          (loop [idx 0
+                 acc init]
+            (if (reduced? acc)
+              @acc
+              (if (< idx (count b))
+                (let [val (pixie.ffi/unpack b idx CUInt8)]
+                  (recur (inc idx)
+                         (f acc val)))
+                acc)))))
+
+;;
+
 
 (extend -str Bool
   (fn [x sb]
@@ -1730,33 +1760,28 @@ user => (refer 'pixie.string :only '(index-of starts-with? ends-with?))
 user => (refer 'pixie.string :rename '{index-of find})
 user => (refer 'pixie.string :exclude '(substring))"
    :added "0.1"}
-  [ns-sym & filters]
+  [from-ns ns-sym & filters]
+  (println ns-sym)
   (let [ns (or (the-ns ns-sym) (throw [:pixie.stdlib/NamespaceNotFoundException
                                        (str "No such namespace: " ns-sym)]))
         filters (apply hashmap filters)
-        nsmap (ns-map ns)
         rename (or (:rename filters) {})
-        exclude (set (:exclude filters))
-        refers (if (= :all (:refer filters))
-                 (keys nsmap)
-                 (or (:refer filters) (:only filters)))]
-    (when (and refers (not (satisfies? ISeqable refers)))
-      (throw [:pixie.stdlib/InvalidArgumentException
-              ":only/:refer must be a collection of symbols"]))
-    (when-let [as (:as filters)]
-      (refer-ns *ns* ns-sym as))
-    (loop [syms (seq refers)]
-      (if (not syms)
-        nil
-        (do
-          (let [sym (first syms)]
-            (when-not (exclude sym)
-              (let [v (nsmap sym)]
-                (when-not v
-                  (throw [:pixie.stdlib/SymbolNotFoundException
-                          (str sym "does not exist")]))
-                (refer-symbol *ns* (or (rename sym) sym) v))))
-          (recur (next syms)))))
+        exclude (:exclude filters)
+        rname (or (:as filters)
+                  ns-sym)]
+    (println "refering " from-ns ns-sym)
+    (-add-refer from-ns ns-sym rname)
+    (if (= :all (:refer filters))
+      (-refer-all from-ns rname)
+      (doseq [sym (:refer filters)]
+        (-add-refer from-ns rname sym sym)))
+
+    (doseq [[from to] (:rename filters)]
+      (-add-refer from-ns rname from to))
+
+    (doseq [nm (:exclude filters)]
+      (-add-exclude from-ns rname nm))
+    
     nil))
 
 
@@ -1818,4 +1843,20 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 ;; End Multimethods
 
+;; LibC Stuff
+(def load-paths (atom ["." ""]))
+
+(defn ffi-library [nm]
+  (reduce
+   (fn [_ x]
+     (when-let [l (-ffi-library (str x (name nm)))]
+       (reduced l)))
+   nil
+   @load-paths))
+
+
+(def libc (ffi-library pixie.platform/lib-c-name))
+
+
+;;
 

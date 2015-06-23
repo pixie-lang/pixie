@@ -184,12 +184,6 @@ def _internal_store_hash(x, h):
 def _internal_int(x):
     return rt.wrap(x.int_val())
 
-@as_var("-internal-set-hash")
-def _internal_sett_hash(x, hash_val):
-    x.set_hash(hash_val.int_val())
-    return x
-
-
 @as_var("-blocking-println")
 def _blocking_println(x):
     print rt.unwrap_string(x)
@@ -228,7 +222,7 @@ def type(x):
 def the_ns(ns_name):
     affirm(ns_name.get_ns() is None, u"the-ns takes a un-namespaced symbol")
 
-    return code._ns_registry.get(ns_name.get_name(), nil)
+    return code.ns_registry.get(ns_name.get_name(), nil)
 
 
 @as_var("load-ns")
@@ -241,25 +235,74 @@ def load_ns(filename):
         affirm(filename.get_ns() is None, u"load-file takes a un-namespaced symbol")
         filename_str = filename.get_name().replace(u".", u"/") + u".pxi"
 
-        loaded_ns = code._ns_registry.get(filename.get_name(), None)
+        loaded_ns = code.ns_registry.get(filename.get_name(), None)
         if loaded_ns is not None:
             return loaded_ns
     else:
         affirm(isinstance(filename, string.String), u"Filename must be string")
         filename_str = filename.get_name
 
-    paths = rt.deref(rt.deref(rt.load_paths))
-    f = None
-    for x in range(rt.count(paths)):
-        path_x = rt.nth(paths, rt.wrap(x))
-        affirm(isinstance(path_x, string.String), u"Contents of load-paths must be strings")
-        full_path = path.join(str(rt.name(path_x)), str(filename_str))
-        if path.isfile(full_path):
-            f = full_path
-            break
-
-    if f is None:
-        affirm(False, u"File '" + rt.name(filename) + u"' does not exist in any directory found in load-paths")
-    else:
-        rt.load_file(rt.wrap(f))
+    # paths = rt.deref(rt.deref(rt.load_paths))
+    # f = None
+    # for x in range(rt.count(paths)):
+    #     path_x = rt.nth(paths, rt.wrap(x))
+    #     affirm(isinstance(path_x, string.String), u"Contents of load-paths must be strings")
+    #     full_path = path.join(str(rt.name(path_x)), str(filename_str))
+    #     if path.isfile(full_path):
+    #         f = full_path
+    #         break
+    #
+    # if f is None:
+    #     affirm(False, u"File '" + rt.name(filename) + u"' does not exist in any directory found in load-paths")
+    # else:
+    #     rt.load_file(rt.wrap(f))
     return nil
+
+
+### NS Helpers
+
+@as_var("-add-refer")
+def refer_syms(in_ns_nm, other_ns_nm, as_nm):
+    from pixie.vm2.keyword import Keyword
+    from pixie.vm2.code import ns_registry
+
+    in_ns = ns_registry.get(in_ns_nm.get_name(), None)
+    affirm(in_ns is not None, u"Can't locate namespace " + in_ns_nm.get_name())
+    other_ns = ns_registry.get(other_ns_nm.get_name(), None)
+    affirm(other_ns is not None, u"Can't locate namespace " + in_ns_nm.get_name())
+
+    in_ns.add_refer(other_ns, as_nm.get_name())
+
+@as_var("-refer-all")
+def refer_all(in_ns_nm, other_ns_sym):
+    from pixie.vm2.keyword import Keyword
+    from pixie.vm2.code import ns_registry
+
+    in_ns = ns_registry.get(in_ns_nm.get_name(), None)
+    affirm(in_ns is not None, u"Can't locate namespace " + in_ns_nm.get_name())
+
+    in_ns.get_refer(other_ns_sym.get_name()).refer_all()
+
+
+@as_var("-refer-var")
+def refer_all(in_ns_nm, other_ns_sym, old, new):
+    from pixie.vm2.keyword import Keyword
+    from pixie.vm2.code import ns_registry
+
+    in_ns = ns_registry.get(in_ns_nm.get_name(), None)
+    affirm(in_ns is not None, u"Can't locate namespace " + in_ns_nm.get_name())
+
+    in_ns.get_refer(other_ns_sym.get_name()).add_var_alias(old.get_name(), new.get_name())
+
+
+@as_var("-in-ns")
+def in_ns(ns_name):
+    ns = code.ns_registry.find_or_make(ns_name.get_name())
+    ns.include_stdlib()
+
+    return nil
+
+@as_var("-run-external-extends")
+def run_external_extends():
+    for var, tp, f in code.init_ctx:
+        var.deref().extend(tp, f)

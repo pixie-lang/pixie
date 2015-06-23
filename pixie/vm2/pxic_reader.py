@@ -136,8 +136,9 @@ def read_object(os):
 
     elif tag == VAR:
         ns = read_raw_string(os)
-        name = read_raw_string(os)
-        return ast.VDeref(code.intern_var(ns, name))
+        var_name = read_object(os)
+        meta = read_object(os)
+        return ast.VDeref(ns, var_name, meta)
 
 
     elif tag == VAR_CONST:

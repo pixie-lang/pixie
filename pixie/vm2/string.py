@@ -20,6 +20,13 @@ class String(Object):
         self._str = s
 
 
+    def get_name(self):
+        return self._str
+
+    def get_ns(self):
+        return None
+
+
 @as_var("-str-len")
 def str_len(self):
     assert isinstance(self, String)
@@ -118,6 +125,7 @@ class Character(Object):
         return u"FIXME"
         #hexv = rt.name(rt.bit_str(rt.wrap(self.char_val()), rt.wrap(4)))
         #return rt.wrap(u"\\u" + u"0" * (4 - len(hexv)) + hexv)
+
 
 class CharCache(object):
     def __init__(self):

@@ -503,10 +503,32 @@ class bindings(py_object):
 
 
 class Refer(py_object):
-    def __init__(self, ns, refer_syms=[], refer_all=False):
+    def __init__(self, ns, refer_syms={}, refer_all=False):
         self._namespace = ns
         self._refer_syms = refer_syms
         self._refer_all = refer_all
+        self._excludes = {}
+
+    def refer_all(self):
+        self._refer_all = True
+
+    def add_var_alias(self, old, new):
+        assert isinstance(old, unicode)
+        assert isinstance(new, unicode)
+
+        self._refer_syms[new] = old
+
+    def add_var_exclude(self, old):
+        self._excludes[old] = old
+
+    def find_var(self, name):
+        if self._refer_all and name not in self._excludes:
+            return self._namespace.resolve_in_ns(name, False)
+        else:
+            other = self._refer_syms.get(name, None)
+            if other:
+                return self._namespace.resolve_in_ns(other, False)
+            return None
 
 
 class Namespace(object.Object):
@@ -519,9 +541,16 @@ class Namespace(object.Object):
         self._registry = {}
         self._name = name
         self._refers = {}
+        self._var_cache = {}
+        self._rev = 0
+
+    def reset_cache(self):
+        self._var_cache.clear()
+        self._rev += 1
 
     def intern_or_make(self, name):
         assert name is not None
+        self.reset_cache()
         affirm(isinstance(name, unicode), u"Var names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
@@ -531,6 +560,8 @@ class Namespace(object.Object):
 
     def add_refer(self, ns, as_nm=None, refer_all=False):
         assert isinstance(ns, Namespace)
+        self.reset_cache()
+
         if as_nm is not None:
             assert isinstance(as_nm, unicode)
 
@@ -539,8 +570,14 @@ class Namespace(object.Object):
 
         self._refers[as_nm] = Refer(ns, refer_all=refer_all)
 
+    def get_refer(self, nm):
+        assert isinstance(nm, unicode)
+
+        return self._refers.get(nm, None)
+
     def add_refer_symbol(self, sym, var):
         assert isinstance(self, Namespace)
+        self.reset_cache()
 
         name = rt.name(sym)
         prev_binding = self._registry.get(name, None)
@@ -551,14 +588,16 @@ class Namespace(object.Object):
         return var
 
     def include_stdlib(self):
-        stdlib = _ns_registry.find_or_make(u"pixie.stdlib")
+        stdlib = ns_registry.find_or_make(u"pixie.stdlib")
         self.add_refer(stdlib, refer_all=True)
+        self.reset_cache()
+
 
     def resolve(self, s, use_refers=True):
         import pixie.vm2.symbol as symbol
         affirm(isinstance(s, symbol.Symbol), u"Must resolve symbols")
-        ns = rt.namespace(s)
-        name = rt.name(s)
+        ns = s.get_ns()
+        name = s.get_name()
 
         if ns is not None:
             refer = self._refers.get(ns, None)
@@ -566,7 +605,7 @@ class Namespace(object.Object):
             if refer is not None:
                 resolved_ns = refer._namespace
             if resolved_ns is None:
-                resolved_ns = _ns_registry.get(ns, None)
+                resolved_ns = ns_registry.get(ns, None)
             if resolved_ns is None:
                 affirm(False, u"Unable to resolve namespace: " + ns + u" inside namespace " + self._name)
         else:
@@ -574,15 +613,44 @@ class Namespace(object.Object):
 
         assert isinstance(resolved_ns, Namespace)
 
-        var = resolved_ns._registry.get(name, None)
-        if var is None and use_refers:
-            for refer_nm in self._refers:
-                refer = self._refers[refer_nm]
-                if name in refer._refer_syms or refer._refer_all:
-                    var = refer._namespace.resolve(symbol.Symbol(name), False)
-                if var is not None:
-                    return var
-            return None
+        return resolved_ns.resolve_in_ns(name, use_refers=use_refers)
+
+    def resolve_in_ns_ex(self, ns, name, use_refers=True):
+        return self._resolve_in_ns_ex(ns, name, self._rev, use_refers)
+
+    @jit.elidable_promote()
+    def _resolve_in_ns_ex(self, ns, name, rev, use_refers):
+        if ns is None:
+            return self._resolve_in_ns(name, use_refers, rev)
+        else:
+            refer = self._refers.get(ns, None)
+            if refer is not None:
+                return refer._namespace._resolve_in_ns(name, use_refers, rev)
+            else:
+                resolved_ns = ns_registry.get(ns, None)
+                if resolved_ns is None:
+                    return None
+                return resolved_ns.resolve_in_ns(name, False)
+
+    def resolve_in_ns(self, name, use_refers=True):
+        return self._resolve_in_ns(name, use_refers, self._rev)
+
+
+    @jit.elidable_promote()
+    def _resolve_in_ns(self, name, use_refers, rev):
+        var = self._var_cache.get(name, None)
+        if var is None:
+            var = self._registry.get(name, None)
+            if var is None and use_refers:
+                for refer_nm in self._refers:
+                    refer = self._refers[refer_nm]
+                    var = refer.find_var(name)
+                    if var is not None:
+                        break
+
+            if var is not None:
+                self._var_cache[name] = var
+
         return var
 
     def get(self, name, default):
@@ -599,12 +667,13 @@ class NamespaceRegistry(py_object):
         if v is None:
             v = Namespace(name)
             self._registry[name] = v
+            v.include_stdlib()
         return v
 
     def get(self, name, default):
         return self._registry.get(name, default)
 
-_ns_registry = NamespaceRegistry()
+ns_registry = NamespaceRegistry()
 
 
 def intern_var(ns, name=None):
@@ -612,11 +681,11 @@ def intern_var(ns, name=None):
         name = ns
         ns = u""
 
-    return _ns_registry.find_or_make(ns).intern_or_make(name)
+    return ns_registry.find_or_make(ns).intern_or_make(name)
 
 
 def get_var_if_defined(ns, name, els=None):
-    w_ns = _ns_registry.get(ns, None)
+    w_ns = ns_registry.get(ns, None)
     if w_ns is None:
         return els
     return w_ns.get(name, els)
@@ -909,6 +978,27 @@ def extend(pfn, tp1, tp2=None):
         return pfn
 
     return extend_inner
+
+init_ctx = []
+
+def extend_var(ns_name, var_name, tp1):
+    if isinstance(tp1, type):
+        assert_tp = tp1
+        tp1 = tp1._type
+    else:
+        assert_tp = object.Object
+
+    var = intern_var(unicode(ns_name), unicode(var_name))
+
+    def extend_inner(fn):
+        init_ctx.append((var, tp1, wrap_fn(fn, assert_tp)))
+
+        return var
+
+    return extend_inner
+
+
+
 
 
 def as_var(ns, name=None):

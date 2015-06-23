@@ -56,7 +56,7 @@
                    body)
            proto-bodies (second bodies)
            all-fields fields
-           type-nm (str (:ns *env*) "." (name nm))
+           type-nm (str @(:ns *env*) "." (name nm))
            type-decl `(def ~nm (create-type ~(keyword type-nm)
                                             ~all-fields))
            inst (gensym)
@@ -68,14 +68,38 @@
                                 (cond
                                   (symbol? body) `(satisfy ~body ~nm)
                                   (seq? body) `(extend ~(first body)
-                                                 ~(symbol (str (:ns *env*) "/" nm))
+                                                 ~(symbol (str @(:ns *env*) "/" nm))
                                                  ~(mk-body body))
                                   :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
                          conj
                          proto-bodies)]
        `(do ~type-decl
             ~ctor
-            ~@proto-bodies)))})
+            ~@proto-bodies)))
+
+   (resolve 'ns)
+   (fn ns [nm & body]
+     (let [bmap (reduce (fn [m b]
+                          (update-in m [(first b)] (fnil conj []) (rest b)))
+                        {}
+                        body)
+           requires
+           (do
+             (assert (>= 1 (count (:require bmap)))
+                     "Only one :require block can be defined per namespace")
+             (mapv (fn [r] `(require ~(keyword (name nm)) ~@r)) (first (:require bmap))))]
+       `(do (in-ns ~(keyword (name nm)))
+            (println "in-ns " ~(keyword (name nm)))
+            ~@requires)))
+
+   (resolve 'require)
+   (fn [ins ns & args]
+  `(do (load-ns (quote ~ns))
+       (assert (the-ns (quote ~ns))
+               (str "Couldn't find the namespace " (quote ~ns) " after loading the file"))
+
+       (apply refer ~ins (quote [~ns ~@args]))))
+   })
 
 
 (def *env* nil)
@@ -206,8 +230,6 @@
 
 (defmethod analyze-seq 'def
   [[_ nm val :as form]]
-  (swap! (:vars *env*) update-in [(:ns *env*) nm] (fn [x]
-                                          (or x :def)))
   (->Def
    nm
    (analyze-form val)
@@ -220,10 +242,10 @@
 
 (defmethod analyze-seq 'in-ns
   [[_ nsp]]
-  (set! (var *env*) (assoc *env* :ns (symbol (name nsp))))
+  (reset! (:ns *env*) (symbol (name nsp)))
   (in-ns nsp)
   (in-ns :pixie.compiler)
-  (analyze-form nil))
+  (analyze-form (list 'pixie.stdlib/-in-ns (keyword (name nsp)))))
 
 (defmethod analyze-seq 'local-macro
   [[_ [nm replace] & body :as form]]
@@ -251,7 +273,7 @@
 (defmethod analyze-seq :default
   [[sym & args :as form]]
   (let [resolved (try (and (symbol? sym)
-                           (resolve-in (the-ns (:ns *env*)) sym))
+                           (resolve-in (the-ns @(:ns *env*)) sym))
                       (catch :pixie.stdlib/AssertionException ex
                         nil))]
     (cond
@@ -316,43 +338,7 @@
             *env*))
 
 (defn maybe-var [x]
-  (let [namesp (the-ns (:ns *env*))
-        resolved (try
-                   (resolve-in namesp x)
-                   (catch :pixie.stdlib/AssertionException ex
-                     nil))
-        result (cond
-                 (namespace x)
-                 (->Var (symbol (namespace x))
-                        (symbol (name x))
-                        x
-                        *env*)
-                 
-                 (get-in @(:vars *env*) [(:ns *env*) x])
-                 (->Var (:ns *env*)
-                        x
-                        x
-                        *env*)
-
-                 ;; Hack until we get proper refers
-                 (get-in @(:vars *env*) ['pixie.stdlib x])
-                 (->Var 'pixie.stdlib
-                        x
-                        x
-                        *env*)
-                 
-                 resolved
-                 (->Var (namespace resolved)
-                        (name resolved)
-                        x
-                        *env*)
-                 
-                 :else
-                 (->Var (name (:ns *env*))
-                        (name x)
-                        x
-                        *env*))]
-    result))
+  (->Var @(:ns *env*) x x *env*))
 
 
 ;; ENV Functions
@@ -361,16 +347,11 @@
   "Creates a new (empty) environment"
   []
   (->Env
-   'pixie.stdlib
-   (atom {'pixie.stdlib {'array true
-                         'size-t true
-                         'bit-count32 true
-                         'contains-table true
-                         'switch-table true
-                         '-add-to-string-builder true
-                         '-parse-number true}})
+   (atom 'pixie.stdlib)
+   nil
    {}
-   true))
+   true
+   nil))
 
 
 (defn analyze
@@ -462,14 +443,14 @@
     (println "done")))
 
 (defn compile-file [from os]
-  (let [forms (read-string (str "[" (io/slurp from) "]"))
+  (let [forms (read-string (str "[" (io/slurp from) "]") from)
         form-count (atom 0)
         total-count (atom 0)]
     (doseq [form forms]
           (swap! form-count inc)
           (swap! total-count inc)
           (when (= @form-count 10)
-            (println from (int (* 100 (/ @total-count (count forms)))) "% in" (:ns *env*))
+            (println from (int (* 100 (/ @total-count (count forms)))) "% in" @(:ns *env*))
             (reset! form-count 0))
           
           (let [ast (read-and-compile form env)]
@@ -490,5 +471,6 @@
 (time (compile-files ["pixie/bootstrap.pxi"
                       "pixie/streams.pxi"
                       "pixie/io-blocking.pxi"
-                      "pixie/reader.pxi"]
+                      "pixie/reader.pxi"
+                      "pixie/main.pxi"]
                      "./bootstrap.pxic"))

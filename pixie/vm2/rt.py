@@ -51,27 +51,11 @@ def init():
     import pixie.vm2.code as code
     import pixie.vm2.numbers as numbers
     import pixie.vm2.stdlib
-    #import pixie.vm.interpreter
-    #import pixie.vm.atom
-    #import pixie.vm.reduced
-    #import pixie.vm.util
     import pixie.vm2.array
-    #import pixie.vm.lazy_seq
-    #import pixie.vm.persistent_list
-    #import pixie.vm.persistent_hash_map
-    #import pixie.vm.persistent_hash_set
     import pixie.vm2.custom_types
-    #import pixie.vm.map_entry
-    #import pixie.vm.libs.platform
-    #import pixie.vm.libs.ffi
-    #import pixie.vm.libs.env
-    #import pixie.vm.symbol
-    #import pixie.vm.libs.path
-    #import pixie.vm.libs.string
-    #import pixie.vm.threads
-    #import pixie.vm.string_builder
-    #import pixie.vm.stacklet
     import pixie.vm2.jit_tables
+    import pixie.vm2.ffi
+    import pixie.vm2.platform
 
     @specialize.argtype(0)
     def wrap(x):
@@ -139,7 +123,7 @@ def init():
 
     globals()["is_true"] = lambda x: False if x is false or x is nil or x is None else True
 
-    _type_registry.set_registry(code._ns_registry)
+    _type_registry.set_registry(code.ns_registry)
 
     numbers.init()
     code.init()
