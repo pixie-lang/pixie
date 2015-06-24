@@ -7,7 +7,7 @@
   (-commit! [this]))
 
 (defprotocol IReadPort
-  (-take! [this cfn] "Take a value from this port passing it to a cancellable function"))
+  (-take! [this cfn] "Take a value from this port passing it to a cancelable function"))
 
 (defprotocol IWritePort
   (-put! [this itm cfn] "Write a value to this port passing true if the write succeeds and the
