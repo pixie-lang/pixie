@@ -2,7 +2,6 @@
   (:require [pixie.streams :as st :refer :all]
             [pixie.io.common :as common]))
 
-
 (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
 (def fseek (ffi-fn libc "fseek" [CVoidP CInt CInt] CInt))
 (def ftell  (ffi-fn libc "ftell" [CVoidP] CInt))
@@ -14,7 +13,6 @@
 (def fclose (ffi-fn libc "fclose" [CVoidP] CInt))
 (def popen (ffi-fn libc "popen" [CCharP CCharP] CVoidP))
 (def pclose (ffi-fn libc "pclose" [CVoidP] CInt))
-
 
 (deftype FileStream [fp]
   IInputStream

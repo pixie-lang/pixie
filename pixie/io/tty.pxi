@@ -3,12 +3,13 @@
             [pixie.streams :refer [IInputStream read IOutputStream write]]
             [pixie.uv :as uv]
             [pixie.io.common :as common]
+            [pixie.io.uv-common :as uv-common]
             [pixie.system :as sys]))
 
 (deftype TTYInputStream [uv-client]
   IInputStream
   (read [this buf len]
-    (common/cb-stream-reader uv-client buf len))
+    (uv/cb-stream-reader uv-client buf len))
   IDisposable
   (-dispose! [this]
     (uv/uv_close uv-client st/close_cb))
@@ -19,7 +20,7 @@
 (deftype TTYOutputStream [uv-client uv-write-buf]
   IOutputStream
   (write [this buffer]
-    (common/cb-stream-writer uv-client uv-write-buf buffer))
+    (uv-common/cb-stream-writer uv-client uv-write-buf buffer))
   IDisposable
   (-dispose! [this]
     (dispose! uv-write-buf)
