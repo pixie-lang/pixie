@@ -3,6 +3,7 @@
             [pixie.streams :refer [IInputStream read IOutputStream write]]
             [pixie.io.common :as common]
             [pixie.uv :as uv]
+            [pixie.io.uv-common :as uv-common]
             [pixie.ffi :as ffi]))
 
 (defrecord TCPServer [ip port on-connect uv-server bind-addr on-connection-cb]
@@ -15,10 +16,10 @@
 (deftype TCPStream [uv-client uv-write-buf]
   IInputStream
   (read [this buffer len]
-    (common/cb-stream-reader uv-client buffer len))
+    (uv-common/cb-stream-reader uv-client buffer len))
   IOutputStream
   (write [this buffer]
-    (common/cb-stream-writer uv-client uv-write-buf buffer))
+    (uv-common/cb-stream-writer uv-client uv-write-buf buffer))
   IDisposable
   (-dispose! [this]
     (dispose! uv-write-buf)
