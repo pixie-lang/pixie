@@ -94,12 +94,12 @@ def symbol(s):
 #         self._hash = util.hash_unencoded_chars(self._str)
 #     return rt.wrap(intmask(self._hash))
 #
-# @as_var("symbol")
-# def _symbol(s):
-#     if not isinstance(s, String):
-#         from pixie.vm.object import runtime_error
-#         runtime_error(u"Symbol name must be a string")
-#     return symbol(s._str)
+@as_var("symbol")
+def _symbol(s):
+    if not isinstance(s, String):
+        from pixie.vm.object import runtime_error
+        runtime_error(u"Symbol name must be a string")
+    return symbol(s.get_name())
 #
 #
 #

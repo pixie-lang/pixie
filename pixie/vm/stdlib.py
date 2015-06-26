@@ -723,7 +723,7 @@ def _var(ns, nm):
 
 @as_var("set-dynamic!")
 def set_dynamic(var):
-    affirm(isinstance(var, Var), u"set-dynamic! expects a var as an argument")
+    affirm(isinstance(var, Var), u"dynamic! expects a var as an argument")
     var.set_dynamic()
     return var
 

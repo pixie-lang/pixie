@@ -7,6 +7,8 @@ class Object(object):
     _attrs_ = ()
 
     def type(self):
+        if not we_are_translated():
+            print "FOR TYPE", self
         affirm(False, u".type isn't overloaded")
 
     @jit.unroll_safe
@@ -146,6 +148,7 @@ class Continuation(object):
     should_enter_jit = False
     _immutable_ = True
     def call_continuation(self, val, stack):
+        assert False
         return None, stack
 
     def get_ast(self):

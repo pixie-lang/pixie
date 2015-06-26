@@ -48,7 +48,7 @@
   (-dissoc [this k]))
 
 (defprotocol ILookup
-  (-get [this]))
+  (-val-at [this]))
 
 (defprotocol IMapEntry
   (-key [this])
@@ -293,7 +293,7 @@
    :added "0.1"}
   ([coll] (-pop! coll)))
 
-(def push!
+(defn push!
   {:doc "Push an element on to a transient stack."
    :signatures [[] [coll] [coll item] [coll item & args]]
    :added "0.1"}
@@ -326,6 +326,14 @@
   [x]
   (satisfies? IMeta x))
 
+(defn meta
+  [x]
+  (-meta x))
+
+(defn with-meta
+  [x m]
+  (-with-meta x m))
+
 (defn count
   ([coll] (-count coll)))
 
@@ -344,6 +352,15 @@
 
 (defn val [m]
   (-val m))
+
+(defn seq [x]
+  (-seq x))
+
+(defn first [x]
+  (-first (seq x)))
+
+(defn next [x]
+  (-next (seq x)))
 
 (defn apply [f & args]
   (let [last-itm (last args)
@@ -393,9 +410,44 @@
 
 
 (deftype List [head tail cnt hash-val meta]
+  IObject
+  (-hash [this]
+    (if hash-val
+      hash-val
+      (let [val (reduce
+                 pixie.stdlib.hashing/ordered-hashing-rf
+                 this)]
+        (set-field! this :hash-val val)
+        val)))
+
+  (-str [this sb]
+    (sb "(")
+    (let [not-first (atom false)]
+      (reduce
+       (fn [_ x]
+         (if @not-first
+           (sb " ")
+           (reset! not-first true))
+         (-str x sb))
+       nil
+       this))
+    (sb ")"))
+
+  IReduce
+  (-reduce [this f init]
+    (loop [acc init
+           s this]
+      (if (reduced? acc)
+        @acc
+        (if (nil? s)
+          acc
+          (recur (f acc (first s))
+                 (next s))))))
+
+  
   ISeq
-  (-first [this] first)
-  (-next [this] next)
+  (-first [this] head)
+  (-next [this] tail)
 
   ICounted
   (-count [this] cnt)
@@ -417,7 +469,7 @@
   (loop [acc nil
          idx (dec (count args))
          cnt 0]
-    (if (pos? idx)
+    (if (>= idx 0)
       (recur (->List (nth args idx)
                      acc
                      cnt
@@ -557,7 +609,7 @@
                   h1 seed]
              (if (< i (count u))
                (let [k1 (bit-or (int (nth u (dec i)))
-                                (int (nth u i)))
+                                (bit-shift-left (int (nth u i)) 16))
                      k1 (mix-k1 k1)
                      h1 (mix-h1 h1 k1)]
                  (recur (+ 2 i)
@@ -702,12 +754,13 @@
 
 ;; Type Checks
 
-(defn instance? [t x]
+(defn instance?
   {:doc "Checks if x is an instance of t.
 
                            When t is seqable, checks if x is an instance of
                            any of the types contained therein."
    :signatures [[t x]]}
+  [t x]
   (if (-satisfies? ISeqable t)
     (let [ts (seq t)]
       (if (not ts) false
@@ -716,12 +769,13 @@
             (instance? (rest ts) x))))
     (-instance? t x)))
 
-(defn satisfies?   [p x]
+(defn satisfies?
   ^{:doc "Checks if x satisfies the protocol p.
 
                             When p is seqable, checks if x satisfies all of
                             the protocols contained therein."
     :signatures [[t x]]}
+  [p x]  
   (if (-satisfies? ISeqable p)
     (let [ps (seq p)]
       (if (not ps) true
@@ -741,9 +795,11 @@
 
 (defn char? [v] (instance? Character v))
 (defn string? [v] (instance? String v))
+(defn symbol? [v] (instance? Symbol v))
 (defn keyword? [v] (instance? Keyword v))
 
 (defn list? [v] (instance? [PersistentList Cons] v))
+(defn seq? [v] (satisfies? ISeq v))
 (defn set? [v] (instance? PersistentHashSet v))
 (defn map? [v] (satisfies? IMap v))
 (defn fn? [v] (satisfies? IFn v))
@@ -1100,7 +1156,7 @@
   
 
   ILookup
-  (-get [this val]
+  (-val-at [this val]
     (-nth-not-found self val nil))
   
 
@@ -1364,7 +1420,7 @@
                                   key
                                   val
                                   added-leaf)]
-              (if (identical n val-or-node)
+              (if (identical? n val-or-node)
                 this
                 (->BitmapIndexedNode nil
                                      bitmap
@@ -1571,7 +1627,7 @@
                                meta)))))
 
   ILookup
-  (-get [this key not-found]
+  (-val-at [this key not-found]
     (if (nil? key)
       (if has-nil?
         nil-val
@@ -1602,7 +1658,9 @@
 (defn create-node [shift key1 val1 key2hash key2 val2]
   (let [key1hash (bit-and (pixie.stdlib/hash key1) MASK-32)]
     (if (= key1hash key2hash)
-      (->HashCollisionNode nil key1hash [key1 val1 key2 val2])
+      (do
+        (println "HASH " key1 val1 key2 val2 key1hash key2hash)
+        (->HashCollisionNode nil key1hash [key1 val1 key2 val2]))
       (let [added-leaf (atom false)]
         (-> BitmapIndexedNode-EMPTY
             (-assoc-inode shift key1hash key1 val1 added-leaf)
@@ -1654,9 +1712,9 @@
 
 (extend -invoke Keyword (fn
                           ([this o]
-                           (-get o this nil))
+                           (-val-at o this nil))
                           ([this o not-found]
-                            (-get o this not-found))))
+                            (-val-at o this not-found))))
 
 
 
@@ -1787,6 +1845,67 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 ;; End NS Functions
 
+;; Delay
+
+(deftype Delay [f val]
+  (-deref [this]
+    (when f
+      (set-field! :val (f))
+      (set-field! :f nil))
+    val))
+
+(defn -delay [f]
+  (->Delay f nil))
+
+;; End Delay 
+
+;; Dynamic Vars
+
+(defeffect EDynamicVar
+  (-dynamic-var-lookup [this])
+  (-dynamic-var-set [this val]))
+
+(deftype DynamicVar [x]
+  IEffect
+  (-effect-val [this y]
+    (println "Effect Val" y)
+    (fn val-fn [s] y))
+  
+  (-effect-return [this f]
+    (println "Effect Return " f)
+    (f x))
+
+  EDynamicVar
+  (-dynamic-var-lookup [this k]
+    (println "lookup")
+    (fn lookup-fn [s]
+      (println "lookup -> " s k)
+      ((k s) s)))
+
+  (-dynamic-var-set [this s' k]
+    (println "call set " s' k)
+    (fn [s]
+      (println "Setting to |  " s' s)
+      ((k nil) s')))
+
+
+  IDeref
+  (-deref [this]
+    (-dynamic-var-lookup this))
+
+  IReset
+  (-reset! [this v]
+    (-dynamic-var-set this v)))
+
+(defn dynamic-var
+  ([]
+   (dynamic-var nil))
+  ([v]
+   (->DynamicVar v)))
+
+
+;;
+
 ;; Multimethod stuff
 #_(comment
 
@@ -1860,3 +1979,20 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 ;;
 
+
+
+;; Mutimethods
+
+(deftype MultiMethod [dispatch-fn default-val methods]
+  IFn
+  (-invoke [self & args]
+    (let [dispatch-val (apply dispatch-fn args)
+          method (if (contains? @methods dispatch-val)
+                   (get @methods dispatch-val)
+                   (get @methods default-val))
+          _ (assert method (str "no method defined for " dispatch-val))]
+      (apply method args))))
+
+
+
+;;

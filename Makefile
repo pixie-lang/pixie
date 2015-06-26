@@ -98,6 +98,6 @@ clean: clean_pxic
 	rm -f ./*.pyc
 
 compile_rpython:
-	touch ./bootstrap.py
-	rm ./bootstrap.py
-	./pixie-vm pixie/compiler.pxi
+	touch ./bootstrap.pxic
+	rm ./bootstrap.pxic
+	../pixie-old/pixie-vm -l . pixie/compile-bootstrap.pxi

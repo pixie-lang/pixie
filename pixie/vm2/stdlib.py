@@ -306,3 +306,19 @@ def in_ns(ns_name):
 def run_external_extends():
     for var, tp, f in code.init_ctx:
         var.deref().extend(tp, f)
+
+
+@as_var("set-dynamic!")
+def set_dynamic(var):
+    affirm(isinstance(var, Var), u"set-dynamic! expects a var as an argument")
+    var.set_dynamic()
+    return var
+
+
+@as_var("resolve-in")
+def _var(ns, nm):
+    if not isinstance(ns, code.Namespace):
+        ns = code.ns_registry.find_or_make(ns.get_name())
+
+    var = ns.resolve_in_ns_ex(nm.get_ns(), nm.get_name())
+    return var if var is not None else nil

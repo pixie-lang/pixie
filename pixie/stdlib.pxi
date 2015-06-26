@@ -2064,8 +2064,10 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                       [(merge meta (first args)) (next args)]
                       [meta args])
         dispatch-fn (first args)
-        options (apply hashmap (next args))]
-    `(def ~name (->MultiMethod ~(str name) ~dispatch-fn ~(get options :default :default) (atom {})))))
+        options (apply hashmap (next args))
+        result `(def ~name (->MultiMethod ~(str name) ~dispatch-fn ~(get options :default :default) (atom {})))]
+    (println result)
+    result))
 
 (defmacro defmethod
   {:doc "Define a method of a multimethod. See `(doc defmulti)` for details."
@@ -2419,24 +2421,6 @@ Calling this function on something that is not ISeqable returns a seq with that 
               (let ~(vec (interleave bindings binding-syms))
                 ~@body)))))
 
-(defmacro with-handler [[h handler] & body]
-  `(let [~h ~handler]
-            (~'pixie.stdlib/-effect-return
-             ~h
-             (~'pixie.stdlib/-with-handler
-              ~h
-              (fn []
-                (~'pixie.stdlib/-effect-val
-                 ~h
-                 (do ~@body)))))))
-
-(defmacro defeffect
-  [nm & sigs]
-  `(do (def ~nm (~'pixie.stdlib/protocol ~(str nm)))
-       ~@(map (fn [[x]]
-                `(def ~x (~'pixie.stdlib/-effect-fn
-                          (~'pixie.stdlib/polymorphic-fn ~(str x) ~nm))))
-              sigs)))
 
 
 (extend -transient PersistentHashMap

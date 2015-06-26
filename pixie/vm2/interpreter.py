@@ -106,6 +106,8 @@ class Locals(object):
         c = self
         while c._c_name is not name:
             c = c._c_next
+            if c is None:
+                runtime_error(name.to_repr() + u" is undefined")
         return c._c_value
 
 class Lookup(AST):
@@ -162,6 +164,17 @@ class Fn(AST):
 
 class InterpretedFn(code.BaseCode):
     _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_arg_names"]
+    _type = Type(u"pixie.stdlib.InterpretedFn")
+
+    def type(self):
+        return InterpretedFn._type
+
+    def to_repr(self):
+        return u"<Fn " + self._c_name.get_name() + u">"
+
+    def to_str(self):
+        return u"<Fn " + self._c_name.get_name() + u">"
+
     def __init__(self, name, arg_names, locals_prefix, ast):
         assert isinstance(name, Keyword)
         code.BaseCode.__init__(self)
@@ -183,7 +196,11 @@ class InterpretedFn(code.BaseCode):
         locals = Locals(self._c_name, self_fn, locals)
 
         if not len(args) == len(self._c_arg_names):
-            runtime_error(u"Wrong number args, expected " + unicode(str(len(args))) + u" got " + unicode(str(len(self._c_arg_names))),
+            runtime_error(u"Wrong number args to" +
+                          self.to_repr() +
+                          u", got " +
+                          unicode(str(len(args))) +
+                          u" expected " + unicode(str(len(self._c_arg_names))),
                           u"pixie.stdlib.ArityException")
 
         for idx in range(len(self._c_arg_names)):
@@ -290,6 +307,11 @@ class Let(AST):
             glocals = merge_dicts(glocals, x.gather_locals())
 
         glocals = merge_dicts(glocals, self._c_body.gather_locals())
+
+        for x in self._c_names:
+            if x in glocals:
+                del glocals[x]
+        
         return glocals
 
     def interpret(self, _, locals, stack):
@@ -489,7 +511,8 @@ class WithHandler(code.BaseCode):
         fn = args[1]
 
         stack = stack_cons(stack, Handler(handler))
-        return fn.invoke_k([], stack)
+        val, stack = fn.invoke_k([], stack)
+        return val, stack
 
 
 
@@ -504,8 +527,16 @@ class Handler(Continuation):
     def get_ast(self):
         return None
 
+    def call_continuation(self, val, stack):
+        return val, stack
+
 class DelimitedContinuation(code.NativeFn):
     _immutable_fields_ = ["_slice[*]"]
+    _type = Type(u"pixie.stdlib.DelmitedContinuation")
+
+    def type(self):
+        return DelimitedContinuation._type
+
     def __init__(self, slice):
         self._slice = slice
 
@@ -559,6 +590,7 @@ class EffectFunction(code.BaseCode):
                 break
 
             if isinstance(stack._cont, Handler) and stack._cont.handler() is handler:
+                size += 1
                 break
 
             size += 1

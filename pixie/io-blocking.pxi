@@ -2,19 +2,7 @@
   (:require [pixie.streams :as st :refer :all]))
 
 
-(def DEFAULT-BUFFER-SIZE 1024)
-
-(defn stream-reducer [this f init]
-  (let [buf (buffer DEFAULT-BUFFER-SIZE)
-        rrf (preserving-reduced f)]
-    (loop [acc init]
-      (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
-        (if (> read-count 0)
-          (let [result (reduce rrf acc buf)]
-            (if (not (reduced? result))
-              (recur result)
-              @result))
-          acc)))))
+(def DEFAULT-BUFFER-SIZE (* 32 1024))
 
 
 
@@ -29,6 +17,19 @@
 (def fclose (ffi-fn libc "fclose" [CVoidP] CInt))
 (def popen (ffi-fn libc "popen" [CCharP CCharP] CVoidP))
 (def pclose (ffi-fn libc "pclose" [CVoidP] CInt))
+
+(defn stream-reducer [this f init]
+  (let [buf (buffer DEFAULT-BUFFER-SIZE)
+        rrf (preserving-reduced f)]
+    (loop [acc init]
+      (let [read-count (read this buf DEFAULT-BUFFER-SIZE)]
+        (if (> read-count 0)
+          (let [result (reduce rrf acc buf)]
+            (if (not (reduced? result))
+              (recur result)
+              @result))
+          acc)))))
+
 
 
 (deftype FileStream [fp]
@@ -87,6 +88,7 @@
   IByteOutputStream
   (write-byte [this val]
     (assert (integer? val) "Value must be a int")
+    (println val)
     (fputc val fp))
   IOutputStream
   (write [this buffer]

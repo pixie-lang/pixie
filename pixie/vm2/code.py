@@ -388,7 +388,7 @@ undefined = Undefined()
 
 class DynamicVars(py_object):
     def __init__(self):
-        self._vars = rt.cons(rt.hashmap(), nil)
+        self._vars = [{}]
 
     def push_binding_frame(self):
         self._vars = rt.cons(rt.first(self._vars), self._vars)
@@ -889,6 +889,8 @@ CO_VARARGS = 0x4
 
 def wrap_fn(fn, tp=object.Object):
     """Converts a native Python function into a pixie function."""
+    import pixie.vm2.rt as rt
+
     docstring = unicode(fn.__doc__) if fn.__doc__ else u""
     def as_native_fn(f):
         return type("W" + fn.__name__, (NativeFn,), {"inner_invoke": f, "_doc": docstring})()
@@ -898,7 +900,7 @@ def wrap_fn(fn, tp=object.Object):
 
     code = fn.func_code
     if fn.__name__.endswith("__args"):
-        return as_variadic_fn(lambda self, args: fn(args))
+        return as_variadic_fn(lambda self, args: rt.wrap(fn(args)))
 
     fn_name = unicode(getattr(fn, "__real_name__", fn.__name__))
 
@@ -910,7 +912,7 @@ def wrap_fn(fn, tp=object.Object):
             def wrapped_fn(self, args):
                 affirm(len(args) == 0, u"Expected 0 arguments to " + fn_name)
                 try:
-                    return fn()
+                    return rt.wrap(fn())
                 except object.WrappedException as ex:
                     #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
@@ -920,7 +922,7 @@ def wrap_fn(fn, tp=object.Object):
             def wrapped_fn(self, args):
                 affirm(len(args) == 1, u"Expected 1 arguments to " + fn_name)
                 try:
-                    return fn(args[0])
+                    return rt.wrap(fn(args[0]))
                 except object.WrappedException as ex:
                     #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
@@ -930,7 +932,7 @@ def wrap_fn(fn, tp=object.Object):
             def wrapped_fn(self, args):
                 affirm(len(args) == 2, u"Expected 2 arguments to " + fn_name)
                 try:
-                    return fn(args[0], args[1])
+                    return rt.wrap(fn(args[0], args[1]))
                 except object.WrappedException as ex:
                     #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
@@ -940,7 +942,7 @@ def wrap_fn(fn, tp=object.Object):
                 affirm(len(args) == 3, u"Expected 3 arguments to " + fn_name)
 
                 try:
-                    return fn(args[0], args[1], args[2])
+                    return rt.wrap(fn(args[0], args[1], args[2]))
                 except object.WrappedException as ex:
                     #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise
@@ -951,7 +953,7 @@ def wrap_fn(fn, tp=object.Object):
                 affirm(len(args) == 4, u"Expected 4 arguments to " + fn_name)
 
                 try:
-                    return fn(args[0], args[1], args[2], args[3])
+                    return rt.wrap(fn(args[0], args[1], args[2], args[3]))
                 except object.WrappedException as ex:
                     #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise

@@ -11,6 +11,7 @@ from pixie.vm2.numbers import parse_number
 from pixie.vm2.pxic_reader import read_file, read_object, Reader
 
 rt.init()
+import sys
 
 def testit(max):
     rdr = Reader("./bootstrap.pxic")
@@ -19,6 +20,8 @@ def testit(max):
             obj = read_object(rdr)
         except EOFError:
             break
+        print ".",
+        sys.stdout.flush()
         run_stack(None, i.InterpretK(obj, None))
 
     return None

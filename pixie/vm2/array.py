@@ -8,6 +8,7 @@ from pixie.vm2.primitives import nil
 import rpython.rlib.jit as jit
 from rpython.rtyper.lltypesystem import lltype
 from rpython.rlib.rarithmetic import intmask
+from rpython.rlib.objectmodel import we_are_translated
 from pixie.vm2.keyword import keyword
 import pixie.vm2.rt as rt
 UNROLL_IF_SMALLER_THAN = 8
@@ -22,6 +23,9 @@ class Array(object.Object):
         return Array._type
 
     def __init__(self, lst):
+        if we_are_translated():
+            for x in lst:
+                assert x is not None
         self._list = lst
 
     @jit.unroll_safe

@@ -1,8 +1,5 @@
 (ns pixie.compiler
-  (:require [pixie.io :as io]
-            [pixie.string :as string]
-            [pixie.time :refer [time]]
-            [pixie.pxic-writer :as pxic-writer]
+  (:require [pixie.string :as string]
             [pixie.ast :refer :all]))
 
 
@@ -73,6 +70,7 @@
                                   :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
                          conj
                          proto-bodies)]
+       (println type-nm all-fields field-syms ctor)
        `(do ~type-decl
             ~ctor
             ~@proto-bodies)))
@@ -99,6 +97,9 @@
                (str "Couldn't find the namespace " (quote ~ns) " after loading the file"))
 
        (apply refer ~ins (quote [~ns ~@args]))))
+
+
+
    })
 
 
@@ -116,12 +117,16 @@
                            (number? x) :number
                            (string? x) :string
                            (char? x) :char
-                           (keyword? x) :keyword)))
+                           (keyword? x) :keyword
+                           (map? x) :map)))
 
 (defmulti analyze-seq (fn [x]
                          (let [f (first x)]
                            (if (symbol? f)
-                             f
+                             (let [sname (symbol (name f))]
+                               (if (get @(get-field analyze-seq :methods) sname)
+                                 sname
+                                 f))
                              :invoke))))
 
 
@@ -148,6 +153,30 @@
         (analyze-form else)
         form
         *env*))
+
+(defmethod analyze-seq 'this-ns-name
+  [[_]]
+  (analyze-form (name @(:ns *env*))))
+
+(defmethod analyze-seq 'with-handler
+  [[_ [h handler] & body]]
+  (analyze-form `(let [~h ~handler]
+                   (~'pixie.stdlib/-effect-return
+                    ~h
+                    (~'pixie.stdlib/-with-handler
+                     ~h
+                     (fn []
+                       (~'pixie.stdlib/-effect-val
+                        ~h
+                        (do ~@body))))))))
+
+(defmethod analyze-seq 'defeffect
+  [[_ nm & sigs]]
+  (analyze-form `(do (def ~nm (~'pixie.stdlib/protocol ~(str nm)))
+                    ~@(map (fn [[x]]
+                             `(def ~x (~'pixie.stdlib/-effect-fn
+                                       (~'pixie.stdlib/polymorphic-fn ~(str x) ~nm))))
+                           sigs))))
 
 
 (defmethod analyze-seq 'fn*
@@ -228,6 +257,10 @@
   (assert (:tail? *env*) "Can only recur at tail position")
   (analyze-form `(~'__loop__fn__ ~@args)))
 
+(defmethod analyze-seq 'var
+  [[_ nm]]
+  (->VarConst @(:ns *env*) nm nm env))
+
 (defmethod analyze-seq 'def
   [[_ nm val :as form]]
   (->Def
@@ -238,7 +271,17 @@
 
 (defmethod analyze-seq 'quote
   [[_ val]]
-  (->Const val *env*))
+  (if (map? val)
+    (analyze-seq (with-meta
+                   `(pixie.stdlib/hashmap ~@(reduce
+                                             (fn [acc [k v]]
+                                               (-> acc
+                                                   (conj `(~'quote k))
+                                                   (conj `(~'quote v))))
+                                             []
+                                             val))
+                   (meta val)))
+    (->Const val *env*)))
 
 (defmethod analyze-seq 'in-ns
   [[_ nsp]]
@@ -337,6 +380,18 @@
             x
             *env*))
 
+(defmethod analyze-form :map
+  [x]
+  (analyze-seq (with-meta
+                 `(pixie.stdlib/hashmap ~@(reduce
+                                           (fn [acc [k v]]
+                                             (-> acc
+                                                 (conj k)
+                                                 (conj v)))
+                                           []
+                                           x))
+                 (meta x))))
+
 (defn maybe-var [x]
   (->Var @(:ns *env*) x x *env*))
 
@@ -364,113 +419,3 @@
        (analyze-form form)))))
 
 
-
-
-(defn walk [pre post selector node]
-  (let [walk-fn (partial walk pre post selector)]
-    (-> (reduce
-         (fn [node k]
-           (let [v (get node k)
-                 result (if (or (vector? v)
-                                (seq? v))
-                          (mapv walk-fn v)
-                          (walk-fn v))]
-             (assoc node k result)))
-         (pre node)
-         (selector node))
-        post)))
-
-(defn post-walk [f ast]
-  (walk identity f children-keys ast))
-
-
-(defn child-seq [ast]
-  (mapcat
-   (fn [k]
-     (let [child (get ast k)]
-       (if (or (vector? child)
-               (seq? child))
-         child
-         [child])))
-   (children-keys ast)))
-
-;; Collect Closed Overs
-
-
-(defn collect-closed-overs [ast]
-  (let [closed-overs (set (or (get-closed-overs ast)
-                              (mapcat get-closed-overs (child-seq ast))))
-        closed-overs (if (instance? FnBody ast)
-                       (reduce disj closed-overs (:args ast))
-                       closed-overs)]
-    (assoc-closed-overs ast closed-overs)))
-
-
-;; End Collect Closed Overs
-
-(defn remove-env [ast]
-  (walk #(dissoc % :env)
-        identity
-        :children
-        ast))
-
-
-(defn run-passes [ast]
-  (walk identity
-        identity #_simplify-ast
-        children-keys
-        ast))
-
-(defn read-and-compile [form env]
-  (let [ast (analyze form env)]
-    ast))
-
-#_(defn compile-file [from to]
-  (println "Reading")
-  (let [form (time (read-string (str "(do " (pixie.io/slurp from) ")")))
-        _ (println "Compiling")
-        ast (time (analyze form))
-        _ (println "Passes")
-        ast (time (run-passes ast))
-        _ (println "To String")
-        os (-> to
-               io/open-write
-               io/buffered-output-stream)]
-    (binding [pxic-writer/*cache* (pxic-writer/writer-cache os)]
-      (time (pxic-writer/write-object os ast)))
-    #_(print str)
-    (dispose! os)
-    (println "done")))
-
-(defn compile-file [from os]
-  (let [forms (read-string (str "[" (io/slurp from) "]") from)
-        form-count (atom 0)
-        total-count (atom 0)]
-    (doseq [form forms]
-          (swap! form-count inc)
-          (swap! total-count inc)
-          (when (= @form-count 10)
-            (println from (int (* 100 (/ @total-count (count forms)))) "% in" @(:ns *env*))
-            (reset! form-count 0))
-          
-          (let [ast (read-and-compile form env)]
-            (pxic-writer/write-object os ast)))))
-
-(defn compile-files [files to]
-  (let [os (-> to
-               io/open-write
-               io/buffered-output-stream)
-                env (new-env)
-]
-    (binding [*env* env]
-      (binding [pxic-writer/*cache* (pxic-writer/writer-cache os)]
-        (doseq [file files]
-          (compile-file file os))))
-    (dispose! os)))
-
-(time (compile-files ["pixie/bootstrap.pxi"
-                      "pixie/streams.pxi"
-                      "pixie/io-blocking.pxi"
-                      "pixie/reader.pxi"
-                      "pixie/main.pxi"]
-                     "./bootstrap.pxic"))
