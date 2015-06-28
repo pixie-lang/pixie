@@ -62,15 +62,14 @@ First of all, the word "magic" is in quotes as it's partly a play on words, pixi
 
 However there are a few features of pixie that although may not be uncommon, are perhaps unexpected from a lisp.
 
-* Pixie implements its own virtual machine. It does not run on the JVM, CLR or Python VM. It implements its own bytecode, has its own GC and JIT. And it's small. Currently the interpreter, JIT, GC, and stdlib clock in at about 5.5MB once compiled down to an executable.
+* Pixie implements its own virtual machine. It does not run on the JVM, CLR or Python VM. It implements its own bytecode, has its own GC and JIT. And it's small. Currently the interpreter, JIT, GC, and stdlib clock in at about 10.3MB once compiled down to an executable.
 
 * The JIT makes some things fast. Very fast. Code like the following compiles down to a loop with 6 CPU instructions. While this may not be too impressive for any language that uses a tracing jit, it is fairly unique for a language as young as Pixie.
 
 ```clojure
 
-(comment
-  This code adds up to 10000 from 0 via calling a function that takes a variable number of arguments.
-  That function then reduces over the argument list to add up all given arguments.)
+;;  This code adds up to 10000 from 0 via calling a function that takes a variable number of arguments.
+;;  That function then reduces over the argument list to add up all given arguments.
 
 (defn add-fn [& args]
   (reduce -add 0 args))
