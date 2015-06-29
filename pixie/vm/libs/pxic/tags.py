@@ -1,7 +1,9 @@
 
 tag_name = ["INT",
+            "BIGINT",
             "FLOAT",
             "INT_STRING",
+            "BIGINT_STRING",
             "STRING",
             "CODE",
             "TRUE",
