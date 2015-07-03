@@ -55,10 +55,10 @@
 
 (defrecord LocalMacro [name respace form env])
 
-(defrecord Invoke [fn args tail-call? form env]
+(defrecord Invoke [args tail-call? form env]
   IAst
   (children-keys  [this]
-    `[:fn :args]))
+    `[:args]))
 
 (defrecord Var [ns var-name form env]
   IAst
@@ -85,8 +85,8 @@
 ;; Ctors
 
 
-(defn make-invoke-ast [fn args form env]
-  (->Invoke fn args false form env))
+(defn make-invoke-ast [f args form env]
+  (->Invoke (cons f args) false form env))
 
 (defn make-var-ast [ns name env]
   (->Var ns name (symbol (pixie.stdlib/name name)) env))

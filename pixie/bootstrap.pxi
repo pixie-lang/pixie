@@ -346,6 +346,24 @@
   ([mp k not-found]
      (-val-at mp k not-found)))
 
+(defn get-in
+  {:doc "Get a value from a nested collection at the \"path\" given by the keys."
+   :examples [["(get-in {:a [{:b 42}]} [:a 0 :b])" nil 42]]
+   :signatures [[m ks] [m ks not-found]]
+   :added "0.1"}
+  ([m ks]
+     (reduce get m ks))
+  ([m ks not-found]
+     (loop [sentinel 'x
+            m m
+            ks (seq ks)]
+       (if ks
+         (let [m (get m (first ks) sentinel)]
+           (if (identical? sentinel m)
+             not-found
+             (recur sentinel m (next ks))))
+         m))))
+
 (defn contains?
   [mp k]
   (-contains-key mp k))

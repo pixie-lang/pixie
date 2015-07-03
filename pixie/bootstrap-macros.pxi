@@ -86,14 +86,11 @@
         (do
           (assert (>= 1 (count (:require bmap)))
                   "Only one :require block can be defined per namespace")
-          (println "NAme" (name nm))
           (mapv (fn [r] `(require ~(keyword (name nm)) ~@r)) (first (:require bmap))))]
     `(do (in-ns ~(keyword (name nm)))
-         (println "in-ns " ~(keyword (name nm)))
          ~@requires)))
 
 (defmacro require [ins ns & args]
-  (println "ns " ins ns (vec args))
   `(do (load-ns (quote ~ns))
        (assert (the-ns (quote ~ns))
                (str "Couldn't find the namespace " (quote ~ns) " after loading the file"))
@@ -106,7 +103,7 @@
         v-sym (gensym "v")
         this-sym (gensym "this")
         result `(-assoc [~this-sym ~k-sym ~v-sym]
-                 (case ~k-sym
+                 (condp identical? ~k-sym
                    ~@(mapcat
                       (fn [k]
                         [k `(~cname ~@(mapv (fn [x]
@@ -133,14 +130,14 @@ and implements IAssociative, ILookup and IObject."
                          (apply ~ctor-name (map #(get m %) ~fields)))
         default-bodies ['IAssociative
                         (-make-record-assoc-body ctor-name fields)
-                        `(-contains-key [self k]
-                                        (contains? ~(set fields) k))
+                        `(-contains-key [self# k#]
+                                        (contains? ~(set fields) k#))
                         `(-dissoc [self k]
                                   (throw [:pixie.stdlib/NotImplementedException
                                           "dissoc is not supported on defrecords"]))
                         'ILookup
-                        '(-val-at [self k not-found]
-                                  (get-field self k not-found))
+                        '(-val-at [self# k# not-found#]
+                                  (get-field self# k# not-found#))
                         'IObject
                         `(-str [self# sb#]
                                (sb# (str "<" ~(name nm) " >" )))

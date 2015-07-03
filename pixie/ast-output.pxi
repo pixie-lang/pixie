@@ -43,16 +43,19 @@
 
   ast/Invoke
   (-to-ast [{:keys [args] :as ast}]
-    (let [args-array (make-array (inc (count args)))]
-      (aset args-array 0 (to-ast (:fn ast)))
-      (loop [idx 0]
-        (when (< idx (count args))
-          (aset args-array
-                (inc idx)
-                (to-ast (nth args idx)))
-          (recur (inc idx))))
+    (let [args-array (make-array (count args))]
+      (dotimes [idx (count args)]
+        (aset args-array idx
+              (to-ast (nth args idx))))
+      
       (iast/->Invoke args-array
                      (meta-ast ast))))
+
+  ast/Var
+  (-to-ast [{:keys [ns var-name] :as ast}]
+    (iast/->VDeref (name ns)
+                   var-name
+                   (meta-ast ast)))
 
   
   Object

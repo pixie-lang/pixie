@@ -280,9 +280,7 @@
 
       :else
       (->Invoke (let [new-env (assoc env :tail? false)]
-                  (analyze-form new-env sym))
-                (let [new-env (assoc env :tail? false)]
-                  (mapv (partial analyze-form new-env) args))
+                  (mapv (partial analyze-form new-env) form))
                 (:tail? env)
                 form
                 env))))
@@ -352,7 +350,7 @@
   "Creates a new (empty) environment"
   [bootstrap?]
   (->Env
-   (atom 'pixie.stdlib)
+   (atom (symbol "pixie.stdlib"))
    nil
    {}
    true

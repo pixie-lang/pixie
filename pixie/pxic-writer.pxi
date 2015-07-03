@@ -223,8 +223,7 @@
   ast/Invoke
   (-write-object [{:keys [args] :as ast} os]
     (write-tag os INVOKE)
-    (write-int-raw os (inc (count args)))
-    (write-object os (:fn ast))
+    (write-int-raw os (count args))
     (doseq [arg args]
       (write-object os arg))
     (write-meta os ast))
