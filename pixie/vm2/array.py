@@ -49,6 +49,9 @@ class Array(object.Object):
             return rt.wrap(len(self._list))
         return nil
 
+    def array_val(self):
+        return self._list
+
 @as_var("array")
 def array__args(lst):
     return Array(lst)

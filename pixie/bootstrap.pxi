@@ -97,7 +97,37 @@
 
 (defprotocol IEffect
   (-effect-val [this v])
-  (-effect-return [this v]))
+  (-effect-finally [this v]))
+
+(defeffect EException
+  (-throw [this kw data ks]))
+
+(deftype ExceptionHandler [catches finally-fn]
+  IEffect
+  (-effect-val [this v]
+    v)
+  
+  (-effect-finally [this v]
+    (when finally-fn
+      (finally-fn))
+    v)
+
+  EException
+  (-throw [this kw data ks k]
+    (let [c (get catches kw)]
+      (if c
+        (c data)
+        (-throw this kw data (conj ks k))))))
+
+(defn throw [kw val]
+  (-throw nil
+          kw
+          val
+          []))
+
+(defn -try [body catches finally]
+  (with-handler [ex (->ExceptionHandler catches finally)]
+    (body)))
 
 (-run-external-extends)
 
@@ -308,6 +338,18 @@
   ([coll idx] (-nth coll idx))
   ([coll idx not-found] (-nth-not-found coll idx not-found)))
 
+(defn get
+  {:doc "Get an element from a collection implementing ILookup, return nil or the default value if not found."
+   :added "0.1"}
+  ([mp k]
+     (get mp k nil))
+  ([mp k not-found]
+     (-val-at mp k not-found)))
+
+(defn contains?
+  [mp k]
+  (-contains-key mp k))
+
 (defn name
   [x] (-name x))
 
@@ -362,18 +404,31 @@
 (defn next [x]
   (-next (seq x)))
 
+(defn nthnext
+  {:doc "Returns the result of calling next n times on the collection."
+   :examples [["(nthnext [1 2 3 4 5] 2)" nil (3 4 5)]
+              ["(nthnext [1 2 3 4 5] 7)" nil nil]]
+   :added "0.1"}
+  [coll n]
+  (loop [n n
+         xs (seq coll)]
+    (if (and xs (pos? n))
+      (recur (dec n) (next xs))
+      xs)))
+
+
 (defn apply [f & args]
   (let [last-itm (last args)
         but-last-cnt (dec (count args))
         arg-array (make-array (+ but-last-cnt
                                  (count last-itm)))
-        _ (array-copy args 0 arg-array 0 but-last-cnt)
         idx (reduce
              (fn [idx itm]
                (aset arg-array idx itm)
                (inc idx))
              but-last-cnt
              last-itm)]
+    (array-copy args 0 arg-array 0 but-last-cnt)
     (-apply f arg-array)))
 
 (defn last [coll]
@@ -391,6 +446,15 @@
       (recur (conj res (first coll))
              (next coll))
       (seq res))))
+
+(defn seq-reduce [s f acc]
+  (if (reduced? acc)
+    @acc
+    (if (nil? s)
+      acc
+      (seq-reduce (next s)
+                  f
+                  (f acc (first s))))))
 
 ;; Cons and List
 
@@ -433,16 +497,34 @@
        this))
     (sb ")"))
 
+  
+  IIndexed
+
+  (-nth [self idx]
+    (loop [i idx
+           s (seq self)]
+      (if (or (= i 0)
+              (nil? s))
+        (if (nil? s)
+          (first s)
+          (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))
+        (recur (dec i)
+               (next s))))1)
+  
+  (-nth-not-found [self idx not-found]
+    (loop [i idx
+           s (seq self)]
+      (if (or (= i 0)
+              (nil? s))
+        (if (nil? s)
+          (first s)
+          not-found)
+        (recur (dec i)0
+               (next s)))))
+  
   IReduce
   (-reduce [this f init]
-    (loop [acc init
-           s this]
-      (if (reduced? acc)
-        @acc
-        (if (nil? s)
-          acc
-          (recur (f acc (first s))
-                 (next s))))))
+    (seq-reduce this f init))
 
   
   ISeq
@@ -468,7 +550,7 @@
 (defn list [& args]
   (loop [acc nil
          idx (dec (count args))
-         cnt 0]
+         cnt 1]
     (if (>= idx 0)
       (recur (->List (nth args idx)
                      acc
@@ -479,6 +561,78 @@
              (inc cnt))
       acc)))
 
+;; LazySeq start
+(in-ns :pixie.stdlib.lazy-seq)
+
+
+(deftype LazySeq [f s hash-val meta-data]
+  ISeqable
+  (-seq [this]
+    (sval this)
+    (when (.-s this)
+      (loop [ls (.-s this)]
+        (if (instance? LazySeq ls)
+          (recur (sval ls))
+          (do (set-field! this :s ls)
+              (seq (.-s this)))))))
+
+  ISeq
+  (-first [this]
+    (seq this)
+    (first (.-s this)))
+
+  (-next [this]
+    (seq this)
+    (next (.-s this)))
+
+  IReduce
+  (-reduce [this f init]
+    (seq-reduce this f init))
+
+  IMessageObject
+  (-get-field [this field]
+    (get-field this field)))
+
+(defn sval [this]
+  (if (.-f this)
+    (do (set-field! this :s ((.-f this)))
+        (set-field! this :f nil)
+        (.-s this))
+    (.-s this)))
+
+
+(in-ns :pixie.stdlib)
+
+(defn lazy-seq* [f]
+  (pixie.stdlib.lazy-seq/->LazySeq f nil nil nil))
+
+(defeffect EGenerator
+    (-yield [this val]))
+
+(deftype Generator []
+  IEffect
+  (-effect-val [this val]
+    nil)
+  (-effect-finally [this val]
+    val)
+
+  EGenerator
+  (-yield [this val k]
+    (cons val (lazy-seq
+               (with-handler [_ this]
+                 (k nil))))))
+
+(defn yield [g i]
+  (-yield g i)
+  g)
+
+(defn sequence [coll]
+  (with-handler [gen (->Generator)]
+    (reduce yield gen coll)))
+
+
+
+;; LazySeq end
 
 ;; String Builder
 
@@ -692,7 +846,7 @@
       (let [s (seq coll)]
         (if s
           (cons (f (first s))
-                (map f (rest s)))
+                (map f (next s)))
           nil)))))
   ([f & colls]
    (let [step (fn step [cs]
@@ -700,9 +854,13 @@
                  (fn []
                    (let [ss (map seq cs)]
                      (if (every? identity ss)
-                       (cons (map first ss) (step (map rest ss)))
+                       (cons (map first ss) (step (map next ss)))
                        nil)))))]
      (map (fn [args] (apply f args)) (step colls)))))
+
+(defn mapv
+  ([f col]
+   (transduce (map f) conj col)))
 
 
 (defn interpose
@@ -740,6 +898,12 @@
       ([result] (rf result))
       ([result input]
        (reduce rrf result input)))))
+
+(defn concat
+  {:doc "Concatenates its arguments."
+   :signatures [[& args]]
+   :added "0.1"}
+  [& args] (transduce cat conj args))
 
 (defn mapcat
   {:doc "Maps f over the elements of coll and concatenates the result"
@@ -800,7 +964,7 @@
 
 (defn list? [v] (instance? [PersistentList Cons] v))
 (defn seq? [v] (satisfies? ISeq v))
-(defn set? [v] (instance? PersistentHashSet v))
+(defn set? [v] (instance? pixie.stdlib.persistent-hash-set/PersistentHashSet v))
 (defn map? [v] (satisfies? IMap v))
 (defn fn? [v] (satisfies? IFn v))
 
@@ -1102,7 +1266,11 @@
          (-str x sb))
        nil
        this))
-    (sb "]"))  
+    (sb "]"))
+
+  ISeqable
+  (-seq [this]
+    (sequence this))
   
   
   IMessageObject
@@ -1561,6 +1729,10 @@
         acc))))
 
 (deftype PersistentHashMap [cnt root has-nil? nil-val hash-val meta]
+  IFn
+  (-invoke [this k]
+    (-val-at this k nil))
+  
   IObject
   (-hash [this]
     (if hash-val
@@ -1626,6 +1798,11 @@
                                nil
                                meta)))))
 
+  (-contains-key [this k]
+    (if (identical? (-val-at this k NOT-FOUND) NOT-FOUND)
+      false
+      true))
+
   ILookup
   (-val-at [this key not-found]
     (if (nil? key)
@@ -1638,6 +1815,8 @@
                (bit-and (hash key) MASK-32)
                key
                not-found))))
+
+  
 
   IReduce
   (-reduce [this f init]
@@ -1652,6 +1831,9 @@
               @acc
               acc))
           acc)))))
+
+(deftype NOT-FOUND-TP [])
+(def NOT-FOUND (->NOT-FOUND-TP))
 
 (def EMPTY (->PersistentHashMap (size-t 0) nil false nil nil nil))
 
@@ -1689,6 +1871,80 @@
       acc)))
 
 ;; End Persistent Hash Map
+
+;; Start Persistent Hash Set
+
+(in-ns :pixie.stdlib.persistent-hash-set)
+
+(deftype PersistentHashSet [m hash-val meta]
+  IObject
+  (-hash [this]
+    (when-not hash-val
+      (set! this :hash-val (reduce
+                            unordered-hashing-rf
+                            this)))
+    hash-val)
+
+  (-str [this sb]
+    (sb "#{")
+    (let [not-first (atom false)]
+      (reduce
+       (fn [_ x]
+         (if @not-first
+           (sb " ")
+           (reset! not-first true))
+         (-str x sb))
+       nil
+       this))
+    (sb "}"))
+  
+  ICounted
+  (-count [this]
+    (-count m))
+
+  IPersistentCollection
+  (-conj [this x]
+    (->PersistentHashSet (-assoc m x x) nil meta))
+  (-disj [this x]
+    (->PersistentHashSet (-dissoc m x) nil meta))
+
+  IMeta
+  (-meta [this]
+    meta)
+
+  (-with-meta [this x]
+    (->PersistentHashSet m hash-val x))
+
+  IAssociative
+  (-contains-key [this x]
+    (-contains-key m x))
+
+  ILookup
+  (-val-at [this k not-found]
+    (-val-at m k not-found))
+
+  IReduce
+  (-reduce [this f init]
+    (reduce
+     (fn [acc kv]
+       (f acc (key kv)))
+     init
+     m)))
+
+(def EMPTY (->PersistentHashSet
+            pixie.stdlib.persistent-hash-map/EMPTY
+            nil
+            nil))
+
+;; End Persistent Hash Set
+
+(in-ns :pixie.stdlib)
+
+(defn set [coll]
+  (into pixie.stdlib.persistent-hash-set/EMPTY
+        coll))
+
+
 ;; Extend Core Types
 
 (extend -invoke Code -invoke)
@@ -1782,7 +2038,21 @@
 
   IReduce
   (-reduce [this f init]
-    init))
+    init)
+
+  ICounted
+  (-count [this]
+    0)
+
+  ISeqable
+  (-seq [this]
+    nil)
+
+  ISeq
+  (-first [this]
+    nil)
+  (-next [this]
+    nil))
 
 
 (extend -with-meta Nil (fn [self _] nil))
@@ -1820,6 +2090,8 @@ user => (refer 'pixie.string :exclude '(substring))"
    :added "0.1"}
   [from-ns ns-sym & filters]
   (println ns-sym)
+  (assert ns-sym "Must provide a ns-sym")
+  (assert from-ns "Must provide a from-ns")
   (let [ns (or (the-ns ns-sym) (throw [:pixie.stdlib/NamespaceNotFoundException
                                        (str "No such namespace: " ns-sym)]))
         filters (apply hashmap filters)
@@ -1871,7 +2143,7 @@ user => (refer 'pixie.string :exclude '(substring))"
     (println "Effect Val" y)
     (fn val-fn [s] y))
   
-  (-effect-return [this f]
+  (-effect-finally [this f]
     (println "Effect Return " f)
     (f x))
 
@@ -1987,9 +2259,8 @@ user => (refer 'pixie.string :exclude '(substring))"
   IFn
   (-invoke [self & args]
     (let [dispatch-val (apply dispatch-fn args)
-          method (if (contains? @methods dispatch-val)
-                   (get @methods dispatch-val)
-                   (get @methods default-val))
+          method (or (get @methods dispatch-val)
+                     (get @methods default-val))
           _ (assert method (str "no method defined for " dispatch-val))]
       (apply method args))))
 

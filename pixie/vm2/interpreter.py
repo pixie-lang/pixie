@@ -1,5 +1,5 @@
 from pixie.vm2.object import Object, Type, Continuation, stack_cons, runtime_error, affirm
-from pixie.vm2.code import ns_registry
+from pixie.vm2.code import ns_registry, as_var
 from pixie.vm2.primitives import nil, false
 from pixie.vm2.array import Array
 import pixie.vm2.code as code
@@ -23,6 +23,10 @@ class AST(Object):
         if self._c_meta != nil:
             return self._c_meta.get_long_location()
         return "<unknown of " + str(self) + ">"
+
+@as_var("pixie.ast.internal", "->Meta")
+def new_meta(line, file, line_number, column_number):
+    return Meta((line.get_name(), file.get_name(), line_number.int_val()), column_number.int_val())
 
 class Meta(Object):
     _type = Type(u"pixie.stdlib.Meta")
@@ -73,10 +77,19 @@ class InterpretK(Continuation):
     def get_ast(self):
         return self._c_ast
 
+@as_var("pixie.ast.internal", "->Const")
+def new_const(val, meta):
+    print val, meta
+    return Const(val, meta)
+
 @expose("_c_val")
 class Const(AST):
     _immutable_fields_ = ["_c_val"]
     _type = Type(u"pixie.interpreter.Const")
+
+    def type(self):
+        return Const._type
+
     def __init__(self, val, meta=nil):
         AST.__init__(self, meta)
         self._c_val = val
@@ -110,6 +123,10 @@ class Locals(object):
                 runtime_error(name.to_repr() + u" is undefined")
         return c._c_value
 
+@as_var("pixie.ast.internal", "->Lookup")
+def new_lookup(name, meta):
+    return Lookup(name, meta)
+
 class Lookup(AST):
     _immutable_fields_ = ["_c_name"]
     def __init__(self, name, meta=nil):
@@ -122,6 +139,10 @@ class Lookup(AST):
 
     def gather_locals(self):
         return {self._c_name: self._c_name}
+
+as_var("pixie.ast.internal", "->Fn")
+def new_fn(name, args, body, meta):
+    return Fn(name, args.array_val(), body, meta)
 
 class Fn(AST):
     _immutable_fields_ = ["_c_name", "_c_args", "_c_body", "_c_closed_overs"]
@@ -209,9 +230,17 @@ class InterpretedFn(code.BaseCode):
         return nil, stack_cons(stack, InterpretK(self._c_fn_ast, locals))
 
 
+@as_var("pixie.ast.internal", "->Invoke")
+def new_invoke(args, meta):
+    return Invoke(args.array_val(), meta)
 
 class Invoke(AST):
     _immutable_fields_ = ["_c_args", "_c_fn"]
+    _type = Type(u"pixie.ast-internal.Invoke")
+
+    def type(self):
+        return Invoke._type
+
     def __init__(self, args, meta=nil):
         AST.__init__(self, meta)
         self._c_args = args
@@ -244,6 +273,10 @@ class InvokeK(Continuation):
         return self._c_ast
 
 
+
+@as_var("pixie.ast.internal", "->TailCall")
+def new_invoke(args, meta):
+    return Invoke(args.array_val(), meta)
 
 class TailCall(AST):
     _immutable_fields_ = ["_c_args", "_c_fn"]
@@ -293,6 +326,10 @@ class ResolveAllK(Continuation):
     def get_ast(self):
         return self._c_args[len(self._c_acc)]
 
+@as_var("pixie.ast.internal", "->Let")
+def new_let(names, bindings, body, meta):
+    return Let(names.array_val(), bindings.array_val(), body, meta)
+
 class Let(AST):
     _immutable_fields_ = ["_c_names", "_c_bindings", "_c_body"]
     def __init__(self, names, bindings, body, meta=nil):
@@ -311,7 +348,7 @@ class Let(AST):
         for x in self._c_names:
             if x in glocals:
                 del glocals[x]
-        
+
         return glocals
 
     def interpret(self, _, locals, stack):
@@ -341,6 +378,10 @@ class LetK(Continuation):
 
     def get_ast(self):
         return self._c_ast
+
+@as_var("pixie.ast.internal", "->If")
+def new_if(test, then, els, meta):
+    return If(test, then, els, meta)
 
 class If(AST):
     _immutable_fields_ = ["_c_test", "_c_then", "_c_else"]
@@ -379,6 +420,9 @@ class IfK(Continuation):
     def get_ast(self):
         return self._c_ast
 
+@as_var("pixie.ast.internal", "->Do")
+def new_do(args, meta):
+    return Do(args.array_val(), meta)
 
 class Do(AST):
     _immutable_fields_ = ["_c_body_asts"]
@@ -418,13 +462,17 @@ class DoK(Continuation):
     def get_ast(self):
         return self._c_ast
 
+@as_var("pixie.ast.internal", "->VDeref")
+def new_vderef(in_ns, var_name, meta):
+    return VDeref(in_ns.get_name(), var_name, meta)
+
 @expose("_c_var")
 class VDeref(AST):
     _immutable_fields_ = ["_c_in_ns", "_c_var_name"]
     def __init__(self, in_ns, var_name, meta=nil):
         AST.__init__(self, meta)
         self._c_in_ns = in_ns
-        self._c_var_ns = var_name.get_ns()
+        self._c_var_ns = None if var_name.get_ns() == u"" else var_name.get_ns()
         self._c_var_name = var_name.get_name()
 
     def interpret(self, val, locals, stack):
@@ -437,7 +485,11 @@ class VDeref(AST):
         if var is not None:
             return var.deref(), stack
         else:
-            runtime_error(u"Var " + self._c_var_name + u" is undefined in " + self._c_in_ns,
+            runtime_error(u"Var " +
+                          (self._c_var_ns + u"/" if self._c_var_ns else u"")
+                          + self._c_var_name +
+                          u" is undefined in " +
+                          self._c_in_ns,
                           u"pixie.stdlib/UndefinedVar")
 
     def gather_locals(self):
@@ -612,6 +664,24 @@ def merge_dicts(a, b):
     return z
 
 
+#  Eval support
+
+class EvalFn(code.NativeFn):
+
+    _type = Type(u"pixie.stdlib.EvalFn")
+
+    def type(self):
+        return EvalFn._type
 
 
+    @jit.unroll_safe
+    def invoke_k(self, args, stack):
+        affirm(len(args) == 1, u"Eval takes one argument")
+        ast = args[0]
+
+        result = ast.interpret(nil, None, stack)
+        print "EVAL RESULT ", result
+        return result
+
+as_var("pixie.ast.internal", "eval")(EvalFn())
 

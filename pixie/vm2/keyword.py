@@ -97,9 +97,9 @@ def keyword(nm, ns=None):
 #         self._hash = util.hash_unencoded_chars(self._str)
 #     return rt.wrap(intmask(self._hash))
 #
-# @as_var("keyword")
-# def _keyword(s):
-#     if not isinstance(s, String):
-#         from pixie.vm.object import runtime_error
-#         runtime_error(u"Symbol name must be a string")
-#     return keyword(s._str)
+@as_var("keyword")
+def _keyword(s):
+    if not isinstance(s, String):
+        from pixie.vm2.object import runtime_error
+        runtime_error(u"Symbol name must be a string")
+    return keyword(s._str)

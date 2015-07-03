@@ -2480,7 +2480,7 @@ and implements IAssociative, ILookup and IObject."
                         'ILookup
                         `(-val-at [self k not-found]
                                   (if (contains? ~(set fields) k)
-                                    (. self k)
+                                    (get-field self k)
                                     not-found))
                         'IObject
                         `(-str [self]

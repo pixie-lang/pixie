@@ -1,5 +1,6 @@
 from pixie.vm2.object import Object, Type, affirm, runtime_error
 import rpython.rlib.jit as jit
+from pixie.vm2.primitives import nil
 from rpython.rlib.rarithmetic import r_uint
 from pixie.vm2.code import as_var
 from pixie.vm2.numbers import Integer, Float
@@ -92,12 +93,11 @@ class CustomTypeInstance(Object):
         assert isinstance(tp, CustomType)
         return self._get_field_immutable(idx, tp._rev)
 
-    def get_field(self, name):
+    def get_field(self, name, not_found):
         idx = self._custom_type.get_slot_idx(name)
         assert isinstance(name, Keyword)
         if idx == -1:
-            runtime_error(u"Invalid field named " + rt.unwrap_keyword(name) + u" on type " + self._custom_type.custom_type_name(),
-                          u"pixie.stdlib/InvalidFieldException")
+            return not_found
 
         if self._custom_type.is_mutable(name):
             value = self.get_field_by_idx(idx)
@@ -235,11 +235,19 @@ def set_field(inst, field, val):
     return inst
 
 @as_var("get-field")
-def get_field(inst, field):
+def get_field__args(args):
+    if len(args) == 2:
+        inst, field = args
+        not_found = nil
+    elif len(args) == 3:
+        inst, field, not_found = args
+    else:
+        runtime_error(u"Get Field requires one or two args")
+        return nil
+
     affirm(isinstance(inst, CustomTypeInstance), u"Can only get fields on CustomType instances")
     affirm(isinstance(field, Keyword), u"Field must be a keyword")
-    return inst.get_field(field)
-
+    return inst.get_field(field, not_found)
 
 
 class AbstractMutableCell(Object):

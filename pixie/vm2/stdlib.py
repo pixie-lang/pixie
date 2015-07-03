@@ -322,3 +322,42 @@ def _var(ns, nm):
 
     var = ns.resolve_in_ns_ex(nm.get_ns(), nm.get_name())
     return var if var is not None else nil
+
+
+class PartialFunction(code.NativeFn):
+    _immutable_fields_ = ["_partial_f", "_partial_args"]
+    def __init__(self, f, args):
+        code.NativeFn.__init__(self)
+        self._partial_f = f
+        self._partial_args = args
+
+    @jit.unroll_safe
+    def invoke_k(self, args, stack):
+        new_args = [None] * (len(args) + len(self._partial_args))
+
+        for x in range(len(self._partial_args)):
+            new_args[x] = self._partial_args[x]
+
+        plen = len(self._partial_args)
+
+        for x in range(len(args)):
+            new_args[plen + x] = args[x]
+
+
+        return self._partial_f.invoke_k(new_args, stack)
+
+
+@as_var("partial")
+@jit.unroll_safe
+def _partial__args(args):
+    """(partial f & args)
+       Creates a function that is a partial application of f. Thus ((partial + 1) 2) == 3"""
+
+    f = args[0]
+
+    new_args = [None] * (len(args) - 1)
+
+    for x in range(len(new_args)):
+        new_args[x] = args[x + 1]
+
+    return PartialFunction(f, new_args)
