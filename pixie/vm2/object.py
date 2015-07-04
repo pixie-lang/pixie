@@ -33,13 +33,13 @@ class Object(object):
         return 0
 
     def hash(self):
-        import pixie.vm.rt as rt
+        import pixie.vm2.rt as rt
         return rt.wrap(compute_identity_hash(self))
 
     def promote(self):
         return self
 
-    def get_field(self, k):
+    def get_field(self, k, not_found):
         runtime_error(u"Unsupported operation get-field")
 
     def to_str(self):

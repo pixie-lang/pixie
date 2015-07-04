@@ -148,7 +148,7 @@ def _instance(c, o):
 
 @as_var("-internal-get-field")
 def _get_field(inst, k):
-    return inst.get_field(k)
+    return inst.get_field(k, nil)
 
 @as_var("identical?")
 def identical(a, b):

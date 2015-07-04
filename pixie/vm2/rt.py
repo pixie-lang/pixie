@@ -7,7 +7,7 @@ from rpython.rlib.objectmodel import specialize, we_are_translated
 def init():
     import pixie.vm2.code as code
     from pixie.vm2.object import affirm, _type_registry
-    from rpython.rlib.rarithmetic import r_uint
+    from rpython.rlib.rarithmetic import r_uint, base_int
     from rpython.rlib.rbigint import rbigint
     from pixie.vm2.primitives import nil, true, false
     from pixie.vm2.string import String
@@ -57,30 +57,39 @@ def init():
     import pixie.vm2.ffi
     import pixie.vm2.platform
 
+    class FakeSpace(object):
+        def wrap(self, x):
+            if isinstance(x, Object):
+                return x
+            elif isinstance(x, bool):
+                return true if x else false
+            elif isinstance(x, int):
+                return numbers.Integer(x)
+            elif isinstance(x, rbigint):
+                return numbers.BigInteger(x)
+            elif isinstance(x, float):
+                return numbers.Float(x)
+            elif isinstance(x, unicode):
+                return String(x)
+            elif isinstance(x, py_str):
+                return String(unicode(x))
+
+            elif isinstance(x, r_uint):
+                from pixie.vm2.numbers import SizeT
+                return SizeT(x)
+
+
+            elif x is None:
+                return nil
+            else:
+                from pixie.vm2.object import runtime_error
+                return runtime_error(u"Bad Wrap")
+        wrap._annspecialcase_ = 'specialize:argtype(1)'
+
+    space = FakeSpace()
     @specialize.argtype(0)
     def wrap(x):
-        if isinstance(x, bool):
-            return true if x else false
-        if isinstance(x, int):
-            return numbers.Integer(x)
-        if isinstance(x, rbigint):
-            return numbers.BigInteger(x)
-        if isinstance(x, float):
-            return numbers.Float(x)
-        if isinstance(x, unicode):
-            return String(x)
-        if isinstance(x, py_str):
-            return String(unicode(x))
-        if isinstance(x, Object):
-            return x
-        if isinstance(x, r_uint):
-            return numbers.SizeT(x)
-        if x is None:
-            return nil
-
-        if not we_are_translated():
-            print x, type(x)
-        affirm(False, u"Bad wrap")
+        return space.wrap(x)
 
     globals()["wrap"] = wrap
 

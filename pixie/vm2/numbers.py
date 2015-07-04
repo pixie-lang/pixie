@@ -412,50 +412,50 @@ def eq(a, b):
 
 
 def init():
-    import pixie.vm.stdlib as proto
-    from pixie.vm.string import String
+    import pixie.vm2.stdlib as proto
+    from pixie.vm2.string import String
 
-    @extend(proto._str, Integer._type)
-    def _str(i):
-        return rt.wrap(unicode(str(i.int_val())))
-
-    @extend(proto._repr, Integer._type)
-    def _repr(i):
-        return rt.wrap(unicode(str(i.int_val())))
-
-    @extend(proto._str, BigInteger._type)
-    def _str(b):
-        return rt.wrap(unicode(b.bigint_val().format('0123456789', suffix='N')))
-
-    @extend(proto._repr, BigInteger._type)
-    def _repr(b):
-        return rt.wrap(unicode(b.bigint_val().format('0123456789', suffix='N')))
-
-    @extend(proto._str, Float._type)
-    def _str(f):
-        return rt.wrap(unicode(str(f.float_val())))
-
-    @extend(proto._repr, Float._type)
-    def _repr(f):
-        return rt.wrap(unicode(str(f.float_val())))
-
-    @extend(proto._repr, Ratio._type)
-    def _repr(r):
-        return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
-
-    @extend(proto._str, Ratio._type)
-    def _str(r):
-        return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
-
-    @as_var("numerator")
-    def numerator(r):
-        affirm(isinstance(r, Ratio), u"First argument must be a Ratio")
-        return rt.wrap(r.numerator())
-
-    @as_var("denominator")
-    def denominator(r):
-        affirm(isinstance(r, Ratio), u"First argument must be a Ratio")
-        return rt.wrap(r.denominator())
+    # @extend(proto._str, Integer._type)
+    # def _str(i):
+    #     return rt.wrap(unicode(str(i.int_val())))
+    #
+    # @extend(proto._repr, Integer._type)
+    # def _repr(i):
+    #     return rt.wrap(unicode(str(i.int_val())))
+    #
+    # @extend(proto._str, BigInteger._type)
+    # def _str(b):
+    #     return rt.wrap(unicode(b.bigint_val().format('0123456789', suffix='N')))
+    #
+    # @extend(proto._repr, BigInteger._type)
+    # def _repr(b):
+    #     return rt.wrap(unicode(b.bigint_val().format('0123456789', suffix='N')))
+    #
+    # @extend(proto._str, Float._type)
+    # def _str(f):
+    #     return rt.wrap(unicode(str(f.float_val())))
+    #
+    # @extend(proto._repr, Float._type)
+    # def _repr(f):
+    #     return rt.wrap(unicode(str(f.float_val())))
+    #
+    # @extend(proto._repr, Ratio._type)
+    # def _repr(r):
+    #     return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
+    #
+    # @extend(proto._str, Ratio._type)
+    # def _str(r):
+    #     return rt.wrap(unicode(str(r.numerator()) + "/" + str(r.denominator())))
+    #
+    # @as_var("numerator")
+    # def numerator(r):
+    #     affirm(isinstance(r, Ratio), u"First argument must be a Ratio")
+    #     return rt.wrap(r.numerator())
+    #
+    # @as_var("denominator")
+    # def denominator(r):
+    #     affirm(isinstance(r, Ratio), u"First argument must be a Ratio")
+    #     return rt.wrap(r.denominator())
 
 from rpython.rlib.rsre import rsre_re as re
 # inspired by https://github.com/clojure/tools.reader/blob/9ee11ed/src/main/clojure/clojure/tools/reader/impl/commons.clj#L45

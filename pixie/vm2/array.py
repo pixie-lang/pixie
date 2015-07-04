@@ -44,10 +44,10 @@ class Array(object.Object):
             init = f.invoke([init, self._list[x]])
         return init
 
-    def get_field(self, k):
+    def get_field(self, k, not_found):
         if k is KW_count:
             return rt.wrap(len(self._list))
-        return nil
+        return not_found
 
     def array_val(self):
         return self._list

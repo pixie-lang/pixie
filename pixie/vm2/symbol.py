@@ -97,7 +97,7 @@ def symbol(s):
 @as_var("symbol")
 def _symbol(s):
     if not isinstance(s, String):
-        from pixie.vm.object import runtime_error
+        from pixie.vm2.object import runtime_error
         runtime_error(u"Symbol name must be a string")
     return symbol(s.get_name())
 #

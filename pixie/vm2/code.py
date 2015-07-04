@@ -448,7 +448,7 @@ class Var(BaseCode):
 
 
     def get_dynamic_value(self):
-        return _dynamic_vars.get_var_value(self, self._root)
+        return nil
 
 
 

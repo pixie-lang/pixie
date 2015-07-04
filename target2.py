@@ -9,6 +9,7 @@ from pixie.vm2.keyword import keyword as kw
 from pixie.vm2.symbol import symbol as sym
 from pixie.vm2.numbers import parse_number
 from pixie.vm2.pxic_reader import read_file, read_object, Reader
+from rpython.rlib.objectmodel import we_are_translated
 
 rt.init()
 import sys
@@ -20,8 +21,9 @@ def testit(max):
             obj = read_object(rdr)
         except EOFError:
             break
-        print ".",
-        sys.stdout.flush()
+        if not we_are_translated():
+            print ".",
+            sys.stdout.flush()
         run_stack(None, i.InterpretK(obj, None))
 
     return None
