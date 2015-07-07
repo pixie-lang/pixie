@@ -1,6 +1,6 @@
 import pixie.vm2.object as object
 from pixie.vm2.primitives import nil, true, false
-from pixie.vm2.code import extend, as_var
+from pixie.vm2.code import extend_var, as_var
 from pixie.vm2.string import String
 import pixie.vm2.rt as rt
 #import pixie.vm2.util as util
@@ -63,13 +63,14 @@ class Symbol(object.Object):
 def symbol(s):
     return Symbol(s)
 #
-# @extend(proto._eq, Symbol)
-# def _eq(self, other):
-#     assert isinstance(self, Symbol)
-#     if not isinstance(other, Symbol):
-#         return false
-#     return true if self._str == other._str else false
-#
+@extend_var("pixie.stdlib", "-eq", Symbol)
+def _eq(self, other):
+    assert isinstance(self, Symbol)
+    if not isinstance(other, Symbol):
+        return false
+    return true if self._str == other._str else false
+
+
 # @extend(proto._str, Symbol)
 # def _str(self):
 #     assert isinstance(self, Symbol)
@@ -100,15 +101,13 @@ def _symbol(s):
         from pixie.vm2.object import runtime_error
         runtime_error(u"Symbol name must be a string")
     return symbol(s.get_name())
-#
-#
-#
-# @extend(proto._meta, Symbol)
-# def _meta(self):
-#     assert isinstance(self, Symbol)
-#     return self.meta()
-#
-# @extend(proto._with_meta, Symbol)
-# def _with_meta(self, meta):
-#     assert isinstance(self, Symbol)
-#     return self.with_meta(meta)
+
+@extend_var("pixie.stdlib", "-meta", Symbol)
+def _meta(self):
+    assert isinstance(self, Symbol)
+    return self.meta()
+
+@extend_var("pixie.stdlib", "-with-meta", Symbol)
+def _with_meta(self, meta):
+    assert isinstance(self, Symbol)
+    return self.with_meta(meta)

@@ -26,20 +26,33 @@
   
   ast/If
   (-to-ast [{:keys [test then else] :as ast}]
-    (ast/->If (to-ast test)
-              (to-ast then)
-              (to-ast else)
-              (meta-ast ast)))
+    (iast/->If (to-ast test)
+               (to-ast then)
+               (to-ast else)
+               (meta-ast ast)))
 
   ast/Let
   (-to-ast [{:keys [bindings body] :as ast}]
-    (ast/->Let (apply array (map #(keyword (name (:name %)))
-                                 bindings))
-               (apply array (map #(to-ast :value %)
-                                 bindings))
-               (to-ast body)
-               (meta-ast ast)))
+    (iast/->Let (apply array (map #(keyword (name (:name %)))
+                                  bindings))
+                (apply array (map #(to-ast :value %)
+                                  bindings))
+                (to-ast body)
+                (meta-ast ast)))
 
+  ast/Do
+  (-to-ast [{:keys [statements ret] :as ast}]
+    (println "DO " statements ret)
+    (let [args-array (make-array (inc (count statements)))]
+      (dotimes [idx (count statements)]
+        (aset args-array idx
+              (to-ast (nth statements idx))))
+
+      (aset args-array (count statements)
+            (to-ast ret))
+      
+      (iast/->Do args-array
+                 (meta-ast ast))))
 
   ast/LetBinding
   (-to-ast

@@ -121,7 +121,7 @@ and implements IAssociative, ILookup and IObject."
                                   (throw [:pixie.stdlib/NotImplementedException
                                           "dissoc is not supported on defrecords"]))
                         'ILookup
-                        '(-val-at [self# k# not-found#]
+                        `(-val-at [self# k# not-found#]
                                   (get-field self# k# not-found#))
                         'IObject
                         `(-str [self# sb#]
@@ -136,3 +136,17 @@ and implements IAssociative, ILookup and IObject."
         deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
     `(do ~type-from-map
          ~deftype-decl)))
+
+(defmacro when [test & body]
+  `(if ~test (do ~@body)))
+
+(defmacro when-not [test & body]
+  `(if (not ~test) (do ~@body)))
+
+(defmacro when-let [binding & body]
+  (let [bind (nth binding 0 nil)
+        test (nth binding 1 nil)]
+    `(let [tmp# ~test]
+       (when tmp#
+         (let [~bind tmp#]
+           ~@body)))))

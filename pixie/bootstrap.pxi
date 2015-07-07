@@ -426,10 +426,20 @@
   (-seq x))
 
 (defn first [x]
-  (-first (seq x)))
+  (if (satisfies? ISeq x)
+    (-first x)
+    (let [x (seq x)]
+      (if (nil? x)
+        nil
+        (-first x)))))
 
 (defn next [x]
-  (-next (seq x)))
+  (if (satisfies? ISeq x)
+    (seq (-next x))
+    (let [x (seq x)]
+      (if (nil? x)
+        nil
+        (seq (-next x))))))
 
 (defn nthnext
   {:doc "Returns the result of calling next n times on the collection."
@@ -463,7 +473,7 @@
     (nth coll (dec (count coll)))
     (loop [coll coll]
       (if-let [v (next coll)]
-        v
+        (recur v)
         (first coll)))))
 
 (defn butlast [coll]
@@ -495,6 +505,10 @@
   (-meta [this] meta)
   (-with-meta [this new-meta]
     (->Cons head tail new-meta))
+
+  IReduce
+  (-reduce [this f init]
+    (seq-reduce this f init))
 
   IIndexed
   (-nth [self idx]
@@ -663,28 +677,21 @@
 (deftype Generator []
   IEffect
   (-effect-val [this val]
-    (println "DONE GENERATOR")
     nil)
   (-effect-finally [this val]
-    (println "FINALLY GENERATOR")
     val)
 
   EGenerator
   (-yield [this val k]
     (let [v (cons val (lazy-seq
-                       (println "calling k")
                        (k nil)))]
-      (println "return v")
       v)))
 
 (defn yield [g i]
-  (println "YIELDING " i)
   (-yield g i)
-  (println "DONE YIELDING " i)
   g)
 
 (defn sequence [coll]
-  (println "----- START --- ")
   (with-handler [gen (->Generator)]
     (reduce yield gen coll)))
 
@@ -1187,7 +1194,11 @@
         (if (< idx (count this))
           (recur (inc idx)
                  (f acc (aget this idx)))
-          acc)))))
+          acc))))
+
+  ISeqable
+  (-seq [this]
+    (sequence this)))
 
 (defn array-copy [from from-idx to to-idx size]
   (loop [idx 0]

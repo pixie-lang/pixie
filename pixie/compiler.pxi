@@ -217,10 +217,14 @@
 
 (defmethod analyze-seq 'in-ns
   [env [_ nsp]]
-  (reset! (:ns env) (symbol (name nsp)))
-  (in-ns nsp)
-  (in-ns :pixie.compiler)
-  (analyze-form env (list 'pixie.stdlib/-in-ns (keyword (name nsp)))))
+  (let [nsp (if (and (:bootstrap? env)
+                     (= (name nsp) "pixie.bootstrap-macros"))
+              (symbol "pixie.stdlib")
+              nsp)]
+    (reset! (:ns env) (symbol (name nsp)))
+    (in-ns nsp)
+    (in-ns :pixie.compiler)
+    (analyze-form env (list 'pixie.stdlib/-in-ns (keyword (name nsp))))))
 
 (defmethod analyze-seq 'local-macro
   [env [_ [nm replace] & body :as form]]

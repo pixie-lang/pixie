@@ -36,7 +36,7 @@
     (dispose! os)))
 
 (compile-files ["pixie/bootstrap.pxi"
-                #_"pixie/bootstrap-macros.pxi"
+                "pixie/bootstrap-macros.pxi"
                 "pixie/streams.pxi"
                 "pixie/io-blocking.pxi"
                 "pixie/reader.pxi"

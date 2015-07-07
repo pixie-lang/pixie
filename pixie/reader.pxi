@@ -55,7 +55,7 @@
         (set-field! this :prev-column-number column-number)
         (set-field! this :prev-line-number line-number)
         (set-field! this :prev-line prev-line)
-        (when (string? line)
+        (when (string? @line)
           (set-field! this :line (atom [])))
         (if (identical? ch \n)
           (do (swap! line (fn [x] (apply str x)))
@@ -320,7 +320,6 @@
          ch)
        (let [m (when (satisfies? IMetadataReader rdr)
                  (metadata rdr))
-             _ (println "METADATA " m)
              macro (handlers ch)
              itm (cond
                    macro (let [itm (macro rdr)]
@@ -336,7 +335,6 @@
                                           (do (unread-ch rdr)
                                               (read-symbol rdr ch))))
                    :else (read-symbol rdr ch))]
-         (println "HAS ET " (type itm) (has-meta? itm))
          (if (identical? itm rdr)
            itm
            (if (has-meta? itm)

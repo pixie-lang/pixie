@@ -385,6 +385,11 @@ def new_if(test, then, els, meta):
 
 class If(AST):
     _immutable_fields_ = ["_c_test", "_c_then", "_c_else"]
+    _type = Type(u"pixie.ast-internal.If")
+
+    def type(self):
+        return If._type
+
     def __init__(self, test, then, els, meta=nil):
         AST.__init__(self, meta)
         self._c_test = test
@@ -426,6 +431,11 @@ def new_do(args, meta):
 
 class Do(AST):
     _immutable_fields_ = ["_c_body_asts"]
+    _type = Type(u"pixie.ast-internal.Do")
+
+    def type(self):
+        return Do._type
+
     def __init__(self, args, meta=nil):
         AST.__init__(self, meta)
         self._c_body_asts = args
@@ -680,7 +690,6 @@ class EvalFn(code.NativeFn):
         ast = args[0]
 
         result = ast.interpret(nil, None, stack)
-        print "EVAL RESULT ", result
         return result
 
 as_var("pixie.ast.internal", "eval")(EvalFn())
