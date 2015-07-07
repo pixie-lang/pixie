@@ -222,11 +222,11 @@ def char(val):
 #     return rt.wrap(intmask(util.hash_unencoded_chars(self._str)))
 
 
-@as_var("pixie.string", "starts-with")
+@as_var("pixie.string", "starts-with?")
 def startswith(a, b):
     return rt.wrap(a.get_name().startswith(b.get_name()))
 
 
-@as_var("pixie.string", "ends-with")
+@as_var("pixie.string", "ends-with?")
 def endswith(a, b):
     return rt.wrap(a.get_name().endswith(b.get_name()))

@@ -154,9 +154,17 @@
 
   Vector
   (simplify-ast [{:keys [items form env]}]
+    (if (not (:bootstrap? env))
+      (println "Vector > " items
+               (seq items)
+               (count (seq items))
+               (first (seq items))
+               (first (next (seq items)))))
     (make-invoke-var-ast
      "pixie.stdlib"
-     (symbol "array")
+     (if (:bootstrap? env)
+       (symbol "array")
+       (symbol "vector"))
      items
      form
      env))

@@ -1,5 +1,5 @@
 import pixie.vm2.rt as rt
-from pixie.vm2.code import as_var, Var, list_copy, NativeFn
+from pixie.vm2.code import as_var, Var, list_copy, NativeFn, extend_var
 from pixie.vm2.numbers import SizeT
 from pixie.vm2.object import affirm, Type, runtime_error
 from pixie.vm2.primitives import nil, true, false
@@ -180,6 +180,12 @@ def _internal_store_hash(x, h):
     x.store_hash(h.r_uint_val())
     return nil
 
+@as_var("-internal-identity-hash")
+def _internal_identity_hash(x):
+    from rpython.rlib.objectmodel import compute_identity_hash
+    return rt.wrap(compute_identity_hash(x))
+
+
 @as_var("-internal-int")
 def _internal_int(x):
     return rt.wrap(x.int_val())
@@ -321,6 +327,7 @@ def _var(ns, nm):
         ns = code.ns_registry.find_or_make(ns.get_name())
 
     var = ns.resolve_in_ns_ex(nm.get_ns(), nm.get_name())
+    print "Resolved ", ns, nm.get_name(), var
     return var if var is not None else nil
 
 
@@ -361,3 +368,21 @@ def _partial__args(args):
         new_args[x] = args[x + 1]
 
     return PartialFunction(f, new_args)
+
+from pixie.vm2.code import BaseCode
+
+@as_var("set-macro!")
+def set_macro(f):
+    affirm(isinstance(f, BaseCode), u"Only code objects can be macros")
+    f.set_macro()
+    return f
+
+@as_var("macro?")
+def macro_QMARK_(f):
+    return true if isinstance(f, BaseCode) and f.is_macro() else false
+
+
+@extend_var("pixie.stdlib", "-deref", Var)
+def __deref(self):
+    assert isinstance(self, Var)
+    return self.deref()

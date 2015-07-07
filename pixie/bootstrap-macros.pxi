@@ -32,21 +32,6 @@
                               rest
                               fields)]
                     `(fn ~(symbol (str fn-name "_" nm)) ~args ~@body)))
-        bodies (reduce
-                (fn [res body]
-                  (cond
-                    (symbol? body) (cond
-                                     (= body 'Object) [body (second res) (third res)]
-                                     :else [body
-                                            (second res)
-                                            (conj (third res) body)])
-                    (seq? body) (let [proto (first res) tbs (second res) pbs (third res)]
-                                  (if (protocol? proto)
-                                    [proto tbs (conj pbs body)]
-                                    [proto (conj tbs body) pbs]))))
-                [nil [] []]
-                body)
-        proto-bodies (second bodies)
         all-fields fields
         type-nm (str #_@(:ns env) "." (name nm))
         type-decl `(def ~nm (create-type ~(keyword type-nm)
@@ -64,7 +49,7 @@
                                               ~(mk-body body))
                                :else (assert false "Unknown body element in deftype, expected symbol or seq"))))
                       conj
-                      proto-bodies)]
+                      body)]
     `(do ~type-decl
          ~ctor
          ~@proto-bodies)))

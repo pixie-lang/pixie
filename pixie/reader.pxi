@@ -10,6 +10,7 @@
   (metadata [this]))
 
 (deftype IndexedReader [s idx]
+  IPushbackReader
   (read-ch [this]
     (if (>= idx (count s))
       :eof
@@ -20,6 +21,7 @@
     (set-field! this :idx (dec idx))))
 
 (deftype UserSpaceReader [string-rdr reader-fn]
+  IPushbackReader
   (read-ch [this]
     (when-not string-rdr
       (let [result (reader-fn)]
@@ -41,6 +43,44 @@
   (->UserSpaceReader nil f))
 
 
+(deftype MetaDataReader [parent-reader line-number column-number line
+                         prev-line-number prev-column-number prev-line prev-chr
+                         filename has-unread cur-chr]
+  IPushbackReader
+  (read-ch [this]
+    (if has-unread
+      (do (set-field! this :has-unread false)
+          prev-chr)
+      (let [ch (read-ch parent-reader)]
+        (set-field! this :prev-column-number column-number)
+        (set-field! this :prev-line-number line-number)
+        (set-field! this :prev-line prev-line)
+        (when (string? line)
+          (set-field! this :line (atom [])))
+        (if (identical? ch \n)
+          (do (swap! line (fn [x] (apply str x)))
+              (set-field! this :line-number (inc line-number))
+              (set-field! this :column-number 0))
+          (do (swap! line conj ch)
+              (set-field! this :column-number (inc column-number))))
+        
+        (set-field! this :cur-chr ch)
+        ch)))
+
+  (unread-ch [this]
+    (assert (not has-unread) "Can't unread twice")
+    (set-field! this :has-unread true)
+    (set-field! this :prev-chr cur-chr))
+
+  IMetadataReader
+  (metadata [this]
+    {:line line
+     :line-number line-number
+     :column-number column-number
+     :file filename}))
+
+(defn metadata-reader [parent file]
+  (->MetaDataReader parent 1 0 (atom []) 1 0 nil \0 file false \0))
 
 
 (def whitespace? (contains-table \return \newline \, \space \tab))
@@ -280,6 +320,7 @@
          ch)
        (let [m (when (satisfies? IMetadataReader rdr)
                  (metadata rdr))
+             _ (println "METADATA " m)
              macro (handlers ch)
              itm (cond
                    macro (let [itm (macro rdr)]
@@ -295,6 +336,7 @@
                                           (do (unread-ch rdr)
                                               (read-symbol rdr ch))))
                    :else (read-symbol rdr ch))]
+         (println "HAS ET " (type itm) (has-meta? itm))
          (if (identical? itm rdr)
            itm
            (if (has-meta? itm)

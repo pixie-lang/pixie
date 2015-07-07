@@ -132,7 +132,8 @@
 (-run-external-extends)
 
 (extend -get-field Object -internal-get-field)
-
+(extend -hash Object -internal-identity-hash)
+(extend -meta Object (fn [x] nil))
 
 (extend-type Object
   (-str [x sb]
@@ -288,7 +289,7 @@
   {:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
    :signatures [[] [coll] [coll item] [coll item & args]]
    :added "0.1"}
-  ([] (-transient []))
+  ([] (-transient pixie.stdlib.persistent-vector/EMPTY))
   ([coll] (-persistent! coll))
   ([coll item] (-conj! coll item))
   ([coll item & args]
@@ -395,7 +396,15 @@
   (-with-meta x m))
 
 (defn count
-  ([coll] (-count coll)))
+  ([coll]
+   (if (counted? coll)
+     (-count coll)
+     (loop [s (seq coll)
+            i 0]
+       (if (counted? s)
+         (+ i (count s))
+         (recur (next s)
+                (inc i)))))))
 
 (defn assoc
   {:doc "Associates the key with the value in the collection"
@@ -476,19 +485,42 @@
 
 ;; Cons and List
 
-(deftype Cons [first next meta]
+(deftype Cons [head tail meta]
   ISeq
-  (-first [this] first)
-  (-next [this] next)
+  (-first [this] head)
+  (-next [this] tail)
   ISeqable
   (-seq [this] this)
   IMeta
   (-meta [this] meta)
   (-with-meta [this new-meta]
-    (->Cons first next new-meta)))
+    (->Cons head tail new-meta))
+
+  IIndexed
+  (-nth [self idx]
+    (loop [i idx
+           s (seq self)]
+      (if (or (= i 0)
+              (nil? s))
+        (if (nil? s)
+          (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"])
+          (first s))
+        (recur (dec i)
+               (next s)))))
+  
+  (-nth-not-found [self idx not-found]
+    (loop [i idx
+           s (seq self)]
+      (if (or (= i 0)
+              (nil? s))
+        (if (nil? s)
+          (first s)
+          not-found)
+        (recur (dec i)
+               (next s))))))
 
 (defn cons [head tail]
-  (->Cons head (seq tail) nil))
+  (->Cons head tail nil))
 
 
 (deftype List [head tail cnt hash-val meta]
@@ -515,7 +547,7 @@
        this))
     (sb ")"))
 
-  
+
   IIndexed
 
   (-nth [self idx]
@@ -527,7 +559,7 @@
           (first s)
           (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"]))
         (recur (dec i)
-               (next s))))1)
+               (next s)))))
   
   (-nth-not-found [self idx not-found]
     (loop [i idx
@@ -535,10 +567,11 @@
       (if (or (= i 0)
               (nil? s))
         (if (nil? s)
-          (first s)
-          not-found)
-        (recur (dec i)0
+          not-found
+          (first s))
+        (recur (dec i)
                (next s)))))
+
   
   IReduce
   (-reduce [this f init]
@@ -558,7 +591,7 @@
   IMeta
   (-meta [this] meta)
   (-with-meta [this new-meta]
-    (->List head tail cnt hash-val meta))
+    (->List head tail cnt hash-val new-meta))
 
   IPersistentCollection
   (-conj [this val]
@@ -630,21 +663,28 @@
 (deftype Generator []
   IEffect
   (-effect-val [this val]
+    (println "DONE GENERATOR")
     nil)
   (-effect-finally [this val]
+    (println "FINALLY GENERATOR")
     val)
 
   EGenerator
   (-yield [this val k]
-    (cons val (lazy-seq
-               (with-handler [_ this]
-                 (k nil))))))
+    (let [v (cons val (lazy-seq
+                       (println "calling k")
+                       (k nil)))]
+      (println "return v")
+      v)))
 
 (defn yield [g i]
+  (println "YIELDING " i)
   (-yield g i)
+  (println "DONE YIELDING " i)
   g)
 
 (defn sequence [coll]
+  (println "----- START --- ")
   (with-handler [gen (->Generator)]
     (reduce yield gen coll)))
 
@@ -847,6 +887,15 @@
    (if (satisfies? IToTransient to)
      (transduce xform conj! (transient to) from)
      (transduce xform conj to from))))
+
+(defn vec
+  {:doc "Converts a reducable collection into a vector using the (optional) transducer."
+   :signatures [[coll] [xform coll]]
+   :added "0.1"}
+  ([coll]
+     (transduce conj coll))
+  ([xform coll]
+     (transduce xform conj coll)))
 
 (defn map
   ^{:doc "map - creates a transducer that applies f to every input element"
@@ -1242,7 +1291,7 @@
 
 
 
-(defn tailoff [this]
+(defn tail-off [this]
   (let [cnt (.-cnt this)]
     (if (< cnt 32)
       0
@@ -1250,7 +1299,7 @@
 
 (defn array-for [this i]
   (if (and (<= 0 i) (< i (.-cnt this)))
-    (if (>= i (tailoff this))
+    (if (>= i (tail-off this))
       (.-tail this)
       (loop [node (.-root this)
              level (.-shift this)]
@@ -1286,6 +1335,8 @@
        this))
     (sb "]"))
 
+  IVector
+
   ISeqable
   (-seq [this]
     (sequence this))
@@ -1299,7 +1350,7 @@
   (-conj [this val]
     (assert (< cnt 0xFFFFFFFF) "Vector too large")
 
-    (if (< (- cnt (tailoff this)) 32)
+    (if (< (- cnt (tail-off this)) 32)
       (let [new-tail (array-append tail val)]
         (->PersistentVector (inc cnt) shift root new-tail hash-val meta))
       
@@ -1355,7 +1406,7 @@
 
     (if (= cnt 1)
       EMPTY
-      (if (> (- cnt (tailoff this)) 1)
+      (if (> (- cnt (tail-off this)) 1)
         (let [size (dec (count tail))
               new-tail (array-resize tail size)]
           (->PersistentVector (dec cnt)
@@ -1514,7 +1565,7 @@
   (-conj! [this val]
     (ensure-editable this)
     (let [i cnt]
-      (if (< (- i (tail-off this) 32))
+      (if (< (- i (tail-off this)) 32)
         (do (aset tail (bit-and i 0x01F) val)
             (set-field! this :cnt (inc cnt))
             this)
@@ -1546,7 +1597,7 @@
   (->Node edited (array-clone (.-array node))))
 
 (defn ensure-editable [node]
-  (assert (not (nil? (.-edit node)))
+  (assert (nil? (.-edit node))
           "Transient used after call to persist!"))
 
 (defn ensure-node-editable [this node]
@@ -1557,7 +1608,7 @@
 
 (defn editable-tail [tail]
   (let [ret (make-array 32)]
-    (acopy tail 0 ret 0 (count tail))
+    (array-copy tail 0 ret 0 (count tail))
     ret))
 
 (in-ns :pixie.stdlib)
@@ -1779,8 +1830,6 @@
   IMeta
   (-meta [this]
     meta)
-
-  IWithMeta
   (-with-meta [this new-meta]
     (->PersistentHashMap cnt root has-nil? nil-val hash-val new-meta))
 
@@ -2049,6 +2098,11 @@
     1000000)
   (-eq [this other]
     (identical? this other))
+
+  ILookup
+  (-val-at
+    ([this k] nil)
+    ([this k not-found] nil))
   
   IDeref
   (-deref [this]

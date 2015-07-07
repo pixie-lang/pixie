@@ -17,7 +17,8 @@
                            (keyword? x) :keyword
                            (map? x) :map
                            (set? x) :set
-                           :else (type x))))
+                           :else (do (println "Cant' Analyze " x)
+                                     (assert false "Can't analyze")))))
 
 (defmulti analyze-seq (fn [_ x]
                          (let [f (first x)]

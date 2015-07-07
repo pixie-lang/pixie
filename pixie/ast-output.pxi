@@ -6,10 +6,21 @@
   (-to-ast [this]))
 
 (defn meta-ast [ast]
-  nil)
+  (let [{:keys [line file line-number column-number] :as m} (or (meta (:form ast))
+                                                                (:meta (:env ast)))
+        line (if (string? line)
+               line
+               (apply str @line))]
+     
+    (iast/->Meta (or line
+                     "<unknown>")
+                 (or file
+                     "<unknown>")
+                 (or line-number -1)
+                 (or column-number 1))))
 
 (defn to-ast [this]
-  (-to-ast this))
+  (-to-ast (simplify this)))
 
 (extend-protocol ToNativeAST
   
@@ -43,6 +54,7 @@
 
   ast/Invoke
   (-to-ast [{:keys [args] :as ast}]
+    (println "INVOKE > " (count args) args)
     (let [args-array (make-array (count args))]
       (dotimes [idx (count args)]
         (aset args-array idx
@@ -60,7 +72,7 @@
   
   Object
   (-to-ast [this]
-    (println this)
+    (println "Encoding" this "of type" (type this))
     (throw [:pixie.stdlib/IllegalArgumentException
             (str "Can't encode " this)])))
 
@@ -68,6 +80,6 @@
   (let [simplified (ast/simplify-ast ast)]
     (if (identical? simplified ast)
       ast
-      (recur simplified))))
+      (simplify simplified))))
 
 
