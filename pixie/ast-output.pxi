@@ -39,7 +39,6 @@
                                   bindings))
                 (to-ast body)
                 (meta-ast ast)))
-
   ast/Do
   (-to-ast [{:keys [statements ret] :as ast}]
     (println "DO " statements ret)
@@ -81,6 +80,15 @@
     (iast/->VDeref (name ns)
                    var-name
                    (meta-ast ast)))
+
+  ast/FnBody
+  (-to-ast [{:keys [name args body] :as ast}]
+    (iast/->Fn (keyword (pixie.stdlib/name name))
+               (to-array (map (fn [x]
+                                (keyword (pixie.stdlib/name x)))
+                              args))
+               (to-ast body)
+               (meta-ast ast)))
 
   
   Object

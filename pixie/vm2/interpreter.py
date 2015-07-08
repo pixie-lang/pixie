@@ -140,12 +140,17 @@ class Lookup(AST):
     def gather_locals(self):
         return {self._c_name: self._c_name}
 
-as_var("pixie.ast.internal", "->Fn")
+@as_var("pixie.ast.internal", "->Fn")
 def new_fn(name, args, body, meta):
     return Fn(name, args.array_val(), body, meta)
 
 class Fn(AST):
     _immutable_fields_ = ["_c_name", "_c_args", "_c_body", "_c_closed_overs"]
+    
+    _type = Type(u"pixie.ast.internal.Fn")
+    def type(self):
+        return Fn._type
+
     def __init__(self, name, args, body, closed_overs=[], meta=nil):
         AST.__init__(self, meta)
         self._c_name = name

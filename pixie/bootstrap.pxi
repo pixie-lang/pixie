@@ -436,11 +436,59 @@
   ([m k v & rest]
      (apply assoc (-assoc m k v) rest)))
 
+(defn assoc-in
+  {:doc "Associate a value in a nested collection given by the path.
+
+Creates new maps if the keys are not present."
+   :examples [["(assoc-in {} [:a :b :c] 42)" nil {:a {:b {:c 42}}}]]
+   :added "0.1"}
+  ([m ks v]
+     (let [ks (seq ks)
+           k  (first ks)
+           ks (next ks)]
+       (if ks
+         (assoc m k (assoc-in (get m k) ks v))
+         (assoc m k v)))))
+
+(defn update-in
+  {:doc "Update a value in a nested collection."
+   :examples [["(update-in {:a {:b {:c 41}}} [:a :b :c] inc)" nil {:a {:b {:c 42}}}]]
+   :added "0.1"}
+  [m ks f & args]
+  (let [f (fn [m] (apply f m args))
+        update-inner-f (fn update-inner-f
+                         ([m f k]
+                            (assoc m k (f (get m k))))
+                         ([m f k & ks]
+                            (assoc m k (apply update-inner-f (get m k) f ks))))]
+    (apply update-inner-f m f ks)))
+
 (defn key [m]
   (-key m))
 
 (defn val [m]
   (-val m))
+
+(defn keys
+  {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
+   a collection, will assume that it is a hashmap and return a vector of all keys from the collection."
+   :signatures [[] [coll]]
+   :added "0.1"}
+  ([] (map key))
+  ([m]
+   (with-handler [g (->Generator)]
+     (transduce (map key) yield g m))))
+
+(defn vals
+  {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
+   a collection, will assume that it is a hashmap and return a vector of all keys from the collection."
+   :signatures [[] [coll]]
+   :added "0.1"}
+  ([] (map val))
+  ([m]
+   (with-handler [g (->Generator)]
+     (transduce (map val) yield g m))))
+
 
 (defn seq [x]
   (-seq x))
@@ -512,6 +560,20 @@
       (seq-reduce (next s)
                   f
                   (f acc (first s))))))
+
+;; Some logic functions
+(defn complement
+  {:doc "Given a function, return a new function which takes the same arguments
+         but returns the opposite truth value"}
+  [f]
+  (assert (fn? f) "Complement must be passed a function")
+  (fn
+    ([] (not (f)))
+    ([x] (not (f x)))
+    ([x y] (not (f x y)))
+    ([x y & more] (not (apply f x y more)))))
+
+;;
 
 ;; Cons and List
 
@@ -721,9 +783,11 @@
                        (k nil)))]
       v)))
 
-(defn yield [g i]
-  (-yield g i)
-  g)
+(defn yield
+  ([g] nil)
+  ([g i]
+   (-yield g i)
+   g))
 
 (defn sequence [coll]
   (with-handler [gen (->Generator)]
@@ -949,13 +1013,8 @@
        ([result] (xf result))
        ([result item] (xf result (f item))))))
   ([f coll]
-   (lazy-seq*
-    (fn []
-      (let [s (seq coll)]
-        (if s
-          (cons (f (first s))
-                (map f (next s)))
-          nil)))))
+   (with-handler [g (->Generator)]
+     (transduce (map f) yield g coll)))
   ([f & colls]
    (let [step (fn step [cs]
                 (lazy-seq*
@@ -970,6 +1029,22 @@
   ([f col]
    (transduce (map f) conj col)))
 
+
+(defn filter
+  {:doc "Filter the collection for elements matching the predicate."
+   :signatures [[pred] [pred coll]]
+   :added "0.1"}
+  ([pred]
+   (fn [xf]
+     (fn
+       ([] (xf))
+       ([acc] (xf acc))
+       ([acc i] (if (pred i)
+                  (xf acc i)
+                  acc)))))
+  ([pred coll]
+   (with-handler [g (->Generator)]
+     (transduce (filter pred) yield g coll))))
 
 (defn interpose
   ^{:doc "Returns a transducer that inserts `val` in between elements of a collection."
@@ -1020,6 +1095,18 @@
    (comp (map f) cat))
   ([f coll]
    (transduce (mapcat f) conj coll)))
+
+(defn every?
+  {:doc "Check if every element of the collection satisfies the predicate."
+   :added "0.1"}
+  [pred coll]
+  (reduce
+   (fn [_ i]
+     (if (pred i)
+       true
+       (reduced false)))
+   true
+   coll))
 
 
 ;; End Basic Transudcer Support
@@ -1255,6 +1342,16 @@
   (let [new-array (make-array size)]
     (array-copy arr 0 new-array 0 size)
     new-array))
+
+(defn to-array [coll]
+  (let [arr (make-array (count coll))]
+    (reduce
+     (fn [idx i]
+       (aset arr idx i)
+       (inc idx))
+     0
+     coll)
+    arr))
 
 ;;;
 
