@@ -72,6 +72,7 @@
           (assert (>= 1 (count (:require bmap)))
                   "Only one :require block can be defined per namespace")
           (mapv (fn [r] `(require ~(keyword (name nm)) ~@r)) (first (:require bmap))))]
+    
     `(do (in-ns ~(keyword (name nm)))
          ~@requires)))
 
@@ -150,3 +151,5 @@ and implements IAssociative, ILookup and IObject."
        (when tmp#
          (let [~bind tmp#]
            ~@body)))))
+
+

@@ -184,6 +184,12 @@
   ([x y & args]
       (reduce -div (-div x y) args)))
 
+(defn quot [num div]
+  (-quot num div))
+
+(defn rem [num div]
+  (-rem num div))
+
 (defn inc
   ([x] (+ x 1)))
 
@@ -249,6 +255,20 @@
    :added "0.1"}
   [x]
   (= x 0))
+
+(defn even?
+  {:doc "Returns true if n is even"
+   :signatures [[n]]
+   :added "0.1"}
+  [n]
+  (zero? (rem n 2)))
+
+(defn odd?
+  {:doc "Returns true of n is odd"
+   :signatures [[n]]
+   :added "0.1"}
+  [n]
+  (= (rem n 2) 1))
 
 
 ;; Base functions
@@ -496,6 +516,20 @@
 ;; Cons and List
 
 (deftype Cons [head tail meta]
+  IObject
+  (-str [this sb]
+    (sb "(")
+    (let [not-first (atom false)]
+      (reduce
+       (fn [_ x]
+         (if @not-first
+           (sb " ")
+           (reset! not-first true))
+         (-str x sb))
+       nil
+       this))
+    (sb ")"))
+  
   ISeq
   (-first [this] head)
   (-next [this] tail)
@@ -1237,7 +1271,9 @@
 
   IAtom
   (-swap! [this f args]
-    (-reset! this (apply f @this args)))
+    (let [new-val (apply f @this args)]
+      (-reset! this new-val)
+      new-val))
   (-reset! [this val]
     (set-field! this :value val)))
 
@@ -2350,3 +2386,48 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 
 ;;
+
+
+(def gensym-state (atom 0))
+(defn gensym
+  ([] (gensym "auto_"))
+  ([prefix] (symbol (str prefix (swap! gensym-state inc)))))
+
+
+;; Macros 
+
+(defmacro fn
+  {:doc "Creates a function.
+
+The following two forms are allowed:
+  (fn name? [param*] & body)
+  (fn name? ([param*] & body)+)
+
+The params can be destructuring bindings, see `(doc let)` for details."}
+  [& decls]
+  (println "FN" (seq decls))
+  (let [name (if (symbol? (first decls)) [(first decls)] nil)
+        decls (if name (next decls) decls)
+        decls (cond
+               (vector? (first decls)) (list decls)
+               ;(satisfies? ISeqable (first decls)) decls
+               ;:else (throw (str "expected a vector or a seq, got a " (type decls)))
+               :else decls)
+        _ (println ">>>"  name decls)
+        decls (seq (map (fn [[argv & body]]
+                          (let [names (vec (map #(if (= % '&) '& (gensym "arg__")) argv))
+                                bindings (loop [i 0 bindings []]
+                                           (if (< i (count argv))
+                                             (if (= (nth argv i) '&)
+                                               (recur (inc i) bindings)
+                                               (recur (inc i) (reduce conj bindings [(nth argv i) (nth names i)])))
+                                             bindings))]
+                            (if (every? symbol? argv)
+                              `(~argv ~@body)
+                              `(~names
+                                (let ~bindings
+                                  ~@body)))))
+                        decls))]
+    (if (= (count decls) 1)
+      `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
+      `(fn* ~@name ~@decls))))

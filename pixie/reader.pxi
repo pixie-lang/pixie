@@ -231,9 +231,9 @@
         sb-fn (fn [x]
                 (-add-to-string-builder sb x))]
     (loop []
-      (let [v (read-ch rdr)]
+      (let [ch (read-ch rdr)]
         (cond
-          (eof? v) (throw [:pixie.reader/ParseError
+          (eof? ch) (throw [:pixie.reader/ParseError
                            "Unmatched string quote"])
           (identical? \" ch) (str sb)
 
@@ -247,7 +247,7 @@
                                      (recur))
                                  (throw [:pixie.reader/ParseError
                                          (str "Unhandled escape character " v)])))
-          :else (do (sb-fn v)
+          :else (do (sb-fn ch)
                     (recur)))))))
 
 (def handlers
@@ -262,7 +262,8 @@
    \@ deref-reader
    \; skip-line-reader
    \^ meta-reader
-   \~ unquote-reader))
+   \~ unquote-reader
+   \" literal-string-reader))
 
 (defn read-number [rdr ch]
   (let [sb (string-builder)

@@ -203,10 +203,12 @@ def _string_builder():
 
 @as_var("-add-to-string-builder")
 def _add_to_string_builder(sb, x):
-    from pixie.vm2.string import String
+    from pixie.vm2.string import String, Character
     if isinstance(x, String):
         sb.add_str(x._str)
         return sb
+    elif isinstance(x, Character):
+        sb.add_str(unichr(x._char_val))
     else:
         runtime_error(u"Expected string or char", u"pixie.stdlib.IllegalArgumentException")
 
