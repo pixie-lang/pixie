@@ -70,6 +70,6 @@
 
 (t/deftest test-promotion
   (t/assert= BigInteger (type (reduce * 1 (range 1 100))))
-  (t/assert (-num-eq 1000000000000000000000N (* 10000000 
-                                                10000000 
+  (t/assert (-num-eq 1000000000000000000000N (* 10000000
+                                                10000000
                                                 10000000))))

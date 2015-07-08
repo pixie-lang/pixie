@@ -1,4 +1,4 @@
-from pixie.vm.object import affirm 
+from pixie.vm.object import affirm
 from pixie.vm.primitives import nil, true, Bool
 from pixie.vm.persistent_vector import EMPTY, PersistentVector
 from pixie.vm.persistent_hash_set import PersistentHashSet

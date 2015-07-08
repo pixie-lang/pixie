@@ -100,6 +100,16 @@ def write_int_raw(i, wtr):
 def write_string_raw(si, wtr):
     wtr.write_raw_cached_string(si)
 
+def write_bigint_raw(i, wtr):
+    bits = i.bit_length()
+    nchars = r_uint(bits / 8)
+    if (bits) % 8 != 0:
+        nchars += 1
+    assert nchars <= MAX_INT32
+    write_int_raw(nchars, wtr) # nchars used to represent the bigint
+    for j in range(nchars):
+        wtr.write(chr((i.rshift(j * 8).int_and_(0xFF).toint())))
+
 def write_int(i, wtr):
     if 0 <= i <= MAX_INT32:
         wtr.write(chr(INT))
@@ -109,9 +119,12 @@ def write_int(i, wtr):
         write_string_raw(unicode(str(i)), wtr)
 
 def write_bigint(i, wtr):
-    # TODO implement a non string BIGINT writer
-    wtr.write(chr(BIGINT_STRING))
-    write_string_raw(unicode(i.str()), wtr)
+    if i.int_ge(0):
+        wtr.write(chr(BIGINT))
+        write_bigint_raw(i, wtr)
+    else:
+        wtr.write(chr(BIGINT_STRING))
+        write_string_raw(unicode(i.str()), wtr)
 
 def write_float(f, wtr):
     write_tag(FLOAT, wtr)
@@ -251,7 +264,7 @@ def write_object(obj, wtr):
         write_string(rt.name(obj), wtr)
     elif isinstance(obj, Integer):
         write_int(obj.int_val(), wtr)
-    elif isinstance(obj, BigInteger):
+    elif isinstance(obj, BigInteger): #TODO test
         write_bigint(obj.bigint_val(), wtr)
     elif isinstance(obj, Float):
         write_float(obj.float_val(), wtr)
