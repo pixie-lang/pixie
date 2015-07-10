@@ -55,6 +55,15 @@ def read_tag(rdr):
 def read_raw_integer(rdr):
     return r_uint(ord(rdr.read()[0]) | (ord(rdr.read()[0]) << 8) | (ord(rdr.read()[0]) << 16) | (ord(rdr.read()[0]) << 24))
 
+def read_raw_bigint(rdr):
+    nchars = read_raw_integer(rdr)
+    n = rbigint.fromint(0)
+    for i in range(nchars):
+        a = rbigint.fromint(ord(rdr.read()[0]))
+        a = a.lshift(8*i)
+        n = n.add(a)
+    return n
+
 def read_raw_string(rdr):
     s = rdr.read_cached_string()
     return s
@@ -138,6 +147,8 @@ def read_obj(rdr):
 
     if tag == INT:
         return Integer(intmask(read_raw_integer(rdr)))
+    elif tag == BIGINT:
+        return BigInteger(read_raw_bigint(rdr))
     elif tag == CODE:
         return read_code(rdr)
     elif tag == NIL:
