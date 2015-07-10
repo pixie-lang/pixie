@@ -79,7 +79,7 @@
             _ (pixie.ffi/set! uvbuf :len (- (count buffer) buffer-offset))
             write-count (fs_write fp uvbuf 1 offset)]
         (when (neg? write-count)
-          (throw [::FileOutputStreamException (uv/uv_err_name read-count)]))
+          (throw [::FileOutputStreamException (uv/uv_err_name write-count)]))
         (set-field! this :offset (+ offset write-count))
         (if (< (+ buffer-offset write-count) (count buffer))
           (recur (+ buffer-offset write-count))
