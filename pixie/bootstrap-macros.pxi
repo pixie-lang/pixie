@@ -152,4 +152,19 @@ and implements IAssociative, ILookup and IObject."
          (let [~bind tmp#]
            ~@body)))))
 
+(defmacro set! [v val]
+  `(-dynamic-var-set dynamic-var-handler (var ~v) ~val))
+
+(defmacro binding [bindings & body]
+  (let [parted (partition 2 bindings)]
+    `(let [vars# (-dynamic-get-vars dynamic-var-handler)]
+       (with-handler [_# dynamic-var-handler]
+         (-dynamic-set-vars dynamic-var-handler
+                            (assoc vars#
+                                   ~@(mapcat
+                                      (fn [[var-name binding]]
+                                        [`(var ~var-name)
+                                         binding])
+                                      parted)))
+         ~@body))))
 

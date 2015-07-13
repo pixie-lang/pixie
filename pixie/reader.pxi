@@ -1,6 +1,9 @@
 (ns pixie.reader
   (:require [pixie.string :as string]))
 
+(def *current-ns* nil)
+(set-dynamic! (var *current-ns*))
+
 
 (defprotocol IPushbackReader
   (read-ch [this])
@@ -127,12 +130,12 @@
             (str "Unmatched delimiter " unhandled-ch)])))
 
 
-(def *gen-sym-env* (dynamic-var))
+(def *gen-sym-env* nil)
+(set-dynamic! (var *gen-sym-env*))
 
 (defn syntax-quote-reader [rdr]
   (let [form (read-inner rdr true)]
-    (with-handler [*gen-sym-env* *gen-sym-env*]
-      (reset! *gen-sym-env* {})
+    (binding [*gen-sym-env* {}]
       (syntax-quote form))))
 
 (defn unquote? [form]
@@ -151,15 +154,21 @@
     (list 'quote form)
 
     (symbol? form)
-    (if (not (namespace form)
-             (string/ends-with (name form) "#"))
-      (let [gmap @*gen-sym-env*
+    (cond
+      (namespace form)
+      (list 'quote form)
+
+      (string/ends-with? (name form) "#")
+      (let [gmap *gen-sym-env*
             _ (assert gmap "Gensym literal used outside of a syntax quote")
             gs (or (get gmap form)
-                   (let [s (symbol (gensym (str (name form) "__")))]
-                     (reset! *gen-sym-env* (assoc gmap form s))))]
+                   (let [s (gensym (str (name form) "__"))]
+                     (set! *gen-sym-env* (assoc gmap form s))
+                     s))]
         (list 'quote gs))
-      (list '-resolve-in form))
+
+      :else
+      (list 'quote (symbol (str (name *current-ns*) "/" (name form)))))
 
     (unquote? form)
     (first (next form))
@@ -171,7 +180,7 @@
     (list 'pixie.stdlib/apply 'pixie.apply/concat (expand-list form))
 
     (and form (seq? form))
-    (list 'pixie.stdlib/apply 'pixie.apply/list (expand-list form))
+    (list 'pixie.stdlib/apply 'pixie.stdlib/list (expand-list form))
 
     :else (list 'quote form)))
 
@@ -185,7 +194,7 @@
        (unquote-splicing? form)
        (conj acc (nth form 1))
 
-       :else (conj acc [(syntax-quote form)])))
+       :else (conj acc (syntax-quote itm))))
    []
    form))
 

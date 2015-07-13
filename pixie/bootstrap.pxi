@@ -1353,6 +1353,21 @@ Creates new maps if the keys are not present."
      coll)
     arr))
 
+;;; Extend Var
+
+(extend-type Var
+  IObject
+  (-str [this sb]
+    (if (namespace this)
+      (do (sb "<Var ")
+          (-str (namespace this) sb)
+          (sb "/")
+          (-str (name this) sb)
+          (sb ">"))
+      (do (sb "<Var ")
+          (-str (name this) sb)
+          (sb ">")))))
+
 ;;;
 
 ;; Atom
@@ -2091,9 +2106,9 @@ Creates new maps if the keys are not present."
   IObject
   (-hash [this]
     (when-not hash-val
-      (set! this :hash-val (reduce
-                            unordered-hashing-rf
-                            this)))
+      (set-field! this :hash-val (reduce
+                                  unordered-hashing-rf
+                                  this)))
     hash-val)
 
   (-str [this sb]
@@ -2349,9 +2364,11 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 ;; Dynamic Vars
 
-(defeffect EDynamicVar
-  (-dynamic-var-lookup [this])
-  (-dynamic-var-set [this val]))
+(defeffect EDynamicVarEnv
+  (-dynamic-var-get [this var])
+  (-dynamic-var-set [this var val])
+  (-dynamic-get-vars [this])
+  (-dynamic-set-vars [this s']))
 
 (deftype DynamicVar [x]
   IEffect
@@ -2363,33 +2380,36 @@ user => (refer 'pixie.string :exclude '(substring))"
     (println "Effect Return " f)
     (f x))
 
-  EDynamicVar
-  (-dynamic-var-lookup [this k]
+  EDynamicVarEnv
+  (-dynamic-var-get [this var k]
     (println "lookup")
     (fn lookup-fn [s]
       (println "lookup -> " s k)
+      ((k (get s var)) s)))
+
+  (-dynamic-var-set [this var val k]
+    (println "call set " var val)
+    (fn [s]
+      (println "Setting to |  " var val)
+      ((k nil) (assoc s var val))))
+  
+  (-dynamic-get-vars [this k]
+    (println "get vars" this k)
+    (fn [s]
+      (println "getting vars " s)
       ((k s) s)))
 
-  (-dynamic-var-set [this s' k]
-    (println "call set " s' k)
-    (fn [s]
-      (println "Setting to |  " s' s)
-      ((k nil) s')))
+  (-dynamic-set-vars [this s' k]
+    (println "set vars" this s')
+    (fn set-vars [s]
+      ((k nil) s'))))
 
 
-  IDeref
-  (-deref [this]
-    (-dynamic-var-lookup this))
+(def dynamic-var-handler (->DynamicVar {}))
 
-  IReset
-  (-reset! [this v]
-    (-dynamic-var-set this v)))
 
-(defn dynamic-var
-  ([]
-   (dynamic-var nil))
-  ([v]
-   (->DynamicVar v)))
+
+
 
 
 ;;
@@ -2528,3 +2548,48 @@ The params can be destructuring bindings, see `(doc let)` for details."}
     (if (= (count decls) 1)
       `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
       `(fn* ~@name ~@decls))))
+
+
+;; State
+
+(defeffect EState
+  (-state-lookup [this k])
+  (-state-update [this key f args]))
+
+(deftype State [x]
+  IEffect
+  (-effect-val [this y]
+    (fn val-fn [s] y))
+  
+  (-effect-finally [this f]
+    (f x))
+
+  EState
+  (-state-lookup [this key k]
+    (fn lookup-fn [s]
+      ((k (get s key)) s)))
+
+  (-state-update [this key f args k]
+    (fn [s]
+      (let [new-state (assoc s key (apply f (get s key) args))]
+        ((k nil) new-state))))
+
+
+  ILookup
+  (-val-at [this k]
+    (-sate-lookup this k)))
+
+(defn state
+  ([]
+   (state {}))
+  ([s]
+   (->State s)))
+
+(defn update [s k f & args]
+  (-state-update s k v))
+
+(defmacro with-state [[n] & body]
+  `(with-handler [~n (state)]
+     ~@body))
+
+

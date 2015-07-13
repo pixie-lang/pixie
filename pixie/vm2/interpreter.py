@@ -100,6 +100,7 @@ class Const(AST):
     def gather_locals(self):
         return {}
 
+
 @expose("_c_value", "_c_name", "_c_next")
 class Locals(object):
     _immutable_ = True
@@ -146,7 +147,7 @@ def new_fn(name, args, body, meta):
 
 class Fn(AST):
     _immutable_fields_ = ["_c_name", "_c_args", "_c_body", "_c_closed_overs"]
-    
+
     _type = Type(u"pixie.ast.internal.Fn")
     def type(self):
         return Fn._type
@@ -481,6 +482,9 @@ class DoK(Continuation):
 def new_vderef(in_ns, var_name, meta):
     return VDeref(in_ns.get_name(), var_name, meta)
 
+dynamic_var_get = code.intern_var(u"pixie.stdlib", u"-dynamic-var-get")
+dynamic_var_handler = code.intern_var(u"pixie.stdlib", u"dynamic-var-handler")
+
 @expose("_c_var")
 class VDeref(AST):
     _immutable_fields_ = ["_c_in_ns", "_c_var_name"]
@@ -498,7 +502,10 @@ class VDeref(AST):
 
         var = ns.resolve_in_ns_ex(self._c_var_ns, self._c_var_name)
         if var is not None:
-            return var.deref(), stack
+            if var.is_dynamic():
+                return dynamic_var_get.invoke_k([dynamic_var_handler.deref(), var], stack)
+            else:
+                return var.deref(), stack
         else:
             runtime_error(u"Var " +
                           (self._c_var_ns + u"/" if self._c_var_ns else u"")
@@ -509,6 +516,50 @@ class VDeref(AST):
 
     def gather_locals(self):
         return {}
+
+
+@as_var("pixie.ast.internal", "->VarConst")
+def new_vderef(in_ns, var_name, meta):
+    return VarConst(in_ns.get_name(), var_name, meta)
+
+@expose("_c_var")
+class VarConst(AST):
+    _immutable_fields_ = ["_c_in_ns", "_c_var_name"]
+    _type = Type(u"pixie.ast.internal.VarConst")
+
+    def type(self):
+        return VarConst._type
+
+    def __init__(self, in_ns, var_name, meta=nil):
+        AST.__init__(self, meta)
+        self._c_in_ns = in_ns
+        self._c_var_ns = None if var_name.get_ns() == u"" else var_name.get_ns()
+        self._c_var_name = var_name.get_name()
+
+    def interpret(self, val, locals, stack):
+        ns = ns_registry.find_or_make(self._c_in_ns)
+        if ns is None:
+            runtime_error(u"Namespace " + self._c_in_ns + u" is not found",
+                          u"pixie.stdlib/UndefinedNamespace")
+
+        var = ns.resolve_in_ns_ex(self._c_var_ns, self._c_var_name)
+        if var is not None:
+            return var, stack
+        else:
+            if self._c_var_ns is not None:
+                runtime_error(u"Var " +
+                              (self._c_var_ns + u"/" if self._c_var_ns else u"")
+                              + self._c_var_name +
+                              u" is undefined in " +
+                              self._c_in_ns,
+                              u"pixie.stdlib/UndefinedVar")
+            else:
+                return ns.intern_or_make(self._c_var_name), stack
+
+
+    def gather_locals(self):
+        return {}
+
 
 
 from rpython.rlib.jit import JitDriver
@@ -653,8 +704,7 @@ class EffectFunction(code.BaseCode):
         while True:
             if stack is None:
                 ## No hander found
-                size = -1
-                break
+                runtime_error(u"No handler found")
 
             if isinstance(stack._cont, Handler) and stack._cont.handler() is handler:
                 size += 1

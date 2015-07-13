@@ -43,7 +43,7 @@
 
 (defmethod analyze-seq 'comment
   [env x]
-  (->Const x env))
+  (->Const nil env))
 
 (defmethod analyze-seq 'if
   [env [_ test then else :as form]]
@@ -204,7 +204,8 @@
 (defmethod analyze-seq 'quote
   [env [_ val]]
   (if (map? val)
-    (analyze-seq (with-meta
+    (analyze-seq env
+                 (with-meta
                    `(pixie.stdlib/hashmap ~@(reduce
                                              (fn [acc [k v]]
                                                (-> acc
@@ -346,7 +347,10 @@
                  (meta x))))
 
 (defn maybe-var [env x]
-  (->Var @(:ns env) x x env))
+  (let [nsp (if (= (namespace x) "pixie.bootstrap-macros")
+              (symbol (str "pixie.stdlib/" (name x)))
+              x)]
+    (->Var @(:ns env) nsp nsp env)))
 
 
 ;; ENV Functions

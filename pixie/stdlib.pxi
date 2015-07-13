@@ -1136,17 +1136,6 @@ Creates new maps if the keys are not present."
   [sym]
   `(resolve-in (this-ns-name) ~sym))
 
-(defmacro binding [bindings & body]
-  (let [bindings (apply hashmap bindings)
-        set-vars (reduce (fn [res binding]
-                           (conj res `(set! (resolve (quote ~(key binding))) ~(val binding))))
-                         []
-                         bindings)]
-    `(do (push-binding-frame!)
-         ~@set-vars
-         (let [ret (do ~@body)]
-           (pop-binding-frame!)
-           ret))))
 
 (defmacro ns [nm & body]
   (let [bmap (reduce (fn [m b]
@@ -1440,19 +1429,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
   ([x y & more] `(let [r# ~x]
                    (if r# r# (or ~y ~@more)))))
 
-(defmacro when [test & body]
-  `(if ~test (do ~@body)))
 
-(defmacro when-not [test & body]
-  `(if (not ~test) (do ~@body)))
-
-(defmacro when-let [binding & body]
-  (let [bind (nth binding 0 nil)
-        test (nth binding 1 nil)]
-    `(let [tmp# ~test]
-       (when tmp#
-         (let [~bind tmp#]
-           ~@body)))))
 
 (defmacro if-not
   ([test then] `(if-not ~test ~then nil))

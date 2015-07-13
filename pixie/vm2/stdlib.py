@@ -388,3 +388,17 @@ def macro_QMARK_(f):
 def __deref(self):
     assert isinstance(self, Var)
     return self.deref()
+
+
+@extend_var("pixie.stdlib", "-name", Var)
+def __deref(self):
+    assert isinstance(self, Var)
+    return rt.wrap(self._name)
+
+
+@extend_var("pixie.stdlib", "-namespace", Var)
+def __deref(self):
+    assert isinstance(self, Var)
+    return rt.wrap(self._ns)
+
+

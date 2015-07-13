@@ -143,8 +143,9 @@ def read_object(os):
 
     elif tag == VAR_CONST:
         ns = read_raw_string(os)
-        name = read_raw_string(os)
-        return ast.Const(code.intern_var(ns, name), nil)
+        name = read_object(os)
+        meta = read_object(os)
+        return ast.VarConst(ns, name, meta)
 
     elif tag == CONST:
         return ast.Const(read_object(os))

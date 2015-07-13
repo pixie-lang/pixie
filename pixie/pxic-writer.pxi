@@ -205,13 +205,11 @@
 
   
   ast/VarConst
-  (-write-object [{:keys [ns name]} os]
-    (write-cached-obj *cache*
-                      [:const ns name]
-                      (fn [_ ns name]
-                        (write-tag os VAR-CONST)
-                        (write-raw-string os (str ns))
-                        (write-raw-string os (str name)))))
+  (-write-object [{:keys [ns name] :as ast} os]
+    (write-tag os VAR-CONST)
+    (write-raw-string os (str ns))
+    (write-object os name)
+    (write-meta os ast))
 
   ast/Var
   (-write-object [{:keys [ns var-name] :as ast} os]

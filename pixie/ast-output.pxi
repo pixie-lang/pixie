@@ -81,6 +81,12 @@
                    var-name
                    (meta-ast ast)))
 
+  ast/VarConst
+  (-to-ast [{:keys [ns name env] :as ast}]
+    (iast/->VarConst ns
+                     name
+                     (meta-ast ast)))
+  
   ast/FnBody
   (-to-ast [{:keys [name args body] :as ast}]
     (iast/->Fn (keyword (pixie.stdlib/name name))
