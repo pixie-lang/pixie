@@ -2,7 +2,43 @@
   (:require [pixie.io-blocking :as io]
             [pixie.reader :as reader]
             [pixie.compiler :as compiler]
-            [pixie.ast-output :as ast-out]))
+            [pixie.ast-output :as ast-out]
+            [pixie.string :as string]))
+
+(defn load-file [ns-sym]
+  (let [name (if (string? ns-sym)
+               ns-sym
+               (string/replace (name ns-sym) "." "/"))
+        name (if (string/ends-with? name ".pxi")
+               name
+               (str name ".pxi"))
+        full-name (reduce
+                   (fn [_ load-path]
+                     (let [nm (str load-path "/" name)]
+                       (println "Looking for " nm)
+                       (when (pixie.io-blocking/file-exists? nm)
+                         (reduced nm))))
+                   nil
+                   @load-paths)]
+    (assert full-name (str "Couldn't load file " ns-sym))
+    (load-resolved-file full-name)))
+
+(defn load-resolved-file [full-name]
+  (let [data (io/slurp full-name)
+        rdr (reader/metadata-reader
+             (reader/indexed-reader data)
+             full-name)]
+    (with-handler [_ dynamic-var-handler]
+      (binding [reader/*current-ns* 'user]
+        (loop []
+          (let [d (reader/read rdr false)
+                analyzed (ast-out/to-ast (compiler/analyze d))]
+            (println "GOT " d)
+            (pixie.ast.internal/eval analyzed)
+            (recur)))))))
+
+#_(load-file :pixie.ffi-infer)
+
 
 (def libedit (ffi-library "libedit.dylib"))
 (println libedit)

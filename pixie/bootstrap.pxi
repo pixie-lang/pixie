@@ -536,6 +536,11 @@ Creates new maps if the keys are not present."
     (array-copy args 0 arg-array 0 but-last-cnt)
     (-apply f arg-array)))
 
+(defn fnil [f else]
+  (fn [x & args]
+    (apply f (if (nil? x) else x) args)))
+
+
 (defn last [coll]
   (if (vector? coll)
     (nth coll (dec (count coll)))
@@ -2267,6 +2272,14 @@ Creates new maps if the keys are not present."
   (-deref [this]
     nil)
 
+  IIndexed
+  
+  (-nth [this idx]
+    (throw [:pixie.stdlib/IndexOutOfRangeException
+            "Index out of range"]))
+  (-nth-not-found [this idx not-found]
+    not-found)
+
   IReduce
   (-reduce [this f init]
     init)
@@ -2345,6 +2358,12 @@ user => (refer 'pixie.string :exclude '(substring))"
     
     nil))
 
+
+(defn load-ns [ns-sym]
+  (assert (not (namespace ns-sym)) "Namespace names must not be namespaced")
+  (println "LOADING " ns-sym)
+  (or (the-ns ns-sym)
+      (load-file ns-sym)))
 
 ;; End NS Functions
 

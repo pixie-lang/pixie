@@ -96,6 +96,10 @@
                (to-ast body)
                (meta-ast ast)))
 
+  ast/Binding
+  (-to-ast [{:keys [name] :as ast}]
+    (iast/->Lookup (keyword (pixie.stdlib/name name))
+                   (meta-ast ast)))  
   
   Object
   (-to-ast [this]

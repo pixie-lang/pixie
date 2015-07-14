@@ -50,6 +50,7 @@ def init():
 
     import pixie.vm2.code as code
     import pixie.vm2.numbers as numbers
+    import pixie.vm2.files
     import pixie.vm2.stdlib
     import pixie.vm2.array
     import pixie.vm2.custom_types

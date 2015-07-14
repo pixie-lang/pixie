@@ -152,3 +152,4 @@ def _namespace(self):
 def _hash(self):
     assert isinstance(self, String)
     return rt.wrap(intmask(util.hash_unencoded_chars(self._str)))
+

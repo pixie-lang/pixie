@@ -230,3 +230,11 @@ def startswith(a, b):
 @as_var("pixie.string", "ends-with?")
 def endswith(a, b):
     return rt.wrap(a.get_name().endswith(b.get_name()))
+
+
+@as_var("pixie.string", "replace")
+def str_replace(s, sfrom, sto):
+    affirm(isinstance(s, String), u"Expected string")
+    affirm(isinstance(sfrom, String), u"Expected string")
+    affirm(isinstance(sto, String), u"Expected string")
+    return rt.wrap(s.get_name().replace(sfrom.get_name(), sto.get_name()))

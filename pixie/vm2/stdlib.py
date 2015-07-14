@@ -233,38 +233,6 @@ def the_ns(ns_name):
     return code.ns_registry.get(ns_name.get_name(), nil)
 
 
-@as_var("load-ns")
-def load_ns(filename):
-    import pixie.vm2.string as string
-    import pixie.vm2.symbol as symbol
-    import os.path as path
-
-    if isinstance(filename, symbol.Symbol):
-        affirm(filename.get_ns() is None, u"load-file takes a un-namespaced symbol")
-        filename_str = filename.get_name().replace(u".", u"/") + u".pxi"
-
-        loaded_ns = code.ns_registry.get(filename.get_name(), None)
-        if loaded_ns is not None:
-            return loaded_ns
-    else:
-        affirm(isinstance(filename, string.String), u"Filename must be string")
-        filename_str = filename.get_name
-
-    # paths = rt.deref(rt.deref(rt.load_paths))
-    # f = None
-    # for x in range(rt.count(paths)):
-    #     path_x = rt.nth(paths, rt.wrap(x))
-    #     affirm(isinstance(path_x, string.String), u"Contents of load-paths must be strings")
-    #     full_path = path.join(str(rt.name(path_x)), str(filename_str))
-    #     if path.isfile(full_path):
-    #         f = full_path
-    #         break
-    #
-    # if f is None:
-    #     affirm(False, u"File '" + rt.name(filename) + u"' does not exist in any directory found in load-paths")
-    # else:
-    #     rt.load_file(rt.wrap(f))
-    return nil
 
 
 ### NS Helpers

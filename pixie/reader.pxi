@@ -23,6 +23,9 @@
   (unread-ch [this]
     (set-field! this :idx (dec idx))))
 
+(defn indexed-reader [s]
+  (->IndexedReader s 0))
+
 (deftype UserSpaceReader [string-rdr reader-fn]
   IPushbackReader
   (read-ch [this]
@@ -259,6 +262,14 @@
           :else (do (sb-fn ch)
                     (recur)))))))
 
+(defn keyword-reader [rdr]
+  (let [ch (read-ch rdr)]
+    (assert (not= \: ch))
+    (let [itm (read-symbol rdr ch)]
+      (if (namespace itm)
+        (keyword (str (namespace itm) "/" (name itm)))
+        (keyword (name itm))))))
+
 (def handlers
   (switch-table
    \( (make-coll-reader list \( \))
@@ -267,6 +278,7 @@
    \] (make-unmatched-handler \])
    \) (make-unmatched-handler \))
    \} (make-unmatched-handler \})
+   \: keyword-reader
    \` syntax-quote-reader
    \@ deref-reader
    \; skip-line-reader

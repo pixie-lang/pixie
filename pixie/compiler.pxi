@@ -7,6 +7,7 @@
                          (cond
                            (identical? x true) :bool
                            (identical? x false) :bool
+                           (keyword? x) :keyword
                            (nil? x) nil
                            (seq? x) :seq
                            (vector? x) :vector
@@ -14,7 +15,6 @@
                            (number? x) :number
                            (string? x) :string
                            (char? x) :char
-                           (keyword? x) :keyword
                            (map? x) :map
                            (set? x) :set
                            :else (do (println "Cant' Analyze " x)

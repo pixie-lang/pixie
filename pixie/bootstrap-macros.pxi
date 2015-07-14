@@ -64,7 +64,7 @@
 
 (defmacro ns [nm & body]
   (let [bmap (reduce (fn [m b]
-                       (update-in m [(first b)] (fnil conj []) (rest b)))
+                       (update-in m [(first b)] (fnil conj []) (next b)))
                      {}
                      body)
         requires
@@ -168,3 +168,39 @@ and implements IAssociative, ILookup and IObject."
                                       parted)))
          ~@body))))
 
+
+(defmacro fn
+  {:doc "Creates a function.
+
+The following two forms are allowed:
+  (fn name? [param*] & body)
+  (fn name? ([param*] & body)+)
+
+The params can be destructuring bindings, see `(doc let)` for details."}
+  [& decls]
+  (let [name (if (symbol? (first decls)) [(first decls)] nil)
+        decls (if name (next decls) decls)
+        decls (cond
+               (vector? (first decls)) (list decls)
+               ;(satisfies? ISeqable (first decls)) decls
+               ;:else (throw (str "expected a vector or a seq, got a " (type decls)))
+               :else decls)
+        decls (seq (map (fn* [decl]
+                          (let [argv (first decl)
+                                names (vec (map #(if (= % '&) '& (gensym "arg__")) argv))
+                                bindings (loop [i 0 bindings []]
+                                           (if (< i (count argv))
+                                             (if (= (nth argv i) '&)
+                                               (recur (inc i) bindings)
+                                               (recur (inc i) (reduce conj bindings [(nth argv i) (nth names i)])))
+                                             bindings))
+                                body (next decl)]
+                            (if (every? symbol? argv)
+                              `(~argv ~@body)
+                              `(~names
+                                (let ~bindings
+                                  ~@body)))))
+                        decls))]
+    (if (= (count decls) 1)
+      `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
+      `(fn* ~@name ~@decls))))
