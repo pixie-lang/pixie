@@ -114,10 +114,12 @@
 
   EException
   (-throw [this kw data ks k]
-    (let [c (get catches kw)]
+    (let [c (or (get catches kw)
+                (get catches :*))]
+      (println "Got Exception" kw c)
       (if c
         (c data)
-        (-throw this kw data (conj ks k))))))
+        (-throw nil kw data (conj ks k))))))
 
 (defn throw [kw val]
   (-throw nil
@@ -2263,6 +2265,20 @@ Creates new maps if the keys are not present."
   (-eq [this other]
     (identical? this other))
 
+  IPersistentCollection
+  (-conj [this x]
+    (vector x))
+  (-disj [this x]
+    nil)
+
+  IAssociative
+  (-assoc [this k v]
+    (hashmap k v))
+  (-dissoc [this k]
+    nil)
+  (-contains-key [this k]
+    false)
+  
   ILookup
   (-val-at
     ([this k] nil)

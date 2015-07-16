@@ -204,3 +204,16 @@ The params can be destructuring bindings, see `(doc let)` for details."}
     (if (= (count decls) 1)
       `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
       `(fn* ~@name ~@decls))))
+
+
+(defmacro assert
+  ([test]
+     `(if ~test
+        nil
+        (throw [:pixie.stdlib/AssertionException
+                "Assert failed"])))
+  ([test msg]
+     `(if ~test
+        nil
+        (throw [:pixie.stdlib/AssertionException
+                (str "Assert failed: " ~msg)]))))

@@ -3,7 +3,7 @@ from pixie.vm2.code import ns_registry, as_var
 from pixie.vm2.primitives import nil, false
 from pixie.vm2.array import Array
 import pixie.vm2.code as code
-from pixie.vm2.keyword import Keyword
+from pixie.vm2.keyword import Keyword, keyword
 from pixie.vm2.code import BaseCode
 
 import rpython.rlib.jit as jit
@@ -121,7 +121,7 @@ class Locals(object):
         while c._c_name is not name:
             c = c._c_next
             if c is None:
-                runtime_error(name.to_repr() + u" is undefined")
+                runtime_error(u"Local" + name.to_repr() + u" is undefined")
         return c._c_value
 
 @as_var("pixie.ast.internal", "->Lookup")
@@ -162,6 +162,9 @@ class Fn(AST):
         for x in self._c_args:
             if x in glocals:
                 del glocals[x]
+
+        if self._c_name in glocals:
+            del glocals[self._c_name]
 
 
         closed_overs = [None] * len(glocals)
@@ -569,6 +572,8 @@ def get_printable_location(ast):
 
 jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
 
+throw_var = code.intern_var(u"pixie.stdlib", u"throw")
+
 def run_stack(val, cont, stack=None, enter_debug=True):
     stack = None
     val = None
@@ -582,11 +587,12 @@ def run_stack(val, cont, stack=None, enter_debug=True):
             if enter_debug:
                 from pixie.vm2.debugger import debug
                 #debug(cont, stack, val)
-            print_stacktrace(cont, stack)
+            #print_stacktrace(cont, stack)
             if not we_are_translated():
                 print ex
-                raise
-            break
+
+            val, stack = throw_var.invoke_k([keyword(u"pixie.stdlib/InternalException"),
+                                             keyword(u"TODO")], stack)
 
         if stack:
             cont = stack._cont
@@ -679,9 +685,16 @@ class EffectFunction(code.BaseCode):
         affirm(len(args) >= 1, u"Effect functions require at least one argument")
         handler = args[0]
 
-        stack, slice = self.slice_stack(stack, handler)
+        stack, slice, handler = self.slice_stack(stack, handler)
 
-        new_args = self.append_args(args, DelimitedContinuation(slice))
+        new_args = [None] * (len(args) + 1)
+
+        # Patch in the handler because the original handler may be nil
+        new_args[0] = handler
+        for x in range(1, len(args)):
+            new_args[x] = args[x]
+        new_args[len(args)] = DelimitedContinuation(slice)
+
 
         return self._inner_fn.invoke_k(new_args, stack)
 
@@ -698,16 +711,26 @@ class EffectFunction(code.BaseCode):
 
     @jit.unroll_safe
     def slice_stack(self, orig_stack, handler):
+        if handler is nil:
+            affirm(isinstance(self._inner_fn, code.PolymorphicFn), u"Can't dispatch with a nil handler from a non polymorphic effect")
 
         size = 0
         stack = orig_stack
+        ret_handler = None
+
         while True:
             if stack is None:
                 ## No hander found
+                if not we_are_translated():
+                    print "Looking for handler, none found, ", handler
                 runtime_error(u"No handler found")
 
-            if isinstance(stack._cont, Handler) and stack._cont.handler() is handler:
+
+            print "Check: ", stack._cont, size, handler, handler.type()._name
+            if (isinstance(stack._cont, Handler) and stack._cont.handler() is handler) or \
+               (handler is nil and isinstance(stack._cont, Handler) and self._inner_fn.satisfied_by(stack._cont.handler())):
                 size += 1
+                ret_handler = stack._cont.handler()
                 break
 
             size += 1
@@ -720,7 +743,7 @@ class EffectFunction(code.BaseCode):
             slice[x] = stack._cont
             stack = stack._parent
 
-        return stack, slice
+        return stack, slice, ret_handler
 
 
 def merge_dicts(a, b):

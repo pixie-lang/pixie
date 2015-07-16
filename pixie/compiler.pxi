@@ -3,6 +3,11 @@
             [pixie.ast :refer :all]))
 
 
+(defn remove-bootstrap [env sym]
+  (if (= (namespace x) "pixie.bootstrap-macros")
+    (symbol (str "pixie.stdlib/" (name x)))
+    x))
+
 (defmulti analyze-form (fn [_ x]
                          (cond
                            (identical? x true) :bool
@@ -109,7 +114,7 @@
                       (let [[_ k ex-nm & body] f]
                         (assert (keyword? k) "First argument to catch must be a keyword")
                         (assoc-in acc [:catches k] `(fn [~ex-nm]
-                                                      ~body)))
+                                                      ~@body)))
                       (and (seq? f)
                            (= (first f) 'finally))
                       (let [[_ & body] f]
@@ -250,22 +255,34 @@
       new)
     new))
 
+(defn resolve-sym [env sym]
+  (cond
+    (and (:bootstrap? env))
+    (try (resolve-in (the-ns :pixie.bootstrap-macros)
+                     (symbol (name sym)))
+         (catch :pixie.stdlib/AssertionException ex
+           nil))
+
+    (namespace sym)
+    (try (resolve-in (the-ns (namespace sym))
+                     (symbol (name sym)))
+         (catch :pixie.stdlib/AssertionException ex
+           nil))
+
+    :else
+    (try (resolve-in (the-ns @(:ns env))
+                     sym)
+         (catch :pixie.stdlib/AssertionException ex
+           nil))))
+
 (defmethod analyze-seq :default
   [env [sym & args :as form]]
   (let [sym (if (and (symbol? sym)
                      (= "pixie.bootstrap-macros" (namespace sym)))
               (symbol (str "pixie.stdlib/" (name sym)))
               sym)
-        bootstrap-resolved (when (and (symbol? sym)
-                                      (:bootstrap? env))
-                             (try (and (symbol? sym)
-                                       (resolve-in (the-ns :pixie.bootstrap-macros) (symbol (name sym))))
-                                  (catch :pixie.stdlib/AssertionException ex
-                                    nil)))
-        resolved (try (and (symbol? sym)
-                           (resolve-in (the-ns @(:ns env)) sym))
-                      (catch :pixie.stdlib/AssertionException ex
-                        nil))]
+        resolved (when (symbol? sym)
+                   (resolve-sym env sym))]
     (cond
       (and (symbol? sym)
            (string/starts-with? (name sym) ".-"))
@@ -274,11 +291,6 @@
                                                 form))]
         result)
 
-      (and bootstrap-resolved
-           (macro? @bootstrap-resolved))
-      (analyze-form env (keep-meta (apply @bootstrap-resolved args)
-                                   form))
-      
       (and resolved
            (macro? @resolved))
       (analyze-form env (keep-meta (apply @resolved args)

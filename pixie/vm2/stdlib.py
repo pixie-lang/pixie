@@ -293,6 +293,8 @@ def set_dynamic(var):
 
 @as_var("resolve-in")
 def _var(ns, nm):
+    if ns is nil:
+        return nil
     if not isinstance(ns, code.Namespace):
         ns = code.ns_registry.find_or_make(ns.get_name())
 

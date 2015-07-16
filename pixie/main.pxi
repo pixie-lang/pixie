@@ -32,12 +32,16 @@
       (binding [reader/*current-ns* 'user]
         (loop []
           (let [d (reader/read rdr false)
+                _ (println "Compiling " d)
                 analyzed (ast-out/to-ast (compiler/analyze d))]
             (println "GOT " d)
             (pixie.ast.internal/eval analyzed)
             (recur)))))))
 
-#_(load-file :pixie.ffi-infer)
+(try
+  (load-file :pixie.ffi-infer)
+  (catch :* ex
+      (println "ERROR Compiling file")))
 
 
 (def libedit (ffi-library "libedit.dylib"))

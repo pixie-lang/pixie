@@ -93,7 +93,7 @@
 
 
 (defn make-var-const-ast [ns name env]
-  (->VarConst ns name (symbol (pixie.stdlib/name name)) env))
+  (->VarConst ns (symbol (pixie.stdlib/name name)) name env))    
 
 (defn make-invoke-var-ast [ns name args form env]
   (make-invoke-ast
@@ -154,12 +154,6 @@
 
   Vector
   (simplify-ast [{:keys [items form env]}]
-    (if (not (:bootstrap? env))
-      (println "Vector > " items
-               (seq items)
-               (count (seq items))
-               (first (seq items))
-               (first (next (seq items)))))
     (make-invoke-var-ast
      "pixie.stdlib"
      (if (:bootstrap? env)

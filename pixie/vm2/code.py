@@ -767,6 +767,14 @@ class PolymorphicFn(BaseCode):
         self._fn_cache = {}
         self._protocol.add_satisfies(tp)
 
+    def satisfied_by(self, o):
+        if not isinstance(o, object.Type):
+            o = o.type()
+
+        print "SATISFY", o, self._name, o._name, self._protocol._name
+        return self._protocol.satisfies(o)
+
+
     def _find_parent_fn(self, tp):
         ## Search the entire object tree to find the function to execute
         assert isinstance(tp, object.Type)
