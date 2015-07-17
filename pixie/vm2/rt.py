@@ -53,6 +53,7 @@ def init():
     import pixie.vm2.files
     import pixie.vm2.stdlib
     import pixie.vm2.array
+    import pixie.vm2.arraymap
     import pixie.vm2.custom_types
     import pixie.vm2.jit_tables
     import pixie.vm2.ffi

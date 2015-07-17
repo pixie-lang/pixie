@@ -771,7 +771,6 @@ class PolymorphicFn(BaseCode):
         if not isinstance(o, object.Type):
             o = o.type()
 
-        print "SATISFY", o, self._name, o._name, self._protocol._name
         return self._protocol.satisfies(o)
 
 

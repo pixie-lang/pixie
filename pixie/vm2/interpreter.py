@@ -2,12 +2,31 @@ from pixie.vm2.object import Object, Type, Continuation, stack_cons, runtime_err
 from pixie.vm2.code import ns_registry, as_var
 from pixie.vm2.primitives import nil, false
 from pixie.vm2.array import Array
+from pixie.vm2.arraymap import ArrayMap
 import pixie.vm2.code as code
 from pixie.vm2.keyword import Keyword, keyword
 from pixie.vm2.code import BaseCode
-
+import pixie.vm2.rt as rt
 import rpython.rlib.jit as jit
 from pixie.vm2.debugger import expose
+
+kw_type = keyword(u"type")
+kw_handler = keyword(u"handler")
+kw_invoke = keyword(u"invoke")
+kw_ast = keyword(u"ast")
+kw_resolve_all = keyword(u"resolve-all")
+kw_args = keyword(u"args")
+kw_acc = keyword(u"acc")
+kw_let = keyword(u"let")
+kw_do = keyword(u"do")
+kw_delimited_continuation = keyword(u"delimited-continuation")
+kw_slice = keyword(u"slice")
+kw_meta = keyword(u"meta")
+kw_line = keyword(u"line")
+kw_file = keyword(u"file")
+kw_line_number = keyword(u"line-number")
+kw_column_number = keyword(u"column-number")
+
 
 class AST(Object):
     _immutable_fields_ = ["_c_meta"]
@@ -23,6 +42,10 @@ class AST(Object):
         if self._c_meta != nil:
             return self._c_meta.get_long_location()
         return "<unknown of " + str(self) + ">"
+
+    def describe(self):
+        if self._c_meta != nil:
+            return ArrayMap([kw_type, kw_ast, kw_meta, self._c_meta.describe()])
 
 @as_var("pixie.ast.internal", "->Meta")
 def new_meta(line, file, line_number, column_number):
@@ -56,6 +79,14 @@ class Meta(Object):
         ld.append("^\n")
 
         return "".join(ld)
+
+    def describe(self):
+        (line, file, line_number) = self._c_line_tuple
+        return ArrayMap([kw_type, kw_meta,
+                         kw_line, rt.wrap(line),
+                         kw_file, rt.wrap(file),
+                         kw_line_number, rt.wrap(line_number),
+                         kw_column_number, rt.wrap(self._c_column_number)])
 
 
 
@@ -130,6 +161,11 @@ def new_lookup(name, meta):
 
 class Lookup(AST):
     _immutable_fields_ = ["_c_name"]
+    _type = Type(u"pixie.ast-internal.Lookup")
+
+    def type(self):
+        return VDeref._type
+
     def __init__(self, name, meta=nil):
         assert isinstance(name, Keyword)
         AST.__init__(self, meta)
@@ -281,6 +317,9 @@ class InvokeK(Continuation):
     def get_ast(self):
         return self._c_ast
 
+    def describe(self):
+        return ArrayMap([kw_type, kw_invoke, kw_ast, self._c_ast])
+
 
 
 @as_var("pixie.ast.internal", "->TailCall")
@@ -335,12 +374,24 @@ class ResolveAllK(Continuation):
     def get_ast(self):
         return self._c_args[len(self._c_acc)]
 
+    def describe(self):
+        return ArrayMap([kw_type, kw_resolve_all,
+                         kw_args, Array(self._c_args),
+                         #kw_locals, Array(self._c_locals),
+                         kw_acc, Array(self._c_acc),
+                         kw_ast, self._c_args[len(self._c_acc)]])
+
 @as_var("pixie.ast.internal", "->Let")
 def new_let(names, bindings, body, meta):
     return Let(names.array_val(), bindings.array_val(), body, meta)
 
 class Let(AST):
     _immutable_fields_ = ["_c_names", "_c_bindings", "_c_body"]
+    _type = Type(u"pixie.ast-internal.Let")
+
+    def type(self):
+        return VDeref._type
+
     def __init__(self, names, bindings, body, meta=nil):
         AST.__init__(self, meta)
         self._c_names = names
@@ -387,6 +438,9 @@ class LetK(Continuation):
 
     def get_ast(self):
         return self._c_ast
+
+    def describe(self):
+        return ArrayMap([kw_type, kw_let, kw_ast, self._c_ast])
 
 @as_var("pixie.ast.internal", "->If")
 def new_if(test, then, els, meta):
@@ -481,6 +535,9 @@ class DoK(Continuation):
     def get_ast(self):
         return self._c_ast
 
+    def describe(self):
+        return ArrayMap([kw_type, kw_do, kw_ast, self._c_ast])
+
 @as_var("pixie.ast.internal", "->VDeref")
 def new_vderef(in_ns, var_name, meta):
     return VDeref(in_ns.get_name(), var_name, meta)
@@ -491,6 +548,11 @@ dynamic_var_handler = code.intern_var(u"pixie.stdlib", u"dynamic-var-handler")
 @expose("_c_var")
 class VDeref(AST):
     _immutable_fields_ = ["_c_in_ns", "_c_var_name"]
+    _type = Type(u"pixie.ast-internal.VDeref")
+
+    def type(self):
+        return VDeref._type
+
     def __init__(self, in_ns, var_name, meta=nil):
         AST.__init__(self, meta)
         self._c_in_ns = in_ns
@@ -654,6 +716,9 @@ class Handler(Continuation):
     def call_continuation(self, val, stack):
         return val, stack
 
+    def describe(self):
+        return ArrayMap([kw_type, kw_handler, kw_handler, self._handler])
+
 class DelimitedContinuation(code.NativeFn):
     _immutable_fields_ = ["_slice[*]"]
     _type = Type(u"pixie.stdlib.DelmitedContinuation")
@@ -664,12 +729,20 @@ class DelimitedContinuation(code.NativeFn):
     def __init__(self, slice):
         self._slice = slice
 
+    def describe(self):
+        return ArrayMap([kw_type, kw_delimited_continuation,
+                      kw_slice, Array([x.describe() for x in self._slice])])
+
     @jit.unroll_safe
     def invoke_k(self, args, stack):
         affirm(len(args) == 1, u"Delmited continuations only take one argument")
         for x in range(len(self._slice)):
             stack = stack_cons(stack, self._slice[x])
         return args[0], stack
+
+@as_var(u"pixie.stdlib", u"describe-internal-object")
+def describe_delimited_continuation(k):
+    return k.describe()
 
 class EffectFunction(code.BaseCode):
     _type = Type(u"pixie.stdlib.EffectFn")
@@ -726,7 +799,6 @@ class EffectFunction(code.BaseCode):
                 runtime_error(u"No handler found")
 
 
-            print "Check: ", stack._cont, size, handler, handler.type()._name
             if (isinstance(stack._cont, Handler) and stack._cont.handler() is handler) or \
                (handler is nil and isinstance(stack._cont, Handler) and self._inner_fn.satisfied_by(stack._cont.handler())):
                 size += 1

@@ -5,6 +5,33 @@
             [pixie.ast-output :as ast-out]
             [pixie.string :as string]))
 
+(defmulti print-stack-at :type)
+(defmethod print-stack-at :handler
+  [{:keys [handler]}]
+  (println "Handler:" (type handler) ":" handler))
+
+(defmethod print-stack-at :default
+  [{:keys [ast type]}]
+  (if ast
+    (let [meta (:meta (describe-internal-object ast))]
+      (println (:line meta)
+               "in"
+               (:file meta)
+               " "
+               type
+               "at"
+               (str (:line-number meta)
+                    ":"
+                    (:column-number meta)))
+      (println (apply str (repeat (- (:column-number meta) 2) " "))
+               "^"))
+    (println "Unknown location in " type)))
+
+(defn print-stack-trace [ks]
+  (doseq [slice ks]
+    (doseq [k (:slice (describe-internal-object slice))]
+      (print-stack-at k))))
+
 (defn load-file [ns-sym]
   (let [name (if (string? ns-sym)
                ns-sym
@@ -31,6 +58,7 @@
     (with-handler [_ dynamic-var-handler]
       (binding [reader/*current-ns* 'user]
         (loop []
+          (println "READING FORM")
           (let [d (reader/read rdr false)
                 _ (println "Compiling " d)
                 analyzed (ast-out/to-ast (compiler/analyze d))]
@@ -40,8 +68,9 @@
 
 (try
   (load-file :pixie.ffi-infer)
-  (catch :* ex
-      (println "ERROR Compiling file")))
+  (catch :* data
+      (println "ERROR Compiling file" data)
+      (print-stack-trace (:ks data))))
 
 
 (def libedit (ffi-library "libedit.dylib"))

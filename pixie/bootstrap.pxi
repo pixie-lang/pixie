@@ -118,8 +118,8 @@
                 (get catches :*))]
       (println "Got Exception" kw c)
       (if c
-        (c data)
-        (-throw nil kw data (conj ks k))))))
+        (c {:ex kw :data data :ks (conj ks k)})
+        (-throw nil kw data (cons k ks))))))
 
 (defn throw [kw val]
   (-throw nil
@@ -296,6 +296,10 @@
   [x]
   (identical? x nil))
 
+(defn deref
+  [x]
+  (-deref x))
+
 (defn conj
   {:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
    :signatures [[] [coll] [coll item] [coll item & args]]
@@ -438,6 +442,17 @@
   ([m k v & rest]
      (apply assoc (-assoc m k v) rest)))
 
+(defn merge
+  ([a] a)
+  ([a b]
+   (reduce
+    (fn [a [k v]]
+      (assoc a k v))
+    a
+    b))
+  ([a b & cs]
+   (apply merge (merge a b) cs)))
+
 (defn assoc-in
   {:doc "Associate a value in a nested collection given by the path.
 
@@ -558,6 +573,44 @@ Creates new maps if the keys are not present."
       (recur (conj res (first coll))
              (next coll))
       (seq res))))
+
+(defn ith
+  {:doc "Returns the ith element of the collection, negative values count from the end.
+         If an index is out of bounds, will throw an Index out of Range exception.
+         However, if you specify a not-found parameter, it will substitute that instead"
+   :signatures [[coll i] [coll idx not-found]]
+   :added "0.1"}
+  ([coll i]
+     (when coll
+       (let [idx (if (neg? i) (+ i (count coll)) i)]
+         (nth coll idx))))
+  ([coll i not-found]
+     (when coll
+       (let [idx (if (neg? i) (+ i (count coll)) i)]
+         (nth coll idx not-found)))))
+
+(defn take
+  {:doc "Takes n elements from the collection, or fewer, if not enough."
+   :added "0.1"}
+  [n coll]
+  (when (pos? n)
+    (when-let [s (seq coll)]
+      (cons (first s) (take (dec n) (next s))))))
+
+(defn drop
+  {:doc "Drops n elements from the start of the collection."
+   :added "0.1"}
+  [n coll]
+  (let [s (seq coll)]
+    (if (and (pos? n) s)
+      (recur (dec n) (next s))
+      s)))
+
+(defn repeat
+  ([x]
+     (cons x (lazy-seq* (fn [] (repeat x)))))
+  ([n x]
+     (take n (repeat x))))
 
 (defn seq-reduce [s f acc]
   (if (reduced? acc)
@@ -1292,6 +1345,20 @@ Creates new maps if the keys are not present."
 (satisfy IVector Array)
 
 (extend-type Array
+  IObject
+  (-str [this sb]
+    (sb "[")
+    (let [not-first (atom false)]
+      (reduce
+       (fn [_ x]
+         (if @not-first
+           (sb " ")
+           (reset! not-first true))
+         (-str x sb))
+       nil
+       this))
+    (sb "]"))
+ 
   IPersistentCollection
   (-conj [arr itm]
     (conj (pixie.stdlib.persistent-vector/vector-from-array arr) itm))
@@ -1327,6 +1394,31 @@ Creates new maps if the keys are not present."
   ISeqable
   (-seq [this]
     (sequence this)))
+
+(extend-type ArrayMap
+  ILookup
+  (-val-at [this kw not-found]
+    (let [lst (array-map-to-array this)]
+      (loop [idx 0]
+        (if (< idx (count lst))
+          (if (= (nth lst idx) kw)
+            (nth lst (inc idx))
+            (recur (+ idx 2)))
+          not-found))))
+
+  IReduce
+  (-reduce [this f init]
+    (let [lst (array-map-to-array this)]
+      (loop [acc init
+             idx 0]
+        (if (reduced? acc)
+          @acc
+          (if (< idx (count lst))
+            (let [k (nth lst idx)
+                  v (nth lst (inc idx))]
+              (recur (f acc (map-entry k v))
+                     (+ idx 2)))
+            acc))))))
 
 (defn array-copy [from from-idx to to-idx size]
   (loop [idx 0]
@@ -2583,6 +2675,28 @@ The params can be destructuring bindings, see `(doc let)` for details."}
     (if (= (count decls) 1)
       `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
       `(fn* ~@name ~@decls))))
+
+
+(defmacro defn ^{:doc "Defines a new function."
+                 :signatures [[nm doc? meta? & body]]}
+  [nm & rest]
+  (let [meta (if (meta nm) (meta nm) {})
+        meta (if (instance? String (first rest))
+               (assoc meta :doc (first rest))
+               meta)
+        rest (if (instance? String (first rest)) (next rest) rest)
+        meta (if (satisfies? IMap (first rest))
+               (merge meta (first rest))
+               meta)
+        rest (if (satisfies? IMap (first rest)) (next rest) rest)
+        meta (if (-contains-key meta :signatures)
+               meta
+               (merge meta {:signatures
+                            (if (satisfies? IVector (first rest))
+                              [(first rest)]
+                              (transduce (map first) conj rest))}))
+        nm (with-meta nm meta)]
+    `(def ~nm (fn ~nm ~@rest))))
 
 
 ;; State

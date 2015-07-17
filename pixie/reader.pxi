@@ -202,7 +202,7 @@
    form))
 
 (defn deref-reader [rdr]
-  (cons 'pixie.stdlib/deref (read-inner rdr true)))
+  (list 'pixie.stdlib/deref (read-inner rdr true)))
 
 
 (defn skip-line-reader [rdr]
