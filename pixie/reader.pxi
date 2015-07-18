@@ -270,6 +270,9 @@
         (keyword (str (namespace itm) "/" (name itm)))
         (keyword (name itm))))))
 
+(defn quote-reader [rdr]
+  (list 'quote (read-inner rdr true)))
+
 (def handlers
   (switch-table
    \( (make-coll-reader list \( \))
@@ -284,7 +287,8 @@
    \; skip-line-reader
    \^ meta-reader
    \~ unquote-reader
-   \" literal-string-reader))
+   \" literal-string-reader
+   \' quote-reader))
 
 (defn read-number [rdr ch]
   (let [sb (string-builder)
@@ -324,6 +328,7 @@
               (recur sb-fn)))))))
 
 (defn interpret-symbol [s]
+  (println "interpret sym " (= s "nil") s)
   (cond
     (= s "true") true
     (= s "false") false

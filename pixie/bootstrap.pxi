@@ -121,11 +121,14 @@
         (c {:ex kw :data data :ks (conj ks k)})
         (-throw nil kw data (cons k ks))))))
 
-(defn throw [kw val]
-  (-throw nil
-          kw
-          val
-          []))
+(defn throw
+  ([[kw val]]
+   (throw kw val))
+  ([kw val]
+    (-throw nil
+            kw
+            val
+            [])))
 
 (defn -try [body catches finally]
   (with-handler [ex (->ExceptionHandler catches finally)]
@@ -608,9 +611,110 @@ Creates new maps if the keys are not present."
 
 (defn repeat
   ([x]
-     (cons x (lazy-seq* (fn [] (repeat x)))))
+   (cons x (lazy-seq (repeat x))))
   ([n x]
-     (take n (repeat x))))
+   (take n (repeat x))))
+
+(defn take-while
+  {:doc "Returns a lazy sequence of successive items from coll while
+        (pred item) returns true. pred must be free of side-effects.
+        Returns a transducer when no collection is provided."
+  :added "0.1"}
+  ([pred]
+     (fn [rf]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+            (if (pred input)
+              (rf result input)
+              (reduced result))))))
+  ([pred coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (when (pred (first s))
+          (cons (first s) (take-while pred (rest s))))))))
+
+
+(defn drop-while
+  {:doc "Returns a lazy sequence of the items in coll starting from the
+        first item for which (pred item) returns logical false.  Returns a
+        stateful transducer when no collection is provided."
+   :added "0.1"}
+   ([pred]
+     (fn [rf]
+       (let [dv (atom true)]
+         (fn
+           ([] (rf))
+           ([result] (rf result))
+           ([result input]
+              (let [drop? @dv]
+                (if drop?
+                  (if (pred input)
+                    result
+                    (do
+                      (reset! dv nil)
+                      (rf result input)))
+                  (rf result input))))))))
+  ([pred coll]
+     (let [step (fn [pred coll]
+                  (let [s (seq coll)]
+                    (if (and s (pred (first s)))
+                      (recur pred (rest s))
+                      s)))]
+       (lazy-seq (step pred coll)))))
+
+;; TODO: use a transient map in the future
+(defn group-by
+  {:doc "Groups the collection into a map keyed by the result of applying f on each element. The value at each key is a vector of elements in order of appearance."
+   :examples [["(group-by even? [1 2 3 4 5])" nil {false [1 3 5] true [2 4]}]
+              ["(group-by (partial apply +) [[1 2 3] [2 4] [1 2]])" nil {6 [[1 2 3] [2 4]] 3 [[1 2]]}]]
+   :signatures [[f coll]]
+   :added "0.1"}
+  [f coll]
+  (reduce (fn [res elem]
+            (update-in res [(f elem)] (fnil conj []) elem))
+          {}
+          coll))
+
+;; TODO: use a transient map in the future
+(defn frequencies
+  {:doc "Returns a map with distinct elements as keys and the number of occurences as values"
+   :added "0.1"}
+  [coll]
+  (reduce (fn [res elem]
+            (update-in res [elem] (fnil inc 0)))
+          {}
+          coll))
+
+(defn partition
+  {:doc "Separates the collection into collections of size n, starting at the beginning, with an optional step size.
+
+The last element of the result contains the remaining element, not necessarily of size n if
+not enough elements were present."
+   :examples [["(partition 2 [1 2 3 4 5 6])" nil ((1 2) (3 4) (5 6))]
+              ["(partition 2 [1 2 3 4 5])" nil ((1 2) (3 4) (5))]
+              ["(partition 2 1 [1 2 3 4 5])" nil ((1 2) (2 3) (3 4) (4 5) (5))]]
+   :signatures [[n coll] [n step coll]]
+   :added "0.1"}
+  ([n coll] (partition n n coll))
+  ([n step coll]
+   (when-let [s (seq coll)]
+     (lazy-seq
+      (cons (take n s) (partition n step (drop step s)))))))
+
+(defn partitionf
+  {:doc "A generalized version of partition. Instead of taking a constant number of elements,
+         this function calls f with the remaining collection to determine how many elements to
+         take."
+   :examples [["(partitionf first [2 :a, 3 :a :b, 4 :a :b :c])"
+               nil ((2 :a) (3 :a :b) (4 :a :b :c))]]}
+  [f coll]
+  (when-let [s (seq coll)]
+    (lazy-seq
+      (let [n (f s)]
+        (cons (take n s)
+              (partitionf f (drop n s)))))))
 
 (defn seq-reduce [s f acc]
   (if (reduced? acc)
@@ -839,9 +943,7 @@ Creates new maps if the keys are not present."
 
   EGenerator
   (-yield [this val k]
-    (let [v (cons val (lazy-seq
-                       (k nil)))]
-      v)))
+    (cons val (lazy-seq (k nil)))))
 
 (defn yield
   ([g] nil)
@@ -2056,6 +2158,7 @@ Creates new maps if the keys are not present."
         acc))))
 
 (deftype PersistentHashMap [cnt root has-nil? nil-val hash-val meta]
+  IMap
   IFn
   (-invoke [this k]
     (-val-at this k nil))
@@ -2441,7 +2544,6 @@ user => (refer 'pixie.string :rename '{index-of find})
 user => (refer 'pixie.string :exclude '(substring))"
    :added "0.1"}
   [from-ns ns-sym & filters]
-  (println ns-sym)
   (assert ns-sym "Must provide a ns-sym")
   (assert from-ns "Must provide a from-ns")
   (let [ns (or (the-ns ns-sym) (throw [:pixie.stdlib/NamespaceNotFoundException
@@ -2451,7 +2553,6 @@ user => (refer 'pixie.string :exclude '(substring))"
         exclude (:exclude filters)
         rname (or (:as filters)
                   ns-sym)]
-    (println "refering " from-ns ns-sym)
     (-add-refer from-ns ns-sym rname)
     (if (= :all (:refer filters))
       (-refer-all from-ns rname)
@@ -2469,7 +2570,6 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 (defn load-ns [ns-sym]
   (assert (not (namespace ns-sym)) "Namespace names must not be namespaced")
-  (println "LOADING " ns-sym)
   (or (the-ns ns-sym)
       (load-file ns-sym)))
 
@@ -2500,34 +2600,25 @@ user => (refer 'pixie.string :exclude '(substring))"
 (deftype DynamicVar [x]
   IEffect
   (-effect-val [this y]
-    (println "Effect Val" y)
     (fn val-fn [s] y))
   
   (-effect-finally [this f]
-    (println "Effect Return " f)
     (f x))
 
   EDynamicVarEnv
   (-dynamic-var-get [this var k]
-    (println "lookup")
     (fn lookup-fn [s]
-      (println "lookup -> " s k)
       ((k (get s var)) s)))
 
   (-dynamic-var-set [this var val k]
-    (println "call set " var val)
     (fn [s]
-      (println "Setting to |  " var val)
       ((k nil) (assoc s var val))))
   
   (-dynamic-get-vars [this k]
-    (println "get vars" this k)
     (fn [s]
-      (println "getting vars " s)
       ((k s) s)))
 
   (-dynamic-set-vars [this s' k]
-    (println "set vars" this s')
     (fn set-vars [s]
       ((k nil) s'))))
 
@@ -2538,65 +2629,7 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 
 
-
-;;
-
-;; Multimethod stuff
-#_(comment
-
-
-(deftype MultiMethod [name dispatch-fn default-val methods]
-  IFn
-  (-invoke [self & args]
-    (let [dispatch-val (apply dispatch-fn args)
-          method (if (contains? @methods dispatch-val)
-                   (get @methods dispatch-val)
-                   (get @methods default-val))
-          _ (assert method (str "no method defined for " dispatch-val " on " name))]
-      (try
-        (apply method args)
-        (catch ex
-            (throw (add-exception-info ex (str "In multimethod "
-                                               name
-                                               " dispatching on "
-                                               dispatch-val
-                                               "\n") args)))))))
-
-(defmacro defmulti
-  {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
-   :examples [["(defmulti greet first)"]
-              ["(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"]
-              ["(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"]
-              ["(greet [:hi \"Jane\"])" nil "Hi, Jane!"]]
-   :signatures [[name dispatch-fn & options]]
-   :added "0.1"}
-  [name & args]
-  (let [[meta args] (if (string? (first args))
-                      [{:doc (first args)} (next args)]
-                      [{} args])
-        [meta args] (if (map? (first args))
-                      [(merge meta (first args)) (next args)]
-                      [meta args])
-        dispatch-fn (first args)
-        options (apply hashmap (next args))]
-    `(def ~name (->MultiMethod ~(str name) ~dispatch-fn ~(get options :default :default) (atom {})))))
-
-(defmacro defmethod
-  {:doc "Define a method of a multimethod. See `(doc defmulti)` for details."
-   :signatures [[name dispatch-val [param*] & body]]
-   :added "0.1"}
-  [name dispatch-val params & body]
-  `(do
-     (let [methods (.methods ~name)]
-       (swap! methods
-              assoc
-              ~dispatch-val (fn ~params
-                              ~@body))
-       ~name)))
-)
-
-;; End Multimethods
-
+ 
 ;; LibC Stuff
 (def load-paths (atom ["." ""]))
 
@@ -2618,6 +2651,38 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 ;; Mutimethods
 
+(defmacro defmulti
+  {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
+   :examples [["(defmulti greet first)"]
+              ["(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"]
+              ["(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"]
+              ["(greet [:hi \"Jane\"])" nil "Hi, Jane!"]]
+   :signatures [[name dispatch-fn & options]]
+   :added "0.1"}
+  [name & args]
+  (let [[meta args] (if (string? (first args))
+                      [{:doc (first args)} (next args)]
+                      [{} args])
+        [meta args] (if (map? (first args))
+                      [(merge meta (first args)) (next args)]
+                      [meta args])
+        dispatch-fn (first args)
+        options (apply hashmap (next args))]
+    `(def ~name (->MultiMethod ~dispatch-fn ~(get options :default :default) (atom {})))))
+
+(defmacro defmethod
+  {:doc "Define a method of a multimethod. See `(doc defmulti)` for details."
+   :signatures [[name dispatch-val [param*] & body]]
+   :added "0.1"}
+  [name dispatch-val params & body]
+  `(do
+     (let [methods (.methods ~name)]
+       (swap! methods
+              assoc
+              ~dispatch-val (fn ~params
+                              ~@body))
+       ~name)))
+
 (deftype MultiMethod [dispatch-fn default-val methods]
   IFn
   (-invoke [self & args]
@@ -2628,9 +2693,7 @@ user => (refer 'pixie.string :exclude '(substring))"
       (apply method args))))
 
 
-
-;;
-
+;; End Multimethods
 
 (def gensym-state (atom 0))
 (defn gensym
@@ -2649,7 +2712,6 @@ The following two forms are allowed:
 
 The params can be destructuring bindings, see `(doc let)` for details."}
   [& decls]
-  (println "FN" (seq decls))
   (let [name (if (symbol? (first decls)) [(first decls)] nil)
         decls (if name (next decls) decls)
         decls (cond
@@ -2657,7 +2719,6 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                ;(satisfies? ISeqable (first decls)) decls
                ;:else (throw (str "expected a vector or a seq, got a " (type decls)))
                :else decls)
-        _ (println ">>>"  name decls)
         decls (seq (map (fn [[argv & body]]
                           (let [names (vec (map #(if (= % '&) '& (gensym "arg__")) argv))
                                 bindings (loop [i 0 bindings []]
@@ -2698,6 +2759,89 @@ The params can be destructuring bindings, see `(doc let)` for details."}
         nm (with-meta nm meta)]
     `(def ~nm (fn ~nm ~@rest))))
 
+
+(defn destructure [binding expr]
+  (cond
+   (symbol? binding) [binding expr]
+   (vector? binding) (let [name (gensym "vec__")]
+                       (reduce conj [name expr]
+                               (destructure-vector binding name)))
+   (map? binding) (let [name (gensym "map__")]
+                    (reduce conj [name expr]
+                            (destructure-map binding name)))
+   :else (throw [:pixie.stdlib/AssertionException
+                 (str "unsupported binding form: " binding)])))
+
+(defn destructure-vector [binding-vector expr]
+  (loop [bindings (seq binding-vector)
+         i 0
+         res []]
+    (if bindings
+      (let [binding (first bindings)]
+        (cond
+         (= binding '&) (recur (nnext bindings)
+                               (inc (inc i))
+                               (reduce conj res (destructure (second bindings) `(nthnext ~expr ~i))))
+         (= binding :as) (reduce conj res (destructure (second bindings) expr))
+         :else (recur (next bindings)
+                      (inc i)
+                      (reduce conj res (destructure (first bindings) `(nth ~expr ~i nil))))))
+      res)))
+
+(defn destructure-map [binding-map expr]
+  (let [defaults (or (:or binding-map) {})
+        res
+        (loop [bindings (seq binding-map)
+               res []]
+          (if bindings
+            (let [binding (key (first bindings))
+                  binding-key (val (first bindings))]
+              (if (contains? #{:or :as :keys} binding)
+                (recur (next bindings) res)
+                (recur (next bindings)
+                       (reduce conj res (destructure binding `(get ~expr ~binding-key ~(get defaults binding)))))))
+            res))
+        expand-with (fn [convert] #(vector % `(get ~expr ~(convert %) ~(get defaults %))))
+        res (if (contains? binding-map :keys) (transduce (map (expand-with (comp keyword name))) concat res (get binding-map :keys)) res)
+        res (if (contains? binding-map :as)
+              (reduce conj res [(get binding-map :as) expr])
+              res)]
+    res))
+
+(defmacro let
+  {:doc "Makes the bindings availlable in the body.
+
+The bindings must be a vector of binding-expr pairs. The binding can be a destructuring
+binding, as below.
+
+Vector destructuring:
+  [x y z]           binds the first three elements of the collection to x, y and z
+  [x y & rest]      binds rest to the elements after the first two elements of the collection
+  [x y :as v]       binds the value of the complete collection to v
+
+Map destructuring:
+  {a :a, b :b}      binds a and b to the values associated with :a and :b
+  {a :a :as m}      binds the value of the complete collection to m
+  {a :a :or {a 42}} binds a to the value associated with :a, or 42, if not present
+  {:keys [a b c]}   binds a, b and c to the values associated with :a, :b and :c
+
+All these forms can be combined and nested, in the example below:
+
+(let [[x y [z :as iv] :as v] [1 2 [3 4 5] 6 7]
+      {a :a [b c {:keys [d]}] :more :or {a 42}} {:a 1, :more [1 2 {:d 3, :e 4}]}]
+  ...)
+
+For more information, see http://clojure.org/special_forms#binding-forms"}
+  [bindings & body]
+  (let* [destructured-bindings (transduce (map (fn let-foo [args]
+                                                 (assert (= 2 (count args)) (str "Bindings must be in pairs, not " args
+                                                                                 " " (meta (first args))))
+                                                 (apply destructure args)))
+                                          concat
+                                          []
+                                          (partition 2 bindings))]
+        `(let* ~destructured-bindings
+               ~@body)))
 
 ;; State
 

@@ -80,7 +80,7 @@
   (children-keys [this]
     `[:items]))
 
-(defrecord Env [ns vars locals tail? meta bootstrap?])
+(defrecord Env [ns vars locals tail? meta bootstrap? recur-point])
 
 ;; Ctors
 

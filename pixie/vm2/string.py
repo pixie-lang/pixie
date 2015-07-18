@@ -1,6 +1,6 @@
 import pixie.vm2.rt as rt
 from pixie.vm2.object import Object, Type, affirm
-from pixie.vm2.code import extend, as_var, wrap_fn
+from pixie.vm2.code import extend_var, as_var, wrap_fn
 from pixie.vm2.primitives import nil, true, false
 from pixie.vm2.numbers import Integer
 #import pixie.vm2.stdlib as proto
@@ -89,12 +89,13 @@ def str_len(self, idx):
 #         return Character(ord(self._str[i]))
 #     return not_found
 #
-# @extend(proto._eq, String)
-# def _eq(self, v):
-#     assert isinstance(self, String)
-#     if not isinstance(v, String):
-#         return false
-#     return true if self._str == v._str else false
+
+@extend_var(u"pixie.stdlib", u"-eq", String)
+def _eq(self, v):
+    assert isinstance(self, String)
+    if not isinstance(v, String):
+        return false
+    return true if self._str == v._str else false
 #
 class Character(Object):
     _type = Type(u"pixie.stdlib.Character")

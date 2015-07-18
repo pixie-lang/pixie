@@ -90,19 +90,20 @@
   (let [[name body] (if (symbol? (first body))
                       [(first body)
                        (next body)]
-                      [(gensym "fn_")
+                      [(gensym "ann-fn_")
                        body])
         arities (if (vector? (first body))
                   [body]
                   body)
+        new-env (assoc env :recur-point name)
         analyzed-bodies (reduce
-                         (partial analyze-fn-body env name)
+                         (partial analyze-fn-body new-env name)
                          {}
                          arities)]
     (->Fn name
           (vals analyzed-bodies)
           form
-          env)))
+          new-env)))
 
 (defmethod analyze-seq 'try
   [env [_ & body :as form]]
@@ -184,7 +185,7 @@
 (defmethod analyze-seq 'loop*
   [env [_ bindings & body]]
   (let [parted (partition 2 bindings)]
-    (analyze-form env
+    (analyze-form (assoc env :recur-point '__loop__fn__)
                   `((fn ~'__loop__fn__ ~(mapv first parted)
                       ~@body)
                     ~@(mapv second parted)))))
@@ -192,7 +193,8 @@
 (defmethod analyze-seq 'recur
   [env [_ & args]]
   (assert (:tail? env) "Can only recur at tail position")
-  (analyze-form env `(~'__loop__fn__ ~@args)))
+  (assert (:recur-point env) "Don't have a point to recur to")
+  (analyze-form env `(~(:recur-point env) ~@args)))
 
 (defmethod analyze-seq 'var
   [env [_ nm]]
@@ -376,7 +378,8 @@
    {}
    true
    nil
-   bootstrap?))
+   bootstrap?
+   nil))
 
 
 (defn analyze

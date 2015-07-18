@@ -1136,6 +1136,17 @@ Creates new maps if the keys are not present."
   [sym]
   `(resolve-in (this-ns-name) ~sym))
 
+(defmacro binding [bindings & body]
+  (let [bindings (apply hashmap bindings)
+        set-vars (reduce (fn [res binding]
+                           (conj res `(set! (resolve (quote ~(key binding))) ~(val binding))))
+                         []
+                         bindings)]
+    `(do (push-binding-frame!)
+         ~@set-vars
+         (let [ret (do ~@body)]
+           (pop-binding-frame!)
+           ret))))
 
 (defmacro ns [nm & body]
   (let [bmap (reduce (fn [m b]
@@ -1276,11 +1287,7 @@ Creates new maps if the keys are not present."
   (puts (apply pr-str args))
   nil)
 
-(defn repeat
-  ([x]
-     (cons x (lazy-seq* (fn [] (repeat x)))))
-  ([n x]
-     (take n (repeat x))))
+
 
 (defn repeatedly
   {:doc "Returns a lazy seq that contains the return values of repeated calls to f.

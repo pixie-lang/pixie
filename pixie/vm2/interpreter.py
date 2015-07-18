@@ -226,10 +226,10 @@ class Fn(AST):
         for n in self._c_closed_overs:
             locals_prefix = Locals(n, Locals.get_local(locals, n), locals_prefix)
 
-        return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body), stack
+        return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body, self), stack
 
 class InterpretedFn(code.BaseCode):
-    _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_arg_names"]
+    _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_arg_names", "_c_fn_def_ast"]
     _type = Type(u"pixie.stdlib.InterpretedFn")
 
     def type(self):
@@ -241,7 +241,7 @@ class InterpretedFn(code.BaseCode):
     def to_str(self):
         return u"<Fn " + self._c_name.get_name() + u">"
 
-    def __init__(self, name, arg_names, locals_prefix, ast):
+    def __init__(self, name, arg_names, locals_prefix, ast, fn_def_ast):
         assert isinstance(name, Keyword)
         code.BaseCode.__init__(self)
         self._c_arg_names = arg_names
@@ -251,6 +251,7 @@ class InterpretedFn(code.BaseCode):
         else:
             self._c_locals = locals_prefix
         self._c_fn_ast = ast
+        self._c_fn_def_ast = fn_def_ast
 
     def invoke_k(self, args, stack):
         return self.invoke_k_with(args, stack, self)
@@ -262,11 +263,13 @@ class InterpretedFn(code.BaseCode):
         locals = Locals(self._c_name, self_fn, locals)
 
         if not len(args) == len(self._c_arg_names):
+
             runtime_error(u"Wrong number args to" +
                           self.to_repr() +
                           u", got " +
                           unicode(str(len(args))) +
-                          u" expected " + unicode(str(len(self._c_arg_names))),
+                          u" expected " + unicode(str(len(self._c_arg_names))) +
+                          u"\n" + unicode(self._c_fn_def_ast.get_long_location()),
                           u"pixie.stdlib.ArityException")
 
         for idx in range(len(self._c_arg_names)):
@@ -645,16 +648,20 @@ def run_stack(val, cont, stack=None, enter_debug=True):
         try:
             val, stack = cont.call_continuation(val, stack)
             ast = cont.get_ast()
+        except SystemExit:
+            exit(0)
         except BaseException as ex:
             if enter_debug:
                 from pixie.vm2.debugger import debug
                 #debug(cont, stack, val)
             #print_stacktrace(cont, stack)
             if not we_are_translated():
+                import traceback
+                print(traceback.format_exc())
                 print ex
 
             val, stack = throw_var.invoke_k([keyword(u"pixie.stdlib/InternalException"),
-                                             keyword(u"TODO")], stack)
+                                             keyword(u"TODO")], stack_cons(stack, cont))
 
         if stack:
             cont = stack._cont
@@ -796,7 +803,8 @@ class EffectFunction(code.BaseCode):
                 ## No hander found
                 if not we_are_translated():
                     print "Looking for handler, none found, ", handler
-                runtime_error(u"No handler found")
+                import sys
+                sys.exit(0)
 
 
             if (isinstance(stack._cont, Handler) and stack._cont.handler() is handler) or \
