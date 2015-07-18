@@ -100,7 +100,11 @@
             (println "analyzing ")
             (let [analyzed (ast-out/to-ast (compiler/analyze d))]
               (println "analyzed " analyzed)
-              (println "result :" (pixie.ast.internal/eval analyzed)))
+              (try
+                (println "result :" (pixie.ast.internal/eval analyzed))
+                (catch :* data
+                  (println "ERROR Compiling file" data)
+                  (print-stack-trace (:ks data)))))
             (recur)))))))
 (repl)
 

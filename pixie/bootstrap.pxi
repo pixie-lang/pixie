@@ -700,8 +700,7 @@ not enough elements were present."
   ([n coll] (partition n n coll))
   ([n step coll]
    (when-let [s (seq coll)]
-     (lazy-seq
-      (cons (take n s) (partition n step (drop step s)))))))
+     (cons (take n s) (lazy-seq (partition n step (drop step s)))))))
 
 (defn partitionf
   {:doc "A generalized version of partition. Instead of taking a constant number of elements,
@@ -717,13 +716,14 @@ not enough elements were present."
               (partitionf f (drop n s)))))))
 
 (defn seq-reduce [s f acc]
-  (if (reduced? acc)
-    @acc
-    (if (nil? s)
-      acc
-      (seq-reduce (next s)
-                  f
-                  (f acc (first s))))))
+  (let [s (seq s)]
+    (if (reduced? acc)
+      @acc
+      (if (nil? s)
+        acc
+        (seq-reduce (next s)
+                    f
+                    (f acc (first s)))))))
 
 ;; Some logic functions
 (defn complement
@@ -794,6 +794,7 @@ not enough elements were present."
                (next s))))))
 
 (defn cons [head tail]
+  (assert (satisfies? ISeqable tail) (str "Can't seq " tail))
   (->Cons head tail nil))
 
 
