@@ -645,7 +645,9 @@ returns true"
    :signatures [[coll]]
    :added "0.1"}
   [coll]
-  (not (seq coll)))
+  (if (satisfies? ICounted coll)
+    (zero? (count coll))
+    (not (seq coll))))
 
 (defn not-empty?
   {:doc "returns true if the collection has items, otherwise false"

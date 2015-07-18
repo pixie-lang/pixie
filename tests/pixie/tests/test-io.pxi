@@ -1,7 +1,9 @@
 (ns pixie.tests.test-io
   (require pixie.test :as t)
   (require pixie.streams :as st :refer :all)
-  (require pixie.io :as io))
+  (require pixie.streams.utf8 :as utf8 :refer :all)
+  (require pixie.io :as io)
+  (require pixie.streams.zlib :as zlib))
 
 (t/deftest test-file-reduction
   (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
@@ -43,3 +45,38 @@
   (t/assert-throws? (io/slurp :foo))
   (t/assert= "I love 🍺 . This is a thumbs up 👍\n" 
              (io/slurp "tests/pixie/tests/test-io-utf8.txt")))
+
+(defn compress-content [output-stream content]
+  (transduce (map identity)
+             (-> output-stream
+                 (zlib/compressing-output-stream (buffer 512) {})
+                 (io/buffered-output-stream 1024)
+                 utf8/utf8-output-stream-rf)
+             (str content)))
+
+(defn compress-and-decompress-content [output-stream content]
+  (transduce (map identity)
+             (-> output-stream
+                 (zlib/decompressing-output-stream (buffer 512) {})
+                 (zlib/compressing-output-stream (buffer 512) {})
+                 (io/buffered-output-stream 1024)
+                 utf8/utf8-output-stream-rf)
+             (str content)))
+
+(t/deftest test-write-compressed
+  (io/run-command "rm compressed-output.gz")
+  (compress-content (io/open-write "compressed-output.gz") (range 1000))
+  ;; decompress the file with zcat
+  (io/run-command "zcat compressed-output.gz > compressed-output.txt")
+  (t/assert= (range 1000) (read-string (io/slurp "compressed-output.txt")))
+
+  ;; Wrapping an IInputStream in decompressing-stream should get the same result
+  (t/assert= (range 1000) (read-string (io/slurp 
+                                         (zlib/decompressing-input-stream 
+                                           (io/open-read "compressed-output.gz")
+                                           (buffer 512) {})))))
+
+;; sticking a compressor into a decompressor should result in the original data
+(t/deftest test-decompression
+  (compress-and-decompress-content (io/open-write "decompressed-output.txt") (range 1000))
+  (t/assert= (range 1000) (read-string (io/slurp "decompressed-output.txt"))))
