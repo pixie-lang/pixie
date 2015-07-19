@@ -109,6 +109,14 @@
   (t/assert= (nth (range 4) 1 :default) 1)
   (t/assert= (nth "hithere" 1 :deafult) \i))
 
+(t/deftest test-get-on-vector
+  (t/assert= (get [1 2 3] 0) 1)
+  (t/assert= (get [1 2 3] 1) 2)
+  (t/assert= (get [1 2 3] 2) 3)
+  (t/assert= (get [1 2 3] 4) nil)
+  (t/assert= (get [1 2 3] 5) nil)
+  (t/assert= (get [1 2 3] 5 :not-found) :not-found))
+
 (t/deftest test-first
   (t/assert= (first []) nil)
   (t/assert= (first '()) nil)
