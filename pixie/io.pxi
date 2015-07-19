@@ -116,10 +116,30 @@
     (when (= idx (count buffer))
       (set-field! this :idx 0)
       (read upstream buffer (buffer-capacity buffer)))
-    (when (pos? (count buffer))
+    (when-not (empty? buffer)
       (let [val (nth buffer idx)]
         (set-field! this :idx (inc idx))
         val)))
+  ISeekableStream
+  (position [this]
+    (+ (- (position upstream) 
+          (count buffer))
+       idx))
+  (rewind [this]
+    (seek this 0))
+  (seek [this pos]
+    ;; We can be clever about seeking. If we are seeking to somewhere with in
+    ;; our current buffer, we can avoid seeking in upstream.
+    (let [upper-bounds (position upstream)
+          lower-bounds (- upper-bounds (count buffer))]
+      (if (and (>= pos lower-bounds)
+               (<= pos upper-bounds))
+        ;; We're in the buffer window :-)
+        (set-field! this :idx (- pos lower-bounds))
+        ;; Put the index at the end of the buffer to force a read from upstream
+        (do
+          (set-field! this :idx (count buffer))
+          (seek upstream pos)))))
   IDisposable
   (-dispose! [this]
     (dispose! buffer)))
