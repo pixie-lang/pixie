@@ -116,7 +116,7 @@
     (when (= idx (count buffer))
       (set-field! this :idx 0)
       (read upstream buffer (buffer-capacity buffer)))
-    (when (pos? (count buffer))
+    (when-not (empty? buffer)
       (let [val (nth buffer idx)]
         (set-field! this :idx (inc idx))
         val)))
