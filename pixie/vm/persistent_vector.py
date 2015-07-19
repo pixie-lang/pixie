@@ -439,7 +439,7 @@ def _nth_not_found(self, idx, not_found):
 def _val_at(self, key, not_found):
     assert isinstance(self, PersistentVector)
     if isinstance(key, Integer):
-        return self.nth(key.int_val())
+        return self.nth(key.int_val(), not_found)
     else:
         return not_found
 
