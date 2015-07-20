@@ -30,4 +30,9 @@
 
 (t/deftest string-to-keyword
   (t/assert= (keyword "foo") :foo)
-  (t/assert= (keyword "foo/bar") :foo/bar))
+  (t/assert= (keyword "foo/bar") :foo/bar)
+  (t/assert-throws? (keyword 1))
+  (t/assert-throws? (keyword :a))
+  (t/assert-throws? (keyword 'a))
+  (t/assert-throws? (keyword nil))
+  (t/assert-throws? (keyword true)))

@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
     runtime_error, add_info, ExtraCodeInfo
-from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
-                          list_copy, returns, intern_var
+from pixie.vm.code import Namespace, BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
+                          list_copy, returns, intern_var, _ns_registry
 import pixie.vm.code as code
 from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.objectmodel import we_are_translated
+import os.path as path
+import sys
 
 defprotocol("pixie.stdlib", "ISeq", ["-first", "-next"])
 defprotocol("pixie.stdlib", "ISeqable", ["-seq"])
@@ -351,7 +353,6 @@ def is_undefined(var):
 def load_ns(filename):
     import pixie.vm.string as string
     import pixie.vm.symbol as symbol
-    import os.path as path
 
     if isinstance(filename, symbol.Symbol):
         affirm(rt.namespace(filename) is None, u"load-file takes a un-namespaced symbol")
@@ -397,7 +398,6 @@ def _load_file(filename, compile=False):
     from pixie.vm.util import unicode_from_utf8
     import pixie.vm.reader as reader
     import pixie.vm.libs.pxic.writer as pxic_writer
-    import os.path as path
 
 
     affirm(isinstance(filename, String), u"filename must be a string")
@@ -439,7 +439,6 @@ def load_pxic_file(filename):
     from pixie.vm.libs.pxic.reader import Reader, read_obj
     from pixie.vm.reader import eof
     import pixie.vm.compiler as compiler
-    import sys
 
     if not we_are_translated():
         print "Loading precompiled file while interpreted, this may take time"
@@ -463,7 +462,6 @@ def load_pxic_file(filename):
 def load_reader(rdr):
     import pixie.vm.reader as reader
     import pixie.vm.compiler as compiler
-    import sys
 
     if not we_are_translated():
         print "Loading file while interpreted, this may take time"
@@ -531,7 +529,6 @@ def in_ns(ns_name):
 
 @as_var("ns-map")
 def ns_map(ns):
-    from pixie.vm.code import Namespace
     from pixie.vm.symbol import Symbol
     affirm(isinstance(ns, Namespace) or isinstance(ns, Symbol), u"ns must be a symbol or a namespace")
 
@@ -551,7 +548,6 @@ def ns_map(ns):
 
 @as_var("ns-aliases")
 def ns_aliases(ns):
-    from pixie.vm.code import Namespace
     from pixie.vm.symbol import Symbol
     affirm(isinstance(ns, Namespace) or isinstance(ns, Symbol), u"ns must be a symbol or a namespace")
 
@@ -573,7 +569,6 @@ def ns_aliases(ns):
 def refer(ns, refer, alias):
     from pixie.vm.symbol import Symbol
     from pixie.vm.string import String
-    from pixie.vm.code import _ns_registry
 
     if isinstance(ns, Symbol) or isinstance(ns, String):
         ns = _ns_registry.find_or_make(rt.name(ns))
@@ -594,9 +589,9 @@ def refer(ns, refer, alias):
 def refer_symbol(ns, sym, var):
     from pixie.vm.symbol import Symbol
 
-    affirm(isinstance(ns, code.Namespace), u"First argument must be a namespace")
+    affirm(isinstance(ns, Namespace), u"First argument must be a namespace")
     affirm(isinstance(sym, Symbol) and rt.namespace(sym) is None, u"Second argument must be a non-namespaced symbol")
-    affirm(isinstance(var, code.Var), u"Third argument must be a var")
+    affirm(isinstance(var, Var), u"Third argument must be a var")
 
     ns.add_refer_symbol(sym, var)
     return nil
@@ -712,7 +707,7 @@ def _throw(ex):
 
 @as_var("resolve-in")
 def _var(ns, nm):
-    affirm(isinstance(ns, code.Namespace), u"First argument to resolve-in must be a namespace")
+    affirm(isinstance(ns, Namespace), u"First argument to resolve-in must be a namespace")
     var = ns.resolve(nm)
     return var if var is not None else nil
 

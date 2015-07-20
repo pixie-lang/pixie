@@ -544,6 +544,13 @@
     "c must be a type"
     (instance? [Keyword :also-not-a-type] 123)))
 
+(t/deftest test-types-are-types
+  (t/assert= Type (type Keyword))
+  (t/assert= Type (type Integer))
+  (t/assert= Type (type Number))
+  (t/assert= Type (type Object))
+  (t/assert= Type (type Type)))
+
 (t/deftest test-satisfies?
   (t/assert= (satisfies? IIndexed [1 2]) true)
   (t/assert= (satisfies? IIndexed '(1 2)) false)

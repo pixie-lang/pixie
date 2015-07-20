@@ -57,12 +57,5 @@ def _with_meta(self, meta):
 def cons(head, tail):
     return Cons(head, tail)
 
-def count(self):
-        cnt = 0
-        while self is not nil:
-            self = self.next()
-            cnt += 1
-        return cnt
-
 def cons(head, tail=nil):
     return Cons(head, tail, nil)
