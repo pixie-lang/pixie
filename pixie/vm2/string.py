@@ -1,5 +1,5 @@
 import pixie.vm2.rt as rt
-from pixie.vm2.object import Object, Type, affirm
+from pixie.vm2.object import Object, Type, affirm, runtime_error
 from pixie.vm2.code import extend_var, as_var, wrap_fn
 from pixie.vm2.primitives import nil, true, false
 from pixie.vm2.numbers import Integer
@@ -38,7 +38,16 @@ def str_len(self, idx):
     i = idx.int_val()
     return char_cache.intern(ord(self._str[i]))
 
-
+@as_var("pixie.string", "-substring")
+def substring3(a, start, end):
+    affirm(isinstance(a, String), u"First argument must be a string")
+    affirm(isinstance(start, Integer) and isinstance(end, Integer), u"Second and third argument must be integers")
+    start = start.int_val()
+    end = end.int_val()
+    if start >= 0 and end >= 0:
+        return rt.wrap(a.get_name()[start:end])
+    else:
+        runtime_error(u"Second and third argument must be non-negative integers")
 
 
 #

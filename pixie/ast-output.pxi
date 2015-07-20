@@ -33,9 +33,11 @@
 
   ast/Let
   (-to-ast [{:keys [bindings body] :as ast}]
+    (println "BINDING " (map :name bindings)
+             (map :value bindings))
     (iast/->Let (apply array (map #(keyword (name (:name %)))
                                   bindings))
-                (apply array (map #(to-ast :value %)
+                (apply array (map #(to-ast (:value %))
                                   bindings))
                 (to-ast body)
                 (meta-ast ast)))
@@ -56,7 +58,7 @@
   ast/LetBinding
   (-to-ast
     [{:keys [name] :as ast}]
-    (iast/->Lookup name
+    (iast/->Lookup (keyword (pixie.stdlib/name name))
                    (meta-ast ast)))
   
   

@@ -35,7 +35,7 @@
         all-fields fields
         type-nm (str #_@(:ns env) "." (name nm))
         type-decl `(def ~nm (create-type ~(keyword type-nm)
-                                         ~all-fields))
+                                         (array ~@all-fields)))
         inst (gensym)
         ctor `(defn ~ctor-name ~field-syms
                 (new ~nm

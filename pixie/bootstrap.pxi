@@ -521,6 +521,37 @@ Creates new maps if the keys are not present."
         nil
         (-first x)))))
 
+(defn second
+  {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retrieve
+         the item from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IIndexed coll)
+    (nth coll 1 nil)
+    (first (next coll))))
+
+(defn third
+  {:doc "Returns the third item in coll, if coll implements IIndexed nth will be used to retrieve
+         the item from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IIndexed coll)
+    (nth coll 2 nil)
+    (first (next (next coll)))))
+
+(defn fourth
+  {:doc "Returns the fourth item in coll, if coll implements IIndexed nth will be used to retrieve
+         the item from the collection."
+   :signatures [[coll]]
+   :added "0.1"}
+  [coll]
+  (if (satisfies? IIndexed coll)
+    (nth coll 3 nil)
+    (first (next (next (next coll))))))
+
+
 (defn next [x]
   (if (satisfies? ISeq x)
     (seq (-next x))
@@ -560,6 +591,22 @@ Creates new maps if the keys are not present."
   (fn [x & args]
     (apply f (if (nil? x) else x) args)))
 
+(defn comp
+  {:doc "Composes the given functions, applying the last function first."
+   :examples [["((comp inc first) [41 2 3])" nil 42]]
+   :signatures [[f] [f & fs]]
+   :added "0.1"}
+  ([] identity)
+  ([f] f)
+  ([f1 f2]
+     (fn [& args]
+       (f1 (apply f2 args))))
+  ([f1 f2 f3]
+     (fn [& args]
+       (f1 (f2 (apply f3 args)))))
+  ([f1 f2 f3 & fs]
+     (fn [& args]
+       (apply (transduce comp (apply list f1 f2 f3 fs)) args))))
 
 (defn last [coll]
   (if (vector? coll)
@@ -788,8 +835,8 @@ not enough elements were present."
       (if (or (= i 0)
               (nil? s))
         (if (nil? s)
-          (first s)
-          not-found)
+          not-found
+          (first s))
         (recur (dec i)
                (next s))))))
 
@@ -2245,7 +2292,9 @@ not enough elements were present."
                key
                not-found))))
 
-  
+  ISeqable
+  (-seq [this]
+    (sequence this))
 
   IReduce
   (-reduce [this f init]
@@ -2677,7 +2726,7 @@ user => (refer 'pixie.string :exclude '(substring))"
    :added "0.1"}
   [name dispatch-val params & body]
   `(do
-     (let [methods (.methods ~name)]
+     (let [methods (.-methods ~name)]
        (swap! methods
               assoc
               ~dispatch-val (fn ~params
@@ -2886,4 +2935,15 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
   `(with-handler [~n (state)]
      ~@body))
 
+;; String stuff
+(in-ns :pixie.string)
 
+(defn substring
+  ([s start]
+   (substring s start (count s)))
+  ([s start end]
+   (-substring s start end)))
+
+
+(in-ns :pixie.stdlib)
+;; End String

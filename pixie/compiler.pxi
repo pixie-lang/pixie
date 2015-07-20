@@ -166,7 +166,7 @@
   (assert (even? (count bindings)) "Let requires an even number of bindings")
   (let [parted (partition 2 bindings)
         [new-env bindings] (reduce
-                            (fn [[new-env bindings] [name binding-form]]
+                            (fn [[new-env bindings] [name binding-form :as pair]]
                               (let [binding-ast (->LetBinding name
                                                               (analyze-form
                                                                (assoc new-env :tail? false)
