@@ -2893,6 +2893,14 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
         `(let* ~destructured-bindings
                ~@body)))
 
+(defmacro defmacro
+  {:doc "Defines a new macro."
+   :added "0.1"}
+  [nm & rest]
+  `(do (defn ~nm ~@rest)
+       (set-macro! ~nm)
+       ~nm))
+
 ;; State
 
 (defeffect EState

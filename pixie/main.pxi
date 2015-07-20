@@ -60,11 +60,12 @@
         (loop []
           (println "READING FORM")
           (let [d (reader/read rdr false)
-                _ (println "Compiling " d)
-                analyzed (ast-out/to-ast (compiler/analyze d))]
-            (println "GOT " d)
-            (pixie.ast.internal/eval analyzed)
-            (recur)))))))
+                _ (println "Compiling " d)]
+            (if (not (= d :eof))
+              (let [analyzed (ast-out/to-ast (compiler/analyze d))]
+                (println "GOT " d)
+                (pixie.ast.internal/eval analyzed)
+                (recur)))))))))
 
 (try
   (load-file :pixie.ffi-infer)

@@ -33,8 +33,6 @@
 
   ast/Let
   (-to-ast [{:keys [bindings body] :as ast}]
-    (println "BINDING " (map :name bindings)
-             (map :value bindings))
     (iast/->Let (apply array (map #(keyword (name (:name %)))
                                   bindings))
                 (apply array (map #(to-ast (:value %))
@@ -43,7 +41,6 @@
                 (meta-ast ast)))
   ast/Do
   (-to-ast [{:keys [statements ret] :as ast}]
-    (println "DO " statements ret)
     (let [args-array (make-array (inc (count statements)))]
       (dotimes [idx (count statements)]
         (aset args-array idx
@@ -68,7 +65,6 @@
 
   ast/Invoke
   (-to-ast [{:keys [args] :as ast}]
-    (println "INVOKE > " (count args) args)
     (let [args-array (make-array (count args))]
       (dotimes [idx (count args)]
         (aset args-array idx

@@ -206,9 +206,9 @@
 
 
 (defn skip-line-reader [rdr]
-  (if (identical? \n (read-ch rdr))
+  (if (identical? \newline (read-ch rdr))
     rdr
-    (skip-line rdr)))
+    (skip-line-reader rdr)))
 
 (defn meta-reader [rdr]
   (let [m (read-inner rdr true)
@@ -328,7 +328,6 @@
               (recur sb-fn)))))))
 
 (defn interpret-symbol [s]
-  (println "interpret sym " (= s "nil") s)
   (cond
     (= s "true") true
     (= s "false") false
@@ -337,12 +336,12 @@
 
 
 (defn read-inner
-  ([rdr eof-on-error]
-   (read-inner rdr eof-on-error true))
-  ([rdr eof-on-error always-return-form]
+  ([rdr error-on-eof]
+   (read-inner rdr error-on-eof true))
+  ([rdr error-on-eof always-return-form]
    (let [ch (eat-whitespace rdr)]
      (if (identical? ch :eof)
-       (if eof-on-error
+       (if error-on-eof
          (assert-not-eof ch "Unexpeced EOF while reading")
          ch)
        (let [m (when (satisfies? IMetadataReader rdr)
