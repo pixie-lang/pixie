@@ -8,7 +8,6 @@ from pixie.vm.primitives import true, false, nil
 import pixie.vm.numbers as numbers
 import rpython.rlib.jit as jit
 from rpython.rlib.rarithmetic import r_uint
-from pixie.vm.interpreter import ShallowContinuation
 from rpython.rlib.objectmodel import we_are_translated
 
 defprotocol("pixie.stdlib", "ISeq", ["-first", "-next"])
@@ -99,7 +98,6 @@ for x in (code.Code, code.Closure, code.VariadicCode, code.MultiArityFn):
 
 
 def default_str(x):
-    from pixie.vm.string import String
     tp = x.type()
     assert isinstance(tp, Type)
     return rt.wrap(u"<inst " + tp._name + u">")
@@ -284,7 +282,6 @@ def nth_not_found(a, b, c):
 
 @as_var("str")
 def str__args(args):
-    from pixie.vm.string import String
     acc = []
     for x in args:
         acc.append(rt.name(rt._str(x)))
@@ -401,7 +398,6 @@ def _load_file(filename, compile=False):
     import pixie.vm.reader as reader
     import pixie.vm.libs.pxic.writer as pxic_writer
     import os.path as path
-    import os
 
 
     affirm(isinstance(filename, String), u"filename must be a string")
@@ -684,7 +680,6 @@ def _try_catch(main_fn, catch_fn, final):
         return main_fn.invoke([])
     except Exception as ex:
         if not isinstance(ex, WrappedException):
-            from pixie.vm.string import String
             if isinstance(ex, Exception):
                 if not we_are_translated():
                     print "Python Error Info: ", ex.__dict__, ex

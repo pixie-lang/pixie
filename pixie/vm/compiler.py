@@ -258,7 +258,7 @@ class LocalMacro(LocalType):
 
 
 
-def resolve_var(ctx, name):
+def resolve_var(name):
     return NS_VAR.deref().resolve(name)
 
 def resolve_local(ctx, name):
@@ -270,7 +270,7 @@ def is_macro_call(form, ctx):
         name = rt.name(rt.first(form))
         if resolve_local(ctx, name):
             return None
-        var = resolve_var(ctx, rt.first(form))
+        var = resolve_var(rt.first(form))
 
         if var and var.is_defined():
             val = var.deref()
@@ -377,7 +377,7 @@ def compile_form(form, ctx):
         ns = rt.namespace(form)
 
         loc = resolve_local(ctx, name)
-        var = resolve_var(ctx, form)
+        var = resolve_var(form)
 
         if var is None and loc:
             loc.emit(ctx)
@@ -409,7 +409,6 @@ def compile_form(form, ctx):
         return
 
     if isinstance(form, PersistentVector):
-        vector_var = rt.vector()
         size = rt.count(form)
         #assert rt.count(form).int_val() == 0
         ctx.push_const(code.intern_var(u"pixie.stdlib", u"vector"))
@@ -513,7 +512,6 @@ LOOP = symbol.symbol(u"loop*")
 def compile_fn_body(name, args, body, ctx):
     new_ctx = Context(rt.name(name), rt.count(args), ctx)
     required_args = add_args(rt.name(name), args, new_ctx)
-    bc = 0
 
     affirm(isinstance(name, symbol.Symbol), u"Function names must be symbols")
 
