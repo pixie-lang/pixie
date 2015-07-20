@@ -1,12 +1,11 @@
-from pixie.vm.compiler import compile, with_ns, NS_VAR
-from pixie.vm.reader import StringReader, read_inner, eof, PromptReader, MetaDataReader
-from pixie.vm.interpreter import interpret
+from pixie.vm.compiler import with_ns, NS_VAR
+from pixie.vm.reader import StringReader
 from rpython.jit.codewriter.policy import JitPolicy
 from rpython.rlib.jit import JitHookInterface, Counters
 from rpython.rlib.rfile import create_stdio
 from rpython.annotator.policy import AnnotatorPolicy
 from pixie.vm.code import wrap_fn, NativeFn, intern_var, Var
-from pixie.vm.object import RuntimeException, WrappedException
+from pixie.vm.object import WrappedException
 from rpython.translator.platform import platform
 from pixie.vm.primitives import nil
 from pixie.vm.atom import Atom
