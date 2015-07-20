@@ -100,7 +100,6 @@
   IDisposable
   (-dispose! [this]
     (set-buffer-count! buffer idx)
-    (write downstream buffer)
     (flush this))
   IFlushableStream
   (flush [this]
