@@ -41,7 +41,6 @@ class TypeRegistry(object):
             self.var_for_type_and_name(nm, tp)
 
     def var_for_type_and_name(self, nm, tp):
-        from pixie.vm.symbol import symbol
         splits = nm.split(u".")
         size = len(splits) - 1
         assert size >= 0
@@ -242,7 +241,6 @@ class PolymorphicCodeInfo(ErrorInfo):
 
     def trace_map(self):
         from pixie.vm.string import String
-        from pixie.vm.numbers import Integer
         from pixie.vm.keyword import keyword
 
         tp = self._tp
@@ -261,7 +259,6 @@ class PixieCodeInfo(ErrorInfo):
 
     def trace_map(self):
         from pixie.vm.string import String
-        from pixie.vm.numbers import Integer
         from pixie.vm.keyword import keyword
 
         tm = {keyword(u"type") : keyword(u"pixie")}

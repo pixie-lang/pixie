@@ -1,13 +1,11 @@
 from pixie.vm.object import Object, Type, affirm, runtime_error
 import rpython.rlib.jit as jit
-from rpython.rlib.rarithmetic import r_uint
 from pixie.vm.code import as_var
 from pixie.vm.numbers import Integer, Float
 from pixie.vm.keyword import Keyword
 import pixie.vm.rt as rt
 
 MAX_FIELDS = 32
-
 
 class CustomType(Type):
     _immutable_fields_ = ["_slots", "_rev?"]

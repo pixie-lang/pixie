@@ -69,32 +69,6 @@ class StringReader(PlatformReader):
     def unread(self):
         self._idx -= 1
 
-class PromptReader(PlatformReader):
-    def __init__(self):
-        self._string_reader = None
-
-
-    def read(self):
-        if self._string_reader is None:
-            result = _readline(str(rt.name(rt.ns.deref())) + " => ")
-            if result == u"":
-                raise EOFError()
-            self._string_reader = StringReader(result)
-
-        try:
-            return self._string_reader.read()
-        except EOFError:
-            self._string_reader = None
-            return self.read()
-
-    def reset_line(self):
-        self._string_reader = None
-
-    def unread(self):
-        assert self._string_reader is not None
-        self._string_reader.unread()
-
-
 class UserSpaceReader(PlatformReader):
     def __init__(self, reader_fn):
         self._string_reader = None
