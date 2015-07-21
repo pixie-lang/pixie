@@ -16,10 +16,10 @@
 (deftype FileStream [fp offset uvbuf]
   IInputStream
   (read [this buffer len]
-    (assert (<= (buffer-capacity buffer) len)
+    (assert (>= (buffer-capacity buffer) len)
             "Not enough capacity in the buffer")
     (let [_ (pixie.ffi/set! uvbuf :base buffer)
-          _ (pixie.ffi/set! uvbuf :len (buffer-capacity buffer))
+          _ (pixie.ffi/set! uvbuf :len len)
           read-count (fs_read fp uvbuf 1 offset)]
       (assert (not (neg? read-count)) "Read Error")
       (set-field! this :offset (+ offset read-count))
@@ -100,7 +100,6 @@
   IDisposable
   (-dispose! [this]
     (set-buffer-count! buffer idx)
-    (write downstream buffer)
     (flush this))
   IFlushableStream
   (flush [this]

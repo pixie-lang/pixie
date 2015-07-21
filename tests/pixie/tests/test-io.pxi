@@ -16,6 +16,22 @@
   (let [f (io/run-command "ls tests/pixie/tests/test-io.txt")]
     (t/assert= f "tests/pixie/tests/test-io.txt\n")))
 
+(t/deftest test-read-into-buffer
+  (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
+    (let [buf (buffer 16)]
+      (io/read f buf 4)
+      (t/assert= (transduce (map char) string-builder buf) "This")
+
+      (io/read f buf 4)
+      (t/assert= (transduce (map char) string-builder buf) " is ")
+
+
+      (io/read f buf 0)
+      (t/assert= (transduce (map char) string-builder buf) "")
+      
+      (t/assert-throws? (io/read f buf 17))
+      (t/assert-throws? (io/read f buf -2)))))
+
 (t/deftest test-read-line
   (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
     (io/read-line f)
