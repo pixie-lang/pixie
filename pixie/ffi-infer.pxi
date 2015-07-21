@@ -108,7 +108,7 @@ return 0;
   [{:keys [size]} _]
   (cond
    (= size 8) 'pixie.stdlib/CDouble
-   :else (assert False "unknown type")))
+   :else (assert false "unknown type")))
 
 (defmethod edn-to-ctype :void
   [_ _]
