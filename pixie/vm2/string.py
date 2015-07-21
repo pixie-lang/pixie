@@ -247,4 +247,4 @@ def str_replace(s, sfrom, sto):
     affirm(isinstance(s, String), u"Expected string")
     affirm(isinstance(sfrom, String), u"Expected string")
     affirm(isinstance(sto, String), u"Expected string")
-    return rt.wrap(s.get_name().replace(sfrom.get_name(), sto.get_name()))
+    return rt.wrap(s.get_name().replace(sfrom.get_name()[0], sto.get_name()[0]))

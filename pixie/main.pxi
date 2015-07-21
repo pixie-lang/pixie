@@ -67,7 +67,7 @@
                 (pixie.ast.internal/eval analyzed)
                 (recur)))))))))
 
-(try
+#_(try
   (load-file :pixie.ffi-infer)
   (catch :* data
       (println "ERROR Compiling file" data)

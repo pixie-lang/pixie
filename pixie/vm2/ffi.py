@@ -138,7 +138,6 @@ class FFIFn(object.Object):
         return ret_val
 
     def invoke_k(self, args, stack):
-        print "Invoking ", self._name
         self = jit.promote(self)
         return self._invoke(args), stack
 

@@ -299,7 +299,6 @@ def _var(ns, nm):
         ns = code.ns_registry.find_or_make(ns.get_name())
 
     var = ns.resolve_in_ns_ex(nm.get_ns(), nm.get_name())
-    print "Resolved ", ns, nm.get_name(), var
     return var if var is not None else nil
 
 

@@ -43,7 +43,8 @@
    :LINE-META
    :VAR-CONST
    :CHAR
-   :VECTOR])
+   :VECTOR
+   :TAILCALL])
 
 (def *cache* nil)
 (set-dynamic! (var *cache*))
@@ -219,8 +220,10 @@
     (write-meta os ast))  
   
   ast/Invoke
-  (-write-object [{:keys [args] :as ast} os]
-    (write-tag os INVOKE)
+  (-write-object [{:keys [args env] :as ast} os]
+    (write-tag os (if (:tail? env)
+                    TAILCALL
+                    INVOKE))
     (write-int-raw os (count args))
     (doseq [arg args]
       (write-object os arg))
