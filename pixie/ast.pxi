@@ -52,6 +52,11 @@
   (children-keys [this]
     `[:value]))
 
+(defrecord Recur [args env]
+  IAst
+  (children-keys [this]
+    `[:args]))
+
 
 (defrecord LocalMacro [name respace form env])
 
@@ -151,6 +156,16 @@
                      arities))
        form
        env)))
+
+  Invoke
+  (simplify-ast [{:keys [args env] :as ast}]
+    (let [first-arg (first args)]
+      (if (and (:tail? env)
+               (and (instance? Binding first-arg)
+                    (= (:name first-arg)
+                       (:recur-point env))))
+        (->Recur args env)
+        ast)))
 
   Vector
   (simplify-ast [{:keys [items form env]}]

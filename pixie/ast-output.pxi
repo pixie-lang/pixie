@@ -64,14 +64,24 @@
     (iast/->Const form (meta-ast ast)))
 
   ast/Invoke
-  (-to-ast [{:keys [args] :as ast}]
+  (-to-ast [{:keys [args env] :as ast}]
     (let [args-array (make-array (count args))]
       (dotimes [idx (count args)]
         (aset args-array idx
               (to-ast (nth args idx))))
-      
+
       (iast/->Invoke args-array
                      (meta-ast ast))))
+
+  ast/Recur
+  (-to-ast [{:keys [args env] :as ast}]
+    (let [args-array (make-array (count args))]
+      (dotimes [idx (count args)]
+        (aset args-array idx
+              (to-ast (nth args idx))))
+
+      (iast/->Recur args-array
+                    (meta-ast ast))))
 
   ast/Var
   (-to-ast [{:keys [ns var-name] :as ast}]

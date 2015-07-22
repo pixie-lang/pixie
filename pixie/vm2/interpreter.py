@@ -32,14 +32,6 @@ class AST(Object):
     _immutable_fields_ = ["_c_meta"]
     def __init__(self, meta):
         self._c_meta = meta
-        self._c_fn_parent = nil ## Almost constant, only set once
-
-    def set_fn(self, fn):
-        self._c_fn_parent = fn
-
-    @jit.elidable_promote()
-    def get_parent_fn(self):
-        return self._c_fn_parent
 
     def get_short_location(self):
         if self._c_meta != nil:
@@ -118,6 +110,7 @@ class InterpretK(Continuation):
 
 @as_var("pixie.ast.internal", "->Const")
 def new_const(val, meta):
+    print val, meta
     return Const(val, meta)
 
 @expose("_c_val")
@@ -201,8 +194,6 @@ class Fn(AST):
         self._c_args = args
         self._c_body = body
 
-        self._call_cache = {}
-
         glocals = self._c_body.gather_locals()
         for x in self._c_args:
             if x in glocals:
@@ -219,47 +210,6 @@ class Fn(AST):
             idx += 1
 
         self._c_closed_overs = closed_overs
-
-        self.set_fn(self)
-
-    def set_fn(self, fn):
-        self._c_fn_parent = self
-        self._c_body.set_fn(self)
-
-    def mark_call(self, callee):
-        #if callee not in self._call_cache:
-        #    print "MARKING", self._c_name.get_name(), " -> ", callee._c_name.get_name()
-        self._call_cache[callee] = callee
-
-    def get_call_cache(self):
-        return self._call_cache
-
-    @jit.elidable_promote()
-    def calls_indirectly(self, callee):
-        stack = []
-        seen = []
-
-        stack.append(self)
-
-        while stack:
-            val = stack.pop()
-
-            if val is callee:
-                return True
-
-            elif val in seen:
-                continue
-
-            else:
-                seen.append(val)
-                for x in val.get_call_cache():
-                    stack.append(x)
-
-        return False
-
-
-
-
 
     def gather_locals(self):
         glocals = {}
@@ -303,9 +253,6 @@ class InterpretedFn(code.BaseCode):
         self._c_fn_ast = ast
         self._c_fn_def_ast = fn_def_ast
 
-    def get_parent_fn(self):
-        return self._c_fn_def_ast
-
     def invoke_k(self, args, stack):
         return self.invoke_k_with(args, stack, self)
 
@@ -346,11 +293,6 @@ class Invoke(AST):
         AST.__init__(self, meta)
         self._c_args = args
 
-    def set_fn(self, fn):
-        self._c_fn_parent = fn
-        for x in self._c_args:
-            x.set_fn(fn)
-
     def gather_locals(self):
         glocals = {}
         for x in self._c_args:
@@ -382,33 +324,28 @@ class InvokeK(Continuation):
         return ArrayMap([kw_type, kw_invoke, kw_ast, self._c_ast])
 
 
-@as_var("pixie.ast.internal", "->TailCall")
+
+@as_var("pixie.ast.internal", "->Recur")
 def new_invoke(args, meta):
-    return Invoke(args.array_val(), meta)
+    return Recur(args.array_val(), meta)
 
-class TailCall(Invoke):
+class Recur(Invoke):
     _immutable_fields_ = ["_c_args", "_c_fn"]
-
     def __init__(self, args, meta=nil):
         Invoke.__init__(self, args, meta)
+        self._c_args = args
 
     def interpret(self, _, locals, stack):
-        stack = stack_cons(stack, TailCallK(self))
+        stack = stack_cons(stack, RecurK(self))
         stack = stack_cons(stack, ResolveAllK(self._c_args, locals, []))
         stack = stack_cons(stack, InterpretK(self._c_args[0], locals))
         return nil, stack
 
-class TailCallK(InvokeK):
+class RecurK(InvokeK):
     _immutable_ = True
     should_enter_jit = True
     def __init__(self, ast):
         InvokeK.__init__(self, ast)
-
-    def mark_call(self, callee):
-        self.get_parent_fn().mark_call(callee.get_ast().get_parent_fn())
-
-    def get_fn(self):
-        return self.get_ast().get_parent_fn()
 
     def get_ast(self):
         return self._c_ast
@@ -463,12 +400,6 @@ class Let(AST):
         self._c_names = names
         self._c_bindings = bindings
         self._c_body = body
-
-    def set_fn(self, fn):
-        self._c_fn_parent = fn
-        self._c_body.set_fn(fn)
-        for x in self._c_bindings:
-            x.set_fn(fn)
 
     def gather_locals(self):
         glocals = {}
@@ -531,12 +462,6 @@ class If(AST):
         self._c_then = then
         self._c_else = els
 
-    def set_fn(self, fn):
-        self._c_fn_parent = fn
-        self._c_test.set_fn(fn)
-        self._c_then.set_fn(fn)
-        self._c_else.set_fn(fn)
-
     def interpret(self, val, locals, stack):
         stack = stack_cons(stack, IfK(self, locals))
         stack = stack_cons(stack, InterpretK(self._c_test, locals))
@@ -580,11 +505,6 @@ class Do(AST):
     def __init__(self, args, meta=nil):
         AST.__init__(self, meta)
         self._c_body_asts = args
-
-    def set_fn(self, fn):
-        self._c_fn_parent = fn
-        for x in self._c_body_asts:
-            x.set_fn(fn)
 
     @jit.unroll_safe
     def interpret(self, val, locals, stack):
@@ -712,27 +632,24 @@ class VarConst(AST):
 
 from rpython.rlib.jit import JitDriver
 from rpython.rlib.objectmodel import we_are_translated
-def get_printable_location(prev_fn):
+def get_printable_location(ast):
+    return ast.get_short_location()
 
-    if isinstance(prev_fn, Fn):
-        return str(prev_fn._c_name.get_name())
-    else:
-        return "<unknown>"
-
-jitdriver = JitDriver(greens=["prev_fn"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
+jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
 
 throw_var = code.intern_var(u"pixie.stdlib", u"throw")
 
 def run_stack(val, cont, stack=None, enter_debug=True):
     stack = None
     val = None
-    prev_fn = nil
+    ast = cont.get_ast()
     while True:
-        jitdriver.jit_merge_point(prev_fn=prev_fn, stack=stack, val=val, cont=cont)
+        jitdriver.jit_merge_point(ast=ast, stack=stack, val=val, cont=cont)
         try:
             val, stack = cont.call_continuation(val, stack)
+            ast = cont.get_ast()
         except SystemExit:
-            break
+            raise
         except BaseException as ex:
             if enter_debug:
                 from pixie.vm2.debugger import debug
@@ -751,23 +668,10 @@ def run_stack(val, cont, stack=None, enter_debug=True):
             stack = stack._parent
         else:
             break
-        if isinstance(cont, TailCallK):
-            maybe_interpreted = val.array_val()[0]
-            if isinstance(maybe_interpreted, InterpretedFn):
-                fn = maybe_interpreted.get_parent_fn()
-            else:
-                fn = nil
-            if prev_fn is not nil and fn is not nil:
-                prev_fn.mark_call(fn)
-            prev_prev_fn = prev_fn
-            prev_fn = fn
-            if prev_fn is not nil and prev_fn.calls_indirectly(prev_prev_fn):
-                #print "LOOPING ", prev_fn._c_name.get_name(), prev_prev_fn._c_name.get_name()
-                jitdriver.can_enter_jit(prev_fn=prev_fn, stack=stack, val=val, cont=cont)
-        elif cont.get_ast() is nil or cont.get_ast() is None:
-            prev_fn = nil
-        else:
-            prev_fn = cont.get_ast().get_parent_fn()
+
+        if isinstance(cont, RecurK):
+            jitdriver.can_enter_jit(ast=ast, stack=stack, val=val, cont=cont)
+
 
     return val
 
@@ -834,8 +738,12 @@ class DelimitedContinuation(code.NativeFn):
         self._slice = slice
 
     def describe(self):
+        arr = [None] * len(self._slice)
+        for idx, x in enumerate(self._slice):
+            arr[idx] = x.describe()
+
         return ArrayMap([kw_type, kw_delimited_continuation,
-                      kw_slice, Array([x.describe() for x in self._slice])])
+                      kw_slice, Array(arr)])
 
     @jit.unroll_safe
     def invoke_k(self, args, stack):
@@ -900,8 +808,8 @@ class EffectFunction(code.BaseCode):
                 ## No hander found
                 if not we_are_translated():
                     print "Looking for handler, none found, ", handler
-                raise SystemExit()
 
+                raise SystemExit()
 
             if (isinstance(stack._cont, Handler) and stack._cont.handler() is handler) or \
                (handler is nil and isinstance(stack._cont, Handler) and self._inner_fn.satisfied_by(stack._cont.handler())):

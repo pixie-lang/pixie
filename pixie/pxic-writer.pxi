@@ -44,7 +44,7 @@
    :VAR-CONST
    :CHAR
    :VECTOR
-   :TAILCALL])
+   :RECUR])
 
 (def *cache* nil)
 (set-dynamic! (var *cache*))
@@ -221,9 +221,15 @@
   
   ast/Invoke
   (-write-object [{:keys [args env] :as ast} os]
-    (write-tag os (if (:tail? env)
-                    TAILCALL
-                    INVOKE))
+    (write-tag os INVOKE)
+    (write-int-raw os (count args))
+    (doseq [arg args]
+      (write-object os arg))
+    (write-meta os ast))
+
+  ast/Recur
+  (-write-object [{:keys [args env] :as ast} os]
+    (write-tag os RECUR)
     (write-int-raw os (count args))
     (doseq [arg args]
       (write-object os arg))

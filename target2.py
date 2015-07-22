@@ -44,6 +44,17 @@ def entry_point(args):
     val = testit(max)
     return 43
 
+def entry_point0():
+    #s = rt.wrap(u"Foo")
+    from pixie.vm2.string import String
+    v = parse_number(u"1")
+
+    s = String(u"Foo")
+    max = 10000 #int(args[1])
+
+    val = testit(max)
+    return 43
+
 ## JIT STUFF
 
 
@@ -80,7 +91,7 @@ def run_debug(argv):
 
     # first annotate and rtype
     try:
-        interp, graph = get_interpreter(entry_point, [], backendopt=False,
+        interp, graph = get_interpreter(entry_point0, [], backendopt=False,
                                         #config=config,
                                         #type_system=config.translation.type_system,
                                         policy=Policy())

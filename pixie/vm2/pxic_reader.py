@@ -60,7 +60,7 @@ bytecodes = ["CACHED_OBJECT",
              "VAR_CONST",
              "CHAR",
              "VECTOR",
-             "TAILCALL"]
+             "RECUR"]
 
 for idx, x in enumerate(bytecodes):
     globals()[x] = idx
@@ -129,13 +129,13 @@ def read_object(os):
         meta = read_object(os)
         return ast.Invoke(args, meta=meta)
 
-    elif tag == TAILCALL:
+    elif tag == RECUR:
         args = [None] * read_raw_int(os)
         for x in range(len(args)):
             args[x] = read_object(os)
 
         meta = read_object(os)
-        return ast.TailCall(args, meta=meta)
+        return ast.Recur(args, meta=meta)
 
     elif tag == NEW_CACHED_OBJECT:
         idx = os.get_cache_idx()

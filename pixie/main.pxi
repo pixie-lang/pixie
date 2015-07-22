@@ -99,14 +99,19 @@
           (let [d (reader/read rdr false)]
             (println "got " d)
             (println "analyzing ")
-            (let [analyzed (ast-out/to-ast (compiler/analyze d))]
+            (let [analyzed (try
+                             (ast-out/to-ast (compiler/analyze d))
+                             (catch :* data
+                               (println "ERROR Analyzing" data)
+                               (print-stack-trace (:ks data))))]
               (println "analyzed " analyzed)
               (try
                 (println "result :" (pixie.ast.internal/eval analyzed))
                 (catch :* data
                   (println "ERROR Compiling file" data)
                   (print-stack-trace (:ks data)))))
-            (recur)))))))
+            (if (not (= d :exit-repl))
+              (recur))))))))
 (repl)
 
 (println "done")

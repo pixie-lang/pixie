@@ -95,7 +95,9 @@
         arities (if (vector? (first body))
                   [body]
                   body)
-        new-env (assoc env :recur-point name)
+        new-env (assoc env
+                       :recur-point name
+                       :tail? true)
         analyzed-bodies (reduce
                          (partial analyze-fn-body new-env name)
                          {}
@@ -178,7 +180,9 @@
                             [env []]
                             parted)]
     (->Let bindings
-           (analyze-form new-env `(do ~@body))
+           (analyze-form (assoc new-env
+                                :tail? (:tail? env))
+                         `(do ~@body))
            form
            env)))
 
