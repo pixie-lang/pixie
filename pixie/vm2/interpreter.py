@@ -27,6 +27,22 @@ kw_file = keyword(u"file")
 kw_line_number = keyword(u"line-number")
 kw_column_number = keyword(u"column-number")
 
+class Args(Object):
+    _type = Type(u"pixie.interpreter.Args")
+    _immutable_fields = ["_c_list[*]"]
+
+    def type(self):
+        return Args._type
+
+    def __init__(self, lst):
+        self._c_list = lst
+
+    def c_array_value(self):
+        return self._c_list
+
+
+
+
 
 class AST(Object):
     _immutable_fields_ = ["_c_meta"]
@@ -283,7 +299,7 @@ def new_invoke(args, meta):
     return Invoke(args.array_val(), meta)
 
 class Invoke(AST):
-    _immutable_fields_ = ["_c_args", "_c_fn"]
+    _immutable_fields_ = ["_c_args[*]"]
     _type = Type(u"pixie.ast-internal.Invoke")
 
     def type(self):
@@ -302,9 +318,18 @@ class Invoke(AST):
 
     def interpret(self, _, locals, stack):
         stack = stack_cons(stack, InvokeK(self))
-        stack = stack_cons(stack, ResolveAllK(self._c_args, locals, []))
+        stack = stack_cons(stack, ResolveAllK(self, locals, []))
         stack = stack_cons(stack, InterpretK(self._c_args[0], locals))
         return nil, stack
+
+    @jit.elidable_promote()
+    def arg_count(self):
+        return len(self._c_args)
+
+    @jit.elidable_promote()
+    def get_arg(self, idx):
+        return self._c_args[idx]
+
 
 class InvokeK(Continuation):
     _immutable_ = True
@@ -312,9 +337,9 @@ class InvokeK(Continuation):
         self._c_ast = ast
 
     def call_continuation(self, val, stack):
-        assert isinstance(val, Array)
-        fn = val._list[0]
-        args = val._list[1:]
+        assert isinstance(val, Args)
+        fn = val._c_list[0]
+        args = val._c_list[1:]
         return fn.invoke_k(args, stack)
 
     def get_ast(self):
@@ -322,6 +347,7 @@ class InvokeK(Continuation):
 
     def describe(self):
         return ArrayMap([kw_type, kw_invoke, kw_ast, self._c_ast])
+
 
 
 
@@ -337,7 +363,7 @@ class Recur(Invoke):
 
     def interpret(self, _, locals, stack):
         stack = stack_cons(stack, RecurK(self))
-        stack = stack_cons(stack, ResolveAllK(self._c_args, locals, []))
+        stack = stack_cons(stack, ResolveAllK(self, locals, []))
         stack = stack_cons(stack, InterpretK(self._c_args[0], locals))
         return nil, stack
 
@@ -353,7 +379,7 @@ class RecurK(InvokeK):
 class ResolveAllK(Continuation):
     _immutable_ = True
     def __init__(self, args, locals, acc):
-        self._c_args = args
+        self._c_args_ast = args
         self._c_locals = locals
         self._c_acc = acc
 
@@ -366,23 +392,23 @@ class ResolveAllK(Continuation):
         return acc
 
     def call_continuation(self, val, stack):
-        if len(self._c_acc) + 1 < len(self._c_args):
-            stack = stack_cons(stack, ResolveAllK(self._c_args, self._c_locals, self.append_to_acc(val)))
-            stack = stack_cons(stack, InterpretK(self._c_args[len(self._c_acc) + 1], self._c_locals))
+        if len(self._c_acc) + 1 < self._c_args_ast.arg_count():
+            stack = stack_cons(stack, ResolveAllK(self._c_args_ast, self._c_locals, self.append_to_acc(val)))
+            stack = stack_cons(stack, InterpretK(self._c_args_ast.get_arg(len(self._c_acc) + 1), self._c_locals))
         else:
-            return Array(self.append_to_acc(val)), stack
+            return Args(self.append_to_acc(val)), stack
 
         return nil, stack
 
     def get_ast(self):
-        return self._c_args[len(self._c_acc)]
+        return self._c_args_ast.get_arg(len(self._c_acc))
 
     def describe(self):
         return ArrayMap([kw_type, kw_resolve_all,
-                         kw_args, Array(self._c_args),
+                         kw_args, self._c_args_ast,
                          #kw_locals, Array(self._c_locals),
                          kw_acc, Array(self._c_acc),
-                         kw_ast, self._c_args[len(self._c_acc)]])
+                         kw_ast, self._c_args_ast.get_arg(len(self._c_acc))])
 
 @as_var("pixie.ast.internal", "->Let")
 def new_let(names, bindings, body, meta):
@@ -550,7 +576,7 @@ dynamic_var_handler = code.intern_var(u"pixie.stdlib", u"dynamic-var-handler")
 
 @expose("_c_var")
 class VDeref(AST):
-    _immutable_fields_ = ["_c_in_ns", "_c_var_name"]
+    _immutable_fields_ = ["_c_in_ns", "_c_var_name", "_c_var_ns"]
     _type = Type(u"pixie.ast-internal.VDeref")
 
     def type(self):
@@ -855,4 +881,3 @@ class EvalFn(code.NativeFn):
         return result
 
 as_var("pixie.ast.internal", "eval")(EvalFn())
-

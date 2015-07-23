@@ -660,11 +660,19 @@ class Namespace(object.Object):
 class NamespaceRegistry(py_object):
     def __init__(self):
         self._registry = {}
+        self._rev = 0
 
-    def find_or_make(self, name):
+    @jit.elidable_promote()
+    def _find_ns(self, name, rev):
         #affirm(isinstance(name, unicode), u"Namespace names must be unicode")
         v = self._registry.get(name, None)
+        return v
+
+
+    def find_or_make(self, name):
+        v = self._find_ns(name, self._rev)
         if v is None:
+            self._rev += 1
             v = Namespace(name)
             self._registry[name] = v
             v.include_stdlib()
