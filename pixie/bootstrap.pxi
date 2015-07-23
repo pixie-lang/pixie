@@ -1570,7 +1570,7 @@ not enough elements were present."
                      (+ idx 2)))
             acc))))))
 
-(defn array-copy [from from-idx to to-idx size]
+#_(defn array-copy [from from-idx to to-idx size]
   (loop [idx 0]
     (when (< idx size)
       (do (aset to (+ to-idx idx) (aget from (+ from-idx idx)))

@@ -5,7 +5,6 @@ class Object(object):
     """ Base Object for all VM objects
     """
     _attrs_ = ()
-
     def type(self):
         if not we_are_translated():
             print "FOR TYPE", self

@@ -8,6 +8,7 @@ from pixie.vm2.keyword import Keyword, keyword
 from pixie.vm2.code import BaseCode
 import pixie.vm2.rt as rt
 import rpython.rlib.jit as jit
+import rpython.rlib.debug as debug
 from pixie.vm2.debugger import expose
 
 kw_type = keyword(u"type")
@@ -35,9 +36,9 @@ class Args(Object):
         return Args._type
 
     def __init__(self, lst):
-        self._c_list = lst
+        self._c_list = debug.make_sure_not_resized(lst)
 
-    def c_array_value(self):
+    def c_array_val(self):
         return self._c_list
 
 
@@ -126,7 +127,6 @@ class InterpretK(Continuation):
 
 @as_var("pixie.ast.internal", "->Const")
 def new_const(val, meta):
-    print val, meta
     return Const(val, meta)
 
 @expose("_c_val")
@@ -245,7 +245,7 @@ class Fn(AST):
         return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body, self), stack
 
 class InterpretedFn(code.BaseCode):
-    _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_arg_names", "_c_fn_def_ast"]
+    _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_fn_def_ast"]
     _type = Type(u"pixie.stdlib.InterpretedFn")
 
     def type(self):
@@ -291,7 +291,7 @@ class InterpretedFn(code.BaseCode):
         for idx in range(len(self._c_arg_names)):
             locals = Locals(self._c_arg_names[idx], args[idx], locals)
 
-        return nil, stack_cons(stack, InterpretK(self._c_fn_ast, locals))
+        return nil, stack_cons(stack, InterpretK(jit.promote(self._c_fn_ast), locals))
 
 
 @as_var("pixie.ast.internal", "->Invoke")
@@ -375,6 +375,15 @@ class RecurK(InvokeK):
 
     def get_ast(self):
         return self._c_ast
+
+    @jit.unroll_safe
+    def recur(self, args, stack):
+        fn = args.get_arg(0)
+        new_args = [None] * (args.get_arg_count() - 1)
+        for x in range(args.get_arg_count() - 1):
+            new_args[x] = args.get_arg(x + 1)
+
+        return fn.invoke_k(new_args, stack)
 
 class ResolveAllK(Continuation):
     _immutable_ = True
@@ -522,7 +531,7 @@ def new_do(args, meta):
     return Do(args.array_val(), meta)
 
 class Do(AST):
-    _immutable_fields_ = ["_c_body_asts"]
+    _immutable_fields_ = ["_c_body_asts[*]"]
     _type = Type(u"pixie.ast-internal.Do")
 
     def type(self):
@@ -661,7 +670,22 @@ from rpython.rlib.objectmodel import we_are_translated
 def get_printable_location(ast):
     return ast.get_short_location()
 
-jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
+class VirtArgs(object):
+    _virtualizable_ = ["_args[*]"]
+    def __init__(self, args):
+        self = jit.hint(self, access_directly=True, fresh_virtualizable=True)
+        self._args = debug.make_sure_not_resized(args)
+
+    def get_arg_count(self):
+        return len(self._args)
+
+    def get_arg(self, idx):
+        assert 0 <= idx < len(self._args)
+        return self._args[idx]
+
+jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "args", "cont"], get_printable_location=get_printable_location,
+                      virtualizables=["args"])
+jit.set_param(jitdriver, "trace_limit", 30000)
 
 throw_var = code.intern_var(u"pixie.stdlib", u"throw")
 
@@ -669,16 +693,21 @@ def run_stack(val, cont, stack=None, enter_debug=True):
     stack = None
     val = None
     ast = cont.get_ast()
+    args = None
     while True:
-        jitdriver.jit_merge_point(ast=ast, stack=stack, val=val, cont=cont)
+        jitdriver.jit_merge_point(ast=ast, stack=stack, val=val, args=args, cont=cont)
         try:
-            val, stack = cont.call_continuation(val, stack)
+            if isinstance(cont, RecurK):
+                val, stack = cont.recur(args, stack)
+                args = None
+            else:
+                val, stack = cont.call_continuation(val, stack)
             ast = cont.get_ast()
         except SystemExit:
             raise
         except BaseException as ex:
-            if enter_debug:
-                from pixie.vm2.debugger import debug
+            #if enter_debug:
+            #    from pixie.vm2.debugger import debug
                 #debug(cont, stack, val)
             #print_stacktrace(cont, stack)
             if not we_are_translated():
@@ -696,7 +725,9 @@ def run_stack(val, cont, stack=None, enter_debug=True):
             break
 
         if isinstance(cont, RecurK):
-            jitdriver.can_enter_jit(ast=ast, stack=stack, val=val, cont=cont)
+            args = VirtArgs(val.c_array_val())
+            val = None
+            jitdriver.can_enter_jit(ast=ast, stack=stack, val=val, args=args, cont=cont)
 
 
     return val

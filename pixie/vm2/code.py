@@ -418,7 +418,7 @@ class DynamicVars(py_object):
 
 class Var(BaseCode):
     _type = object.Type(u"pixie.stdlib.Var")
-    _immutable_fields_ = ["_rev?"]
+    _immutable_fields_ = ["_rev?", "_ns", "_name"]
 
     def type(self):
         return Var._type
@@ -969,6 +969,17 @@ def wrap_fn(fn, tp=object.Object):
 
                 try:
                     return rt.wrap(fn(args[0], args[1], args[2], args[3]))
+                except object.WrappedException as ex:
+                    #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                    raise
+            return as_native_fn(wrapped_fn)
+
+        if argc == 5:
+            def wrapped_fn(self, args):
+                affirm(len(args) == 5, u"Expected 5 arguments to " + fn_name)
+
+                try:
+                    return rt.wrap(fn(args[0], args[1], args[2], args[3], args[4]))
                 except object.WrappedException as ex:
                     #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
                     raise

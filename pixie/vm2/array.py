@@ -160,6 +160,16 @@ def aset(self, idx, val):
     self._list[idx.int_val()] = val
     return val
 
+@as_var("array-copy")
+def array_copy(afrom, afstart, ato, atstart, cnt):
+    afrom = afrom.array_val()
+    ato = ato.array_val()
+    afstart = afstart.int_val()
+    atstart = atstart.int_val()
+    for x in range(cnt.int_val()):
+        ato[atstart + x] = afrom[afstart + x]
+
+
 #
 # @as_var("aslice")
 # def aslice(self, offset):
