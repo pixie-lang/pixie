@@ -60,6 +60,15 @@ def array__args(lst):
 def _make_array(size):
     return Array([nil] * size.int_val())
 
+@as_var("array-copy")
+def array_copy(afrom, afstart, ato, atstart, cnt):
+    afrom = afrom.array_val()
+    ato = ato.array_val()
+    afstart = afstart.int_val()
+    atstart = atstart.int_val()
+    for x in range(cnt.int_val()):
+        ato[atstart + x] = afrom[afstart + x]
+
 #@extend(proto._count, Array)
 #def _count(self):
 #    assert isinstance(self, Array)

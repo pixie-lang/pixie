@@ -974,7 +974,18 @@ def wrap_fn(fn, tp=object.Object):
                     raise
             return as_native_fn(wrapped_fn)
 
-        assert False, "implement more"
+        if argc == 5:
+            def wrapped_fn(self, args):
+                affirm(len(args) == 5, u"Expected 5 arguments to " + fn_name)
+
+                try:
+                    return rt.wrap(fn(args[0], args[1], args[2], args[3], args[4]))
+                except object.WrappedException as ex:
+                    #ex._ex._trace.append(object.NativeCodeInfo(fn_name))
+                    raise
+            return as_native_fn(wrapped_fn)
+
+        assert False, "implement more " + str(argc)
 
 
 def extend(pfn, tp1, tp2=None):
