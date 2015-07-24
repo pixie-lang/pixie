@@ -58,12 +58,9 @@
     (with-handler [_ dynamic-var-handler]
       (binding [reader/*current-ns* 'user]
         (loop []
-          (println "READING FORM")
-          (let [d (reader/read rdr false)
-                _ (println "Compiling " d)]
+          (let [d (reader/read rdr false)]
             (if (not (= d :eof))
               (let [analyzed (ast-out/to-ast (compiler/analyze d))]
-                (println "GOT " d)
                 (pixie.ast.internal/eval analyzed)
                 (recur)))))))))
 

@@ -317,8 +317,7 @@ class Invoke(AST):
         return glocals
 
     def interpret(self, _, locals, stack):
-        stack = stack_cons(stack, InvokeK(self))
-        stack = stack_cons(stack, ResolveAllK(self, locals, []))
+        stack = stack_cons(stack, ResolveAllK(self, locals, [], False))
         stack = stack_cons(stack, InterpretK(self._c_args[0], locals))
         return nil, stack
 
@@ -333,13 +332,23 @@ class Invoke(AST):
 
 class InvokeK(Continuation):
     _immutable_ = True
-    def __init__(self, ast):
+    def __init__(self, invoke_args, ast):
+        self._c_invoke_args = invoke_args
         self._c_ast = ast
 
+    @jit.unroll_safe
+    def fn_and_args(self):
+        fn = self._c_invoke_args[0]
+        new_args = [None] * (len(self._c_invoke_args) - 1)
+
+        for x in range(len(new_args)):
+            new_args[x] = self._c_invoke_args[x + 1]
+
+        return fn, new_args
+
+
     def call_continuation(self, val, stack):
-        assert isinstance(val, Args)
-        fn = val._c_list[0]
-        args = val._c_list[1:]
+        fn, args = self.fn_and_args()
         return fn.invoke_k(args, stack)
 
     def get_ast(self):
@@ -362,26 +371,26 @@ class Recur(Invoke):
         self._c_args = args
 
     def interpret(self, _, locals, stack):
-        stack = stack_cons(stack, RecurK(self))
-        stack = stack_cons(stack, ResolveAllK(self, locals, []))
+        stack = stack_cons(stack, ResolveAllK(self, locals, [], True))
         stack = stack_cons(stack, InterpretK(self._c_args[0], locals))
         return nil, stack
 
 class RecurK(InvokeK):
     _immutable_ = True
     should_enter_jit = True
-    def __init__(self, ast):
-        InvokeK.__init__(self, ast)
+    def __init__(self, invoke_args, ast):
+        InvokeK.__init__(self, invoke_args, ast)
 
     def get_ast(self):
         return self._c_ast
 
 class ResolveAllK(Continuation):
     _immutable_ = True
-    def __init__(self, args, locals, acc):
+    def __init__(self, args, locals, acc, recur):
         self._c_args_ast = args
         self._c_locals = locals
         self._c_acc = acc
+        self._c_recur = recur
 
     @jit.unroll_safe
     def append_to_acc(self, val):
@@ -393,10 +402,14 @@ class ResolveAllK(Continuation):
 
     def call_continuation(self, val, stack):
         if len(self._c_acc) + 1 < self._c_args_ast.arg_count():
-            stack = stack_cons(stack, ResolveAllK(self._c_args_ast, self._c_locals, self.append_to_acc(val)))
+            stack = stack_cons(stack, ResolveAllK(self._c_args_ast, self._c_locals, self.append_to_acc(val), self._c_recur))
             stack = stack_cons(stack, InterpretK(self._c_args_ast.get_arg(len(self._c_acc) + 1), self._c_locals))
         else:
-            return Args(self.append_to_acc(val)), stack
+            new_acc = self.append_to_acc(val)
+            if self._c_recur:
+                return nil, stack_cons(stack, RecurK(new_acc, self._c_args_ast.get_arg(0)))
+            else:
+                return nil, stack_cons(stack, InvokeK(new_acc, self._c_args_ast.get_arg(0)))
 
         return nil, stack
 
@@ -661,7 +674,12 @@ from rpython.rlib.objectmodel import we_are_translated
 def get_printable_location(ast):
     return ast.get_short_location()
 
-jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location)
+def should_unroll(ast):
+    return True
+
+jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location,
+                      should_unroll_one_iteration=should_unroll)
+
 
 throw_var = code.intern_var(u"pixie.stdlib", u"throw")
 
