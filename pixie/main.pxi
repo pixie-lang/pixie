@@ -58,13 +58,19 @@
     (with-handler [_ dynamic-var-handler]
       (binding [reader/*current-ns* 'user]
         (loop []
+          (println "read..")
           (let [d (reader/read rdr false)]
+            (println "done")
             (if (not (= d :eof))
-              (let [analyzed (ast-out/to-ast (compiler/analyze d))]
-                (pixie.ast.internal/eval analyzed)
-                (recur)))))))))
+              (do (println "analyze")
+                  (let [analyzed (ast-out/to-ast (compiler/analyze d))]
+                    (println "done")
+                    (println "eval")
+                    (pixie.ast.internal/eval analyzed)
+                    (println "done")
+                    (recur))))))))))
 
-#_(try
+(try
   (load-file :pixie.ffi-infer)
   (catch :* data
       (println "ERROR Compiling file" data)

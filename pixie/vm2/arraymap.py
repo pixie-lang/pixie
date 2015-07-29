@@ -33,3 +33,8 @@ class ArrayMap(object.Object):
 @as_var(u"pixie.stdlib", u"array-map-to-array")
 def to_list(this):
     return Array(this.list_val())
+
+@as_var(u"pixie.stdlib", u"array-map")
+def array_map__args(args):
+    #_affirm((len(args) % 2) == 0, u"Must have even number of args to array-map")
+    return ArrayMap(args)

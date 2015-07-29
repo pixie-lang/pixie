@@ -118,7 +118,7 @@ class InterpretK(Continuation):
         self._c_locals = locals
 
     def call_continuation(self, val, stack):
-        ast = self._c_ast
+        ast = jit.promote(self._c_ast)
         return ast.interpret(val, self._c_locals, stack)
 
     def get_ast(self):
@@ -126,7 +126,6 @@ class InterpretK(Continuation):
 
 @as_var("pixie.ast.internal", "->Const")
 def new_const(val, meta):
-    print val, meta
     return Const(val, meta)
 
 @expose("_c_val")
@@ -148,35 +147,81 @@ class Const(AST):
         return {}
 
 
-@expose("_c_value", "_c_name", "_c_next")
 class Locals(object):
     _immutable_ = True
-    def __init__(self, name, value, next):
-        assert isinstance(name, Keyword)
-        self._c_value = value
-        self._c_name = name
-        self._c_next = next
-
-
+    def __init__(self, prev):
+        assert prev is None or isinstance(prev, Locals)
+        self._c_prev = prev
 
     @staticmethod
-    @jit.unroll_safe
-    def get_local(self, name):
-        if self is None:
-            return nil
+    def idx_tuple(self, name):
+        stack_idx = 0
         c = self
-        while c._c_name is not name:
-            c = c._c_next
-            if c is None:
-                runtime_error(u"Local" + name.to_repr() + u" is undefined")
-        return c._c_value
+        while c is not None:
+            idx = c.idx_for_name(name)
+            if idx != -1:
+                return (stack_idx, idx)
+
+            c = c._c_prev
+            stack_idx += 1
+
+        return (-1, -1)
+
+    @jit.unroll_safe
+    def val_at(self, idx_tuple):
+        stack_idx, idx = idx_tuple
+        assert stack_idx >= 0
+        c = self
+        for x in range(stack_idx):
+            c = c._c_prev
+
+        return c.val_for_idx(idx)
+
+    def get_local_slow(self, name):
+        tuple = Locals.idx_tuple(self, name)
+        return self.val_at(tuple)
+
+
+class ArrayLocals(Locals):
+    _immutable_fields_ = ["_c_names[*]", "_c_vals[*]"]
+    _immutable_ = True
+    def __init__(self, prev, names, vals):
+        Locals.__init__(self, prev)
+        self._c_names = names
+        self._c_vals = vals
+
+    def idx_for_name(self, name):
+        for idx, nm in enumerate(self._c_names):
+            if nm is name:
+                return idx
+        return -1
+
+    def val_for_idx(self, idx):
+        assert idx >= 0
+        return self._c_vals[idx]
+
+class SingleLocal(Locals):
+    _immutable_ = True
+    def __init__(self, prev, name, val):
+        Locals.__init__(self, prev)
+        self._c_name = name
+        self._c_val = val
+
+    def idx_for_name(self, name):
+        if name is self._c_name:
+            return 0
+        return -1
+
+    def val_for_idx(self, idx):
+        assert idx == 0
+        return self._c_val
 
 @as_var("pixie.ast.internal", "->Lookup")
 def new_lookup(name, meta):
     return Lookup(name, meta)
 
 class Lookup(AST):
-    _immutable_fields_ = ["_c_name"]
+    _immutable_fields_ = ["_c_name", "_q_idx?"]
     _type = Type(u"pixie.ast-internal.Lookup")
 
     def type(self):
@@ -186,9 +231,25 @@ class Lookup(AST):
         assert isinstance(name, Keyword)
         AST.__init__(self, meta)
         self._c_name = name
+        self._q_idx = (-1, -1)
+
+
+    def get_idx(self, locals):
+        stack_idx, _ = self._q_idx
+        if stack_idx == -1:
+            self._q_idx = Locals.idx_tuple(locals, self._c_name)
+            if not we_are_translated():
+                (stack_idx, idx) = self._q_idx
+                assert stack_idx >= 0, u"Local unfound" + unicode(str(self._c_name))
+            return self._q_idx
+        else:
+            return jit.promote(self._q_idx)
 
     def interpret(self, _, locals, stack):
-        return Locals.get_local(locals, self._c_name), stack
+        idx = self.get_idx(locals)
+        stack_idx, _ = idx
+        assert stack_idx >= 0, u"Can't find " + self._c_name.get_name()
+        return locals.val_at(idx), stack
 
     def gather_locals(self):
         return {self._c_name: self._c_name}
@@ -198,7 +259,7 @@ def new_fn(name, args, body, meta):
     return Fn(name, args.array_val(), body, meta=meta)
 
 class Fn(AST):
-    _immutable_fields_ = ["_c_name", "_c_args", "_c_body", "_c_closed_overs"]
+    _immutable_fields_ = ["_c_name", "_c_args", "_c_body", "_c_closed_overs", "_c_closed_over_tuples?"]
 
     _type = Type(u"pixie.ast.internal.Fn")
     def type(self):
@@ -209,6 +270,7 @@ class Fn(AST):
         self._c_name = name
         self._c_args = args
         self._c_body = body
+        self._c_closed_over_tuples = None
 
         glocals = self._c_body.gather_locals()
         for x in self._c_args:
@@ -217,7 +279,6 @@ class Fn(AST):
 
         if self._c_name in glocals:
             del glocals[self._c_name]
-
 
         closed_overs = [None] * len(glocals)
         idx = 0
@@ -235,12 +296,39 @@ class Fn(AST):
 
         return glocals
 
+    def get_closed_over_tuples(self, local_vals):
+        tuples = [(-1, -1)] * len(self._c_closed_overs)
+
+        for idx, nm in enumerate(self._c_closed_overs):
+            stack_idx, idx_val = Locals.idx_tuple(local_vals, nm)
+            if not we_are_translated():
+                if not stack_idx >= 0:
+                    print "INTERNAL ERROR: LOCAL NOT FOUND", nm
+                assert stack_idx >= 0, u"Local error" + str(nm)
+
+            tuples[idx] = (stack_idx, idx_val)
+        return tuples
+
+    @jit.unroll_safe
+    def get_closed_overs(self, locals):
+        if self._c_closed_over_tuples is None:
+            self._c_closed_over_tuples = self.get_closed_over_tuples(locals)
+
+        closed_overs = [None] * len(self._c_closed_overs)
+        for idx, n in enumerate(jit.promote(self._c_closed_over_tuples)):
+            closed_overs[idx] = locals.val_at(jit.promote(n))
+
+        return closed_overs
+
 
     @jit.unroll_safe
     def interpret(self, _, locals, stack):
-        locals_prefix = None
-        for n in self._c_closed_overs:
-            locals_prefix = Locals(n, Locals.get_local(locals, n), locals_prefix)
+        if len(self._c_closed_overs) > 0:
+            closed_overs = self.get_closed_overs(locals)
+            locals_prefix = ArrayLocals(None, self._c_closed_overs, closed_overs)
+
+        else:
+            locals_prefix = None
 
         return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body, self), stack
 
@@ -262,10 +350,7 @@ class InterpretedFn(code.BaseCode):
         code.BaseCode.__init__(self)
         self._c_arg_names = arg_names
         self._c_name = name
-        if name is not nil:
-            self._c_locals = Locals(name, self, locals_prefix)
-        else:
-            self._c_locals = locals_prefix
+        self._c_locals = locals_prefix
         self._c_fn_ast = ast
         self._c_fn_def_ast = fn_def_ast
 
@@ -274,10 +359,6 @@ class InterpretedFn(code.BaseCode):
 
     @jit.unroll_safe
     def invoke_k_with(self, args, stack, self_fn):
-        # TODO: Check arg count
-        locals = self._c_locals
-        locals = Locals(self._c_name, self_fn, locals)
-
         if not len(args) == len(self._c_arg_names):
 
             runtime_error(u"Wrong number args to" +
@@ -288,8 +369,8 @@ class InterpretedFn(code.BaseCode):
                           u"\n" + unicode(self._c_fn_def_ast.get_long_location()),
                           u"pixie.stdlib.ArityException")
 
-        for idx in range(len(self._c_arg_names)):
-            locals = Locals(self._c_arg_names[idx], args[idx], locals)
+        locals = SingleLocal(self._c_locals, jit.promote(self._c_name), self_fn)
+        locals = ArrayLocals(locals, self._c_arg_names, args)
 
         return nil, stack_cons(stack, InterpretK(self._c_fn_ast, locals))
 
@@ -400,18 +481,29 @@ class ResolveAllK(Continuation):
         acc[len(self._c_acc)] = val
         return acc
 
+    @jit.unroll_safe
+    def fn_and_args(self, acc):
+        fn = acc[0]
+        new_args = [None] * (len(acc) - 1)
+
+        for x in range(len(new_args)):
+            new_args[x] = acc[x + 1]
+
+        return fn, new_args
+
     def call_continuation(self, val, stack):
         if len(self._c_acc) + 1 < self._c_args_ast.arg_count():
             stack = stack_cons(stack, ResolveAllK(self._c_args_ast, self._c_locals, self.append_to_acc(val), self._c_recur))
             stack = stack_cons(stack, InterpretK(self._c_args_ast.get_arg(len(self._c_acc) + 1), self._c_locals))
         else:
-            new_acc = self.append_to_acc(val)
-            if self._c_recur:
-                return nil, stack_cons(stack, RecurK(new_acc, self._c_args_ast.get_arg(0)))
-            else:
-                return nil, stack_cons(stack, InvokeK(new_acc, self._c_args_ast.get_arg(0)))
 
+            new_acc = self.append_to_acc(val)
+            fn, args = self.fn_and_args(new_acc)
+            return fn.invoke_k(args, stack)
         return nil, stack
+
+    def is_loop_tail(self):
+        return self._c_recur and len(self._c_acc) + 1 == self._c_args_ast.arg_count()
 
     def get_ast(self):
         return self._c_args_ast.get_arg(len(self._c_acc))
@@ -428,7 +520,7 @@ def new_let(names, bindings, body, meta):
     return Let(names.array_val(), bindings.array_val(), body, meta)
 
 class Let(AST):
-    _immutable_fields_ = ["_c_names", "_c_bindings", "_c_body"]
+    _immutable_fields_ = ["_c_names[*]", "_c_bindings[*]", "_c_body"]
     _type = Type(u"pixie.ast-internal.Let")
 
     def type(self):
@@ -467,7 +559,7 @@ class LetK(Continuation):
 
     def call_continuation(self, val, stack):
         assert isinstance(self._c_ast, Let)
-        new_locals = Locals(self._c_ast._c_names[self._c_idx], val, self._c_locals)
+        new_locals = SingleLocal(self._c_locals, self._c_ast._c_names[self._c_idx], val)
 
         if self._c_idx + 1 < len(self._c_ast._c_names):
             stack = stack_cons(stack, LetK(self._c_ast, self._c_idx + 1, new_locals))
@@ -680,6 +772,7 @@ def should_unroll(ast):
 jitdriver = JitDriver(greens=["ast"], reds=["stack", "val", "cont"], get_printable_location=get_printable_location,
                       should_unroll_one_iteration=should_unroll)
 
+jit.set_param(jitdriver, "trace_limit", 60000)
 
 throw_var = code.intern_var(u"pixie.stdlib", u"throw")
 
@@ -707,13 +800,14 @@ def run_stack(val, cont, stack=None, enter_debug=True):
             val, stack = throw_var.invoke_k([keyword(u"pixie.stdlib/InternalException"),
                                              keyword(u"TODO")], stack_cons(stack, cont))
 
+        prev_cont = cont
         if stack:
             cont = stack._cont
             stack = stack._parent
         else:
             break
 
-        if isinstance(cont, RecurK):
+        if prev_cont.is_loop_tail():
             jitdriver.can_enter_jit(ast=ast, stack=stack, val=val, cont=cont)
 
 

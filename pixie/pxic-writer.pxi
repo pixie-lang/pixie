@@ -172,10 +172,10 @@
     (write-raw-string os (str name))
     (write-int-raw os (count args))
     (doseq [arg args]
-      (write-object os (keyword (str arg))))
+      (write-object os (keyword (pixie.stdlib/name arg))))
     (write-int-raw os (count closed-overs))
     (doseq [co closed-overs]
-      (write-object os (keyword (str co))))
+      (write-object os (keyword (pixie.stdlib/name co))))
     (write-object os body)
     (write-meta os ast))
 

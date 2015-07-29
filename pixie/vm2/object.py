@@ -155,6 +155,8 @@ class Continuation(object):
         from pixie.vm2.primitives import nil
         return nil
 
+    def is_loop_tail(self):
+        return False
 
 class StackCell(object):
     """Defines an immutable call stack, stacks can be copied, spliced and combined"""

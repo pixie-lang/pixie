@@ -418,7 +418,7 @@ class DynamicVars(py_object):
 
 class Var(BaseCode):
     _type = object.Type(u"pixie.stdlib.Var")
-    _immutable_fields_ = ["_rev?"]
+    _immutable_fields_ = ["_rev?", "_ns", "_name"]
 
     def type(self):
         return Var._type
