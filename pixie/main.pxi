@@ -70,7 +70,7 @@
                     (println "done")
                     (recur))))))))))
 
-(try
+#_(try
   (load-file :pixie.ffi-infer)
   (catch :* data
       (println "ERROR Compiling file" data)
@@ -118,3 +118,7 @@
 (repl)
 
 (println "done")
+
+
+(count (with-handler [y (->Generator)]
+         (reduce yield y (range 10000))))

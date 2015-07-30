@@ -20,9 +20,9 @@ class SwitchTable(Object):
     def lookup(self, itm):
         return self._switch_table.get(itm, nil)
 
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         affirm(len(args) == 1, u"SwitchTables should be called with one arg")
-        return self.lookup(args[0]), stack
+        return self.lookup(args[0])
 
 
 
@@ -52,9 +52,9 @@ class ContainsTable(Object):
     def lookup(self, itm):
         return rt.wrap(itm in self._switch_table)
 
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         affirm(len(args) == 1, u"ContainsTables should be called with one arg")
-        return self.lookup(args[0]), stack
+        return self.lookup(args[0])
 
 @as_var("contains-table")
 def contains_table__args(args):

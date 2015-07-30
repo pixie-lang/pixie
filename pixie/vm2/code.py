@@ -192,16 +192,17 @@ class MultiArityFn(BaseCode):
                       u"pixie.stdlib/InvalidArityException")
 
 
-
+    def __repr__(self):
+        return u"<multi-fn " + self._name + u">"
 
     def get_arities(self):
         return self._arities.keys()
 
-    def invoke_k(self, args, stack):
-        return self.invoke_k_with(args, stack, self)
+    def invoke_k(self, args):
+        return self.invoke_k_with(args, self)
 
-    def invoke_k_with(self, args, stack, self_fn):
-        return self.get_fn(len(args)).invoke_k_with(args, stack, self_fn)
+    def invoke_k_with(self, args, self_fn):
+        return self.get_fn(len(args)).invoke_k_with(args, self_fn)
 
 
 class NativeFn(BaseCode):
@@ -217,72 +218,14 @@ class NativeFn(BaseCode):
     def invoke(self, args):
         return self.inner_invoke(args)
 
-    def invoke_k(self, args, stack):
-        return self.invoke(args), stack
+    def invoke_k(self, args):
+        return self.invoke(args)
 
     def inner_invoke(self, args):
         raise NotImplementedError()
 
     def invoke_with(self, args, this_fn):
         return self.invoke(args)
-
-
-class Code(BaseCode):
-    """Interpreted code block. Contains consts and """
-    _type = object.Type(u"pixie.stdlib.Code")
-    _immutable_fields_ = ["_arity", "_consts[*]", "_bytecode", "_stack_size", "_meta"]
-
-    def type(self):
-        return Code._type
-
-    def __init__(self, name, arity, bytecode, consts, stack_size, debug_points, meta=nil):
-        BaseCode.__init__(self)
-        self._arity = arity
-        self._bytecode = bytecode
-        self._consts = consts
-        self._name = name
-        self._stack_size = stack_size
-        self._debug_points = debug_points
-        self._meta = meta
-
-    def with_meta(self, meta):
-        return Code(self._name, self._arity, self._bytecode, self._consts, self._stack_size, self._debug_points, meta=meta)
-
-    def get_debug_points(self):
-        return self._debug_points
-
-    def invoke(self, args):
-        if len(args) == self.get_arity():
-            return self.invoke_with(args, self)
-        else:
-            runtime_error(u"Invalid number of arguments " + unicode(str(len(args))) 
-                          + u" for function '" + unicode(str(self._name)) + u"'. Expected "
-                          + unicode(str(self.get_arity())),
-                          u":pixie.stdlib/InvalidArityException")
-
-    def invoke_with(self, args, this_fn):
-        return interpret(self, args, self_obj=this_fn)
-
-
-    @elidable_promote()
-    def get_arity(self):
-        return self._arity
-            
-    @elidable_promote()
-    def get_consts(self):
-        return self._consts
-
-    @elidable_promote()
-    def get_bytecode(self):
-        return self._bytecode
-
-    @elidable_promote()
-    def stack_size(self):
-        return self._stack_size
-
-    @elidable_promote()
-    def get_base_code(self):
-        return self
 
 
 class VariadicCode(BaseCode):
@@ -307,74 +250,25 @@ class VariadicCode(BaseCode):
     def required_arity(self):
         return self._required_arity
 
-    def invoke_k(self, args, stack):
-        return self.invoke_k_with(args, stack, self)
+    def invoke_k(self, args):
+        return self.invoke_k_with(args, self)
 
-    def invoke_k_with(self, args, stack, this_fn):
+    def invoke_k_with(self, args, this_fn):
         from pixie.vm2.array import Array
         argc = len(args)
         if self._required_arity == 0:
-            return self._code.invoke_k([Array(args)], stack)
+            return self._code.invoke_k([Array(args)])
         if argc == self._required_arity:
             new_args = resize_list(args, len(args) + 1)
             new_args[len(args)] = Array([])
-            return self._code.invoke_k_with(new_args, stack, this_fn)
+            return self._code.invoke_k_with(new_args, this_fn)
         elif argc > self._required_arity:
             start = slice_from_start(args, self._required_arity, 1)
             rest = slice_to_end(args, self._required_arity)
             start[self._required_arity] = Array(rest)
-            return self._code.invoke_k_with(start, stack, this_fn)
+            return self._code.invoke_k_with(start, this_fn)
         affirm(False, u"Got " + unicode(str(argc)) + u" arg(s) need at least " + unicode(str(self._required_arity)))
         return None, stack
-
-
-class Closure(BaseCode):
-    _type = object.Type(u"pixie.stdlib.Closure")
-    _immutable_fields_ = ["_closed_overs[*]", "_code", "_meta"]
-    
-    def type(self):
-        return Closure._type
-
-    def __init__(self, code, closed_overs, meta=nil):
-        BaseCode.__init__(self)
-        affirm(isinstance(code, Code), u"Code argument to Closure must be an instance of Code")
-        self._code = code
-        self._closed_overs = closed_overs
-        self._meta = meta
-
-    def with_meta(self, meta):
-        return Closure(self._code, self._closed_overs, meta)
-
-    
-    def name(self):
-        return None
-
-    def invoke(self, args):
-        return self.invoke_with(args, self)
-
-    def invoke_with(self, args, self_fn):
-        return interpret(self, args, self_obj=self_fn)
-
-    def get_closed_over(self, idx):
-        return self._closed_overs[idx]
-
-    def get_consts(self):
-        return self._code.get_consts()
-
-    def get_bytecode(self):
-        return self._code.get_bytecode()
-
-    def stack_size(self):
-        return self._code.stack_size()
-
-    def get_closed_overs(self):
-        return self._closed_overs
-
-    def get_base_code(self):
-        return self._code.get_base_code()
-
-    def get_debug_points(self):
-        return self._code.get_debug_points()
 
 
 class Undefined(object.Object):
@@ -486,8 +380,8 @@ class Var(BaseCode):
     def invoke_with(self, args, this_fn):
         return self.invoke(args)
 
-    def invoke_k(self, args, stack):
-        return self.deref().invoke_k(args, stack)
+    def invoke_k(self, args):
+        return self.deref().invoke_k(args)
 
 class bindings(py_object):
     def __init__(self, *args):
@@ -710,12 +604,16 @@ class DefaultProtocolFn(NativeFn):
         pfn = self._pfn
         if isinstance(pfn, PolymorphicFn):
             protocol = pfn._protocol
+            assert isinstance(protocol, Protocol)
+            affirm(False, u"No override for " + tp._name + u" on " + self._pfn._name + u" in protocol " + protocol._name)
         elif isinstance(pfn, DoublePolymorphicFn):
             protocol = pfn._protocol
+            assert isinstance(protocol, Protocol)
+            tp2 = args[1].type()
+            assert isinstance(tp2, object.Type)
+            affirm(False, u"No override for " + tp._name + u" and " + tp2._name + u" on " + self._pfn._name + u" in protocol " + protocol._name)
         else:
             assert False
-        assert isinstance(protocol, Protocol)
-        affirm(False, u"No override for " + tp._name + u" on " + self._pfn._name + u" in protocol " + protocol._name)
 
 
 class Protocol(object.Object):
@@ -816,11 +714,11 @@ class PolymorphicFn(BaseCode):
 
         return promote(fn)
 
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         affirm(len(args) >= 1, u"Wrong number of args")
         a = args[0].type()
         fn = self.get_protocol_fn(a, self._rev)
-        return fn.invoke_k(args, stack)
+        return fn.invoke_k(args)
 
 
 class DoublePolymorphicFn(BaseCode):
@@ -862,12 +760,12 @@ class DoublePolymorphicFn(BaseCode):
         fn = d1.get(tp2, self._default_fn)
         return promote(fn)
 
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         affirm(len(args) >= 2, u"DoublePolymorphicFunctions take at least two args")
         a = args[0].type()
         b = args[1].type()
         fn = self.get_fn(a, b, self._rev)
-        return fn.invoke_k(args, stack)
+        return fn.invoke_k(args)
 
 def munge(s):
     return s.replace("-", "_").replace("?", "_QMARK_").replace("!", "_BANG_")

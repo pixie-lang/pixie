@@ -112,7 +112,7 @@ def _multi_arity_fn__args(args):
 
 class Apply(NativeFn):
     @jit.unroll_safe
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         from pixie.vm2.array import Array
         last_itm = args[len(args) - 1]
         affirm(isinstance(last_itm, Array), u"Final argument in -apply must be an array")
@@ -126,7 +126,7 @@ class Apply(NativeFn):
         for x in range(len(last_itm._list)):
             out_args[argc + x] = last_itm._list[x]
 
-        return fn.invoke_k(out_args, stack)
+        return fn.invoke_k(out_args)
 
 as_var("-apply")(Apply())
 
@@ -310,7 +310,7 @@ class PartialFunction(code.NativeFn):
         self._partial_args = args
 
     @jit.unroll_safe
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         new_args = [None] * (len(args) + len(self._partial_args))
 
         for x in range(len(self._partial_args)):
@@ -322,7 +322,7 @@ class PartialFunction(code.NativeFn):
             new_args[plen + x] = args[x]
 
 
-        return self._partial_f.invoke_k(new_args, stack)
+        return self._partial_f.invoke_k(new_args)
 
 
 @as_var("partial")

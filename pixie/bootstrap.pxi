@@ -2425,11 +2425,9 @@ not enough elements were present."
 
 ;; Extend Core Types
 
-(extend -invoke Code -invoke)
 (extend -invoke NativeFn -invoke)
 (extend -invoke VariadicCode -invoke)
 (extend -invoke MultiArityFn -invoke)
-(extend -invoke Closure -invoke)
 (extend -invoke Var -invoke)
 (extend -invoke PolymorphicFn -invoke)
 (extend -invoke DoublePolymorphicFn -invoke)

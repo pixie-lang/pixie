@@ -137,9 +137,9 @@ class FFIFn(object.Object):
         keepalive_until_here(args)
         return ret_val
 
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         self = jit.promote(self)
-        return self._invoke(args), stack
+        return self._invoke(args)
 
 
 

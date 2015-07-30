@@ -105,6 +105,22 @@ class Meta(Object):
                          kw_column_number, rt.wrap(self._c_column_number)])
 
 
+class KVal(Object):
+    _immutable_fields_ = ["_c_k", "_c_prev"]
+    def type(self):
+        runtime_error(u"KVal escaped")
+
+    def __init__(self, prev, k):
+        self._c_k = k
+        self._c_prev = prev
+
+    def get_k(self):
+        return self._c_k
+
+    def get_prev(self):
+        return self._c_prev
+
+
 
 class PrevASTNil(AST):
     def __init__(self):
@@ -117,9 +133,13 @@ class InterpretK(Continuation):
         self._c_ast = ast
         self._c_locals = locals
 
+    @jit.unroll_safe
     def call_continuation(self, val, stack):
         ast = jit.promote(self._c_ast)
-        return ast.interpret(val, self._c_locals, stack)
+        result = ast.interpret(val, self._c_locals)
+
+        ## This AST created a continuation, so unpack it onto the stack
+        return maybe_unpack(result, stack)
 
     def get_ast(self):
         return self._c_ast
@@ -140,8 +160,8 @@ class Const(AST):
         AST.__init__(self, meta)
         self._c_val = val
 
-    def interpret(self, _, locals, stack):
-        return self._c_val, stack
+    def interpret(self, _, locals):
+        return self._c_val
 
     def gather_locals(self):
         return {}
@@ -245,11 +265,11 @@ class Lookup(AST):
         else:
             return jit.promote(self._q_idx)
 
-    def interpret(self, _, locals, stack):
+    def interpret(self, _, locals):
         idx = self.get_idx(locals)
         stack_idx, _ = idx
         assert stack_idx >= 0, u"Can't find " + self._c_name.get_name()
-        return locals.val_at(idx), stack
+        return locals.val_at(idx)
 
     def gather_locals(self):
         return {self._c_name: self._c_name}
@@ -322,7 +342,7 @@ class Fn(AST):
 
 
     @jit.unroll_safe
-    def interpret(self, _, locals, stack):
+    def interpret(self, _, locals):
         if len(self._c_closed_overs) > 0:
             closed_overs = self.get_closed_overs(locals)
             locals_prefix = ArrayLocals(None, self._c_closed_overs, closed_overs)
@@ -330,7 +350,7 @@ class Fn(AST):
         else:
             locals_prefix = None
 
-        return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body, self), stack
+        return InterpretedFn(self._c_name, self._c_args, locals_prefix, self._c_body, self)
 
 class InterpretedFn(code.BaseCode):
     _immutable_fields_ = ["_c_arg_names[*]", "_c_locals", "_c_fn_ast", "_c_name", "_c_arg_names", "_c_fn_def_ast"]
@@ -354,11 +374,11 @@ class InterpretedFn(code.BaseCode):
         self._c_fn_ast = ast
         self._c_fn_def_ast = fn_def_ast
 
-    def invoke_k(self, args, stack):
-        return self.invoke_k_with(args, stack, self)
+    def invoke_k(self, args):
+        return self.invoke_k_with(args, self)
 
     @jit.unroll_safe
-    def invoke_k_with(self, args, stack, self_fn):
+    def invoke_k_with(self, args, self_fn):
         if not len(args) == len(self._c_arg_names):
 
             runtime_error(u"Wrong number args to" +
@@ -372,7 +392,7 @@ class InterpretedFn(code.BaseCode):
         locals = SingleLocal(self._c_locals, jit.promote(self._c_name), self_fn)
         locals = ArrayLocals(locals, self._c_arg_names, args)
 
-        return nil, stack_cons(stack, InterpretK(self._c_fn_ast, locals))
+        return self._c_fn_ast.interpret(nil, locals)
 
 
 @as_var("pixie.ast.internal", "->Invoke")
@@ -397,10 +417,29 @@ class Invoke(AST):
 
         return glocals
 
-    def interpret(self, _, locals, stack):
-        stack = stack_cons(stack, ResolveAllK(self, locals, [], False))
-        stack = stack_cons(stack, InterpretK(self._c_args[0], locals))
-        return nil, stack
+    @jit.unroll_safe
+    def trim_array(self, arr, size):
+        ret = [None] * size
+        for x in range(size):
+            ret[x] = arr[x]
+
+        return ret
+
+    @jit.unroll_safe
+    def interpret(self, _, locals):
+        resolved = [None] * len(self._c_args)
+        for idx, ast in enumerate(self._c_args):
+            val = ast.interpret(nil, locals)
+
+            if isinstance(val, KVal):
+                trimmed = self.trim_array(resolved, idx)
+                return KVal(val, ResolveAllK(self, locals, trimmed, False))
+
+            resolved[idx] = val
+
+        fn, args = fn_and_args(resolved)
+
+        return fn.invoke_k(args)
 
     @jit.elidable_promote()
     def arg_count(self):
@@ -429,8 +468,8 @@ class InvokeK(Continuation):
 
 
     def call_continuation(self, val, stack):
-        fn, args = self.fn_and_args()
-        return fn.invoke_k(args, stack)
+        fn, args = fn_and_args(self._c_invoke_args)
+        return invoke_fn(fn, args, stack)
 
     def get_ast(self):
         return self._c_ast
@@ -451,10 +490,10 @@ class Recur(Invoke):
         Invoke.__init__(self, args, meta)
         self._c_args = args
 
-    def interpret(self, _, locals, stack):
-        stack = stack_cons(stack, ResolveAllK(self, locals, [], True))
-        stack = stack_cons(stack, InterpretK(self._c_args[0], locals))
-        return nil, stack
+    def interpret(self, _, locals):
+        ret = KVal(None, InterpretK(self._c_args[0], locals))
+        ret = KVal(ret, ResolveAllK(self, locals, [], True))
+        return ret
 
 class RecurK(InvokeK):
     _immutable_ = True
@@ -464,6 +503,28 @@ class RecurK(InvokeK):
 
     def get_ast(self):
         return self._c_ast
+
+@jit.unroll_safe
+def fn_and_args(acc):
+    fn = acc[0]
+    new_args = [None] * (len(acc) - 1)
+
+    for x in range(len(new_args)):
+        new_args[x] = acc[x + 1]
+
+    return fn, new_args
+
+def maybe_unpack(val, stack):
+    if isinstance(val, KVal):
+        sval = val
+        while sval is not None:
+            stack = stack_cons(stack, sval.get_k())
+            sval = sval.get_prev()
+        return nil, stack
+    return val, stack
+
+def invoke_fn(fn, args, stack):
+    return maybe_unpack(fn.invoke_k(args), stack)
 
 class ResolveAllK(Continuation):
     _immutable_ = True
@@ -481,25 +542,14 @@ class ResolveAllK(Continuation):
         acc[len(self._c_acc)] = val
         return acc
 
-    @jit.unroll_safe
-    def fn_and_args(self, acc):
-        fn = acc[0]
-        new_args = [None] * (len(acc) - 1)
-
-        for x in range(len(new_args)):
-            new_args[x] = acc[x + 1]
-
-        return fn, new_args
-
     def call_continuation(self, val, stack):
         if len(self._c_acc) + 1 < self._c_args_ast.arg_count():
             stack = stack_cons(stack, ResolveAllK(self._c_args_ast, self._c_locals, self.append_to_acc(val), self._c_recur))
             stack = stack_cons(stack, InterpretK(self._c_args_ast.get_arg(len(self._c_acc) + 1), self._c_locals))
         else:
-
             new_acc = self.append_to_acc(val)
-            fn, args = self.fn_and_args(new_acc)
-            return fn.invoke_k(args, stack)
+            fn, args = fn_and_args(new_acc)
+            return invoke_fn(fn, args, stack)
         return nil, stack
 
     def is_loop_tail(self):
@@ -545,10 +595,16 @@ class Let(AST):
 
         return glocals
 
-    def interpret(self, _, locals, stack):
-        stack = stack_cons(stack, LetK(self, 0, locals))
-        stack = stack_cons(stack, InterpretK(self._c_bindings[0], locals))
-        return nil, stack
+    def interpret(self, _, locals):
+        for idx in range(len(self._c_names)):
+            result = self._c_bindings[idx].interpret(nil, locals)
+
+            if isinstance(result, KVal):
+                return KVal(result, LetK(self, idx, locals))
+
+            locals = SingleLocal(locals, self._c_names[idx], result)
+
+        return self._c_body.interpret(nil, locals)
 
 class LetK(Continuation):
     _immutable_ = True
@@ -593,10 +649,18 @@ class If(AST):
         self._c_then = then
         self._c_else = els
 
-    def interpret(self, val, locals, stack):
-        stack = stack_cons(stack, IfK(self, locals))
-        stack = stack_cons(stack, InterpretK(self._c_test, locals))
-        return nil, stack
+    def interpret(self, val, locals):
+        val = self._c_test.interpret(nil, locals)
+
+
+        if isinstance(val, KVal):
+            ret = KVal(val, IfK(self, locals))
+            return ret
+
+        if val is false or val is nil:
+            return self._c_else.interpret(nil, locals)
+        else:
+            return self._c_then.interpret(nil, locals)
 
     def gather_locals(self):
         glocals = self._c_test.gather_locals()
@@ -638,8 +702,15 @@ class Do(AST):
         self._c_body_asts = args
 
     @jit.unroll_safe
-    def interpret(self, val, locals, stack):
-        return nil, stack_cons(stack, DoK(self, self._c_body_asts, locals))
+    def interpret(self, _, locals):
+        val = nil
+        for idx in range(len(self._c_body_asts) - 1):
+            val = self._c_body_asts[idx].interpret(nil, locals)
+
+            if isinstance(val, KVal):
+                return KVal(val, DoK(self, self._c_body_asts, locals, idx + 1))
+
+        return self._c_body_asts[(len(self._c_body_asts) - 1)].interpret(nil, locals)
 
     def gather_locals(self):
         glocals = {}
@@ -693,7 +764,7 @@ class VDeref(AST):
         self._c_var_ns = None if var_name.get_ns() == u"" else var_name.get_ns()
         self._c_var_name = var_name.get_name()
 
-    def interpret(self, val, locals, stack):
+    def interpret(self, val, locals):
         ns = ns_registry.find_or_make(self._c_in_ns)
         if ns is None:
             runtime_error(u"Namespace " + self._c_in_ns + u" is not found",
@@ -702,9 +773,10 @@ class VDeref(AST):
         var = ns.resolve_in_ns_ex(self._c_var_ns, self._c_var_name)
         if var is not None:
             if var.is_dynamic():
-                return dynamic_var_get.invoke_k([dynamic_var_handler.deref(), var], stack)
+                print "dynamic va"
+                return dynamic_var_get.invoke_k([dynamic_var_handler.deref(), var])
             else:
-                return var.deref(), stack
+                return var.deref()
         else:
             runtime_error(u"Var " +
                           (self._c_var_ns + u"/" if self._c_var_ns else u"")
@@ -735,7 +807,7 @@ class VarConst(AST):
         self._c_var_ns = None if var_name.get_ns() == u"" else var_name.get_ns()
         self._c_var_name = var_name.get_name()
 
-    def interpret(self, val, locals, stack):
+    def interpret(self, val, locals):
         ns = ns_registry.find_or_make(self._c_in_ns)
         if ns is None:
             runtime_error(u"Namespace " + self._c_in_ns + u" is not found",
@@ -743,7 +815,7 @@ class VarConst(AST):
 
         var = ns.resolve_in_ns_ex(self._c_var_ns, self._c_var_name)
         if var is not None:
-            return var, stack
+            return var
         else:
             if self._c_var_ns is not None:
                 runtime_error(u"Var " +
@@ -753,7 +825,7 @@ class VarConst(AST):
                               self._c_in_ns,
                               u"pixie.stdlib/UndefinedVar")
             else:
-                return ns.intern_or_make(self._c_var_name), stack
+                return ns.intern_or_make(self._c_var_name)
 
 
     def gather_locals(self):
@@ -798,7 +870,7 @@ def run_stack(val, cont, stack=None, enter_debug=True):
                 print ex
 
             val, stack = throw_var.invoke_k([keyword(u"pixie.stdlib/InternalException"),
-                                             keyword(u"TODO")], stack_cons(stack, cont))
+                                             keyword(u"TODO")])
 
         prev_cont = cont
         if stack:
@@ -837,14 +909,18 @@ class WithHandler(code.BaseCode):
     def __init__(self):
         BaseCode.__init__(self)
 
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         affirm(len(args) == 2, u"-with-handler takes one argument")
         handler = args[0]
         fn = args[1]
 
-        stack = stack_cons(stack, Handler(handler))
-        val, stack = fn.invoke_k([], stack)
-        return val, stack
+        ## Kindof funny, we run the function first, if it never raises an effect, then we don't need to
+        ## install the handler.
+        ret_val = fn.invoke_k([])
+
+        if isinstance(ret_val, KVal):
+            return KVal(ret_val, Handler(handler))
+        return ret_val
 
 
 
@@ -865,6 +941,14 @@ class Handler(Continuation):
     def describe(self):
         return ArrayMap([kw_type, kw_handler, kw_handler, self._handler])
 
+class ValK(Continuation):
+    _immutable_ = True
+    def __init__(self, val):
+        self._c_val = val
+
+    def call_continuation(self, val, stack):
+        return self._c_val, stack
+
 class DelimitedContinuation(code.NativeFn):
     _immutable_fields_ = ["_slice[*]"]
     _type = Type(u"pixie.stdlib.DelmitedContinuation")
@@ -884,30 +968,27 @@ class DelimitedContinuation(code.NativeFn):
                       kw_slice, Array(arr)])
 
     @jit.unroll_safe
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         affirm(len(args) == 1, u"Delmited continuations only take one argument")
-        for x in range(len(self._slice)):
-            stack = stack_cons(stack, self._slice[x])
-        return args[0], stack
+        ret = KVal(None, ValK(args[0]))
+        # TODO: Improve this?
+        for x in range(len(self._slice)-1, -1, -1):
+            ret = KVal(ret, self._slice[x])
+        return ret
 
 @as_var(u"pixie.stdlib", u"describe-internal-object")
 def describe_delimited_continuation(k):
     return k.describe()
 
-class EffectFunction(code.BaseCode):
-    _type = Type(u"pixie.stdlib.EffectFn")
+class EffectK(Continuation):
+    _immutable_ = True
+    def __init__(self, args, inner_fn):
+        self._c_args = args
+        self._c_inner_fn = inner_fn
 
-    def type(self):
-        return EffectFunction._type
-
-    def __init__(self, inner_fn):
-        BaseCode.__init__(self)
-        self._inner_fn = inner_fn
-
-    def invoke_k(self, args, stack):
-        affirm(len(args) >= 1, u"Effect functions require at least one argument")
+    def call_continuation(self, val, stack):
+        args = self._c_args
         handler = args[0]
-
         stack, slice, handler = self.slice_stack(stack, handler)
 
         new_args = [None] * (len(args) + 1)
@@ -919,7 +1000,7 @@ class EffectFunction(code.BaseCode):
         new_args[len(args)] = DelimitedContinuation(slice)
 
 
-        return self._inner_fn.invoke_k(new_args, stack)
+        return invoke_fn(self._c_inner_fn, new_args, stack)
 
 
     @jit.unroll_safe
@@ -968,6 +1049,25 @@ class EffectFunction(code.BaseCode):
         return stack, slice, ret_handler
 
 
+class EffectFunction(code.BaseCode):
+    _type = Type(u"pixie.stdlib.EffectFn")
+
+    def type(self):
+        return EffectFunction._type
+
+    def __init__(self, inner_fn):
+        BaseCode.__init__(self)
+        self._inner_fn = inner_fn
+
+    def invoke_k(self, args):
+        affirm(len(args) >= 1, u"Effect functions require at least one argument")
+
+        return KVal(None, EffectK(args, self._inner_fn))
+
+
+
+
+
 def merge_dicts(a, b):
     z = a.copy()
     z.update(b)
@@ -985,11 +1085,11 @@ class EvalFn(code.NativeFn):
 
 
     @jit.unroll_safe
-    def invoke_k(self, args, stack):
+    def invoke_k(self, args):
         affirm(len(args) == 1, u"Eval takes one argument")
         ast = args[0]
 
-        result = ast.interpret(nil, None, stack)
+        result = ast.interpret(nil, None)
         return result
 
 as_var("pixie.ast.internal", "eval")(EvalFn())
