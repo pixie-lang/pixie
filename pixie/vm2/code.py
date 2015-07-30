@@ -268,7 +268,7 @@ class VariadicCode(BaseCode):
             start[self._required_arity] = Array(rest)
             return self._code.invoke_k_with(start, this_fn)
         affirm(False, u"Got " + unicode(str(argc)) + u" arg(s) need at least " + unicode(str(self._required_arity)))
-        return None, stack
+        return None
 
 
 class Undefined(object.Object):

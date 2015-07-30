@@ -49,6 +49,9 @@ class AST(Object):
     def __init__(self, meta):
         self._c_meta = meta
 
+    def interpret(self, val, locals):
+        return self._interpret(val, locals)
+
     def get_short_location(self):
         if self._c_meta != nil:
             return self._c_meta.get_short_location()
@@ -160,7 +163,7 @@ class Const(AST):
         AST.__init__(self, meta)
         self._c_val = val
 
-    def interpret(self, _, locals):
+    def _interpret(self, _, locals):
         return self._c_val
 
     def gather_locals(self):
@@ -265,7 +268,7 @@ class Lookup(AST):
         else:
             return jit.promote(self._q_idx)
 
-    def interpret(self, _, locals):
+    def _interpret(self, _, locals):
         idx = self.get_idx(locals)
         stack_idx, _ = idx
         assert stack_idx >= 0, u"Can't find " + self._c_name.get_name()
@@ -342,7 +345,7 @@ class Fn(AST):
 
 
     @jit.unroll_safe
-    def interpret(self, _, locals):
+    def _interpret(self, _, locals):
         if len(self._c_closed_overs) > 0:
             closed_overs = self.get_closed_overs(locals)
             locals_prefix = ArrayLocals(None, self._c_closed_overs, closed_overs)
@@ -426,7 +429,7 @@ class Invoke(AST):
         return ret
 
     @jit.unroll_safe
-    def interpret(self, _, locals):
+    def _interpret(self, _, locals):
         resolved = [None] * len(self._c_args)
         for idx, ast in enumerate(self._c_args):
             val = ast.interpret(nil, locals)
@@ -490,7 +493,7 @@ class Recur(Invoke):
         Invoke.__init__(self, args, meta)
         self._c_args = args
 
-    def interpret(self, _, locals):
+    def _interpret(self, _, locals):
         ret = KVal(None, InterpretK(self._c_args[0], locals))
         ret = KVal(ret, ResolveAllK(self, locals, [], True))
         return ret
@@ -514,6 +517,7 @@ def fn_and_args(acc):
 
     return fn, new_args
 
+@jit.unroll_safe
 def maybe_unpack(val, stack):
     if isinstance(val, KVal):
         sval = val
@@ -595,9 +599,11 @@ class Let(AST):
 
         return glocals
 
-    def interpret(self, _, locals):
+    @jit.unroll_safe
+    def _interpret(self, _, locals):
         for idx in range(len(self._c_names)):
             result = self._c_bindings[idx].interpret(nil, locals)
+
 
             if isinstance(result, KVal):
                 return KVal(result, LetK(self, idx, locals))
@@ -613,17 +619,25 @@ class LetK(Continuation):
         self._c_ast = ast
         self._c_locals = locals
 
+    @jit.unroll_safe
     def call_continuation(self, val, stack):
         assert isinstance(self._c_ast, Let)
-        new_locals = SingleLocal(self._c_locals, self._c_ast._c_names[self._c_idx], val)
+        locals = SingleLocal(self._c_locals, self._c_ast._c_names[self._c_idx], val)
 
         if self._c_idx + 1 < len(self._c_ast._c_names):
-            stack = stack_cons(stack, LetK(self._c_ast, self._c_idx + 1, new_locals))
-            stack = stack_cons(stack, InterpretK(self._c_ast._c_bindings[self._c_idx + 1], new_locals))
-        else:
-            stack = stack_cons(stack, InterpretK(self._c_ast._c_body, new_locals))
+            for idx in range(self._c_idx + 1, len(self._c_ast._c_names)):
+                val = self._c_ast._c_bindings[idx].interpret(nil, locals)
 
-        return nil, stack
+                if isinstance(val, KVal):
+                    stack = stack_cons(stack, LetK(self._c_ast, idx, locals))
+                    return maybe_unpack(val, stack)
+
+                locals = SingleLocal(locals, self._c_ast._c_names[idx], val)
+
+            return maybe_unpack(self._c_ast._c_body.interpret(nil, locals), stack)
+
+        else:
+            return maybe_unpack(self._c_ast._c_body.interpret(nil, locals), stack)
 
 
     def get_ast(self):
@@ -649,7 +663,7 @@ class If(AST):
         self._c_then = then
         self._c_else = els
 
-    def interpret(self, val, locals):
+    def _interpret(self, val, locals):
         val = self._c_test.interpret(nil, locals)
 
 
@@ -702,7 +716,7 @@ class Do(AST):
         self._c_body_asts = args
 
     @jit.unroll_safe
-    def interpret(self, _, locals):
+    def _interpret(self, _, locals):
         val = nil
         for idx in range(len(self._c_body_asts) - 1):
             val = self._c_body_asts[idx].interpret(nil, locals)
@@ -728,14 +742,19 @@ class DoK(Continuation):
         self._c_body_asts = do_asts
         self._c_idx = idx
 
+    @jit.unroll_safe
     def call_continuation(self, val, stack):
         if self._c_idx + 1 < len(self._c_body_asts):
-            stack = stack_cons(stack, DoK(self._c_ast, self._c_body_asts, self._c_locals, self._c_idx + 1))
-            stack = stack_cons(stack, InterpretK(self._c_body_asts[self._c_idx], self._c_locals))
-            return nil, stack
+            for idx in range(self._c_idx, len(self._c_body_asts) - 1):
+                val = self._c_body_asts[idx].interpret(nil, self._c_locals)
+
+                if isinstance(val, KVal):
+                    stack = stack_cons(stack, DoK(self._c_ast, self._c_body_asts, self._c_locals, idx + 1))
+                    return maybe_unpack(val, stack)
+
+            return maybe_unpack(self._c_body_asts[len(self._c_body_asts) - 1].interpret(nil, self._c_locals), stack)
         else:
-            stack = stack_cons(stack, InterpretK(self._c_body_asts[self._c_idx], self._c_locals))
-            return nil, stack
+            return maybe_unpack(self._c_body_asts[self._c_idx].interpret(nil, self._c_locals), stack)
 
     def get_ast(self):
         return self._c_ast
@@ -764,7 +783,7 @@ class VDeref(AST):
         self._c_var_ns = None if var_name.get_ns() == u"" else var_name.get_ns()
         self._c_var_name = var_name.get_name()
 
-    def interpret(self, val, locals):
+    def _interpret(self, val, locals):
         ns = ns_registry.find_or_make(self._c_in_ns)
         if ns is None:
             runtime_error(u"Namespace " + self._c_in_ns + u" is not found",
@@ -773,7 +792,6 @@ class VDeref(AST):
         var = ns.resolve_in_ns_ex(self._c_var_ns, self._c_var_name)
         if var is not None:
             if var.is_dynamic():
-                print "dynamic va"
                 return dynamic_var_get.invoke_k([dynamic_var_handler.deref(), var])
             else:
                 return var.deref()
@@ -807,7 +825,7 @@ class VarConst(AST):
         self._c_var_ns = None if var_name.get_ns() == u"" else var_name.get_ns()
         self._c_var_name = var_name.get_name()
 
-    def interpret(self, val, locals):
+    def _interpret(self, val, locals):
         ns = ns_registry.find_or_make(self._c_in_ns)
         if ns is None:
             runtime_error(u"Namespace " + self._c_in_ns + u" is not found",
@@ -836,7 +854,9 @@ class VarConst(AST):
 from rpython.rlib.jit import JitDriver
 from rpython.rlib.objectmodel import we_are_translated
 def get_printable_location(ast):
-    return ast.get_short_location()
+    if ast is not nil and ast is not None:
+        return ast.get_long_location()
+    return ""
 
 def should_unroll(ast):
     return True
@@ -854,6 +874,9 @@ def run_stack(val, cont, stack=None, enter_debug=True):
     ast = cont.get_ast()
     while True:
         jitdriver.jit_merge_point(ast=ast, stack=stack, val=val, cont=cont)
+        if not we_are_translated():
+            get_printable_location(ast)
+
         try:
             val, stack = cont.call_continuation(val, stack)
             ast = cont.get_ast()
@@ -869,8 +892,7 @@ def run_stack(val, cont, stack=None, enter_debug=True):
                 print(traceback.format_exc())
                 print ex
 
-            val, stack = throw_var.invoke_k([keyword(u"pixie.stdlib/InternalException"),
-                                             keyword(u"TODO")])
+            val, stack = invoke_fn(throw_var, [keyword(u"pixie.stdlib/InternalException"), keyword(u"TODO")], stack)
 
         prev_cont = cont
         if stack:
@@ -1016,7 +1038,7 @@ class EffectK(Continuation):
     @jit.unroll_safe
     def slice_stack(self, orig_stack, handler):
         if handler is nil:
-            affirm(isinstance(self._inner_fn, code.PolymorphicFn), u"Can't dispatch with a nil handler from a non polymorphic effect")
+            affirm(isinstance(self._c_inner_fn, code.PolymorphicFn), u"Can't dispatch with a nil handler from a non polymorphic effect")
 
         size = 0
         stack = orig_stack
@@ -1031,7 +1053,7 @@ class EffectK(Continuation):
                 raise SystemExit()
 
             if (isinstance(stack._cont, Handler) and stack._cont.handler() is handler) or \
-               (handler is nil and isinstance(stack._cont, Handler) and self._inner_fn.satisfied_by(stack._cont.handler())):
+               (handler is nil and isinstance(stack._cont, Handler) and self._c_inner_fn.satisfied_by(stack._cont.handler())):
                 size += 1
                 ret_handler = stack._cont.handler()
                 break

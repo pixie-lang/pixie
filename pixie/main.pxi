@@ -70,7 +70,7 @@
                     (println "done")
                     (recur))))))))))
 
-#_(try
+(try
   (load-file :pixie.ffi-infer)
   (catch :* data
       (println "ERROR Compiling file" data)
@@ -115,7 +115,7 @@
                   (print-stack-trace (:ks data)))))
             (if (not (= d :exit-repl))
               (recur))))))))
-(repl)
+#_(repl)
 
 (println "done")
 
