@@ -73,6 +73,8 @@ def init():
     import pixie.vm.string_builder
     import pixie.vm.stacklet
 
+    import pixie.vm.c_api
+
     @specialize.argtype(0)
     def wrap(x):
         if isinstance(x, bool):

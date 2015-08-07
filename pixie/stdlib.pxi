@@ -841,7 +841,7 @@ there's a value associated with the key. Use `some` for checking for values."
 
             (fn [] ~@finally)))))))
 
-(defn .
+#_(defn .
   {:doc "Access the field named by the symbol.
 
 If further arguments are passed, invokes the method named by symbol, passing the object and arguments."
@@ -1279,9 +1279,7 @@ and implements IAssociative, ILookup and IObject."
                                           "dissoc is not supported on defrecords"]))
                         'ILookup
                         `(-val-at [self k not-found]
-                                  (if (contains? ~(set fields) k)
-                                    (. self k)
-                                    not-found))
+                                  (get-field self k))
                         'IObject
                         `(-str [self]
                                (str "<" ~(name nm) " " (reduce #(assoc %1 %2 (. self %2)) {} ~fields) ">"))
@@ -2072,7 +2070,48 @@ The params can be destructuring bindings, see `(doc let)` for details."}
       `(fn* ~@name ~(first (first decls)) ~@(next (first decls)))
       `(fn* ~@name ~@decls))))
 
+;; TODO: implement :>> like in Clojure?
+(defmacro condp
+  "Takes a binary predicate, an expression and a number of two-form clauses.
+Calls the predicate on the first value of each clause and the expression.
+If the result is truthy returns the second value of the clause.
+
+If the number of arguments is odd and no clause matches, the last argument is returned.
+If the number of arguments is even and no clause matches, throws an exception."
+  [pred-form expr & clauses]
+  (let [x (gensym 'expr), pred (gensym 'pred)]
+    `(let [~x ~expr, ~pred ~pred-form]
+       (cond ~@(mapcat
+                 (fn [[a b :as clause]]
+                   (if (> (count clause) 1)
+                     `((~pred ~a ~x) ~b)
+                     `(:else ~a)))
+                 (partition 2 clauses))
+             :else (throw [:pixie.stdlib/MissingClauseException
+                           "No matching clause!"])))))
+
+(defmacro case
+  "Takes an expression and a number of two-form clauses.
+Checks for each clause if the first part is equal to the expression.
+If yes, returns the value of the second part.
+
+The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
+
+If the number of arguments is odd and no clause matches, the last argument is returned.
+If the number of arguments is even and no clause matches, throws an exception."
+  [expr & args]
+  `(condp #(if (set? %1) (%1 %2) (= %1 %2))
+     ~expr ~@args))
+
+
+
+
 (deftype MultiMethod [dispatch-fn default-val methods]
+  IMessageObject
+  (-get-attr [this kw]
+    (case kw
+      :methods methods
+      :else nil))
   IFn
   (-invoke [self & args]
     (let [dispatch-val (apply dispatch-fn args)
@@ -2081,6 +2120,7 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                    (get @methods default-val))
           _ (assert method (str "no method defined for " dispatch-val))]
       (apply method args))))
+
 
 (defmacro defmulti
   {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
@@ -2107,12 +2147,16 @@ The params can be destructuring bindings, see `(doc let)` for details."}
    :added "0.1"}
   [name dispatch-val params & body]
   `(do
-     (let [methods (.methods ~name)]
+     (let [methods (.-methods ~name)]
        (swap! methods
               assoc
               ~dispatch-val (fn ~params
                               ~@body))
        ~name)))
+
+(defmulti Foo :r)
+(defmethod Foo :r
+  [x] x)
 
 (defmacro declare
   {:doc "Forward declare the given variable names, setting them to nil."
@@ -2214,39 +2258,6 @@ Expands to calls to `extend-type`."
   [coll]
   "Returns a collection that contains all the elements of the argument in reverse order."
   (into () coll))
-
-;; TODO: implement :>> like in Clojure?
-(defmacro condp
-  "Takes a binary predicate, an expression and a number of two-form clauses.
-Calls the predicate on the first value of each clause and the expression.
-If the result is truthy returns the second value of the clause.
-
-If the number of arguments is odd and no clause matches, the last argument is returned.
-If the number of arguments is even and no clause matches, throws an exception."
-  [pred-form expr & clauses]
-  (let [x (gensym 'expr), pred (gensym 'pred)]
-    `(let [~x ~expr, ~pred ~pred-form]
-       (cond ~@(mapcat
-                 (fn [[a b :as clause]]
-                   (if (> (count clause) 1)
-                     `((~pred ~a ~x) ~b)
-                     `(:else ~a)))
-                 (partition 2 clauses))
-             :else (throw [:pixie.stdlib/MissingClauseException
-                           "No matching clause!"])))))
-
-(defmacro case
-  "Takes an expression and a number of two-form clauses.
-Checks for each clause if the first part is equal to the expression.
-If yes, returns the value of the second part.
-
-The first part of each clause can also be a set. If that is the case, the clause matches when the result of the expression is in the set.
-
-If the number of arguments is odd and no clause matches, the last argument is returned.
-If the number of arguments is even and no clause matches, throws an exception."
-  [expr & args]
-  `(condp #(if (set? %1) (%1 %2) (= %1 %2))
-     ~expr ~@args))
 
 (defmacro use
   [ns]

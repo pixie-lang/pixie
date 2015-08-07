@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
-    runtime_error, add_info, ExtraCodeInfo, finalizer_registry
-from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
-                          list_copy, returns, intern_var
 from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
-    runtime_error, add_info, ExtraCodeInfo
+    runtime_error, add_info, ExtraCodeInfo, finalizer_registry
 from pixie.vm.code import Namespace, BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           list_copy, returns, intern_var, _ns_registry
 import pixie.vm.code as code
@@ -64,6 +60,8 @@ defprotocol("pixie.stdlib", "ITransientStack", ["-push!", "-pop!"])
 
 defprotocol("pixie.stdlib", "IDisposable", ["-dispose!"])
 defprotocol("pixie.stdlib", "IFinalize", ["-finalize!"])
+
+defprotocol("pixie.stdlib", "IMessageObject", ["-call-method", "-get-attr"])
 
 def maybe_mark_finalizer(self, tp):
     if self is _finalize_BANG_:

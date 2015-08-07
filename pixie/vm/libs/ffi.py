@@ -688,7 +688,7 @@ name_gen = FunctionTypeNameGenerator()
 
 class CFunctionType(object.Type):
     base_type = object.Type(u"pixie.ffi.CType")
-    _immutable_fields_ = ["_arg_types", "_ret-type", "_cd"]
+    _immutable_fields_ = ["_arg_types", "_ret_type", "_cd", "_is_variadic"]
 
     def __init__(self, arg_types, ret_type, is_variadic=False):
         object.Type.__init__(self, name_gen.next(), CStructType.base_type)
@@ -724,7 +724,7 @@ class CFunctionType(object.Type):
     def ffi_type(self):
         return clibffi.ffi_type_pointer
 
-class CStruct(object.Object):
+class CStruct(PointerType):
     _immutable_fields_ = ["_type", "_buffer"]
     def __init__(self, tp, buffer):
         self._type = tp
@@ -827,7 +827,6 @@ def prep_ffi_call__args(args):
 
 
 def comp_ptrs(a, b):
-    print a, b
     assert isinstance(a, PointerType)
     if not isinstance(b, PointerType):
         return false
@@ -835,9 +834,18 @@ def comp_ptrs(a, b):
         return true
     return false
 
+def hash_ptr(a):
+    assert isinstance(a, PointerType)
+    hashval = rffi.cast(lltype.Signed, a.raw_data())
+    return rt.wrap(hashval)
+
 extend(proto._eq, Buffer)(comp_ptrs)
 extend(proto._eq, CStructType.base_type)(comp_ptrs)
 extend(proto._eq, VoidP)(comp_ptrs)
+
+extend(proto._hash, Buffer)(hash_ptr)
+extend(proto._hash, CStructType.base_type)(hash_ptr)
+extend(proto._hash, VoidP)(hash_ptr)
 
 
 import sys

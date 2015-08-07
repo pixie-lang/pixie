@@ -49,9 +49,6 @@ class Object(object):
     def promote(self):
         return self
 
-    def __del__(self):
-        if self.type().has_finalizer():
-            finalizer_registry.register(self)
 
 
 
