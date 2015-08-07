@@ -141,3 +141,12 @@
   (t/assert= (s/blank? " ") true)
   (t/assert= (s/blank? " \t \n  \r ") true)
   (t/assert= (s/blank? "  foo  ") false))
+
+(t/deftest test-escape
+  (t/assert= (s/escape "foo" {\f \z}) "zoo")
+  (t/assert= (s/escape "foo" {\z \f}) "foo")
+  (t/assert= (s/escape "foobar" {\f \b \o \e \b \j}) "beejar")
+  (t/assert= (s/escape "foo" {}) "foo")
+  (t/assert= (s/escape "foo" nil) "foo")
+  (t/assert= (s/escape "" {\f \z}) "")
+  (t/assert= (s/escape nil {\f \z}) nil))
