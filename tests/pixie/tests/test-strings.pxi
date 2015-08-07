@@ -101,6 +101,12 @@
   (t/assert= (s/replace-first "&&&" "&" "&&") "&&&&")
   (t/assert= (s/replace-first "oops" "" "WAT") "WAToops"))
 
+(t/deftest test-reverse
+  (t/assert= (s/reverse "not a palindrome") "emordnilap a ton")
+  (t/assert= (s/reverse "tacocat") "tacocat")
+  (t/assert= (s/reverse "") "")
+  (t/assert= (s/reverse nil) nil))
+
 (t/deftest test-join
   (t/assert= (s/join []) "")
   (t/assert= (s/join [1]) "1")

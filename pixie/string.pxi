@@ -1,5 +1,6 @@
 (ns pixie.string
-  (:require [pixie.string.internal :as si]))
+  (:require [pixie.stdlib :as std]
+            [pixie.string.internal :as si]))
 
 ; reexport native string functions
 (def substring si/substring)
@@ -44,6 +45,12 @@
   (if-let [i (index-of s x)]
     (str (substring s 0 i) r (substring s (+ i (count x))))
     s))
+
+(defn reverse
+   "Returns s with its characters reversed."
+   [s]
+   (when s
+     (apply str (std/reverse s))))
 
 (defn join
   {:doc "Join the elements of the collection using an optional separator"
