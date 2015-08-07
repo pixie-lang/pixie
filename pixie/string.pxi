@@ -73,6 +73,19 @@
             false))))
     true))
 
+(defn escape
+  "Return a new string, using cmap to escape each character ch
+   from s as follows:
+
+   If (cmap ch) is nil, append ch to the new string.
+   If (cmap ch) is non-nil, append (str (cmap ch)) instead."
+  [s cmap]
+  (if (or (nil? s)
+          (nil? cmap))
+    s
+    (apply str (map #(if-let [c (cmap %)] c %)
+                    (vec s)))))
+
 (defmacro interp
   ; TODO: This might merit special read syntax
   {:doc "String interpolation."
