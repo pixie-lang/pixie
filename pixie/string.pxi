@@ -7,6 +7,11 @@
 (def index-of (comp #(if (not= -1 %) %) si/index-of))
 (def split si/split)
 
+(defn split-lines
+  "Splits on \\n or \\r\\n, the two typical line breaks."
+  [s]
+  (when s (apply concat (map #(split % "\n") (split s "\r\n")))))
+
 (def ends-with? si/ends-with)
 (def starts-with? si/starts-with)
 
