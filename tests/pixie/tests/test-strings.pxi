@@ -44,7 +44,7 @@
   (t/assert= (s/split-lines "BibbidiBobbidiBoo")
              ["BibbidiBobbidiBoo"])
   ;; Works with empty strings.
-  (t/assert= (s/split-lines "") "")
+  (t/assert= (s/split-lines "") [""])
   ;; Nil pass-through.
   (t/assert= (s/split-lines nil) nil))
 
