@@ -27,6 +27,27 @@
     (t/assert= (s/split s ",") ["hey" "ho" "huh"])
     (t/assert= (s/split s "h") ["" "ey," "o," "u" ""])))
 
+(t/deftest test-split-lines
+  ;; Splits unix-style lines.
+  (t/assert= (s/split-lines "bibbidi\nbobbidi\nboo")
+             ["bibbidi" "bobbidi" "boo"])
+  ;; Splits windows-style lines.
+  (t/assert= (s/split-lines "bibbidi\r\nbobbidi\r\nboo")
+             ["bibbidi" "bobbidi" "boo"])
+  ;; Splits mixed up stuff.
+  (t/assert= (s/split-lines "bibbidi\nbobbidi\r\nboo")
+             ["bibbidi" "bobbidi" "boo"])
+  ;; Doesn't split lonely \r
+  (t/assert= (s/split-lines "bibbidi\nbobbidi\rboo")
+             ["bibbidi" "bobbidi\rboo"])
+  ;; Works with a single line.
+  (t/assert= (s/split-lines "BibbidiBobbidiBoo")
+             ["BibbidiBobbidiBoo"])
+  ;; Works with empty strings.
+  (t/assert= (s/split-lines "") [""])
+  ;; Nil pass-through.
+  (t/assert= (s/split-lines nil) nil))
+
 (t/deftest test-index-of
   (let [s "heyhohuh"]
     (t/assert= (s/index-of s "hey") 0)
