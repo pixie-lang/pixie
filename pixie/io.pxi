@@ -88,7 +88,7 @@
     (unbuffered-read-line input-stream)
     
     :else
-    (throw [::Exception "Expected an IInputStream or IByteInputStream"])))
+    (throw [::Exception "Expected an IInputStream or BufferedInputStream"])))
 
 (defn line-seq
   "Returns the lines of text from input-stream as a lazy sequence of strings.
