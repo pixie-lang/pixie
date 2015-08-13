@@ -75,14 +75,8 @@
   "True if s is nil, empty, or contains only whitespace."
   [s]
   (if s
-    (let [white (set whitespace)
-          length (count s)]
-      (loop [index 0]
-        (if (= length index)
-          true
-          (if (white (nth s index))
-            (recur (inc index))
-            false))))
+    (let [white (set whitespace)]
+      (every? white s))
     true))
 
 (defn escape
