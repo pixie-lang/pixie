@@ -562,7 +562,15 @@
     (satisfies? :not-a-proto 123))
   (t/assert-throws? RuntimeException
     "proto must be a Protocol"
-    (satisfies? [IIndexed :also-not-a-proto] [1 2])))
+    (satisfies? [IIndexed :also-not-a-proto] [1 2]))
+  (defprotocol IFoo (foo [this]))
+  (extend-protocol IFoo
+    Number
+    (foo [this] this))
+  (t/assert= (satisfies? IFoo 1) true)
+  (t/assert= (satisfies? IFoo 1.0) true)
+  (t/assert= (satisfies? IFoo 1/2) true)
+  (t/assert= (satisfies? IFoo \a) false))
 
 (t/deftest test-reduce
  (t/assert= 5050 (reduce + (range 101)))

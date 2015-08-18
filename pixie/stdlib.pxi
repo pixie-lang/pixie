@@ -2457,3 +2457,100 @@ Calling this function on something that is not ISeqable returns a seq with that 
   (fn [v] (str "<Namespace " (name v) ">")))
 
 (extend -repr Namespace -str)
+
+
+(defn bool?
+  [x]
+  (instance? Bool x))
+
+(defprotocol IComparable
+  (-compare [x y]
+    "Compare to objects returing 0 if the same -1 with x is logically smaller than y and 1 if x is logically larger"))
+
+(defn compare-numbers
+  [x y]
+  (cond
+    (> x y) 1
+    (< x y) -1
+    :else 0))
+
+(defn compare-counted
+  [x y]
+  (if (= x y)
+    0
+    (let [min-length (min (count x) (count y))]
+      (loop [n 0]
+        (if (not= min-length n)
+          (let [diff (-compare (nth x n) 
+                               (nth y n))]
+            (if-not (zero? diff)
+              diff
+              (recur (inc n))))
+          ;; We have compared all characters of the smallest string
+          ;; against the largest string.
+          ;; If equal lengths 0 otherwise -1 or 1
+          (compare-numbers (count x) (count y)))))))
+
+(defn compare-named
+  [x y]
+  (if (= x y)
+    0
+    (compare-counted (str x) (str y))))
+
+(extend-protocol IComparable
+  Number
+  (-compare [x y]
+    (if (number? y)
+      (compare-numbers x y)
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)])))
+
+  Character
+  (-compare [x y]
+    (if (char? y)
+      (compare-numbers (int x) (int y))
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)])))
+  
+  PersistentVector
+  (-compare [x y]
+    (if (vector? y)
+      (compare-counted x y)
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)])))
+
+  String
+  (-compare [x y]
+    (if (string? y)
+      (compare-counted (str x) (str y))
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)])))
+
+  Keyword
+  (-compare [x y]
+    (if (keyword? y)
+      (compare-counted (str x) (str y))
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)])))
+
+  Symbol
+  (-compare [x y]
+    (if (symbol?  y)
+      (compare-counted (str x) (str y))
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)])))
+
+  Bool
+  (-compare [x y]
+    (if (bool? y)
+      (cond
+        (= x y) 0
+        (and (true? x) (false? y)) 1
+        :else  -1))
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)]))
+  
+  Nil
+  (-compare [x y]
+    (if (nil? y)
+      0
+      (throw [::ComparisonError (str "Cannot compare: " x " to " y)]))))
+
+(defn compare
+  [x y]
+  (if (satisfies? IComparable x)
+    (-compare x y)
+    (throw [::ComparisonError (str x " does not satisfy IComparable")])))

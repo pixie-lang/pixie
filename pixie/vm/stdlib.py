@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
+from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
     runtime_error, add_info, ExtraCodeInfo
 from pixie.vm.code import Namespace, BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
                           list_copy, returns, intern_var, _ns_registry
@@ -321,13 +321,23 @@ def _instance(c, o):
 
     return true if istypeinstance(o, c) else false
 
+def type_satisfies(proto, type):
+    affirm(isinstance(type, Type), u"type must be a Type")
+    if proto.satisfies(type):
+        return true
+    elif type == Object._type:
+        # top level type do not recurse
+        return false
+    elif type.parent():
+        return type_satisfies(proto, type.parent())
+    else:
+        return false
+
 @returns(bool)
 @as_var("-satisfies?")
 def _satisfies(proto, o):
     affirm(isinstance(proto, Protocol), u"proto must be a Protocol")
-
-    return true if proto.satisfies(o.type()) else false
-
+    return type_satisfies(proto, o.type())
 
 import pixie.vm.rt as rt
 
