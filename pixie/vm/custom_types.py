@@ -8,7 +8,7 @@ import pixie.vm.rt as rt
 MAX_FIELDS = 32
 
 class CustomType(Type):
-    _immutable_fields_ = ["_slots", "_rev?"]
+    _immutable_fields_ = ["_slots[*]", "_rev?"]
     def __init__(self, name, slots):
         Type.__init__(self, name)
 
@@ -16,7 +16,7 @@ class CustomType(Type):
         self._mutable_slots = {}
         self._rev = 0
 
-    @jit.elidable_promote()
+    @jit.elidable
     def get_slot_idx(self, nm):
         return self._slots.get(nm, -1)
 
@@ -26,19 +26,19 @@ class CustomType(Type):
             self._mutable_slots[nm] = nm
 
 
-    @jit.elidable_promote()
+    @jit.elidable
     def _is_mutable(self, nm, rev):
         return nm in self._mutable_slots
 
     def is_mutable(self, nm):
         return self._is_mutable(nm, self._rev)
 
-    @jit.elidable_promote()
+    @jit.elidable
     def get_num_slots(self):
         return len(self._slots)
 
 class CustomTypeInstance(Object):
-    _immutable_fields_ = ["_type"]
+    _immutable_fields_ = ["_custom_type"]
     def __init__(self, type):
         affirm(isinstance(type, CustomType), u"Can't create a instance of a non custom type")
         self._custom_type = type
@@ -60,7 +60,7 @@ class CustomTypeInstance(Object):
             self.set_field_by_idx(idx, val)
         return self
 
-    @jit.elidable_promote()
+    @jit.elidable
     def _get_field_immutable(self, idx, rev):
         return self.get_field_by_idx(idx)
 
