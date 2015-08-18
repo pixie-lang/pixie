@@ -60,6 +60,10 @@
     (t/assert= (char (io/read-byte f)) \i)
     (t/assert= (char (io/read-byte f)) \s)))
 
+(t/deftest test-buffered-input-streams-throws-on-non-input-streams
+  (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt"))]
+    (t/assert-throws? (io/buffered-input-stream f))))
+
 (t/deftest test-buffered-input-streams-seek
   ;; We use a buffer size of 4 because the test file isn't huge and i am terrible at
   ;; counting characters...
