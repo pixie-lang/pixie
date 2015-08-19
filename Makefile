@@ -6,7 +6,7 @@ PYTHON ?= python
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 
-COMMON_BUILD_OPTS?=--thread --no-shared --gcrootfinder=shadowstack --continuation
+COMMON_BUILD_OPTS?=--thread --gcrootfinder=shadowstack --continuation
 JIT_OPTS?=--opt=jit
 TARGET_OPTS?=target.py
 
@@ -27,6 +27,12 @@ build_no_jit: fetch_externals
 	@if [ ! -d /usr/local/include/boost -a ! -d /usr/include/boost ] ; then echo "Boost C++ Library not found" && false; fi && \
 	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) target.py && \
 	make compile_basics
+
+build_no_jit_shared: fetch_externals
+	@if [ ! -d /usr/local/include/boost -a ! -d /usr/include/boost ] ; then echo "Boost C++ Library not found" && false; fi && \
+	$(PYTHON) $(EXTERNALS)/pypy/rpython/bin/rpython $(COMMON_BUILD_OPTS) --shared target.py && \
+	make compile_basics
+
 
 compile_basics:
 	@echo -e "\n\n\n\nWARNING: Compiling core libs. If you want to modify one of these files delete the .pxic files first\n\n\n\n"

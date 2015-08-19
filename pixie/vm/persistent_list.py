@@ -82,6 +82,9 @@ def create_from_list(lst):
         i -= 1
     return acc
 
+def create(*args):
+    return create_from_list(args)
+
 @extend(proto._meta, PersistentList)
 def _meta(self):
     assert isinstance(self, PersistentList)

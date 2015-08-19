@@ -1,4 +1,4 @@
-from pixie.vm.object import Object, Type, affirm, runtime_error
+from pixie.vm.object import Object, Type, affirm, runtime_error, finalizer_registry
 import rpython.rlib.jit as jit
 from pixie.vm.code import as_var
 from pixie.vm.numbers import Integer, Float
@@ -84,6 +84,11 @@ class CustomTypeInstance(Object):
             return value.get_mutable_cell_value()
         else:
             return value
+
+
+    def __del__(self):
+        if self.type().has_finalizer():
+            finalizer_registry.register(self)
 
 
 create_type_prefix = """

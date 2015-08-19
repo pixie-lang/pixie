@@ -38,7 +38,8 @@
            (t/assert (satisfies? IAssociative t))
            (t/assert= t (assoc t4 :three 3))
            (let [t' (assoc t :one 42)
-                 t-oops (assoc t :oops 'never-found)]
+                 t-oops (try (assoc t :oops 'never-found)
+                             (catch ex t))]
              (t/assert (not (= t t')))
              (t/assert= (get t' :one) 42)
              (t/assert= t t-oops)

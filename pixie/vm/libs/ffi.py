@@ -29,6 +29,9 @@ good docs in that module.
 
 """
 
+class PointerType(object.Object):
+    pass
+
 
 class CType(object.Type):
     def __init__(self, name):
@@ -89,54 +92,54 @@ class ExternalLib(object.Object):
 
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
-    _immutable_fields_ = ["_is_inited", "_lib", "_name", "_arg_types[*]", "_arity", "_ret_type", "_is_variadic", \
-                            "_transfer_size", "_arg0_offset", "_ret_offset", "_cd"]
+    _immutable_fields_ = ["_name", "_f_ptr", "_c_fn_type"]
 
     def type(self):
         return FFIFn._type
 
-    def __init__(self, lib, name, arg_types, ret_type, is_variadic):
+    def __init__(self, name, fn_ptr, c_fn_type):
+        assert isinstance(c_fn_type, CFunctionType)
         self._rev = 0
         self._name = name
-        self._lib = lib
-        self._arg_types = arg_types
-        self._arity = len(arg_types)
-        self._ret_type = ret_type
-        self._is_variadic = is_variadic
-        self._f_ptr = self._lib.get_fn_ptr(self._name)
-        self._cd = CifDescrBuilder(self._arg_types, self._ret_type).rawallocate()
+        self._f_ptr = fn_ptr
+        self._c_fn_type = c_fn_type
 
     @jit.unroll_safe
     def prep_exb(self, args):
-        size = jit.promote(self._cd.exchange_size)
+        cd = self._c_fn_type.get_cd()
+        fn_tp = self._c_fn_type
+
+        size = jit.promote(cd.exchange_size)
         exb = rffi.cast(rffi.VOIDP, lltype.malloc(rffi.CCHARP.TO, size, flavor="raw"))
         tokens = [None] * len(args)
 
-        for i, tp in enumerate(self._arg_types):
-            offset_p = rffi.ptradd(exb, jit.promote(self._cd.exchange_args[i]))
+        for i, tp in enumerate(fn_tp._arg_types):
+            offset_p = rffi.ptradd(exb, jit.promote(cd.exchange_args[i]))
             tokens[i] = tp.ffi_set_value(offset_p, args[i])
 
         return exb, tokens
 
     def get_ret_val_from_buffer(self, exb):
-        offset_p = rffi.ptradd(exb, jit.promote(self._cd.exchange_result))
-        ret_val = self._ret_type.ffi_get_value(offset_p)
+        cd = self._c_fn_type.get_cd()
+        offset_p = rffi.ptradd(exb, jit.promote(cd.exchange_result))
+        ret_val = self._c_fn_type._ret_type.ffi_get_value(offset_p)
         return ret_val
 
     @jit.unroll_safe
     def _invoke(self, args):
         arity = len(args)
-        if self._is_variadic:
-            if arity < self._arity:
+        tp_arity = len(self._c_fn_type._arg_types)
+        if self._c_fn_type._is_variadic:
+            if arity < tp_arity:
                 runtime_error(u"Wrong number of args to fn: got " + unicode(str(arity)) +
-                    u", expected at least " + unicode(str(self._arity)))
+                    u", expected at least " + unicode(str(tp_arity)))
         else:
-            if arity != self._arity:
+            if arity != tp_arity:
                 runtime_error(u"Wrong number of args to fn: got " + unicode(str(arity)) +
-                    u", expected " + unicode(str(self._arity)))
+                    u", expected " + unicode(str(tp_arity)))
 
         exb, tokens = self.prep_exb(args)
-        cd = jit.promote(self._cd)
+        cd = jit.promote(self._c_fn_type.get_cd())
         #fp = jit.promote(self._f_ptr)
         jit_ffi_call(cd,
                      self._f_ptr,
@@ -194,7 +197,9 @@ def _ffi_fn__args(args):
         else:
             affirm(False, u"unknown ffi-fn option: :" + k)
 
-    f = FFIFn(lib, rt.name(nm), new_args, ret_type, is_variadic)
+    tp = CFunctionType(new_args, ret_type, is_variadic)
+    nm = rt.name(nm)
+    f = FFIFn(nm, lib.get_fn_ptr(nm), tp)
     return f
 
 @as_var("ffi-voidp")
@@ -209,7 +214,7 @@ def _ffi_voidp(lib, nm):
 
 
 
-class Buffer(object.Object):
+class Buffer(PointerType):
     """ Defines a byte buffer with non-gc'd (therefore non-movable) contents
     """
     _type = object.Type(u"pixie.stdlib.Buffer")
@@ -474,9 +479,10 @@ class CVoidP(CType):
         return clibffi.ffi_type_pointer
 cvoidp = CVoidP()
 
-class VoidP(object.Object):
+class VoidP(PointerType):
+    _type = cvoidp
     def type(self):
-        return cvoidp
+        return VoidP._type
 
     def __init__(self, raw_data):
         self._raw_data = raw_data
@@ -567,7 +573,7 @@ class CStructType(object.Type):
 
 registered_callbacks = {}
 
-class CCallback(object.Object):
+class CCallback(PointerType):
     _type = object.Type(u"pixie.ffi.CCallback")
 
     def __init__(self, cft, raw_closure, id, fn):
@@ -625,6 +631,17 @@ def ffi_callback(args, ret_type):
 
     return CFunctionType(args_w, ret_type)
 
+
+class TranslatedIDGenerator(py_object):
+    def __init__(self):
+        self._val = 0
+
+    def get_next(self):
+        self._val += 1
+        return self._val
+
+id_generator = TranslatedIDGenerator()
+
 @as_var(u"pixie.ffi", u"ffi-prep-callback")
 def ffi_prep_callback(tp, f):
     """(ffi-prep-callback callback-tp fn)
@@ -634,7 +651,10 @@ def ffi_prep_callback(tp, f):
     affirm(isinstance(tp, CFunctionType), u"First argument to ffi-prep-callback must be a CFunctionType")
     raw_closure = rffi.cast(rffi.VOIDP, clibffi.closureHeap.alloc())
 
-    unique_id = rffi.cast(lltype.Signed, raw_closure)
+    if not we_are_translated():
+        unique_id = id_generator.get_next()
+    else:
+        unique_id = rffi.cast(lltype.Signed, raw_closure)
 
     res = clibffi.c_ffi_prep_closure(rffi.cast(clibffi.FFI_CLOSUREP, raw_closure), tp.get_cd().cif,
                              invoke_callback,
@@ -668,16 +688,18 @@ name_gen = FunctionTypeNameGenerator()
 
 class CFunctionType(object.Type):
     base_type = object.Type(u"pixie.ffi.CType")
-    _immutable_fields_ = ["_arg_types", "_ret-type", "_cd"]
+    _immutable_fields_ = ["_arg_types", "_ret_type", "_cd", "_is_variadic"]
 
-    def __init__(self, arg_types, ret_type):
+    def __init__(self, arg_types, ret_type, is_variadic=False):
         object.Type.__init__(self, name_gen.next(), CStructType.base_type)
         self._arg_types = arg_types
         self._ret_type = ret_type
+        self._is_variadic = is_variadic
         self._cd = CifDescrBuilder(self._arg_types, self._ret_type).rawallocate()
 
     def ffi_get_value(self, ptr):
-        runtime_error(u"Cannot get a callback value via FFI")
+        casted = rffi.cast(rffi.VOIDPP, ptr)
+        return FFIFn(u"<unknown>", casted[0], self)
 
     def ffi_set_value(self, ptr, val):
         if isinstance(val, CCallback):
@@ -702,7 +724,7 @@ class CFunctionType(object.Type):
     def ffi_type(self):
         return clibffi.ffi_type_pointer
 
-class CStruct(object.Object):
+class CStruct(PointerType):
     _immutable_fields_ = ["_type", "_buffer"]
     def __init__(self, tp, buffer):
         self._type = tp
@@ -804,7 +826,26 @@ def prep_ffi_call__args(args):
     affirm(isinstance(fn, CFunctionType), u"First arg must be a FFI function")
 
 
+def comp_ptrs(a, b):
+    assert isinstance(a, PointerType)
+    if not isinstance(b, PointerType):
+        return false
+    if a.raw_data() == b.raw_data():
+        return true
+    return false
 
+def hash_ptr(a):
+    assert isinstance(a, PointerType)
+    hashval = rffi.cast(lltype.Signed, a.raw_data())
+    return rt.wrap(hashval)
+
+extend(proto._eq, Buffer)(comp_ptrs)
+extend(proto._eq, CStructType.base_type)(comp_ptrs)
+extend(proto._eq, VoidP)(comp_ptrs)
+
+extend(proto._hash, Buffer)(hash_ptr)
+extend(proto._hash, CStructType.base_type)(hash_ptr)
+extend(proto._hash, VoidP)(hash_ptr)
 
 
 import sys

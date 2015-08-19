@@ -10,6 +10,8 @@ from pixie.vm.string import Character, String
 from pixie.vm.atom import Atom
 from rpython.rlib.rarithmetic import r_uint, intmask
 from pixie.vm.persistent_list import EmptyList
+from pixie.vm.cons import cons
+from pixie.vm.persistent_list import create_from_list
 
 import pixie.vm.rt as rt
 
@@ -321,23 +323,6 @@ def compile_set_literal(form, ctx):
 
     compile_cons(set_call, ctx)
 
-def macroexpand(form):
-    sym = rt.first(form)
-    if isinstance(sym, symbol.Symbol):
-        s = rt.name(sym)
-        if s.startswith(".") and s != u".":
-            if rt.count(form) < 2:
-                raise Exception("malformed dot expression, expecting (.member obj ...)")
-
-            method = rt.keyword(rt.wrap(rt.name(sym)[1:]))
-            obj = rt.first(rt.next(form))
-            dot = rt.symbol(rt.wrap(u"."))
-            call = rt.cons(dot, rt.cons(obj, rt.cons(method, rt.next(rt.next(form)))))
-
-            return call
-
-    return form
-
 def compile_meta(meta, ctx):
     ctx.push_const(code.intern_var(u"pixie.stdlib", u'with-meta'))
     ctx.bytecode.append(code.DUP_NTH)
@@ -351,13 +336,37 @@ def compile_meta(meta, ctx):
     ctx.bytecode.append(1)
     ctx.sub_sp(1)
 
+def maybe_oop_invoke(form):
+    head = rt.first(form)
+    if isinstance(rt.first(form), symbol.Symbol) and rt.name(head).startswith(".-"):
+        postfix = rt.next(form)
+        affirm(rt.count(postfix) == 1, u" Attribute lookups must only have one argument")
+        subject = rt.first(postfix)
+        kw = keyword(rt.name(head)[2:])
+        fn = symbol.symbol(u"pixie.stdlib/-get-attr")
+        return create_from_list([fn, subject, kw])
+
+    elif isinstance(rt.first(form), symbol.Symbol) and rt.name(head).startswith("."):
+        subject = rt.first(rt.next(form))
+        postfix = rt.next(rt.next(form))
+        form = cons(keyword(rt.name(head)[1:]), postfix)
+        form = cons(subject, form)
+        form = cons(symbol.symbol(u"pixie.stdlib/-call-method"), form)
+        return form
+
+    else:
+        return form
+
+
 def compile_form(form, ctx):
     if form is nil:
         ctx.push_const(nil)
         return
 
     if rt._satisfies_QMARK_(rt.ISeq.deref(), form) and form is not nil:
-        form = macroexpand(form)
+
+        form = maybe_oop_invoke(form)
+
         return compile_cons(form, ctx)
     if isinstance(form, numbers.Integer):
         ctx.push_const(form)

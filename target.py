@@ -147,18 +147,22 @@ def load_stdlib():
 from pixie.vm.code import intern_var
 run_with_stacklets = intern_var(u"pixie.stacklets", u"run-with-stacklets")
 
+def init_vm(progname):
+    import pixie.vm.stacklet
+    pixie.vm.stacklet.init()
+
+    init_load_path(progname)
+    load_stdlib()
+    add_to_load_paths(".")
+
 def entry_point(args):
     try:
-        import pixie.vm.stacklet
-        pixie.vm.stacklet.init()
+
+        init_vm(args[0])
 
         interactive = True
         exit = False
         script_args = []
-
-        init_load_path(args[0])
-        load_stdlib()
-        add_to_load_paths(".")
 
         i = 1
         while i < len(args):
@@ -226,6 +230,7 @@ def entry_point(args):
 
 def add_to_load_paths(path):
     rt.reset_BANG_(LOAD_PATHS.deref(), rt.conj(rt.deref(LOAD_PATHS.deref()), rt.wrap(path)))
+
 
 def init_load_path(self_path):
     if not path.isfile(self_path):
