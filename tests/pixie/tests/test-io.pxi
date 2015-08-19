@@ -148,7 +148,6 @@
   (io/run-command "rm compressed-output.gz")
   (compress-content (io/open-write "compressed-output.gz") (range 1000))
   ;; decompress the file with zcat
-  (io/run-command "cat compressed-coutput | zcat > compressed-output.txt")
   (t/assert= (range 1000) (read-string (io/slurp "compressed-output.txt")))
 
   ;; Wrapping an IInputStream in decompressing-stream should get the same result
