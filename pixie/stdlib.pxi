@@ -1183,14 +1183,9 @@ Creates new maps if the keys are not present."
 (defmacro deftype
   {:doc "Define a custom type."
    :examples [["(deftype Person [name]
-  Object
-  (say-hi [self other-name]
-    (str \"Hi, I'm \" name \". You're \" other-name \", right?\"))
-
   IObject
   (-str [self]
     (str \"<Person \" (pr-str name) \">\")))"]
-              ["(.say-hi (->Person \"James\") \"Paul\")" nil "Hi, I'm James. You're Paul, right?"]
               ["(str (->Person \"James\"))" nil "<Person \"James\">"]]
    :added "0.1"}
   [nm fields & body]
@@ -1256,40 +1251,64 @@ Creates new maps if the keys are not present."
          ~ctor
          ~@proto-bodies)))
 
+(defn -make-record-assoc-body [cname fields]
+  (let [k-sym (gensym "k")
+        v-sym (gensym "v")
+        this-sym (gensym "this")
+        result `(-assoc [~this-sym ~k-sym ~v-sym]
+                 (case ~k-sym
+                   ~@(mapcat
+                      (fn [k]
+                        [k `(~cname ~@(mapv (fn [x]
+                                             (if (= x k)
+                                               v-sym
+                                               `(get-field ~this-sym ~x)))
+                                           fields))])
+                      fields)
+                   (throw [:pixie.stdlib/NotImplementedException
+                           (str "Can't assoc to a unknown field: " ~k-sym)])))]
+    result))
+
 (defmacro defrecord
   {:doc "Define a record type.
 
 Similar to `deftype`, but supports construction from a map using `map->Type`
 and implements IAssociative, ILookup and IObject."
    :added "0.1"}
-  [nm fields & body]
+  [nm field-syms & body]
   (let [ctor-name (symbol (str "->" (name nm)))
         map-ctor-name (symbol (str "map" (name ctor-name)))
-        fields (transduce (map (comp keyword name)) conj fields)
+        fields (transduce (map (comp keyword name)) conj field-syms)
         type-from-map `(defn ~map-ctor-name [m]
                          (apply ~ctor-name (map #(get m %) ~fields)))
         default-bodies ['IAssociative
-                        `(-assoc [self k v]
-                                 (let [m (reduce #(assoc %1 %2 (. self %2)) {} ~fields)]
-                                   (~map-ctor-name (assoc m k v))))
+                        (-make-record-assoc-body ctor-name fields)
+
                         `(-contains-key [self k]
                                         (contains? ~(set fields) k))
                         `(-dissoc [self k]
                                   (throw [:pixie.stdlib/NotImplementedException
                                           "dissoc is not supported on defrecords"]))
                         'ILookup
-                        `(-val-at [self k not-found]
-                                  (get-field self k))
+                        (let [self-nm (gensym "self")
+                              k-nm (gensym "k")]
+                          `(-val-at [~self-nm ~k-nm not-found#]
+                                    (case ~k-nm
+                                      ~@(mapcat
+                                         (fn [k]
+                                           [k `(get-field ~self-nm ~k-nm)])
+                                         fields)
+                                      not-found#)))
                         'IObject
-                        `(-str [self]
-                               (str "<" ~(name nm) " " (reduce #(assoc %1 %2 (. self %2)) {} ~fields) ">"))
+                        `(-str [self#]
+                               (str "<" ~(name nm) " " (reduce #(assoc %1 %2 (%2 self#)) {} ~fields) ">"))
                         `(-eq [self other]
                               (and (instance? ~nm other)
                                    ~@(map (fn [field]
-                                            `(= (. self ~field) (. other ~field)))
+                                            `(= (~field self) (~field other)))
                                           fields)))
                         `(-hash [self]
-                                (throw [:pixie.stdlib/NotImplementedException "not implemented"]))]
+                                (hash [~@field-syms]))]
         deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
     `(do ~type-from-map
          ~deftype-decl)))
