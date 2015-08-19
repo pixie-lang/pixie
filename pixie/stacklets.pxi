@@ -65,21 +65,26 @@
                                  pixie.ffi/dispose!))
 
 ;;; Sleep
-(defn sleep [ms]
-  (let [f (fn [k]
-            (let [cb (atom nil)
-                  timer (uv/uv_timer_t)]
-              (reset! cb (ffi/ffi-prep-callback uv/uv_timer_cb
-                                            (fn [handle]
-                                              (try
-                                                (run-and-process k)
-                                               (uv/uv_timer_stop timer)
-                                                (-dispose! @cb)
-                                                (catch ex
-                                                    (println ex))))))
-              (uv/uv_timer_init (uv/uv_default_loop) timer)
-              (uv/uv_timer_start timer @cb ms 0)))]
-    (call-cc f)))
+(defn sleep
+  ([ms]
+   (sleep ms false))
+  ([ms background?]
+    (let [f (fn [k]
+              (let [cb (atom nil)
+                    timer (uv/uv_timer_t)]
+                (reset! cb (ffi/ffi-prep-callback uv/uv_timer_cb
+                                                  (fn [handle]
+                                                    (try
+                                                      (run-and-process k)
+                                                      (uv/uv_timer_stop timer)
+                                                      (-dispose! @cb)
+                                                      (catch ex
+                                                          (println ex))))))
+                (uv/uv_timer_init (uv/uv_default_loop) timer)
+                (when background?
+                  (uv/uv_unref timer))
+                (uv/uv_timer_start timer @cb ms 0)))]
+      (call-cc f))))
 
 ;; Spawn
 (defn -spawn [start-fn]
@@ -101,6 +106,17 @@
                  (catch e
                      (println e)))))))
 
+(defmacro spawn-background [& body]
+  `(let [frames (-get-current-var-frames nil)]
+     (-spawn (fn [h# _]
+               (-set-current-var-frames nil frames)
+               (try
+                 (reset! stacklet-loop-h h#)
+                 (let [result# (do ~@body)]
+                   (call-cc (fn [_] nil)))
+                 (catch e
+                     (println e)))))))
+
 
 (defn spawn-from-non-stacklet [f]
   (let [s (new-stacklet (fn [h _]
@@ -115,6 +131,14 @@
     (-run-later
      (fn []
        (run-and-process s)))))
+
+
+(defn finalizer-loop []
+  (spawn-background
+   (loop []
+     (-run-finalizers)
+     (sleep 1000 true)
+     (recur))))
 
 
 (defn -with-stacklets [fn]
@@ -134,11 +158,14 @@
     (fn [h# _]
       (try
         (reset! stacklet-loop-h h#)
+        (finalizer-loop)
         (let [result# (do ~@body)]
           (swap! running-threads dec)
           (call-cc (fn [_] nil)))
         (catch e
             (println e))))))
+
+
 
 (defn run-with-stacklets [f]
   (with-stacklets
@@ -166,3 +193,5 @@
               (fn []
                 (let [result (apply f args)]
                   (-run-later (fn [] (run-and-process k result)))))))))
+
+

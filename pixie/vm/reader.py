@@ -43,6 +43,9 @@ ARG_ENV.set_root(nil)
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
 
+    def type(self):
+        return PlatformReader._type
+
     def read(self):
         assert False
 
@@ -53,6 +56,9 @@ class PlatformReader(object.Object):
         return self
 
 class StringReader(PlatformReader):
+    _type = object.Type(u"pixie.stdlib.StringReader")
+    def type(self):
+        return StringReader._type
 
     def __init__(self, s):
         affirm(isinstance(s, unicode), u"StringReader requires unicode")

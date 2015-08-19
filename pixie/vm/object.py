@@ -1,6 +1,26 @@
 from rpython.rlib.objectmodel import compute_identity_hash
 import rpython.rlib.jit as jit
 
+
+class FinalizerRegistry(object):
+    def __init__(self):
+        # TODO: PyPy uses a linked list, investigate if we need that too
+        self._registry = []
+
+    def register(self, o):
+        print "register finalizer ", o
+        self._registry.append(o)
+
+    def run_finalizers(self):
+        import pixie.vm.rt as rt
+
+        vals = self._registry
+        self._registry = []
+        for x in vals:
+            rt._finalize_BANG_(x)
+
+finalizer_registry = FinalizerRegistry()
+
 class Object(object):
     """ Base Object for all VM objects
     """
@@ -28,6 +48,13 @@ class Object(object):
 
     def promote(self):
         return self
+
+    def __del__(self):
+        if self.type().has_finalizer():
+            finalizer_registry.register(self)
+
+
+
 
 class TypeRegistry(object):
     def __init__(self):
@@ -66,6 +93,7 @@ def get_type_by_name(nm):
     return _type_registry.get_by_name(nm)
 
 class Type(Object):
+    _immutable_fields_ = ["_name", "_has_finalizer?"]
     def __init__(self, name, parent=None, object_inited=True):
         assert isinstance(name, unicode), u"Type names must be unicode"
         _type_registry.register_type(name, self)
@@ -79,6 +107,7 @@ class Type(Object):
 
         self._parent = parent
         self._subclasses = []
+        self._has_finalizer = False
 
     def name(self):
         return self._name
@@ -94,6 +123,14 @@ class Type(Object):
 
     def subclasses(self):
         return self._subclasses
+
+    @jit.elidable_promote()
+    def has_finalizer(self):
+        return self._has_finalizer
+
+    def set_finalizer(self):
+        self._has_finalizer = True
+
 
 Object._type = Type(u"pixie.stdlib.Object", None, False)
 Type._type = Type(u"pixie.stdlib.Type")

@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+from pixie.vm.object import Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
+    runtime_error, add_info, ExtraCodeInfo, finalizer_registry
+from pixie.vm.code import BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
+                          list_copy, returns, intern_var
 from pixie.vm.object import Object, Type, _type_registry, WrappedException, RuntimeException, affirm, InterpreterCodeInfo, istypeinstance, \
     runtime_error, add_info, ExtraCodeInfo
 from pixie.vm.code import Namespace, BaseCode, PolymorphicFn, wrap_fn, as_var, defprotocol, extend, Protocol, Var, \
@@ -59,6 +63,15 @@ defprotocol("pixie.stdlib", "ITransientCollection", ["-conj!"])
 defprotocol("pixie.stdlib", "ITransientStack", ["-push!", "-pop!"])
 
 defprotocol("pixie.stdlib", "IDisposable", ["-dispose!"])
+defprotocol("pixie.stdlib", "IFinalize", ["-finalize!"])
+
+def maybe_mark_finalizer(self, tp):
+    if self is _finalize_BANG_:
+        print "MARKING ", tp
+
+        tp.set_finalizer()
+
+code.PolymorphicFn.maybe_mark_finalizer = maybe_mark_finalizer
 
 @as_var("pixie.stdlib.internal", "-defprotocol")
 def _defprotocol(name, methods):
@@ -913,3 +926,8 @@ def _add_exception_info(ex, str, data):
     assert isinstance(ex, RuntimeException)
     ex._trace.append(ExtraCodeInfo(rt.name(str), data))
     return ex
+
+@as_var("-run-finalizers")
+def _run_finalizers():
+    finalizer_registry.run_finalizers()
+    return nil

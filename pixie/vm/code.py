@@ -693,6 +693,14 @@ class PolymorphicFn(BaseCode):
         self._fn_cache = {}
         self._protocol.add_satisfies(tp)
 
+        ## We have to special case this so that the GC doesn't go nuts trying to do a ton during
+        ## collection.
+        self.maybe_mark_finalizer(tp)
+
+    def maybe_mark_finalizer(self, tp):
+        ## Gets overridden in stdlib
+        pass
+
     def _find_parent_fn(self, tp):
         ## Search the entire object tree to find the function to execute
         assert isinstance(tp, object.Type)

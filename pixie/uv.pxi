@@ -20,6 +20,8 @@
 
   (f/defcfn uv_run)
   (f/defcfn uv_loop_alive)
+  (f/defcfn uv_unref)
+  (f/defcfn uv_ref)
   (f/defcfn uv_stop)
   (f/defcfn uv_loop_size)
   (f/defcfn uv_backend_fd)
