@@ -343,17 +343,17 @@
 
 (extend -str PersistentVector
   (fn [v]
-    (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
+    (str "[" (transduce (interpose " ") string-builder v) "]")))
 (extend -repr PersistentVector
   (fn [v]
-    (apply str "[" (conj (transduce (comp (map -repr) (interpose " ")) conj v) "]"))))
+    (str "[" (transduce (comp (map -repr) (interpose " ")) string-builder v) "]")))
 
 (extend -str Cons
   (fn [v]
-    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
+    (str "(" (transduce (interpose " ") string-builder v) ")")))
 (extend -repr Cons
   (fn [v]
-    (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
+    (str "(" (transduce (comp (map -repr) (interpose " ")) string-builder v) ")")))
 
 (extend -hash Cons
         (fn [v]
@@ -361,10 +361,10 @@
 
 (extend -str PersistentList
   (fn [v]
-    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
+    (str "(" (transduce (interpose " ") string-builder v) ")")))
 (extend -repr PersistentList
   (fn [v]
-    (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
+    (str "(" (transduce (comp (map -repr) (interpose " ")) string-builder v) ")")))
 
 (extend -hash PersistentList
   (fn [v]
@@ -373,10 +373,10 @@
 
 (extend -str LazySeq
   (fn [v]
-    (apply str "(" (conj (transduce (interpose " ") conj v) ")"))))
+    (str "(" (transduce (interpose " ") string-builder v) ")")))
 (extend -repr LazySeq
   (fn [v]
-    (apply str "(" (conj (transduce (comp (map -repr) (interpose " ")) conj v) ")"))))
+    (str "(" (transduce (comp (map -repr) (interpose " ")) string-builder v) ")")))
 
 (extend -hash PersistentVector
   (fn [v]
@@ -945,10 +945,10 @@ If further arguments are passed, invokes the method named by symbol, passing the
 
 (extend -str MapEntry
   (fn [v]
-    (apply str "[" (conj (transduce (interpose " ") conj v) "]"))))
+    (str "[" (transduce (interpose " ") string-builder v) "]")))
 (extend -repr MapEntry
   (fn [v]
-    (apply str "[" (conj (transduce (comp (map -repr) (interpose " ")) conj v) "]"))))
+    (str "[" (transduce (comp (map -repr) (interpose " ")) string-builder v) "]")))
 
 (extend -hash MapEntry
   (fn [v]
@@ -989,11 +989,11 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (extend -str PersistentHashMap
         (fn [v]
           (let [entry->str (map (fn [e] (vector (key e) " " (val e))))]
-            (apply str "{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
+            (str "{" (transduce (comp entry->str (interpose [", "]) cat) string-builder v) "}"))))
 (extend -repr PersistentHashMap
         (fn [v]
           (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
-            (apply str "{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
+            (str "{" (transduce (comp entry->str (interpose [", "]) cat) string-builder v) "}"))))
 
 (extend -hash PersistentHashMap
         (fn [v]
@@ -1005,10 +1005,10 @@ If further arguments are passed, invokes the method named by symbol, passing the
 
 (extend -str PersistentHashSet
         (fn [s]
-          (apply str "#{" (conj (transduce (interpose " ") conj s) "}"))))
+          (str "#{" (transduce (interpose " ") string-builder s) "}")))
 (extend -repr PersistentHashSet
         (fn [s]
-          (apply str "#{" (conj (transduce (comp (map -repr) (interpose " ")) conj s) "}"))))
+          (str "#{" (transduce (comp (map -repr) (interpose " ")) string-builder s) "}")))
 
 (extend -empty Cons (fn [_] '()))
 (extend -empty LazySeq (fn [_] '()))
@@ -2408,12 +2408,12 @@ Calling this function on something that is not ISeqable returns a seq with that 
 (extend -str Environment
         (fn [v]
           (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
-            (apply str "#Environment{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
+            (str "#Environment{" (transduce (comp entry->str (interpose [", "]) cat) string-builder v) "}"))))
 
 (extend -repr Environment
         (fn [v]
           (let [entry->str (map (fn [e] (vector (-repr (key e)) " " (-repr (val e)))))]
-            (apply str "#Environment{" (conj (transduce (comp entry->str (interpose [", "]) cat) conj v) "}")))))
+            (str "#Environment{" (transduce (comp entry->str (interpose [", "]) cat) string-builder v) "}"))))
 
 (defn interleave
   "Returns a seq of all the items in the input collections interleaved"
