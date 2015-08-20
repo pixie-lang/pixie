@@ -932,6 +932,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
                nil [:me :me :me :me]]]}
   (fn [& _] x))
 
+(satisfy ISeqable MapEntry)
 (extend -count MapEntry (fn [self] 2))
 (extend -nth MapEntry (fn map-entry-nth [self idx]
                           (cond (= idx 0) (-key self)
@@ -940,6 +941,10 @@ If further arguments are passed, invokes the method named by symbol, passing the
                                   (cond (= idx 0) (-key self)
                                         (= idx 1) (-val self)
                                         :else not-found)))
+
+
+
+(extend -eq MapEntry -seq-eq)
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -2615,6 +2620,12 @@ Calling this function on something that is not ISeqable returns a seq with that 
    (sort compare coll))
   ([comp-fn coll]
    (merge-sort comp-fn coll)))
+
+(defn sort-by
+  ([key-fn coll]
+   (sort-by key-fn compare coll))
+  ([key-fn comp-fn coll]
+   (sort #(comp-fn (key-fn %1) (key-fn %2)) coll)))
 
 
 ;;; End Sorting

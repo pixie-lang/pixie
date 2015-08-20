@@ -7,14 +7,34 @@
   (println "<html><head></head><body>")
   (println "<h2>" (name namespace) "</h2")
   (load-ns (symbol namespace))
-  (doseq [[k v] (ns-map (the-ns namespace))]
+  (println "<hr/>")
+  (println "<ul>")
+  (doseq [k (sort (keys (ns-map (the-ns namespace))))]
+    (println (str "<li><a href=\"#"
+                  (name k)
+                  "\">"
+                  (name k)
+                  "</a></li>")))
+  (println "</ul>")  
+  
+  (println "<hr/>")
+
+  
+  (doseq [[k v] (sort-by first (ns-map (the-ns namespace)))]
     (let [m (meta @v)]
       (if (and (:line-number m)
                (:file m))
-        (println (str "<a href=\"http://github.com/pixie-lang/pixie/blob/master/"
+        (println (str "<a name=\""
+                      (name k)
+                      "\" "
+                      "href=\"http://github.com/pixie-lang/pixie/blob/master/"
                       (:file m)
                       "#L"
                       (:line-number m)
+                      "\"><h3>" (name k) "</h3></a>"))
+        (println (str "<a name=\""
+                      (name k)
+                      "\" "
                       "\"><h3>" (name k) "</h3></a>")))
       (println "<ul>")
       (doseq [sig (:signatures (meta @v))]
@@ -27,7 +47,8 @@
         (println "<h4>Examples:</h4>"))
       (doseq [[code _ result] (:examples (meta @v))]
         (println "<p>" code "=><i>" result "</i></p>"))
-      (println "\n")))
+      (println "\n<hr/>")
+      ))
 
   (println "</body></html>"))
 

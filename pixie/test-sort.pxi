@@ -9,3 +9,21 @@
 (t/deftest test-sort-big
   (t/assert= (sort (range 10000))      (range 10000))
   (t/assert= (sort (range 9999 -1 -1)) (range 10000)))
+
+(t/deftest test-sort-by
+  (t/assert= (sort-by first
+                      (zipmap (range 4)
+                              (range 4)))
+             [[0 0]
+              [1 1]
+              [2 2]
+              [3 3]])
+
+
+  (t/assert= (sort-by second
+                      (zipmap (range 4)
+                              (range 100 0 -1)))
+             [[0 0]
+              [1 1]
+              [2 2]
+              [3 3]]))
