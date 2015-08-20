@@ -95,3 +95,9 @@ clean: clean_pxic
 	rm -rf ./externals
 	rm -f ./pixie-vm
 	rm -f ./*.pyc
+
+gen_docs:
+	./pixie-vm pixie/generate-docs.pxi pixie.stdlib > docs/pixie.stdlib.html
+	./pixie-vm pixie/generate-docs.pxi pixie.io > docs/pixie.io.html
+	./pixie-vm pixie/generate-docs.pxi pixie.streams > docs/pixie.streams.html
+	./pixie-vm pixie/generate-docs.pxi pixie.string > docs/pixie.string.html
