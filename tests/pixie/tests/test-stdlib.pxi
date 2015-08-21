@@ -10,6 +10,7 @@
   (t/assert= (map inc [1 2 3]) [2 3 4])
   (t/assert= (map + [1 2 3] [4 5 6]) [5 7 9])
   (t/assert= (map + [1 2 3] [4 5 6] [7 8 9]) [12 15 18])
+  (t/assert= (map + [1 2 3] (repeat 7)) [8 9 10])
   (let [value (map identity [1 2 3])]
     (t/assert= (seq value) [1 2 3])
     (t/assert= (seq value) [1 2 3])))
@@ -37,6 +38,7 @@
   (t/assert= (str (type 3)) "<type pixie.stdlib.Integer>")
   (t/assert= (str [1 {:a 1} "hey"]) "[1 {:a 1} hey]")
   (t/assert= (seq (map identity "iterable")) '(\i \t \e \r \a \b \l \e))
+  (t/assert= (str (repeat 3 7)) "(7 7 7)")
   (t/assert= (str (range 3)) "(0 1 2)"))
 
 (t/deftest test-repr
@@ -60,6 +62,7 @@
   (t/assert= (-repr (type 3)) "pixie.stdlib.Integer")
 
   (t/assert= (-repr [1 {:a 1} "hey"]) "[1 {:a 1} \"hey\"]")
+  (t/assert= (-repr (repeat 3 7)) "(7 7 7)")
   (t/assert= (-repr (range 3)) "(0 1 2)"))
 
 (t/deftest test-nth
@@ -67,6 +70,7 @@
   (t/assert= (nth [1 2 3] 1) 2)
   (t/assert= (nth '(1 2 3) 1) 2)
   (t/assert= (nth (make-array 3) 2) nil)
+  (t/assert= (nth (repeat 4 1) 3) 1)
   (t/assert= (nth (range 4) 1) 1)
   (t/assert= (nth "hithere" 1) \i)
 
@@ -93,6 +97,9 @@
     (nth '() 0)
     (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
   (try
+    (nth (repeat 99 nil) 99)
+    (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
+  (try
     (nth (range 0 0) 0)
     (catch ex (t/assert= (ex-msg ex) "Index out of Range")))
 
@@ -100,12 +107,14 @@
   (t/assert= (nth [1 2 3] 99 :default) :default)
   (t/assert= (nth '(1 2 3) 99 :default) :default)
   (t/assert= (nth (make-array 3) 99 :default) :default)
+  (t/assert= (nth (repeat 4 1) 99 :default) :default)
   (t/assert= (nth (range 4) 99 :default) :default)
   (t/assert= (nth "hithere" 99 :default) :default)
 
   (t/assert= (nth [1 2 3] 1 :default) 2)
   (t/assert= (nth '(1 2 3) 1 :default) 2)
   (t/assert= (nth (make-array 3) 2 :default) nil)
+  (t/assert= (nth (repeat 4 1) 3 :default) 1)
   (t/assert= (nth (range 4) 1 :default) 1)
   (t/assert= (nth "hithere" 1 :deafult) \i))
 
@@ -138,6 +147,7 @@
         r (range 1 6)]
     (t/assert= (last nil) nil)
     (t/assert= (last []) nil)
+    (t/assert= (last (repeat 3 nil)) nil)
     (t/assert= (last (range 0 0)) nil)
     (t/assert= (last v) 5)
     (t/assert= (last l) 5)
@@ -161,6 +171,7 @@
   (t/assert= (empty? (make-array 0)) true)
   (t/assert= (empty? {}) true)
   (t/assert= (empty? #{}) true)
+  (t/assert= (empty? (repeat '())) false)
   (t/assert= (empty? (range 1 5)) false)
 
   (t/assert= (empty? [1 2 3]) false)
@@ -177,6 +188,7 @@
   (t/assert= (not-empty? (make-array 0)) false)
   (t/assert= (not-empty? {}) false)
   (t/assert= (not-empty? #{}) false)
+  (t/assert= (not-empty? (repeat 0 'x)) false)
   (t/assert= (not-empty? (range 1 5)) true)
 
   (t/assert= (not-empty? [1 2 3]) true)
@@ -399,6 +411,12 @@
     (t/assert= (f ::catch-this) :found)
     (t/assert= (f :something-else) :not-found)))
 
+(t/deftest test-repeat
+  (t/assert= (seq (repeat 3 1)) '(1 1 1))
+  (t/assert= (seq (repeat 0 1)) nil)
+  (t/assert= (count (repeat 4096 'x)) 4096)
+  (t/assert= (count (repeat 0 'x)) 0))
+
 (t/deftest test-range
   (t/assert= (= (-seq (range 10))
                 '(0 1 2 3 4 5 6 7 8 9))
@@ -573,6 +591,9 @@
   (t/assert= (satisfies? IFoo \a) false))
 
 (t/deftest test-reduce
+ (t/assert= 300 (reduce + (repeat 100 3)))
+ (t/assert= 0 (reduce + (repeat 0 3)))
+ (t/assert= [9 9 9] (reduce (partial map +) (repeat 0) (repeat 3 (repeat 3 3))))
  (t/assert= 5050 (reduce + (range 101)))
  (t/assert= 3628800 (reduce * (range 1 11)))
  (t/assert= 5051 (reduce + 1 (range 101))))

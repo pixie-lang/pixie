@@ -1347,12 +1347,6 @@ and implements IAssociative, ILookup and IObject."
   (puts (apply pr-str args))
   nil)
 
-(defn repeat
-  ([x]
-     (cons x (lazy-seq* (fn [] (repeat x)))))
-  ([n x]
-     (take n (repeat x))))
-
 (defn repeatedly
   {:doc "Returns a lazy seq that contains the return values of repeated calls to f.
 
@@ -1813,6 +1807,52 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
   (if (< x 0)
     (* -1 x)
     x))
+
+(deftype Repeat [n x]
+  IReduce
+  (-reduce [self f init]
+    (loop [i 0
+           acc init]
+      (if (< i n)
+        (let [acc (f acc x)]
+          (if (reduced? acc)
+            @acc
+            (recur (inc i) acc)))
+        acc)))
+  ICounted
+  (-count [self]
+    n)
+  IIndexed
+  (-nth [self idx]
+    (if (and (>= idx 0) (< idx n))
+      x
+      (throw [:pixie.stdlib/OutOfRangeException "Index out of Range"])))
+  (-nth-not-found [self idx not-found]
+    (if (and (>= idx 0) (< idx n))
+      x
+      not-found))
+  ISeqable
+  (-seq [self]
+    (when (>= n 1)
+      (cons x (lazy-seq* (fn [] (->Repeat (dec n) x)))))))
+
+(extend -str Repeat
+        (fn [v]
+          (-str (seq v))))
+
+(extend -repr Repeat -str)
+
+(defn repeat
+  {:doc "Returns a seqable of repetitions of a value."
+   :examples [["(repeat 3 :buffalo)" nil (:buffalo :buffalo :buffalo)]
+              ["(map vector '(1 2 3) (repeat :ahahah))" nil ([1 :ahahah] [2 :ahahah] [3 :ahahah])]]
+   :signatures [[x] [n x]]
+   :added "0.1"}
+  ([x]
+   (let [positive-infinity (/ 1.0 0)]
+     (repeat positive-infinity x)))
+  ([n x]
+   (->Repeat n x)))
 
 (deftype Range [start stop step]
   IReduce
