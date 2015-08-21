@@ -16,7 +16,7 @@ class CustomType(Type):
         self._mutable_slots = {}
         self._rev = 0
 
-    @jit.elidable
+    @jit.elidable_promote()
     def get_slot_idx(self, nm):
         return self._slots.get(nm, -1)
 
@@ -26,14 +26,14 @@ class CustomType(Type):
             self._mutable_slots[nm] = nm
 
 
-    @jit.elidable
+    @jit.elidable_promote()
     def _is_mutable(self, nm, rev):
         return nm in self._mutable_slots
 
     def is_mutable(self, nm):
         return self._is_mutable(nm, self._rev)
 
-    @jit.elidable
+    @jit.elidable_promote()
     def get_num_slots(self):
         return len(self._slots)
 
