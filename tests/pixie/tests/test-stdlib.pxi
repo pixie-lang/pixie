@@ -218,6 +218,28 @@
   (t/assert= (empty {:a 1, :b 2, :c 3}) {})
   (t/assert= (empty #{1 2 3}) #{}))
 
+(t/deftest test-count
+  (t/assert= (count nil) 0)
+  (t/assert= (count '()) 0)
+  (t/assert= (count '(1 2 '(3 4))) 3)
+  (t/assert= (count '(nil nil nil)) 3)
+  (t/assert= (count (cons 1 [2 3])) 3)
+  (t/assert= (count (list)) 0)
+  (t/assert= (count (list 1 2 3)) 3)
+  (t/assert= (count []) 0)
+  (t/assert= (count [1 2 3]) 3)
+  (t/assert= (count {}) 0)
+  (t/assert= (count {:a 1, :b 2, :c 3}) 3)
+  (t/assert= (count (first (seq {:a 1, :b 2, :c 3}))) 2)
+  (t/assert= (count #{}) 0)
+  (t/assert= (count (conj #{1 2 3} 3)) 3)
+  (t/assert= (count (lazy-seq '())) 0)
+  (t/assert= (count (lazy-seq '(1 2 3))) 3)
+  (t/assert= (count (cons 1 (lazy-seq [2 3]))) 3)
+  (t/assert= (count (range 0 -9 -3)) 3)
+  (t/assert= (count "") 0)
+  (t/assert= (count "123") 3)
+  (t/assert= (count (make-array 3)) 3))
 
 (t/deftest test-vec
   (let [v '(1 2 3 4 5)]
