@@ -258,9 +258,12 @@ def count(x):
     while True:
         _count_driver.jit_merge_point(tp=rt.type(x))
         if ICounted.satisfies(rt.type(x)):
-           return rt._add(rt.wrap(acc), rt._count(x))
+            return rt._add(rt.wrap(acc), rt._count(x))
+        seq = rt.seq(x)
+        if seq is nil:
+            return rt.wrap(acc)
         acc += 1
-        x = rt.next(rt.seq(x))
+        x = rt._next(seq)
 
 
 @as_var("+")
