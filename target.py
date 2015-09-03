@@ -39,7 +39,7 @@ PROGRAM_ARGUMENTS.set_root(nil)
 
 LOAD_PATHS = intern_var(u"pixie.stdlib", u"load-paths")
 LOAD_PATHS.set_root(nil)
-load_path = Var(u"pixie.stdlib", u"internal-load-path")
+load_path = intern_var(u"pixie.stdlib", u"internal-load-path")
 
 class ReplFn(NativeFn):
     def __init__(self, args):
@@ -53,6 +53,8 @@ class ReplFn(NativeFn):
         repl = intern_var(u"pixie.repl", u"repl")
         with with_ns(u"user"):
             repl.invoke([])
+
+load_file = intern_var(u"pixie.stdlib", u"load-file")
 
 class BatchModeFn(NativeFn):
     def __init__(self, args):
@@ -81,7 +83,9 @@ class BatchModeFn(NativeFn):
                     if not path.isfile(self._file):
                         print "Error: Cannot open '" + self._file + "'"
                         os._exit(1)
-                    f = open(self._file)
+                    load_file.invoke([rt.wrap(self._file)])
+                    return None
+
                 data = f.read()
                 f.close()
 

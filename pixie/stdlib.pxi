@@ -21,7 +21,6 @@
 
 (def libm (ffi-library (str "libm." pixie.platform/so-ext)))
 (def atan2 (ffi-fn libm "atan2" [CDouble CDouble] CDouble))
-(def floor (ffi-fn libm "floor" [CDouble] CDouble))
 (def lround (ffi-fn libm "lround" [CDouble] CInt))
 
 
@@ -871,29 +870,6 @@ If further arguments are passed, invokes the method named by symbol, passing the
 
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
-
-(defn float
-  {:doc "Converts a number to a float."
-   :since "0.1"}
-  [x]
-  (cond
-   (number? x) (+ x 0.0)
-   :else (throw
-          [:pixie.stdlib/ConversionException
-           (str "Can't convert a value of type " (type x) " to a Float")])))
-
-(defn int
-  {:doc "Converts a number to an integer."
-   :since "0.1"}
-  [x]
-  (cond
-   (integer? x) x
-   (float? x) (lround (floor x))
-   (ratio? x) (int (/ (float (numerator x)) (float (denominator x))))
-   (char? x) (+ x 0)
-   :else (throw
-          [:pixie.stdlib/ConversionException
-           (throw (str "Can't convert a value of type " (type x) " to an Integer"))])))
 
 (defn last
   {:doc "Returns the last element of the collection, or nil if none."
@@ -2285,6 +2261,44 @@ Expands to calls to `extend-type`."
                      []
                      tps)]
     `(do ~@exts)))
+
+(defprotocol IToFloat
+  (-float [this]))
+
+(defn float
+  {:doc "Converts a number to a float."
+   :since "0.1"}  
+  [x]
+  (-float x))
+
+(extend-type Number
+  IToFloat
+  (-float [x] (+ x 0.0)))
+
+(defprotocol IToInteger
+  (-int [x]))
+
+(extend-protocol IToInteger
+  Integer
+  (-int [x] x)
+
+  Float
+  (-int [x] (floor x))
+
+  Ratio
+  (-int [x]
+    (int (/ (float (numerator x)) (float (denominator x)))))
+
+  Character
+  (-int [x]
+    (+ x 0)))
+
+(defn int
+  {:doc "Converts a number to an integer."
+   :since "0.1"}  
+  [x]
+  (-int x))
+
 
 (defmacro for
   {:doc "A list comprehension for the bindings."

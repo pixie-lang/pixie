@@ -427,6 +427,10 @@ def _load_file(filename, compile=False):
     affirm(isinstance(filename, String), u"filename must be a string")
     filename = str(rt.name(filename))
 
+    if filename.endswith(".pxic"):
+        load_pxic_file(filename)
+        return nil
+
     if path.isfile(filename + "c") and not compile:
         load_pxic_file(filename + "c")
         return nil
@@ -932,3 +936,10 @@ def _add_exception_info(ex, str, data):
 def _run_finalizers():
     finalizer_registry.run_finalizers()
     return nil
+
+
+@as_var("floor")
+def _floor(x):
+    affirm(isinstance(x, numbers.Float), u"floor expects a Float")
+    return numbers.Integer(int(x.float_val()))
+
