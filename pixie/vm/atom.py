@@ -18,7 +18,7 @@ class Atom(object.Object):
 def _reset(self, v):
     assert isinstance(self, Atom)
     self._boxed_value = v
-    return self
+    return v
 
 
 @extend(proto._deref, Atom)
