@@ -623,3 +623,9 @@
 (t/deftest test-comp
   (t/assert= 5 ((comp inc inc inc inc) 1))
   (t/assert= :xyz ((comp) :xyz)))
+
+(t/deftest test-swap-reset
+  (let [a (atom 0)]
+    (t/assert= 1 (swap! a inc))
+    (t/assert= 2 (swap! a inc))
+    (t/assert= 3 (reset! a 3))))
