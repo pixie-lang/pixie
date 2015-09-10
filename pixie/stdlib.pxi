@@ -1569,10 +1569,22 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defn take
   {:doc "Takes n elements from the collection, or fewer, if not enough."
    :added "0.1"}
-  [n coll]
-  (when (pos? n)
-    (when-let [s (seq coll)]
-      (cons (first s) (take (dec n) (next s))))))
+  ([n]
+   (fn [rf]
+     (let [seen (atom 0)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+          (let [s (swap! seen inc)]
+              (if (<= s n)
+                (rf result input)
+                result)))))))
+  ([n coll]
+   (lazy-seq
+     (when (pos? n)
+       (when-let [s (seq coll)]
+         (cons (first s) (take (dec n) (next s))))))))
 
 (defn drop
   {:doc "Drops n elements from the start of the collection."
