@@ -493,6 +493,26 @@
        a
        (recur (inc a))))))
 
+(t/deftest test-take
+  (t/assert= (take 0 [1 2 3 4]) ())
+  (t/assert= (take 1 [1 2 3 4]) [1])
+  (t/assert= (take 2 [1 2 3 4]) [1 2])
+  (t/assert= (take 3 [1 2 3 4]) [1 2 3])
+  (t/assert= (transduce (take 0) conj [1 2 3 4]) [])
+  (t/assert= (transduce (take 1) conj [1 2 3 4]) [1])
+  (t/assert= (transduce (take 2) conj [1 2 3 4]) [1 2])
+  (t/assert= (transduce (take 3) conj [1 2 3 4]) [1 2 3]))
+
+(t/deftest test-drop
+  (t/assert= (drop 0 [1 2 3 4]) [1 2 3 4])
+  (t/assert= (drop 1 [1 2 3 4]) [2 3 4])
+  (t/assert= (drop 2 [1 2 3 4]) [3 4])
+  (t/assert= (drop 3 [1 2 3 4]) [4])
+  (t/assert= (transduce (drop 0) conj [1 2 3 4]) [1 2 3 4])
+  (t/assert= (transduce (drop 1) conj [1 2 3 4]) [2 3 4])
+  (t/assert= (transduce (drop 2) conj [1 2 3 4]) [3 4])
+  (t/assert= (transduce (drop 3) conj [1 2 3 4]) [4]))
+
 (t/deftest test-take-while
   (t/assert= (take-while pos? [1 2 3 -1]) [1 2 3])
   (t/assert= (take-while pos? [-1 2]) ())

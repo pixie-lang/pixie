@@ -1569,19 +1569,45 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defn take
   {:doc "Takes n elements from the collection, or fewer, if not enough."
    :added "0.1"}
-  [n coll]
-  (when (pos? n)
-    (when-let [s (seq coll)]
-      (cons (first s) (take (dec n) (next s))))))
+  ([n]
+   (fn [rf]
+     (let [rrf (preserving-reduced rf)
+           seen (atom 0)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+          (let [s (swap! seen inc)]
+            (if (<= s n)
+              (rrf result input)
+              (reduced result))))))))
+  ([n coll]
+   (lazy-seq
+     (when (pos? n)
+       (when-let [s (seq coll)]
+         (cons (first s) (take (dec n) (next s))))))))
 
 (defn drop
   {:doc "Drops n elements from the start of the collection."
    :added "0.1"}
-  [n coll]
-  (let [s (seq coll)]
-    (if (and (pos? n) s)
-      (recur (dec n) (next s))
-      s)))
+  ([n]
+   (fn [rf]
+     (let [rrf (preserving-reduced rf)
+           seen (atom 0)]
+       (fn
+         ([] (rf))
+         ([result] 
+          (rf result))
+         ([result input]
+          (let [s (swap! seen inc)]
+            (if (> s n)
+              (rrf result input)
+              result)))))))
+  ([n coll]
+   (let [s (seq coll)]
+     (if (and (pos? n) s)
+       (recur (dec n) (next s))
+       s))))
 
 (defn split-at
   {:doc "Returns a vector of the first n elements of the collection, and the remaining elements."
