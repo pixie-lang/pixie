@@ -2144,7 +2144,24 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                                                (recur (inc i) bindings)
                                                (recur (inc i) (reduce conj bindings [(nth argv i) (nth names i)])))
                                              bindings))
-                                body (next decl)]
+                                body (next decl)
+                                conds (when (and (next body) (map? (first body)))
+                                        (first body))
+                                pre (:pre conds)
+                                post (:post conds)
+                                body (if conds (next body) body)
+                                body (if post
+                                       `((let [~'% ~(if (> (count body) 1)
+                                                      `(do ~@body)
+                                                      (first body))]
+                                           ~@(map (fn* [c] `(assert ~c)) post)
+                                           ~'%))
+                                       body)
+                                body (if pre
+                                       (seq (concat
+                                             (map (fn* [c] `(assert ~c)) pre)
+                                             body))
+                                       body)]
                             (if (every? symbol? argv)
                               `(~argv ~@body)
                               `(~names
