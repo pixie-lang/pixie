@@ -653,14 +653,14 @@
 (t/deftest pre-post-conds
   (let [f (fn ([a] {:pre [(even? a)] :post [(= % 6)]} (/ a 2))
             ([a b] {:pre [(= (+ 1 a) b)] :post [(odd? %)]} (+ a b)))]
-    (= 6 (f 12))
+    (t/assert= 6 (f 12))
     (t/assert-throws? RuntimeException
-                      "Assert failed"
+                      "Assert failed: (even? a)"
                       (f 13))
     (t/assert-throws? RuntimeException
-                      "Assert failed"
+                      "Assert failed: (= % 6)"
                       (f 14))
-    (= 15 (f 7 8))
+    (t/assert= 15 (f 7 8))
     (t/assert-throws? RuntimeException
-                      "Assert failed"
+                      "Assert failed: (= (+ 1 a) b)"
                       (f 1 1))))

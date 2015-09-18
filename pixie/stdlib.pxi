@@ -2154,12 +2154,12 @@ The params can be destructuring bindings, see `(doc let)` for details."}
                                        `((let [~'% ~(if (> (count body) 1)
                                                       `(do ~@body)
                                                       (first body))]
-                                           ~@(map (fn* [c] `(assert ~c)) post)
+                                           ~@(map (fn* [c] `(assert ~c (str '~c))) post)
                                            ~'%))
                                        body)
                                 body (if pre
                                        (seq (concat
-                                             (map (fn* [c] `(assert ~c)) pre)
+                                             (map (fn* [c] `(assert ~c (str '~c))) pre)
                                              body))
                                        body)]
                             (if (every? symbol? argv)
