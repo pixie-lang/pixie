@@ -1633,13 +1633,14 @@ The new value is thus `(apply f current-value-of-atom args)`."
   :added "0.1"}
   ([pred]
      (fn [rf]
-       (fn
-         ([] (rf))
-         ([result] (rf result))
-         ([result input]
+       (let [rrf (preserving-reduced rf)]
+         (fn
+           ([] (rf))
+           ([result] (rf result))
+           ([result input]
             (if (pred input)
-              (rf result input)
-              (reduced result))))))
+              (rrf result input)
+              (reduced result)))))))
   ([pred coll]
      (lazy-seq
       (when-let [s (seq coll)]

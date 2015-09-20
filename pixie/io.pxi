@@ -53,12 +53,14 @@
 (def line-feed? #{\newline \return})
 
 (deftype LineReader
-  [buffered-input-stream]
+  [input-stream]
   ILineReader
   (-read-line [this]
-    (loop [string (string-builder)]
-      (if-let [i (read-byte buffered-input-stream)]
-        (let [ch (char i)]
+    (let [read-fn (if (satisfies? utf8/IUTF8InputStream input-stream)
+                    utf8/read-char
+                    (fn [stream] (when-let [i (read-byte stream)] (char i))))]
+      (loop [string (string-builder)]
+        (if-let [ch (read-fn input-stream)]
           (if-not (line-feed? ch) 
             (recur (conj! string ch))
             (str string))))))
@@ -79,17 +81,14 @@
     (satisfies? ILineReader input-stream)
     input-stream
 
-    (instance? BufferedInputStream input-stream)
-    (-> input-stream
-        (->LineReader))
+    (satisfies? utf8/IUTF8InputStream input-stream) 
+    (-> input-stream ->LineReader)
 
-    (satisfies? IInputStream input-stream) 
-    (-> input-stream
-        (buffered-input-stream)
-        (->LineReader)) 
-    
+    (instance? BufferedInputStream input-stream)
+    (-> input-stream ->LineReader)
+
     :else
-    (throw [::Exception "Expected a LineReader, an IInputStream or BufferedInputStream"])))
+    (throw [::Exception "Expected a LineReader, UTF8InputStream, or BufferedInputStream"])))
 
 (defn read-line
   "Read one line from input-stream for each invocation.
@@ -147,13 +146,14 @@
 (deftype BufferedInputStream [upstream idx buffer]
   IReduce
   (-reduce [this f init]
-    (loop [acc init]
-      (if-let [next-byte (read-byte this)]
-        (let [step (f acc next-byte)]
-          (if (reduced? step)
-            @step
-            (recur step)))
-        acc)))
+    (let [rrf (preserving-reduced f)]
+      (loop [acc init]
+        (if-let [next-byte (read-byte this)]
+          (let [step (rrf acc next-byte)]
+            (if (reduced? step)
+              @step
+              (recur step)))
+          acc))))
   IByteInputStream
   (read-byte [this]
     (when (= idx (count buffer))
@@ -248,7 +248,7 @@
                  (satisfies? IInputStream input) input
                  :else (throw [:pixie.io/Exception "Expected a string or an IInputStream"]))
         result (transduce
-                 (map char)
+                 (map identity)
                  string-builder
                  (-> stream
                      buffered-input-stream
