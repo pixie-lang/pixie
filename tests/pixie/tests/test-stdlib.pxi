@@ -399,6 +399,11 @@
               [2 :a] [2 :b] [2 :c]
               [3 :a] [3 :b] [3 :c]]))
 
+(t/deftest test-doto
+  (let [a (atom 0)]
+    (t/assert= a (doto a (swap! + 3) (swap! str)))
+    (t/assert= @a "3")))
+
 (t/deftest test-into
   (t/assert= [1 3] (into [] (comp (map inc) (filter odd?)) (range 3)))
   (t/assert= {:a 1 :b 2} (into {} [[:a 1] [:b 2]])))

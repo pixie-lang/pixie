@@ -2337,6 +2337,17 @@ Expands to calls to `extend-type`."
                         [~@body])))]
     `(or (seq ~(gen-loop [] bindings)) '())))
 
+(defmacro doto
+  {:doc "Evaluate o, uses the value as the first argument in each form. Returns o"}
+  [o & forms]
+  (let [s (gensym o)]
+    `(let [~s ~o]
+       ~@(for [f forms]
+           (if (seq? f)
+             `(~(first f) ~s ~@(rest f))
+             `(~f ~s)))
+       ~s)))
+
 (defn reverse
   ; TODO: We should probably have a protocol IReversible, so we can e.g.
   ;       reverse vectors efficiently, etc..
