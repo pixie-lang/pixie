@@ -130,8 +130,8 @@
   (t/assert= (first []) nil)
   (t/assert= (first '()) nil)
   (t/assert= (first (make-array 0)) nil)
-  (comment (t/assert= (first {}) nil))
-  (comment (t/assert= (first #{}) nil))
+  (t/assert= (first {}) nil)
+  (t/assert= (first #{}) nil)
 
   (t/assert= (first [1 2 3]) 1)
   (t/assert= (first '(1 2 3)) 1)
