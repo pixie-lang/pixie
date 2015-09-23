@@ -686,7 +686,9 @@ returns true"
   [coll]
   (if (satisfies? IIndexed coll)
     (nth coll 0 nil)
-    (-first coll)))
+    (if (satisfies? ISeq coll)
+      (-first coll)
+      (-first (seq coll)))))
 
 (defn second
   {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retrieve
