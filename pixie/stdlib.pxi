@@ -686,9 +686,7 @@ returns true"
   [coll]
   (if (satisfies? IIndexed coll)
     (nth coll 0 nil)
-    (if (satisfies? ISeq coll)
-      (-first coll)
-      (-first (seq coll)))))
+    (-first coll)))
 
 (defn second
   {:doc "Returns the second item in coll, if coll implements IIndexed nth will be used to retrieve
@@ -2594,6 +2592,11 @@ Calling this function on something that is not ISeqable returns a seq with that 
   (if (= x y)
     0
     (compare-counted (str x) (str y))))
+
+(extend-protocol ISeq
+  ISeqable
+  (-first [coll] (-first (seq coll)))
+  (-next  [coll] (-next  (seq coll))))
 
 (extend-protocol IComparable
   Number
