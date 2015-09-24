@@ -919,10 +919,14 @@ If further arguments are passed, invokes the method named by symbol, passing the
                                         (= idx 1) (-val self)
                                         :else not-found)))
 (extend -eq MapEntry (fn [self other]
-                       (and (= (-key self)
-                               (-key other))
-                            (= (-val self)
-                               (-val other)))))
+                       (cond
+                         (map-entry? other) (and (= (-key self)
+                                                    (-key other))
+                                                 (= (-val self)
+                                                    (-val other)))
+                         (vector? other) (= [(-key self) (-val self)]
+                                            other)
+                         :else (= (seq self) other))))
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -936,6 +940,10 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (extend -hash MapEntry
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+(extend -seq MapEntry
+  (fn [self]
+    (list (-key self) (-val self))))
 
 (defn select-keys
   {:doc "Produces a map with only the values in m contained in key-seq"}
