@@ -940,6 +940,11 @@ If further arguments are passed, invokes the method named by symbol, passing the
                                   (cond (= idx 0) (-key self)
                                         (= idx 1) (-val self)
                                         :else not-found)))
+(extend -eq MapEntry (fn [self other]
+                       (and (= (-key self)
+                               (-key other))
+                            (= (-val self)
+                               (-val other)))))
 
 (extend -reduce MapEntry indexed-reduce)
 

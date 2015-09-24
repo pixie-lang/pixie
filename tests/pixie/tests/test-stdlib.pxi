@@ -133,6 +133,9 @@
   (t/assert= (first {}) nil)
   (t/assert= (first #{}) nil)
 
+  (t/assert= (first {:a 1}) (map-entry :a 1))
+  (t/assert= (first #{:a}) :a)
+
   (t/assert= (first [1 2 3]) 1)
   (t/assert= (first '(1 2 3)) 1)
   (let [a (make-array 3)]
