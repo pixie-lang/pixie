@@ -871,6 +871,8 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
 
+(defn map-entry? [v] (satisfies? IMapEntry v))
+
 (defn last
   {:doc "Returns the last element of the collection, or nil if none."
    :signatures [[coll]]
@@ -2320,7 +2322,7 @@ Expands to calls to `extend-type`."
 
 (defn float
   {:doc "Converts a number to a float."
-   :since "0.1"}  
+   :since "0.1"}
   [x]
   (-float x))
 
@@ -2348,7 +2350,7 @@ Expands to calls to `extend-type`."
 
 (defn int
   {:doc "Converts a number to an integer."
-   :since "0.1"}  
+   :since "0.1"}
   [x]
   (-int x))
 
