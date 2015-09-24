@@ -940,6 +940,11 @@ If further arguments are passed, invokes the method named by symbol, passing the
                                   (cond (= idx 0) (-key self)
                                         (= idx 1) (-val self)
                                         :else not-found)))
+(extend -eq MapEntry (fn [self other]
+                       (and (= (-key self)
+                               (-key other))
+                            (= (-val self)
+                               (-val other)))))
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -2603,6 +2608,11 @@ Calling this function on something that is not ISeqable returns a seq with that 
   (if (= x y)
     0
     (compare-counted (str x) (str y))))
+
+(extend-protocol ISeq
+  ISeqable
+  (-first [coll] (-first (seq coll)))
+  (-next  [coll] (-next  (seq coll))))
 
 (extend-protocol IComparable
   Number
