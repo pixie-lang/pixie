@@ -47,55 +47,63 @@
   (assert (string? filename) "Filename must be a string")
   (->FileStream (fs_open filename uv/O_RDONLY 0) 0 (uv/uv_buf_t)))
 
-(defn buffered-read-line
+(defprotocol ILineReader
+  (-read-line [this]))
+
+(def line-feed? #{\newline \return})
+
+(deftype LineReader
   [input-stream]
-  (let [line-feed (into #{} (map int [\newline \return]))]
-    (loop [acc []]
-      (let [ch (read-byte input-stream)]
-        (cond
-          (nil? ch) nil
-          (zero? ch) nil
+  ILineReader
+  (-read-line [this]
+    (let [read-fn (if (satisfies? utf8/IUTF8InputStream input-stream)
+                    utf8/read-char
+                    (fn [stream] (when-let [i (read-byte stream)] (char i))))]
+      (loop [string (string-builder)]
+        (if-let [ch (read-fn input-stream)]
+          (if-not (line-feed? ch) 
+            (recur (conj! string ch))
+            (str string))))))
+  IReduce
+  (-reduce [this f init]
+    (let [rrf (preserving-reduced f)]
+      (loop [acc init]
+        (if-let [line (-read-line this)]
+          (let [result (rrf acc line)]
+            (if (not (reduced? result))
+              (recur result)
+              @result))
+          acc)))))
 
-          (and (pos? ch) (not (line-feed ch)))
-          (recur (conj acc ch))
-
-          :else (transduce (map char) string-builder acc))))))
-
-(defn unbuffered-read-line
+(defn line-reader
   [input-stream]
-  (let [line-feed (into #{} (map int [\newline \return]))
-        buf (buffer 1)]
-    (loop [acc []]
-      (let [len (read input-stream buf 1)]
-        (cond
-          (and (pos? len) (not (line-feed (first buf))))
-          (recur (conj acc (first buf)))
+  (cond
+    (satisfies? ILineReader input-stream)
+    input-stream
 
-          (and (zero? len) (empty? acc)) nil
+    (satisfies? utf8/IUTF8InputStream input-stream) 
+    (-> input-stream ->LineReader)
 
-          :else (transduce (map char) string-builder acc))))))
+    (instance? BufferedInputStream input-stream)
+    (-> input-stream ->LineReader)
+
+    :else
+    (throw [::Exception "Expected a LineReader, UTF8InputStream, or BufferedInputStream"])))
 
 (defn read-line
   "Read one line from input-stream for each invocation.
    nil when all lines have been read. 
    Pass a BufferedInputStream for best performance."
   [input-stream]
-  (cond
-    (instance? BufferedInputStream input-stream)
-    (buffered-read-line input-stream)
-
-    (satisfies? IInputStream input-stream) 
-    (unbuffered-read-line input-stream)
-    
-    :else
-    (throw [::Exception "Expected an IInputStream or BufferedInputStream"])))
+  (-read-line (line-reader input-stream)))
 
 (defn line-seq
   "Returns the lines of text from input-stream as a lazy sequence of strings.
    input-stream must implement IInputStream"
   [input-stream]
-  (when-let [line (read-line input-stream)]
-    (cons line (lazy-seq (line-seq input-stream)))))
+  (let [lr (line-reader input-stream)]
+    (when-let [line (-read-line lr)]
+      (cons line (lazy-seq (line-seq lr))))))
 
 (deftype FileOutputStream [fp offset uvbuf]
   IOutputStream
@@ -136,6 +144,16 @@
       (flush downstream))))
 
 (deftype BufferedInputStream [upstream idx buffer]
+  IReduce
+  (-reduce [this f init]
+    (let [rrf (preserving-reduced f)]
+      (loop [acc init]
+        (if-let [next-byte (read-byte this)]
+          (let [step (rrf acc next-byte)]
+            (if (reduced? step)
+              @step
+              (recur step)))
+          acc))))
   IByteInputStream
   (read-byte [this]
     (when (= idx (count buffer))
@@ -230,7 +248,7 @@
                  (satisfies? IInputStream input) input
                  :else (throw [:pixie.io/Exception "Expected a string or an IInputStream"]))
         result (transduce
-                 (map char)
+                 (map identity)
                  string-builder
                  (-> stream
                      buffered-input-stream

@@ -33,18 +33,18 @@
       (t/assert-throws? (io/read f buf -2)))))
 
 (t/deftest test-read-line
-  (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
+  (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt"))]
     (io/read-line f)
     (t/assert= (io/read-line f) "Second line.")
     (t/assert= (io/read-line f) nil)))
 
 (t/deftest test-line-seq
-  (let [f (io/open-read "tests/pixie/tests/test-io.txt")
+  (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt"))
         s (io/line-seq f)]
     (t/assert= (last s) "Second line.")))
 
 (t/deftest test-seek
-  (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
+  (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt"))]
     (io/read-line f)
     (t/assert= (io/read-line f) "Second line.")
     (io/rewind f)
