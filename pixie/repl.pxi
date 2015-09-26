@@ -5,7 +5,8 @@
 
 (f/with-config {:library "edit"
                 :includes ["editline/readline.h"]}
-  (f/defcfn readline))
+  (f/defcfn readline)
+  (f/defcfn add_history))
 
 
 (defn repl []
@@ -15,7 +16,9 @@
                                         "")
                                line (st/apply-blocking readline prompt)]
                            (if line
-                             (str line "\n")
+                             (do
+                               (add_history line)
+                               (str line "\n"))
                              ""))))]
     (loop []
       (try (let [form (read rdr false)]
