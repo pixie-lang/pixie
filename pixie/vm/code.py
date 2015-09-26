@@ -91,7 +91,7 @@ def slice_from_start(from_list, count, extra=r_uint(0)):
 
 
 class BaseCode(object.Object):
-    _immutable_fields_ = ["_meta"]
+    _immutable_fields_ = ["_meta", "_name"]
     def __init__(self):
         assert isinstance(self, BaseCode)
         self._name = u"unknown"
@@ -215,7 +215,7 @@ class NativeFn(BaseCode):
 class Code(BaseCode):
     """Interpreted code block. Contains consts and """
     _type = object.Type(u"pixie.stdlib.Code")
-    _immutable_fields_ = ["_arity", "_consts[*]", "_bytecode", "_stack_size", "_meta"]
+    _immutable_fields_ = ["_arity", "_consts[*]", "_bytecode", "_stack_size", "_meta", "_debug_points"]
 
     def type(self):
         return Code._type
@@ -411,22 +411,22 @@ class DynamicVars(py_object):
 
 class Var(BaseCode):
     _type = object.Type(u"pixie.stdlib.Var")
-    _immutable_fields_ = ["_rev?"]
+    _immutable_fields_ = ["_ns_ref"]
 
     def type(self):
         return Var._type
 
-    def __init__(self, ns, name):
+    def __init__(self, ns_ref, ns, name):
         BaseCode.__init__(self)
+        self._ns_ref = ns_ref
         self._ns = ns
         self._name = name
-        self._rev = 0
         self._root = undefined
         self._dynamic = False
 
     def set_root(self, o):
         affirm(o is not None, u"Invalid var set")
-        self._rev += 1
+        self._ns_ref._rev += 1
         self._root = o
         return self
 
@@ -437,7 +437,7 @@ class Var(BaseCode):
 
     def set_dynamic(self):
         self._dynamic = True
-        self._rev += 1
+        self._ns_ref._rev += 1
 
 
     def get_dynamic_value(self):
@@ -450,11 +450,15 @@ class Var(BaseCode):
         return self._dynamic
 
     def is_dynamic(self):
-        return self._is_dynamic(self._rev)
+        return self._is_dynamic(self.ns_ref()._rev)
 
     @elidable_promote()
     def get_root(self, rev):
         return self._root
+
+    @elidable_promote()
+    def ns_ref(self):
+        return self._ns_ref
 
     def deref(self):
         if self.is_dynamic():
@@ -465,9 +469,9 @@ class Var(BaseCode):
                 if globals().has_key("_dynamic_vars"):
                     return self.get_dynamic_value()
                 else:
-                    return self.get_root(self._rev)
+                    return self.get_root(self.ns_ref()._rev)
         else:
-            val = self.get_root(self._rev)
+            val = self.get_root(self.ns_ref()._rev)
             affirm(val is not undefined, u"Var " + self._name + u" is undefined")
             return val
 
@@ -503,10 +507,13 @@ class Refer(py_object):
 class Namespace(object.Object):
     _type = object.Type(u"pixie.stdlib.Namespace")
 
+    _immutable_fields_ = ["_rev?"]
+
     def type(self):
         return Namespace._type
 
     def __init__(self, name):
+        self._rev = 0
         self._registry = {}
         self._name = name
         self._refers = {}
@@ -516,7 +523,7 @@ class Namespace(object.Object):
         affirm(isinstance(name, unicode), u"Var names must be unicode")
         v = self._registry.get(name, None)
         if v is None:
-            v = Var(self._name, name)
+            v = Var(self, self._name, name)
             self._registry[name] = v
         return v
 
