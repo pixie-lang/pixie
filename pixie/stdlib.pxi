@@ -1025,6 +1025,10 @@ If further arguments are passed, invokes the method named by symbol, passing the
         (fn [coll x]
           (cons x coll)))
 
+(extend -conj LazySeq
+        (fn [coll x]
+          (cons x coll)))
+
 (defn empty
   {:doc "Returns an empty collection of the same type, or nil."
    :added "0.1"}
@@ -1577,7 +1581,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
            seen (atom 0)]
        (fn
          ([] (rf))
-         ([result] 
+         ([result]
           (rf result))
          ([result input]
           (let [s (swap! seen inc)]
@@ -2625,7 +2629,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
     (let [min-length (min (count x) (count y))]
       (loop [n 0]
         (if (not= min-length n)
-          (let [diff (-compare (nth x n) 
+          (let [diff (-compare (nth x n)
                                (nth y n))]
             (if-not (zero? diff)
               diff
@@ -2658,7 +2662,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
     (if (char? y)
       (compare-numbers (int x) (int y))
       (throw [::ComparisonError (str "Cannot compare: " x " to " y)])))
-  
+
   PersistentVector
   (-compare [x y]
     (if (vector? y)
@@ -2691,7 +2695,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
         (and (true? x) (false? y)) 1
         :else  -1))
       (throw [::ComparisonError (str "Cannot compare: " x " to " y)]))
-  
+
   Nil
   (-compare [x y]
     (if (nil? y)

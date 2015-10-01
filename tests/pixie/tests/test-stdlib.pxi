@@ -672,3 +672,6 @@
     (t/assert-throws? RuntimeException
                       "Assert failed: (= (+ 1 a) b)"
                       (f 1 1))))
+
+(t/deftest test-lazyseq-conj
+  (t/assert= '(1 2 3) (conj (lazy-seq '(2 3)) 1)))
