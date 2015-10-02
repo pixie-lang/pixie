@@ -110,6 +110,16 @@
   (t/assert= (s/trimr "   hey  ") "   hey")
   (t/assert= (s/trimr "   h  ey   ") "   h  ey"))
 
+(t/deftest test-trim-newline
+  (t/assert= (s/trim-newline "") "")
+  (t/assert= (s/trim-newline "\r\n") "")
+  (t/assert= (s/trim-newline "hey\r\n") "hey")
+  (t/assert= (s/trim-newline "hey\n\r") "hey")
+  (t/assert= (s/trim-newline "hey\r") "hey")
+  (t/assert= (s/trim-newline "hey\n") "hey")
+  (t/assert= (s/trim-newline "hey\r\nthere\r\n") "hey\r\nthere")
+  (t/assert= (s/trim-newline "\r\nhey\r\n") "\r\nhey"))
+
 (t/deftest test-replace
   (t/assert= (s/replace "hey,you,there" "," ", ") "hey, you, there")
   (t/assert= (s/replace "hey,you,there" "," "") "heyyouthere")

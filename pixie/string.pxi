@@ -18,6 +18,7 @@
 (def trim si/trim)
 (def triml si/triml)
 (def trimr si/trimr)
+(def trim-newline si/trim-newline)
 
 (def capitalize si/capitalize)
 (def lower-case si/lower-case)

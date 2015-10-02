@@ -121,3 +121,13 @@ def trimr(a):
     if j <= 0:
         return rt.wrap(u"")
     return rt.wrap(a[0:j])
+
+@as_var("pixie.string.internal", "trim-newline")
+def trim_newline(a):
+    a = rt.name(a)
+    j = len(a)
+    while j > 0 and unicodedb.islinebreak(ord(a[j - 1])):
+        j -= 1
+    if j <= 0:
+        return rt.wrap(u"")
+    return rt.wrap(a[0:j])
