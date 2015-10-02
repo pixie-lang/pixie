@@ -871,6 +871,8 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))
 
+(defn map-entry? [v] (satisfies? IMapEntry v))
+
 (defn last
   {:doc "Returns the last element of the collection, or nil if none."
    :signatures [[coll]]
@@ -917,10 +919,14 @@ If further arguments are passed, invokes the method named by symbol, passing the
                                         (= idx 1) (-val self)
                                         :else not-found)))
 (extend -eq MapEntry (fn [self other]
-                       (and (= (-key self)
-                               (-key other))
-                            (= (-val self)
-                               (-val other)))))
+                       (cond
+                         (map-entry? other) (and (= (-key self)
+                                                    (-key other))
+                                                 (= (-val self)
+                                                    (-val other)))
+                         (vector? other) (= [(-key self) (-val self)]
+                                            other)
+                         :else (= (seq self) other))))
 
 (extend -reduce MapEntry indexed-reduce)
 
@@ -934,6 +940,10 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (extend -hash MapEntry
   (fn [v]
     (transduce ordered-hash-reducing-fn v)))
+
+(extend -seq MapEntry
+  (fn [self]
+    (list (-key self) (-val self))))
 
 (defn select-keys
   {:doc "Produces a map with only the values in m contained in key-seq"}
@@ -2320,7 +2330,7 @@ Expands to calls to `extend-type`."
 
 (defn float
   {:doc "Converts a number to a float."
-   :since "0.1"}  
+   :since "0.1"}
   [x]
   (-float x))
 
@@ -2348,7 +2358,7 @@ Expands to calls to `extend-type`."
 
 (defn int
   {:doc "Converts a number to an integer."
-   :since "0.1"}  
+   :since "0.1"}
   [x]
   (-int x))
 

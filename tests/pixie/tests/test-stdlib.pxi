@@ -675,3 +675,19 @@
 
 (t/deftest test-lazyseq-conj
   (t/assert= '(1 2 3) (conj (lazy-seq '(2 3)) 1)))
+
+(t/deftest map-entry-seq
+  (let [m (map-entry :a 1)]
+    (t/assert= (seq m) '(:a 1))
+    ;; vectors are equal to seqs if their indexed values are equal
+    ;; thus, a vector of length 2 is equal to a map-entry's seq IFoo
+    ;; their values are equal
+    (t/assert= [:a 1] m)
+    (t/assert= '(:a 1) m)))
+
+(t/deftest map-entry-equals
+  (let [m (map-entry :a 1)]
+    (t/assert= m m)
+    (t/assert= m (map-entry :a 1))
+    (t/assert= m [:a 1])
+    (t/assert= m '(:a 1))))
