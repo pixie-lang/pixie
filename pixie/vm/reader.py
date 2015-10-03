@@ -430,6 +430,7 @@ APPLY = symbol(u"apply")
 CONCAT = symbol(u"concat")
 SEQ = symbol(u"seq")
 LIST = symbol(u"list")
+HASHMAP = symbol(u"hashmap")
 
 def is_unquote(form):
     return True if rt._satisfies_QMARK_(rt.ISeq.deref(), form) \
@@ -477,6 +478,9 @@ class SyntaxQuoteReader(ReaderHandler):
             return runtime_error(u"Unquote splicing not used inside list")
         elif rt.vector_QMARK_(form) is true:
             ret = rt.list(APPLY, CONCAT, SyntaxQuoteReader.expand_list(form))
+        elif rt.map_QMARK_(form) is true:
+            mes = SyntaxQuoteReader.flatten_map(form)
+            ret = rt.list(APPLY, HASHMAP, rt.list(APPLY, CONCAT, SyntaxQuoteReader.expand_list(mes)))
         elif form is not nil and rt.seq_QMARK_(form) is true:
             ret = rt.list(APPLY, LIST, rt.cons(CONCAT, SyntaxQuoteReader.expand_list(rt.seq(form))))
         else:
@@ -484,8 +488,16 @@ class SyntaxQuoteReader(ReaderHandler):
         return ret
 
     @staticmethod
+    def flatten_map(form):
+        return rt.reduce(flatten_map_rfn, EMPTY_VECTOR, form)
+
+    @staticmethod
     def expand_list(form):
         return rt.reduce(expand_list_rfn, EMPTY_VECTOR, form)
+
+@wrap_fn
+def flatten_map_rfn(ret, item):
+    return rt.conj(rt.conj(ret, rt.first(item)), rt.first(rt.next(item)))
 
 @wrap_fn
 def expand_list_rfn(ret, item):
