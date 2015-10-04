@@ -667,6 +667,10 @@ def identical(a, b):
 def vector_QMARK_(a):
     return true if rt._satisfies_QMARK_(rt.IVector.deref(), a) else false
 
+@as_var("map?")
+def map_QMARK_(a):
+    return true if rt._satisfies_QMARK_(rt.IMap.deref(), a) else false
+
 @returns(bool)
 @as_var("eq")
 def eq(a, b):
