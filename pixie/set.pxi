@@ -22,3 +22,17 @@
    (-union s t))
   ([s t & sets]
    (reduce -union (-union s t) sets)))
+
+(defn- -intersection [s t]
+  (-must-be-set s)
+  (-must-be-set t)
+  (into #{} (filter #(contains? s %)) t))
+
+(defn intersection
+  "Returns a set that is the intersection of the input sets."
+  ([] #{})
+  ([s] (-must-be-set s))
+  ([s t]
+   (-intersection s t))
+  ([s t & sets]
+   (reduce -intersection (-intersection s t) sets)))
