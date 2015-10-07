@@ -26,11 +26,7 @@
 (defn- -intersection [s t]
   (-must-be-set s)
   (-must-be-set t)
-  (let [result (atom #{})]
-    (doseq [i s]
-      (when (contains? t i)
-        (swap! result conj i)))
-    @result))
+  (into #{} (filter #(contains? s %)) t))
 
 (defn intersection
   "Returns a set that is the intersection of the input sets."
