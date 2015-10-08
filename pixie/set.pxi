@@ -23,6 +23,20 @@
   ([s t & sets]
    (reduce -union (-union s t) sets)))
 
+(defn- -difference [s t]
+  (-must-be-set s)
+  (-must-be-set t)
+  (into #{} (filter #(not (contains? t %))) s))
+
+(defn difference
+  "Returns a set that is the difference of the input sets."
+  ([] #{})
+  ([s] (-must-be-set s))
+  ([s t]
+   (-difference s t))
+  ([s t & sets]
+   (reduce -difference (-difference s t) sets)))
+
 (defn- -intersection [s t]
   (-must-be-set s)
   (-must-be-set t)
