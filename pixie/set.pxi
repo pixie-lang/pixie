@@ -63,8 +63,9 @@
 (defn strict-subset?
   "Returns true if the first set is a subset of the second."
   [s t]
-  (and (subset? s t)
-       (< (count s) (count t))))
+  (-must-be-sets s t)
+  (and (< (count s) (count t))
+       (subset? s t)))
 
 (defn superset?
   "Returns true if the first set is a superset of the second."
