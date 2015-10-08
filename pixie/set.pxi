@@ -14,8 +14,8 @@
 (defn- -union [s t]
      (-must-be-sets s t)
      (if (< (count s) (count t))
-       (reduce conj t s)
-       (reduce conj s t)))
+       (into t s)
+       (into s t)))
 
 (defn union
   "Returns a set that is the union of the input sets."
