@@ -34,6 +34,17 @@
 (def hexdigits "0123456789abcdefABCDEF")
 (def octdigits "012345678")
 
+(defn trim-newline
+  "Replace all trailing newline characters (\\r and \\n) from the end of a string."
+  [s]
+  (loop [index (count s)]
+    (if (zero? index)
+      ""
+      (let [ch (nth s (dec index))]
+        (if (or (= ch \newline) (= ch \return))
+          (recur (dec index))
+          (substring s 0 index))))))
+
 (defn replace
   "Replace all occurrences of x in s with r."
   [s x r]
