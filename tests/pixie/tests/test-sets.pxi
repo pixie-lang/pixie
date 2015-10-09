@@ -38,4 +38,32 @@
     (t/assert= (s/intersection #{:boo} magic) #{:boo})
     (t/assert= (s/intersection magic #{:bobbidi :boo}) #{:bobbidi :boo})
     (t/assert= (s/intersection magic #{:bibbidi :boo} #{:bobbidi :boo}) #{:boo})
-    (t/assert-throws? (s/intersection [:i :only] [:love :sets]))))
+    (t/assert-throws? (s/intersection [:i :only] [:love :sets])))
+
+  (t/deftest test-subset?
+    (t/assert (not (s/subset? magic work)))
+    (t/assert (s/subset? magic magic))
+    (t/assert (not (s/subset? magic #{:foo})))
+    (t/assert (s/subset? #{:boo} magic))
+    (t/assert-throws? (s/subset? [:i :only] [:love :sets])))
+
+  (t/deftest test-strict-subset?
+    (t/assert (not (s/strict-subset? magic work)))
+    (t/assert (not (s/strict-subset? magic magic)))
+    (t/assert (not (s/strict-subset? magic #{:foo})))
+    (t/assert (s/strict-subset? #{:boo} magic))
+    (t/assert-throws? (s/strict-subset? [:i :only] [:love :sets])))
+
+  (t/deftest test-superset?
+    (t/assert (not (s/superset? magic work)))
+    (t/assert (s/superset? magic magic))
+    (t/assert (not (s/superset? #{:foo} magic)))
+    (t/assert (s/superset? magic #{:boo}))
+    (t/assert-throws? (s/superset? [:i :only] [:love :sets])))
+
+  (t/deftest test-strict-superset?
+    (t/assert (not (s/strict-superset? magic work)))
+    (t/assert (not (s/strict-superset? magic magic)))
+    (t/assert (not (s/strict-superset? #{:foo} magic)))
+    (t/assert (s/strict-superset? magic #{:boo}))
+    (t/assert-throws? (s/strict-superset? [:i :only] [:love :sets]))))
