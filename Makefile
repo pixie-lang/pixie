@@ -87,7 +87,7 @@ compile_src:
 	find * -name "*.pxi" | grep "^pixie/" | xargs -L1 ./pixie-vm $(EXTERNALS_FLAGS) -c
 
 clean_pxic:
-	find * -name "*.pxic" | xargs rm
+	find * -name "*.pxic" | xargs --no-run-if-empty rm
 
 clean: clean_pxic
 	rm -rf ./lib
