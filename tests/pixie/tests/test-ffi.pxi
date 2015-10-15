@@ -58,3 +58,10 @@
 
 (t/deftest test-size
   (t/assert= (pixie.ffi/struct-size (pixie.ffi/c-struct "struct" 1234 [])) 1234))
+
+
+(t/deftest test-double-coercion
+  (t/assert= (m/sin 1) (m/sin 1.0))
+  (let [big (reduce * 1 (range 1 100))]
+    (t/assert= (m/sin big) (m/sin (float big))))
+  (t/assert= (m/sin (/ 1 2)) (m/sin (float (/ 1 2)))))

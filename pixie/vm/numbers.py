@@ -302,6 +302,8 @@ def to_float(x):
         return x
     if isinstance(x, Ratio):
         return rt.wrap(x.numerator() / float(x.denominator()))
+    if isinstance(x, Integer):
+        return rt.wrap(float(x.int_val()))
     if isinstance(x, BigInteger):
         return rt.wrap(x.bigint_val().tofloat())
     assert False
