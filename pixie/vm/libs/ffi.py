@@ -8,7 +8,7 @@ from pixie.vm.code import as_var, affirm, extend, wrap_fn
 import pixie.vm.rt as rt
 from rpython.rtyper.lltypesystem import rffi, lltype, llmemory
 from pixie.vm.primitives import nil, true, false
-from pixie.vm.numbers import Integer, Float
+from pixie.vm.numbers import to_float, Integer, Float, BigInteger, Ratio
 from pixie.vm.string import String
 from pixie.vm.keyword import Keyword
 from pixie.vm.util import unicode_to_utf8
@@ -359,6 +359,7 @@ class CDouble(CType):
         return Float(casted[0])
 
     def ffi_set_value(self, ptr, val):
+        val = to_float(val)
         casted = rffi.cast(rffi.DOUBLEP, ptr)
         casted[0] = rffi.cast(rffi.DOUBLE, val.float_val())
 
