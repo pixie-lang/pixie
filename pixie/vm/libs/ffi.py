@@ -359,8 +359,7 @@ class CDouble(CType):
         return Float(casted[0])
 
     def ffi_set_value(self, ptr, val):
-        if isinstance(val, Integer) or isinstance(val, BigInteger) or isinstance(val, Ratio):
-            val = to_float(val)
+        val = to_float(val)
         casted = rffi.cast(rffi.DOUBLEP, ptr)
         casted[0] = rffi.cast(rffi.DOUBLE, val.float_val())
 
