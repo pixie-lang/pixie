@@ -1,3 +1,4 @@
+sudo: false
 env:
   - JIT_OPTS='--opt=jit' TARGET_OPTS='target.py'
   - JIT_OPTS='' TARGET_OPTS='target.py'
