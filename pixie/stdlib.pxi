@@ -1371,7 +1371,7 @@ and implements IAssociative, ILookup and IObject."
    :added "0.1"}
   [v]
 
-  (let [vr (resolve v)
+  (let [vr (resolve-in *ns* v)
         x (if vr @vr)
         doc (get (meta x) :doc)
         has-doc? (if doc true (get (meta x) :signatures))]
