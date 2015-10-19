@@ -867,6 +867,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (defn set? [v] (instance? PersistentHashSet v))
 (defn map? [v] (satisfies? IMap v))
 (defn fn? [v] (satisfies? IFn v))
+(defn coll? [v] (satisfies? IPersistentCollection v))
 
 (defn indexed? [v] (satisfies? IIndexed v))
 (defn counted? [v] (satisfies? ICounted v))

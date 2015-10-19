@@ -304,6 +304,16 @@
   (t/assert= (fn? "foo") false)
   (t/assert= (fn? (let [x 8] (fn [y] (+ x y)))) true))
 
+(t/deftest test-coll?
+  (t/assert= (coll? '()) true)
+  (t/assert= (coll? []) true)
+  (t/assert= (coll? {:foo "bar"}) true)
+  (t/assert= (coll? #{:foo :bar}) true)
+  (t/assert= (coll? #(%)) false)
+  (t/assert= (coll? :foo) false)
+  (t/assert= (coll? "foo") false)
+  (t/assert= (coll? 1) false))
+
 (t/deftest test-macro?
   (t/assert= (macro? and) true)
   (t/assert= (macro? or) true)
