@@ -12,8 +12,12 @@
 (t/deftest test-satisfies
   (foreach [t [t1 t2 t3 t4 t5]]
            (t/assert= t t)
+           (t/assert (satisfies? IRecord t))
            (t/assert (satisfies? IAssociative t))
            (t/assert (satisfies? ILookup t))))
+
+(t/deftest test-record-pred
+  (t/assert (record? t1)))
 
 (t/deftest test-eq
   (t/assert= t1 t2)
