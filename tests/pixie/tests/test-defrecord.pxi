@@ -53,3 +53,7 @@
            (t/assert (contains? t :one))
            (t/assert (contains? t :two))
            (t/assert (contains? t :three))))
+
+(t/deftest test-record-metadata
+  (t/assert= nil (meta t1))
+  (t/assert= :foo (-> t1 (with-meta :foo) meta)))

@@ -1281,6 +1281,7 @@ and implements IAssociative, ILookup and IObject."
         fields (transduce (map (comp keyword name)) conj field-syms)
         type-from-map `(defn ~map-ctor-name [m]
                          (apply ~ctor-name (map #(get m %) ~fields)))
+        meta-gs (gensym "meta")
         default-bodies ['IAssociative
                         (-make-record-assoc-body ctor-name fields)
 
@@ -1299,6 +1300,13 @@ and implements IAssociative, ILookup and IObject."
                                            [k `(get-field ~self-nm ~k-nm)])
                                          fields)
                                       not-found#)))
+
+                        'IMeta
+                        `(-with-meta [self# ~meta-gs]
+                                     (new ~nm
+                                          ~@(conj field-syms meta-gs)))
+                        `(-meta [self#] __meta)
+
                         'IObject
                         `(-str [self#]
                                (str "<" ~(name nm) " " (reduce #(assoc %1 %2 (%2 self#)) {} ~fields) ">"))
@@ -1310,9 +1318,13 @@ and implements IAssociative, ILookup and IObject."
                         `(-hash [self]
                                 (hash [~@field-syms]))
                         `IRecord]
-        deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
+        deftype-decl `(deftype ~nm ~(conj fields '__meta) ~@default-bodies ~@body)
+        ctor `(defn ~ctor-name ~field-syms
+                (new ~nm
+                     ~@(conj field-syms nil)))]
     `(do ~type-from-map
-         ~deftype-decl)))
+         ~deftype-decl
+         ~ctor)))
 
 (defn print
   {:doc "Prints the arguments, seperated by spaces."
