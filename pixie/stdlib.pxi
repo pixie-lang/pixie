@@ -2371,6 +2371,8 @@ Expands to calls to `extend-type`."
 (defprotocol IRecord)
 
 (defn record?
+  {:doc "Returns true if x implements IRecord"
+   :since "0.1"}
   [x]
   (satisfies? IRecord x))
 
