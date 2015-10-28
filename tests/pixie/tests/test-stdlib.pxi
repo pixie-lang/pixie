@@ -692,5 +692,5 @@
     (t/assert= m [:a 1])
     (t/assert= m '(:a 1))))
 
-(t/deftest vary-meta
+(t/deftest test-vary-meta
   (t/assert= 42 (-> {} (vary-meta assoc :foo 42) meta :foo)))
