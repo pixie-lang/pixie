@@ -2719,7 +2719,9 @@ Calling this function on something that is not ISeqable returns a seq with that 
     (throw [::ComparisonError (str x " does not satisfy IComparable")])))
 
 (defn vary-meta
-  [x f & args]
-  "Returns x with meta data updated with the application of f and args to it.
+  {:doc "Returns x with meta data updated with the application of f and args to it.
 ex: (vary-meta x assoc :foo 42)"
+   :signatures [[x f & args]]
+   :added "0.1"}
+  [x f & args]
   (with-meta x (apply f (meta x) args)))
