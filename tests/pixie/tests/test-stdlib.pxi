@@ -691,3 +691,6 @@
     (t/assert= m (map-entry :a 1))
     (t/assert= m [:a 1])
     (t/assert= m '(:a 1))))
+
+(t/deftest test-vary-meta
+  (t/assert= 42 (-> {} (vary-meta assoc :foo 42) meta :foo)))
