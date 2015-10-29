@@ -339,6 +339,11 @@
     ([state] (finish-hash-state state))
     ([state itm] (update-hash-unordered! state itm))))
 
+(def string-builder
+  (fn ^{:doc "Creates a reducing function that builds a string based on calling str on the transduced collection"}
+    ([] (-string-builder))
+    ([sb] (str sb))
+    ([sb item] (conj! sb item))))
 
 (extend -str PersistentVector
   (fn [v]
@@ -1303,7 +1308,8 @@ and implements IAssociative, ILookup and IObject."
                                             `(= (~field self) (~field other)))
                                           fields)))
                         `(-hash [self]
-                                (hash [~@field-syms]))]
+                                (hash [~@field-syms]))
+                        `IRecord]
         deftype-decl `(deftype ~nm ~fields ~@default-bodies ~@body)]
     `(do ~type-from-map
          ~deftype-decl)))
@@ -2362,6 +2368,13 @@ Expands to calls to `extend-type`."
   [x]
   (-int x))
 
+(defprotocol IRecord)
+
+(defn record?
+  {:doc "Returns true if x implements IRecord"
+   :since "0.1"}
+  [x]
+  (satisfies? IRecord x))
 
 (defmacro for
   {:doc "A list comprehension for the bindings."
@@ -2417,12 +2430,6 @@ Expands to calls to `extend-type`."
   ([] 0)
   ([result] result)
   ([result _] (inc result)))
-
-(defn string-builder
-  "Creates a reducing function that builds a string based on calling str on the transduced collection"
-  ([] (-string-builder))
-  ([sb] (str sb))
-  ([sb item] (conj! sb item)))
 
 (defn dispose!
   "Finalizes use of the object by cleaning up resources used by the object"
