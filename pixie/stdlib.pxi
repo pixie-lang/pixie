@@ -1268,6 +1268,19 @@ and implements IAssociative, ILookup and IObject."
                                          fields)
                                       not-found#)))
 
+                        'IReduce
+                        `(-reduce [self# f# init#]
+                                   (loop [fields# ~fields
+                                          acc# init#]
+                                     (if-let [field# (first fields#)]
+                                       (let [acc# (f# acc# (map-entry field#
+                                                                     (get-field self#
+                                                                                field#)))]
+                                         (if (reduced? acc#)
+                                           @acc#
+                                           (recur (next fields#) acc#)))
+                                       acc#)))
+
                         'IMeta
                         `(-with-meta [self# ~meta-gs]
                                      (new ~nm
