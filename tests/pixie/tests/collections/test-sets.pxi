@@ -58,7 +58,9 @@
     (t/assert= (s 3) 3)
 
     (t/assert= (s -1) nil)
-    (t/assert= (s 4) nil)))
+    (t/assert= (s 4) nil)
+    (t/assert= (s :d :foo) :foo)
+    (t/assert= (:d s :foo) :foo)))
 
 (t/deftest test-has-meta
   (let [m {:has-meta true}

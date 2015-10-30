@@ -1028,17 +1028,22 @@ If further arguments are passed, invokes the method named by symbol, passing the
 
 (extend -repr Symbol -str)
 
-(extend -invoke Keyword (fn [k m] (-val-at m k nil)))
-(extend -invoke PersistentHashMap (fn [m k] (-val-at m k nil)))
-(extend -invoke PersistentHashSet (fn [m k] (-val-at m k nil)))
-
 (defn get
   {:doc "Get an element from a collection implementing ILookup, return nil or the default value if not found."
    :added "0.1"}
   ([mp k]
      (get mp k nil))
   ([mp k not-found]
-     (-val-at mp k not-found)))
+   (-val-at mp k not-found)))
+
+(extend -invoke Keyword (fn
+                          ([k m not-found]
+                           (-val-at m k not-found))
+                          ([k m]
+                           (-val-at m k nil))))
+(extend -invoke PersistentHashMap get)
+(extend -invoke PersistentHashSet get)
+
 
 (defn get-in
   {:doc "Get a value from a nested collection at the \"path\" given by the keys."

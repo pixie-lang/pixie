@@ -7,7 +7,8 @@
     (t/assert= (:b m) 2)
     (t/assert= (:c m) 3)
 
-    (t/assert= (:d m) nil)))
+    (t/assert= (:d m) nil)
+    (t/assert= (:d m :foo) :foo)))
 
 (t/deftest keyword-namespace
   (t/assert= (namespace :foo/bar) "foo")
