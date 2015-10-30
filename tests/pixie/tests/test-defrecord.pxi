@@ -57,3 +57,9 @@
 (t/deftest test-record-metadata
   (t/assert= nil (meta t1))
   (t/assert= :foo (-> t1 (with-meta :foo) meta)))
+
+
+(t/deftest ireduce []
+  (t/assert= [[:one 1] [:two 2] [:three 3]] (reduce conj [] t1))
+  (t/assert= [1 2 3] (vals t1))
+  (t/assert= [:one :two :three] (keys t1)))
