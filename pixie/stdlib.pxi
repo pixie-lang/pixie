@@ -226,7 +226,6 @@
     ([val coll]
        (transduce (interpose val) conj coll))))
 
-
 (def preserving-reduced
   (fn preserving-reduced [rf]
     (fn pr-inner [a b]
@@ -479,38 +478,6 @@
   [nm & rest]
   (let [nm (with-meta nm (assoc (meta nm) :private true))]
     (cons `defn (cons nm rest))))
-
-(defmacro ->
-  {:doc "Threads `x` through `forms`, passing the result of one step as the first argument of the next."
-   :examples [["(-> 3 inc inc)" nil 5]
-              ["(-> \"James\" (str \" is \" \"awesome \") (str \"(and stuff)\" \"!\"))" nil "James is awesome (and stuff)!"]]
-   :signatures [[x & forms]]
-   :added "0.1"}
-  [x & forms]
-  (loop [x x, forms forms]
-    (if forms
-      (let [form (first forms)
-            threaded (if (seq? form)
-                       (with-meta `(~(first form) ~x ~@(next form)) (meta form))
-                       (list form x))]
-        (recur threaded (next forms)))
-      x)))
-
-(defmacro ->>
-  {:doc "Threads `x` through `forms`, passing the result of one step as the last argument of the next."
-   :examples [["(->> \"James\" (str \"we \" \"like \") (str \"you \" \"know \" \"what? \"))" nil "you know what? we like James"]
-              ["(->> 5 (range) (map inc) seq)" nil (1 2 3 4 5)]]
-   :signatures [[x & forms]]
-   :added "0.1"}
-  [x & forms]
-  (loop [x x, forms forms]
-    (if forms
-      (let [form (first forms)
-            threaded (if (seq? form)
-                       (with-meta `(~(first form) ~@(next form)  ~x) (meta form))
-                       (list form x))]
-        (recur threaded (next forms)))
-      x)))
 
 (defn not
   {:doc "Inverts the input, if a truthy value is supplied, returns false, otherwise
@@ -2639,6 +2606,117 @@ Calling this function on something that is not ISeqable returns a seq with that 
 (defn bool?
   [x]
   (instance? Bool x))
+
+(defmacro ->
+  {:doc "Threads `x` through `forms`, passing the result of one step as the first argument of the next."
+   :examples [["(-> 3 inc inc)" nil 5]
+              ["(-> \"James\" (str \" is \" \"awesome \") (str \"(and stuff)\" \"!\"))" nil "James is awesome (and stuff)!"]]
+   :signatures [[x & forms]]
+   :added "0.1"}
+  [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+                       (with-meta `(~(first form) ~x ~@(next form)) (meta form))
+                       (list form x))]
+        (recur threaded (next forms)))
+      x)))
+
+(defmacro ->>
+  {:doc "Threads `x` through `forms`, passing the result of one step as the last argument of the next."
+   :examples [["(->> \"James\" (str \"we \" \"like \") (str \"you \" \"know \" \"what? \"))" nil "you know what? we like James"]
+              ["(->> 5 (range) (map inc) seq)" nil (1 2 3 4 5)]]
+   :signatures [[x & forms]]
+   :added "0.1"}
+  [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+                       (with-meta `(~(first form) ~@(next form)  ~x) (meta form))
+                       (list form x))]
+        (recur threaded (next forms)))
+      x)))
+
+(defmacro some->
+  {:doc "When expr is not nil, threads it into the first form (via ->),
+    and when that result is not nil, through the next etc"
+   :signatures [[expr & forms]]
+   :added "0.1"}
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (nil? ~g) nil (-> ~g ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro some->>
+  {:doc "When expr is not nil, threads it into the first form (via ->>),
+  and when that result is not nil, through the next etc"
+   :signatures [[x & forms]]
+   :added "0,1"}
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (nil? ~g) nil (->> ~g ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro cond->
+  {:added "0.1"
+   :signatures [[expr & clauses]]
+   :doc "Takes an expression and a set of test/form pairs. Threads expr (via ->)
+  through each form for which the corresponding test
+  expression is true. Note that, unlike cond branching, cond-> threading does
+  not short circuit after the first true test expression."}
+  [expr & clauses]
+  (assert (even? (count clauses)))
+  (let [g (gensym)
+        steps (map (fn [[test step]] `(if ~test (-> ~g ~step) ~g))
+                   (partition 2 clauses))]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro cond->>
+  {:doc "Takes an expression and a set of test/form pairs. Threads expr (via ->>)
+  through each form for which the corresponding test expression
+  is true.  Note that, unlike cond branching, cond->> threading does not short circuit
+  after the first true test expression."
+   :signatures [[expr & clauses]]
+   :added "0.1"}
+  [expr & clauses]
+  (assert (even? (count clauses)))
+  (let [g (gensym)
+        steps (map (fn [[test step]] `(if ~test (->> ~g ~step) ~g))
+                   (partition 2 clauses))]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro as->
+  {:doc "Binds name to expr, evaluates the first form in the lexical context
+  of that binding, then binds name to that result, repeating for each
+  successive form, returning the result of the last form."
+   :signatures [[expr name & forms]]
+   :added "0,1"}
+  [expr name & forms]
+  `(let [~name ~expr
+         ~@(interleave (repeat name) (butlast forms))]
+     ~(if (empty? forms)
+        name
+        (last forms))))
 
 (defprotocol IComparable
   (-compare [x y]
