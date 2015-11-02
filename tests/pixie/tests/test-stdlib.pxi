@@ -19,6 +19,19 @@
   (t/assert= (mapcat identity []) [])
   (t/assert= (mapcat first [[[1 2]] [[3] [:not :present]] [[4 5 6]]]) [1 2 3 4 5 6]))
 
+(t/deftest test-indexed
+  (t/assert= (map-indexed (fn [& xs] xs) []) [])
+  (t/assert= (map-indexed (fn [& xs] xs) [:a :b]) [[0 :a] [1 :b]])
+  (t/assert= (transduce (map-indexed (fn [& xs] xs)) conj [:a :b]) [[0 :a] [1 :b]]))
+
+(t/deftest test-reductions
+  (t/assert= (reductions + nil)
+             [0])
+  (t/assert= (reductions + [1 2 3 4 5])
+             [1 3 6 10 15])
+  (t/assert= (reductions + 10 [1 2 3 4 5])
+             [10 11 13 16 20 25]))
+
 (t/deftest test-str
   (t/assert= (str nil) "nil")
   (t/assert= (str true) "true")
