@@ -1762,7 +1762,7 @@ not enough elements were present."
   ([f]
    (fn [rf]
      (let [iv (atom -1)
-           rrf (preserving-reduced)]
+           rrf (preserving-reduced rf)]
        (fn
          ([] (rf))
          ([result] (rf result))

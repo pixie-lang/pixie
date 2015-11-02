@@ -22,7 +22,15 @@
 (t/deftest test-indexed
   (t/assert= (map-indexed (fn [& xs] xs) []) [])
   (t/assert= (map-indexed (fn [& xs] xs) [:a :b]) [[0 :a] [1 :b]])
-  (t/assert= (transduce (map-indexed (fn [& xs] xs)) conj [:a :b]) [[0 :a] [1 :b]]))
+  (t/assert= (transduce (map-indexed (fn [& xs] xs)) conj [:a :b]) [[0 :a] [1 :b]])
+
+  (t/assert= (keep-indexed (constantly true) []) [])
+  (t/assert= (keep-indexed (constantly nil) []) [])
+  (t/assert= (keep-indexed (fn [i x] [i x]) [:a :b]) [[0 :a] [1 :b]])
+
+  (t/assert= (transduce (keep-indexed (constantly true)) conj []) [])
+  (t/assert= (transduce (keep-indexed (constantly nil)) conj []) [])
+  (t/assert= (transduce (keep-indexed (fn [i x] [i x])) conj [:a :b]) [[0 :a] [1 :b]]))
 
 (t/deftest test-reductions
   (t/assert= (reductions + nil)
