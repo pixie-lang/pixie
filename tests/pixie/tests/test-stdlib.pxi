@@ -683,11 +683,12 @@
   (t/assert= 5 ((comp inc inc inc inc) 1))
   (t/assert= :xyz ((comp) :xyz)))
 
-(t/deftest test-swap-reset
+(t/deftest test-atom
   (let [a (atom 0)]
     (t/assert= 1 (swap! a inc))
     (t/assert= 2 (swap! a inc))
-    (t/assert= 3 (reset! a 3))))
+    (t/assert= 3 (reset! a 3))
+    (t/assert= :bar (-> a (with-meta {:foo :bar}) meta :foo))))
 
 (t/deftest pre-post-conds
   (let [f (fn ([a] {:pre [(even? a)] :post [(= % 6)]} (/ a 2))
