@@ -107,8 +107,12 @@ _gte = as_var("-gte")(DoublePolymorphicFn(u"-gte", IMath))
 _num_eq = as_var("-num-eq")(DoublePolymorphicFn(u"-num-eq", IMath))
 _num_eq.set_default_fn(wrap_fn(lambda a, b: false))
 
-as_var("MAX-NUMBER")(Integer(100000)) # TODO: set this to a real max number
+IUncheckedMath = as_var("IUncheckedMath")(Protocol(u"IUncheckedMath"))
+_unchecked_add = as_var("-unchecked-add")(DoublePolymorphicFn(u"-unchecked-add", IUncheckedMath))
+_unchecked_subtract = as_var("-unchecked-subtract")(DoublePolymorphicFn(u"-unchecked-subtract", IUncheckedMath))
+_unchecked_multiply = as_var("-unchecked-multiply")(DoublePolymorphicFn(u"-unchecked-multiply", IUncheckedMath))
 
+as_var("MAX-NUMBER")(Integer(100000)) # TODO: set this to a real max number
 
 num_op_template = """@extend({pfn}, {ty1}._type, {ty2}._type)
 def {pfn}_{ty1}_{ty2}(a, b):
@@ -167,6 +171,16 @@ def define_num_ops():
 
 define_num_ops()
 
+def define_unchecked_num_ops():
+    # maybe define get_val() instead of using tuples?
+    num_classes = [(Integer, "int_val"), (Float, "float_val")]
+    for (c1, conv1) in num_classes:
+        for (c2, conv2) in num_classes:
+            for (op, sym) in [("_unchecked_add", "+"), ("_unchecked_subtract", "-"), ("_unchecked_multiply", "*")]:
+                extend_num_op(op, c1, c2, conv1, sym, conv2)
+
+define_unchecked_num_ops()
+                
 bigint_ops_tmpl = """@extend({pfn}, {ty1}._type, {ty2}._type)
 def _{pfn}_{ty1}_{ty2}(a, b):
     assert isinstance(a, {ty1}) and isinstance(b, {ty2})

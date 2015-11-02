@@ -73,3 +73,7 @@
   (t/assert (-num-eq 1000000000000000000000N (* 10000000
                                                 10000000
                                                 10000000))))
+
+(t/deftest test-wrap-around
+  (t/assert= Integer (type (unchecked-add 9223372036854775807 1)))
+  (t/assert (-num-eq -9223372036854775808 (unchecked-add 9223372036854775807 1))))
