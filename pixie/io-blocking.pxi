@@ -13,6 +13,7 @@
 (def fclose (ffi-fn libc "fclose" [CVoidP] CInt))
 (def popen (ffi-fn libc "popen" [CCharP CCharP] CVoidP))
 (def pclose (ffi-fn libc "pclose" [CVoidP] CInt))
+(def EOF -1)
 
 (deftype FileStream [fp]
   IInputStream
@@ -85,7 +86,7 @@
       ([cnt chr]
        (assert (integer? chr))
        (let [written (write-byte fp chr)]
-         (if (= written 0)
+         (if (= written EOF)
            (reduced cnt)
            (+ cnt written)))))))
 
