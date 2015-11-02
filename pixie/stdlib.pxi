@@ -1727,6 +1727,79 @@ not enough elements were present."
         (cons (take n s)
               (partitionf f (drop n s)))))))
 
+(defn map-indexed
+  {:doc "Returns a lazy sequence consisting of the
+  result of applying f to 0 and the first item of coll, followed by
+  applying f to 1 and the second item in coll, etc, until coll is
+  exhausted. Thus function f should accept 2 arguments, index and
+  item. Returns a stateful transducer when no collection is provided."
+   :added "0.1"
+   :signatures [[f] [f coll]]}
+  ([f]
+   (fn [rf]
+     (let [i (atom -1)
+           rrf (preserving-reduced rf)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+          (rrf result (f (swap! i inc) input)))))))
+  ([f coll]
+   (let [mapi (fn mapi [i coll]
+                (lazy-seq
+                 (when-let [s (seq coll)]
+                   (cons (f i (first s))
+                         (mapi (inc i) (rest s))))))]
+     (mapi 0 coll))))
+
+(defn keep-indexed
+  {:doc "Returns a lazy sequence of the non-nil
+  results of (f index item). Note, this means false return values will
+  be included.  f must be free of side-effects.  Returns a stateful
+  transducer when no collection is provided."
+   :signatures [[f] [f coll]]
+   :added "0.1"}
+  ([f]
+   (fn [rf]
+     (let [iv (atom -1)
+           rrf (preserving-reduced rf)]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+          (let [i (swap! iv inc)
+                v (f i input)]
+            (if (nil? v)
+              result
+              (rrf result v))))))))
+  ([f coll]
+   (let [keepi (fn keepi [i coll]
+                 (lazy-seq
+                  (when-let [s (seq coll)]
+                    (let [x (f i (first s))]
+                      (if (nil? x)
+                        (keepi (inc i) (rest s))
+                        (cons x (keepi (inc i) (rest s))))))))]
+     (keepi 0 coll))))
+
+(defn reductions
+  {:doc "Returns a lazy seq of the intermediate values of the
+  reduction (as per reduce) of coll by f, starting with init."
+   :added "0.1"
+   :signatures [[f coll] [f init coll]]}
+  ([f coll]
+   (lazy-seq
+    (if-let [s (seq coll)]
+      (reductions f (first s) (rest s))
+      (list (f)))))
+  ([f init coll]
+   (if (reduced? init)
+     (list @init)
+     (cons init
+           (lazy-seq
+            (when-let [s (seq coll)]
+              (reductions f (f init (first s)) (rest s))))))))
+
 (defn destructure [binding expr]
   (cond
    (symbol? binding) [binding expr]
