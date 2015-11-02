@@ -11,7 +11,6 @@
 (def printf (ffi-fn libc "printf" [CCharP] CInt :variadic? true))
 (def getenv (ffi-fn libc "getenv" [CCharP] CCharP))
 
-
 (def libedit (ffi-library (str "libedit." pixie.platform/so-ext)))
 (def readline (ffi-fn libedit "readline" [CCharP] CCharP))
 (def rand (ffi-fn libc "rand" [] CInt))
@@ -1286,6 +1285,13 @@ and implements IAssociative, ILookup and IObject."
                                            @acc#
                                            (recur (next fields#) acc#)))
                                        acc#)))
+                        'ICounted
+                        `(-count [self] ~(count fields))
+
+                        'ISeqable
+                        `(-seq [self#]
+                               (map #(map-entry % (get-field self# %))
+                                    ~fields))
 
                         'IMeta
                         `(-with-meta [self# ~meta-gs]

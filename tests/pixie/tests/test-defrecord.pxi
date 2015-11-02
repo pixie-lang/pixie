@@ -63,3 +63,11 @@
   (t/assert= [[:one 1] [:two 2] [:three 3]] (reduce conj [] t1))
   (t/assert= [1 2 3] (vals t1))
   (t/assert= [:one :two :three] (keys t1)))
+
+(t/deftest icounted []
+  (t/assert= (count t1) 3))
+
+(t/deftest seqable []
+  (t/assert= (key (first (seq t1))) :one)
+  (t/assert= (val (first (seq t1))) 1)
+  (t/assert (instance? LazySeq (seq t1))))
