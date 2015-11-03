@@ -14,7 +14,8 @@
            (t/assert= t t)
            (t/assert (satisfies? IRecord t))
            (t/assert (satisfies? IAssociative t))
-           (t/assert (satisfies? ILookup t))))
+           (t/assert (satisfies? ILookup t))
+           (t/assert (satisfies? IPersistentCollection t))))
 
 (t/deftest test-record-pred
   (t/assert (record? t1)))
@@ -53,6 +54,10 @@
            (t/assert (contains? t :one))
            (t/assert (contains? t :two))
            (t/assert (contains? t :three))))
+
+(t/deftest test-ipersistentcoll
+  (t/assert= 11 (-> t1 (conj [:one 11]) :one))
+  (t/assert= 11 (-> t1 (conj (map-entry :one 11)) :one)))
 
 (t/deftest test-record-metadata
   (t/assert= nil (meta t1))
