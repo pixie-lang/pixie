@@ -1293,6 +1293,22 @@ and implements IAssociative, ILookup and IObject."
                                (map #(map-entry % (get-field self# %))
                                     ~fields))
 
+                        'IPersistentCollection
+                        `(-conj [self# x]
+                                (cond
+                                  (instance? MapEntry x)
+                                  (assoc self# (key x) (val x))
+                                  (instance? PersistentVector x)
+                                  (if (= (count x) 2)
+                                    (assoc self# (first x) (second x))
+                                    (throw
+                                     [:pixie.stdlib/InvalidArgumentException
+                                      "Vector arg to record conj must be a pair"]))))
+
+                        `(-disj [self# x]
+                                (throw [:pixie.stdlib/NotImplementedException
+                                        "disj is not supported on defrecords"]))
+
                         'IMeta
                         `(-with-meta [self# ~meta-gs]
                                      (new ~nm
