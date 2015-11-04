@@ -701,7 +701,7 @@ returns true"
 (defn dissoc
   {:doc "Removes the value associated with the keys from the collection"
    :signatures [[m] [m & ks]]
-   :addded "0.1"}
+   :added "0.1"}
   ([m] m)
   ([m & ks]
     (reduce -dissoc m ks)))
