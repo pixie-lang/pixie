@@ -918,7 +918,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
     (list (-key self) (-val self))))
 
 (defn select-keys
-  {:doc "Produces a map with only the values in m contained in key-seq"}
+  {:doc "Returns a map containing only the entries of `m` where the entry's key is in `key-seq`."}
   [m key-seq]
   (with-meta
     (transduce
