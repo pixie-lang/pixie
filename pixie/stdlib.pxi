@@ -510,6 +510,30 @@ returns true"
   ([x y & args]
       (reduce -mul (-mul x y) args)))
 
+(defn unchecked-add
+  {:doc "Adds the arguments, returning 0 if no arguments"
+   :signatures [[& args]]
+   :added "0.1"}
+  ([] 0)
+  ([x] x)
+  ([x y] (-unchecked-add x y))
+  ([x y & args]
+      (reduce -unchecked-add (-unchecked-add x y) args)))
+
+(defn unchecked-subtract
+  ([] 0)
+  ([x] (-unchecked-subtract 0 x))
+  ([x y] (-unchecked-subtract x y))
+  ([x y & args]
+      (reduce -unchecked-subtract (-unchecked-subtract x y) args)))
+
+(defn unchecked-multiply
+  ([] 1)
+  ([x] x)
+  ([x y] (-unchecked-multiply x y))
+  ([x y & args]
+      (reduce -unchecked-multiply (-unchecked-multiply x y) args)))
+
 (defn /
   ([x] (-div 1 x))
   ([x y] (-div x y))
@@ -609,6 +633,20 @@ returns true"
    :added "0.1"}
   [x]
   (- x 1))
+
+(defn unchecked-inc
+  {:doc "Increments x by one"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
+  (unchecked-add x 1))
+
+(defn unchecked-dec
+  {:doc "Decrements x by one"
+   :signatures [[x]]
+   :added "0.1"}
+  [x]
+  (unchecked-subtract x 1))
 
 (defn empty?
   {:doc "returns true if the collection has no items, otherwise false"
