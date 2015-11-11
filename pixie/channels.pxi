@@ -1,5 +1,7 @@
 (ns pixie.channels
   (:require [pixie.stacklets :as st]
+            [pixie.uv :as uv]
+            [pixie.ffi :as ffi]
             [pixie.buffers :as b]))
 
 (defprotocol ICancelable
@@ -142,6 +144,24 @@
                                     size-or-buffer
                                     false
                                     0)))))
+
+(defn timeout
+  "Returns a channel that will close after given delay in ms"
+  [ms]
+  (let [ch (chan)
+        timer (uv/uv_timer_t)
+        cb (atom nil)]
+    (reset! cb (ffi/ffi-prep-callback uv/uv_timer_cb
+                                      (fn [handle]
+                                        (try
+                                          (-close! ch)
+                                          (uv/uv_timer_stop timer)
+                                          (-dispose! @cb)
+                                          (catch ex
+                                              (println ex))))))
+    (uv/uv_timer_init (uv/uv_default_loop) timer)
+    (uv/uv_timer_start timer @cb ms 0)
+    ch))
 
 (deftype AltHandler [atm f]
   ICancelable
