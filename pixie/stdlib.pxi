@@ -549,7 +549,9 @@ returns true"
 (defn rand-int
   {:doc "random integer between 0 (inclusive) and n (exclusive)"}
   [n]
-  (rem (rand) n))
+  (if (zero? n)
+    0
+    (rem (rand) n)))
 
 (defn =
   {:doc "Returns true if all the arguments are equivalent. Otherwise, returns false. Uses

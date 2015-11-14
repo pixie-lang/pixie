@@ -361,7 +361,9 @@
 
 (t/deftest test-rand-int
   (let [vs (repeatedly 10 #(rand-int 4))]
-    (t/assert (every? #(and (>= % 0) (< % 4)) vs))))
+    (t/assert (every? #(and (>= % 0) (< % 4)) vs)))
+  (let [vs (repeatedly 10 #(rand-int 0))]
+    (t/assert (every? zero? vs))))
 
 (t/deftest test-some
   (t/assert= (some even? [2 4 6 8]) true)
