@@ -31,3 +31,18 @@
     (assert= (alts! [c] :default 42) [:default 42])
     (>! c 1)
     (assert= (alts! [c] :default 42) [c 1])))
+
+(deftest test-timeout-channel
+  (let [ts [(timeout 300)
+            (timeout 200)
+            (timeout 100)]]
+    (-> (go
+          (loop [ts (set ts)
+                 res []]
+            (if (empty? ts)
+              res
+              (let [[p _] (alts! ts)]
+                (recur (set (remove #{p} ts))
+                       (conj res p))))))
+        <!
+        (assert= (reverse ts)))))

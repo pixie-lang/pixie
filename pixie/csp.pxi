@@ -4,6 +4,7 @@
             [pixie.channels :as chans]))
 
 (def chan chans/chan)
+(def timeout chans/timeout)
 
 (defn close!
   "Closes the channel, future writes will be rejected, future reads will
