@@ -890,9 +890,18 @@ If further arguments are passed, invokes the method named by symbol, passing the
    :signatures [[coll]]
    :added "0.1"}
   [coll]
-  (if (next coll)
-    (recur (next coll))
-    (first coll)))
+  (cond
+    (satisfies? IIndexed coll)
+    (when (pos? (count coll))
+      (nth coll (dec (count coll))))
+
+    (satisfies? ISeq coll)
+    (if (next coll)
+      (recur (next coll))
+      (first coll))
+    
+    (satisfies? ISeqable coll)
+    (recur (seq coll))))
 
 (defn butlast
   {:doc "Returns all elements but the last from the collection."
@@ -2050,18 +2059,26 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
       (if (cmp val stop)
         val
        not-found)))
+  ISeq
+  (-first [this] 
+    (when (not= start stop)
+      start))
+  (-next  [this]
+    (let [i (+ step start)]
+      (when (or (and (> step 0) (< i stop))
+                    (and (< step 0) (> i stop))
+                    (and (= step 0)))
+        (range i stop step))))
   ISeqable
-  (-seq [self]
-    (when (or (and (> step 0) (< start stop))
-              (and (< step 0) (> start stop)))
-      (cons start (lazy-seq* #(range (+ start step) stop step))))))
+  (-seq [self] self))
 
 (extend -str Range
         (fn [v]
-          (-str (seq v))))
+          (str "(" (transduce (interpose " ") string-builder v) ")")))
+
 (extend -repr Range
         (fn [v]
-          (-repr (seq v))))
+          (str "(" (transduce (interpose " ") string-builder v) ")")))
 
 (defn range
   {:doc "Returns a range of numbers."
