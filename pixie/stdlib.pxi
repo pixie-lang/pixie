@@ -2976,3 +2976,20 @@ ex: (vary-meta x assoc :foo 42)"
    :added "0.1"}
   [x f & args]
   (with-meta x (apply f (meta x) args)))
+
+(defn memoize
+  {:doc "Returns a memoized version of function f. The first call will
+   realize the return value and subsequent calls get the same value
+   from its cache."
+   :signatures [[f]]
+   :added "0.1"}
+  [f]
+  (let [cache (atom {})]
+    (fn [& args]
+      (let [argsv (vec args)
+            val (get @cache argsv ::not-found)]
+        (if (= val ::not-found)
+          (let [ret (apply f args)]
+            (swap! cache assoc argsv ret)
+            ret)
+          val)))))

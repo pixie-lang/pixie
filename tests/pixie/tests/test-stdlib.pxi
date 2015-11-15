@@ -728,3 +728,7 @@
 
 (t/deftest test-vary-meta
   (t/assert= 42 (-> {} (vary-meta assoc :foo 42) meta :foo)))
+
+(t/deftest test-memoize
+  (let [f (memoize rand)]
+    (t/assert= (f) (f))))
