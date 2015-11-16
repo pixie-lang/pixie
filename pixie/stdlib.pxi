@@ -197,7 +197,7 @@
                     (-satisfies? p x))))
 
 (def into (fn ^{:doc "Add the elements of `from` to the collection `to`."
-                :signatures [[to from]]
+                :signatures [[to from] [to xform from]]
                 :added "0.1"}
             ([to from]
              (if (satisfies? IToTransient to)
