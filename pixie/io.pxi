@@ -87,6 +87,10 @@
     (instance? BufferedInputStream input-stream)
     (-> input-stream ->LineReader)
 
+
+    (satisfies? IInputStream input-stream)
+    (-> input-stream (buffered-input-stream 1) ->LineReader)
+
     :else
     (throw [::Exception "Expected a LineReader, UTF8InputStream, or BufferedInputStream"])))
 
