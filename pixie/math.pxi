@@ -23,9 +23,15 @@
 
   (i/defcfn exp)
   (i/defcfn ldexp)
+
   (i/defcfn log)
+  (i/defcfn log2)
   (i/defcfn log10)
-  ;(i/defcfn modf) ;; Needs ffi support
+  (i/defcfn log1p)
+  (i/defcfn logb)
+  (i/defcfn ilogb)
+
+  ;; (i/defcfn modf) ;; Needs ffi support
   (i/defcfn pow)
   (i/defcfn sqrt)
   (i/defcfn ceil)
