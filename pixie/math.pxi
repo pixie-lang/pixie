@@ -12,6 +12,7 @@
   (i/defcfn cosh)
   (i/defcfn sin)
   (i/defcfn sinh)
+  (i/defcfn tan)
   (i/defcfn tanh)
   (i/defcfn exp)
   (i/defcfn ldexp)
