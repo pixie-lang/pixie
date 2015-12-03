@@ -17,6 +17,10 @@
   (i/defcfn cosh)
   (i/defcfn tanh)
 
+  (i/defcfn asinh)
+  (i/defcfn acosh)
+  (i/defcfn atanh)
+
   (i/defcfn exp)
   (i/defcfn ldexp)
   (i/defcfn log)
