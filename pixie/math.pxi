@@ -4,16 +4,19 @@
 (i/with-config {:library "m"
                 :cxx-flags ["-lm"]
                 :includes ["math.h"]}
-  (i/defcfn acos)
-  (i/defcfn asin)
-  (i/defcfn atan)
-  (i/defcfn atan2)
-  (i/defcfn cos)
-  (i/defcfn cosh)
   (i/defcfn sin)
-  (i/defcfn sinh)
+  (i/defcfn cos)
   (i/defcfn tan)
+
+  (i/defcfn asin)
+  (i/defcfn acos)
+  (i/defcfn atan)
+  (i/defcfn atan2) ; Arc tangent function of two variables.
+
+  (i/defcfn sinh)
+  (i/defcfn cosh)
   (i/defcfn tanh)
+
   (i/defcfn exp)
   (i/defcfn ldexp)
   (i/defcfn log)
