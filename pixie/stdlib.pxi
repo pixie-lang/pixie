@@ -47,7 +47,7 @@
     x))
 
 (def conj
-  (fn ^{:doc "Adds elements to the collection. Elements are added to the end except in the case of Cons lists"
+  (fn ^{:doc "Adds elements to the collection. Elements are added to the end except in the case of Cons lists."
         :signatures [[] [coll] [coll item] [coll item & args]]
         :added "0.1"}
     conj
@@ -58,7 +58,7 @@
        (reduce -conj (-conj coll item) args))))
 
 (def conj!
-  (fn ^{:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists"
+  (fn ^{:doc "Adds elements to the transient collection. Elements are added to the end except in the case of Cons lists."
         :signatures [[] [coll] [coll item] [coll item & args]]
         :added "0.1"}
     conj!
@@ -96,7 +96,7 @@
     ([coll] (-pop coll))))
 
 (def push
-  (fn ^{:doc "Push an element on to a stack."
+  (fn ^{:doc "Pushes an element on to a stack."
         :signatures [[] [coll] [coll item] [coll item & args]]
         :added "0.1"}
     push
@@ -110,7 +110,7 @@
     ([coll] (-pop! coll))))
 
 (def push!
-  (fn ^{:doc "Push an element on to a transient stack."
+  (fn ^{:doc "Pushes an element on to a transient stack."
         :signatures [[] [coll] [coll item] [coll item & args]]
         :added "0.1"}
     push!
@@ -134,7 +134,7 @@
                           result (-reduce coll f init)]
                       (f result)))))
 
-(def map (fn ^{:doc "map - creates a transducer that applies f to every input element"
+(def map (fn ^{:doc "Creates a transducer that applies f to every input element."
                :signatures [[f] [f coll]]
                :added "0.1"}
            map
@@ -246,7 +246,7 @@
            (reduce rrf result input))))))
 
 (def mapcat
-  (fn ^{:doc "Maps f over the elements of coll and concatenates the result"
+  (fn ^{:doc "Maps f over the elements of coll and concatenates the result."
         :added "0.1"}
     mapcat
     ([f]
@@ -338,7 +338,7 @@
     ([state itm] (update-hash-unordered! state itm))))
 
 (def string-builder
-  (fn ^{:doc "Creates a reducing function that builds a string based on calling str on the transduced collection"}
+  (fn ^{:doc "Creates a reducing function that builds a string based on calling str on the transduced collection."}
     ([] (-string-builder))
     ([sb] (str sb))
     ([sb item] (conj! sb item))))
@@ -471,7 +471,7 @@
 (set-macro! defmacro)
 
 (defmacro defn-
-  {:doc "Define a new non-public function. Otherwise the same as defn"
+  {:doc "Define a new non-public function. Otherwise the same as defn."
    :signatures [[nm doc? meta? & body]]
    :added "0.1"}
   [nm & rest]
@@ -480,14 +480,14 @@
 
 (defn not
   {:doc "Inverts the input, if a truthy value is supplied, returns false, otherwise
-returns true"
+returns true."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (if x false true))
 
 (defn +
-  {:doc "Adds the arguments, returning 0 if no arguments"
+  {:doc "Adds the arguments, returning 0 if no arguments."
    :signatures [[& args]]
    :added "0.1"}
   ([] 0)
@@ -511,7 +511,7 @@ returns true"
       (reduce -mul (-mul x y) args)))
 
 (defn unchecked-add
-  {:doc "Adds the arguments, returning 0 if no arguments"
+  {:doc "Adds the arguments, returning 0 if no arguments."
    :signatures [[& args]]
    :added "0.1"}
   ([] 0)
@@ -547,7 +547,7 @@ returns true"
   (-rem num div))
 
 (defn rand-int
-  {:doc "random integer between 0 (inclusive) and n (exclusive)"}
+  {:doc "Returns a random integer between 0 (inclusive) and n (exclusive)."}
   [n]
   (if (zero? n)
     0
@@ -602,56 +602,56 @@ returns true"
                   false)))
 
 (defn pos?
-  {:doc "Returns true if x is greater than zero"
+  {:doc "Returns true if x is greater than zero."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (> x 0))
 
 (defn neg?
-  {:doc "Returns true if x is less than zero"
+  {:doc "Returns true if x is less than zero."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (< x 0))
 
 (defn zero?
-  {:doc "Returns true if x is equal to zero"
+  {:doc "Returns true if x is equal to zero."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (= x 0))
 
 (defn inc
-  {:doc "Increments x by one"
+  {:doc "Increments x by one."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (+ x 1))
 
 (defn dec
-  {:doc "Decrements x by one"
+  {:doc "Decrements x by one."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (- x 1))
 
 (defn unchecked-inc
-  {:doc "Increments x by one"
+  {:doc "Increments x by one."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (unchecked-add x 1))
 
 (defn unchecked-dec
-  {:doc "Decrements x by one"
+  {:doc "Decrements x by one."
    :signatures [[x]]
    :added "0.1"}
   [x]
   (unchecked-subtract x 1))
 
 (defn empty?
-  {:doc "returns true if the collection has no items, otherwise false"
+  {:doc "Returns true if the collection has no items, otherwise false."
    :signatures [[coll]]
    :added "0.1"}
   [coll]
@@ -660,21 +660,21 @@ returns true"
     (not (seq coll))))
 
 (defn not-empty?
-  {:doc "returns true if the collection has items, otherwise false"
+  {:doc "Returns true if the collection has items, otherwise false."
    :signatures [[coll]]
    :added "0.1"}
   [coll]
   (if (seq coll) true false))
 
 (defn even?
-  {:doc "Returns true if n is even"
+  {:doc "Returns true if n is even."
    :signatures [[n]]
    :added "0.1"}
   [n]
   (zero? (rem n 2)))
 
 (defn odd?
-  {:doc "Returns true of n is odd"
+  {:doc "Returns true of n is odd."
    :signatures [[n]]
    :added "0.1"}
   [n]
@@ -682,7 +682,7 @@ returns true"
 
 (defn nth
   {:doc "Returns the element at the idx.  If the index is not found it will return an error.
-         However, if you specify a not-found parameter, it will substitute that instead"
+         However, if you specify a not-found parameter, it will substitute that instead."
    :signatures [[coll idx] [coll idx not-found]]
    :added "0.1"}
   ([coll idx] (-nth coll idx))
@@ -729,7 +729,7 @@ returns true"
     (first (next (next (next coll))))))
 
 (defn assoc
-  {:doc "Associates the key with the value in the collection"
+  {:doc "Associates the key with the value in the collection."
    :signatures [[m] [m k v] [m k v & kvs]]
    :added "0.1"}
   ([m] m)
@@ -739,7 +739,7 @@ returns true"
      (apply assoc (-assoc m k v) rest)))
 
 (defn dissoc
-  {:doc "Removes the value associated with the keys from the collection"
+  {:doc "Removes the value associated with the keys from the collection."
    :signatures [[m] [m & ks]]
    :added "0.1"}
   ([m] m)
@@ -763,7 +763,7 @@ there's a value associated with the key. Use `some` for checking for values."
   (-contains-key coll key))
 
 (defn hash-set [& args]
-  {:doc "Creates a hash-set from the arguments of the function"
+  {:doc "Creates a hash-set from the arguments of the function."
    :added "0.1"}
   (set args))
 
@@ -797,7 +797,7 @@ there's a value associated with the key. Use `some` for checking for values."
        (apply (transduce comp (apply list f1 f2 f3 fs)) args))))
 
 (defmacro cond
-  {:doc "Checks if any of the tests is truthy, if so, stops and returns the value of the corresponding body"
+  {:doc "Checks if any of the tests is truthy, if so, stops and returns the value of the corresponding body."
    :signatures [[] [test then & clauses]]
    :added "0.1"}
   ([] nil)
@@ -915,8 +915,8 @@ If further arguments are passed, invokes the method named by symbol, passing the
       (seq res))))
 
 (defn complement
-  {:doc "Given a function, return a new function which takes the same arguments
-         but returns the opposite truth value"}
+  {:doc "Given a function, returns a new function which takes the same arguments
+         but returns the opposite truth value."}
   [f]
   (assert (fn? f) "Complement must be passed a function")
   (fn
@@ -926,7 +926,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
     ([x y & more] (not (apply f x y more)))))
 
 (defn constantly [x]
-  {:doc "Return a function that always returns x, no matter what it is called with."
+  {:doc "Returns a function that always returns x, no matter what it is called with."
    :examples [["(let [f (constantly :me)] [(f 1) (f \"foo\") (f :abc) (f nil)])"
                nil [:me :me :me :me]]]}
   (fn [& _] x))
@@ -977,7 +977,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
     (meta m)))
 
 (defn keys
-  {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
+  {:doc "If called with no arguments, returns a transducer that will extract the key from each map entry. If passed
    a collection, will assume that it is a hashmap and return a vector of all keys from the collection."
    :signatures [[] [coll]]
    :added "0.1"}
@@ -986,7 +986,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
      (transduce (map key) conj! m)))
 
 (defn vals
-  {:doc "If called with no arguments returns a transducer that will extract the key from each map entry. If passed
+  {:doc "If called with no arguments, returns a transducer that will extract the key from each map entry. If passed
    a collection, will assume that it is a hashmap and return a vector of all keys from the collection."
    :signatures [[] [coll]]
    :added "0.1"}
@@ -1078,7 +1078,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 (extend -repr Symbol -str)
 
 (defn get
-  {:doc "Get an element from a collection implementing ILookup, return nil or the default value if not found."
+  {:doc "Gets an element from a collection implementing ILookup. Returns nil or the default value if not found."
    :added "0.1"}
   ([mp k]
      (get mp k nil))
@@ -1095,7 +1095,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
 
 
 (defn get-in
-  {:doc "Get a value from a nested collection at the \"path\" given by the keys."
+  {:doc "Gets a value from a nested collection at the \"path\" given by the keys."
    :examples [["(get-in {:a [{:b 42}]} [:a 0 :b])" nil 42]]
    :signatures [[m ks] [m ks not-found]]
    :added "0.1"}
@@ -1113,7 +1113,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
          m))))
 
 (defn assoc-in
-  {:doc "Associate a value in a nested collection given by the path.
+  {:doc "Associates a value in a nested collection given by the path.
 
 Creates new maps if the keys are not present."
    :examples [["(assoc-in {} [:a :b :c] 42)" nil {:a {:b {:c 42}}}]]
@@ -1127,7 +1127,7 @@ Creates new maps if the keys are not present."
          (assoc m k v)))))
 
 (defn update-in
-  {:doc "Update a value in a nested collection."
+  {:doc "Updates a value in a nested collection."
    :examples [["(update-in {:a {:b {:c 41}}} [:a :b :c] inc)" nil {:a {:b {:c 42}}}]]
    :added "0.1"}
   [m ks f & args]
@@ -1154,7 +1154,7 @@ Creates new maps if the keys are not present."
                 (str "Assert failed: " ~msg)]))))
 
 (defmacro resolve
-  {:doc "Resolve the var associated with the symbol in the current namespace."
+  {:doc "Resolves the var associated with the symbol in the current namespace."
    :added "0.1"}
   [sym]
   `(resolve-in (this-ns-name) ~sym))
@@ -1202,7 +1202,7 @@ Creates new maps if the keys are not present."
   (instance? Protocol x))
 
 (defmacro deftype
-  {:doc "Define a custom type."
+  {:doc "Defines a custom type."
    :examples [["(deftype Person [name]
   IObject
   (-str [self]
@@ -1291,7 +1291,7 @@ Creates new maps if the keys are not present."
     result))
 
 (defmacro defrecord
-  {:doc "Define a record type.
+  {:doc "Defines a record type.
 
 Similar to `deftype`, but supports construction from a map using `map->Type`
 and implements IAssociative, ILookup and IObject."
@@ -1511,7 +1511,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
   (identical? x nil))
 
 (defn some? [x]
-  {:doc "true if x is not nil"}
+  {:doc "Returns true if x is not nil."}
   (not (nil? x)))
 
 (defn fnil [f else]
@@ -1528,7 +1528,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
     ~(nth binding 1 nil)))
 
 (defmacro dotimes
-  {:doc "Execute the expressions in the body n times."
+  {:doc "Executes the expressions in the body n times."
    :examples [["(dotimes [i 3] (println i))" "1\n2\n3\n"]]
    :signatures [[[i n] & body]]
    :added "0.1"}
@@ -1542,7 +1542,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
                (recur (inc ~b))))))))
 
 (defmacro and
-  {:doc "Check if the given expressions return truthy values, returning the last, or false."
+  {:doc "Checks if the given expressions return truthy values, returning the last, or false."
    :examples [["(and true false)" nil false]
               ["(and 1 2 3)" nil 3]
               ["(and 1 false 3)" nil false]]
@@ -1604,7 +1604,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
     false))
 
 (defn nnext
-  {:doc "Equivalent to (next (next coll))"
+  {:doc "Equivalent to (next (next coll))."
    :added "0.1"}
   [coll]
   (next (next coll)))
@@ -1624,7 +1624,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 (defn ith
   {:doc "Returns the ith element of the collection, negative values count from the end.
          If an index is out of bounds, will throw an Index out of Range exception.
-         However, if you specify a not-found parameter, it will substitute that instead"
+         However, if you specify a not-found parameter, it will substitute that instead."
    :signatures [[coll i] [coll idx not-found]]
    :added "0.1"}
   ([coll i]
@@ -1688,7 +1688,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 (defmacro while
   {:doc "Repeatedly executes body while test expression is true. Presumes
-  some side-effect will cause test to become false/nil. Returns nil"
+  some side-effect will cause test to become false/nil. Returns nil."
   :added "0.1"}
   [test & body]
     `(loop []
@@ -1761,7 +1761,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
 
 ;; TODO: use a transient map in the future
 (defn frequencies
-  {:doc "Returns a map with distinct elements as keys and the number of occurences as values"
+  {:doc "Returns a map with distinct elements as keys and the number of occurences as values."
    :added "0.1"}
   [coll]
   (reduce (fn [res elem]
@@ -2114,7 +2114,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
                          self))))
 
 (defn filter
-  {:doc "Filter the collection for elements matching the predicate."
+  {:doc "Filters the collection for elements matching the predicate."
    :signatures [[pred] [pred coll]]
    :added "0.1"}
   ([pred]
@@ -2260,7 +2260,7 @@ user => (refer 'pixie.string :exclude '(substring))"
            (reduce merge2 (first maps) (next maps)))))
 
 (defn every?
-  {:doc "Check if every element of the collection satisfies the predicate."
+  {:doc "Checks if every element of the collection satisfies the predicate."
    :added "0.1"}
   [pred coll]
   (cond
@@ -2377,7 +2377,7 @@ If the number of arguments is even and no clause matches, throws an exception."
 
 
 (defmacro defmulti
-  {:doc "Define a multimethod, which dispatches to its methods based on dispatch-fn."
+  {:doc "Defines a multimethod, which dispatches to its methods based on dispatch-fn."
    :examples [["(defmulti greet first)"]
               ["(defmethod greet :hi [[_ name]] (str \"Hi, \" name \"!\"))"]
               ["(defmethod greet :hello [[_ name]] (str \"Hello, \" name \".\"))"]
@@ -2396,7 +2396,7 @@ If the number of arguments is even and no clause matches, throws an exception."
     `(def ~name (->MultiMethod ~dispatch-fn ~(get options :default :default) (atom {})))))
 
 (defmacro defmethod
-  {:doc "Define a method of a multimethod. See `(doc defmulti)` for details."
+  {:doc "Defines a method of a multimethod. See `(doc defmulti)` for details."
    :signatures [[name dispatch-val [param*] & body]]
    :added "0.1"}
   [name dispatch-val params & body]
@@ -2413,14 +2413,14 @@ If the number of arguments is even and no clause matches, throws an exception."
   [x] x)
 
 (defmacro declare
-  {:doc "Forward declare the given variable names, setting them to nil."
+  {:doc "Forward declares the given variable names, setting them to nil."
    :added "0.1"}
   [& nms]
   (let [defs (map (fn [nm] `(def ~nm)) (seq nms))]
     `(do ~@defs)))
 
 (defmacro defprotocol
-  {:doc "Define a new protocol."
+  {:doc "Defines a new protocol."
    :examples [["(defprotocol SayHi (hi [x]))"]
               ["(extend hi String (fn [name] (str \"Hi, \" name \"!\")))"]
               ["(hi \"Jane\")" nil "Hi, Jane!"]]
@@ -2433,7 +2433,7 @@ If the number of arguments is even and no clause matches, throws an exception."
                                                 sigs)))
 
 (defmacro extend-type
-  {:doc "Extend the protocols to the given type.
+  {:doc "Extends the protocols to the given type.
 
 Expands to calls to `extend`."
    :examples [["(defprotocol SayHi (hi [x]))"]
@@ -2521,7 +2521,7 @@ Expands to calls to `extend-type`."
 (defprotocol IRecord)
 
 (defn record?
-  {:doc "Returns true if x implements IRecord"
+  {:doc "Returns true if x implements IRecord."
    :since "0.1"}
   [x]
   (satisfies? IRecord x))
@@ -2552,7 +2552,7 @@ Expands to calls to `extend-type`."
     `(or (seq ~(gen-loop [] bindings)) '())))
 
 (defmacro doto
-  {:doc "Evaluate o, uses the value as the first argument in each form. Returns o"}
+  {:doc "Evaluate o, uses the value as the first argument in each form. Returns o."}
   [o & forms]
   (let [s (gensym o)]
     `(let [~s ~o]
@@ -2598,14 +2598,14 @@ Expands to calls to `extend-type`."
        result#)))
 
 (defn pst
-  {:doc "Prints the trace of a Runtime Exception if given, or the last Runtime Exception in *e"
+  {:doc "Prints the trace of a Runtime Exception if given, or the last Runtime Exception in *e."
    :signatures [[] [e]]
    :added "0.1"}
   ([] (pst *e))
   ([e] (when e (print (str e)))))
 
 (defn trace
-  {:doc "Returns a seq of the trace of a Runtime Exception or the last Runtime Exception in *e"
+  {:doc "Returns a seq of the trace of a Runtime Exception or the last Runtime Exception in *e."
    :signatures [[] [e]]
    :added "0.1"}
   ([] (trace *e))
@@ -2701,7 +2701,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
             (str "#Environment{" (transduce (comp entry->str (interpose [", "]) cat) string-builder v) "}"))))
 
 (defn interleave
-  "Returns a seq of all the items in the input collections interleaved"
+  "Returns a seq of all the items in the input collections interleaved."
   ([] ())
   ([c1] (seq c1))
   ([c1 c2]
@@ -2719,13 +2719,13 @@ Calling this function on something that is not ISeqable returns a seq with that 
                 (apply interleave (map next ss))))))))
 
 (defn min
-  "Returns the smallest of all the arguments to this function. Assumes arguments are numeric"
+  "Returns the smallest of all the arguments to this function. Assumes arguments are numeric."
   ([x] x)
   ([x y] (if (< x y) x y))
   ([x y & zs] (apply min (min x y) zs)))
 
 (defn max
-  "Returns the largest of all the arguments to this function. Assumes arguments are numeric"
+  "Returns the largest of all the arguments to this function. Assumes arguments are numeric."
   ([x] x)
   ([x y] (if (> x y) x y))
   ([x y & zs] (apply max (max x y) zs)))
@@ -2812,7 +2812,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 (defmacro some->
   {:doc "When expr is not nil, threads it into the first form (via ->),
-    and when that result is not nil, through the next etc"
+    and when that result is not nil, through the next etc."
    :signatures [[expr & forms]]
    :added "0.1"}
   [expr & forms]
@@ -2827,7 +2827,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 (defmacro some->>
   {:doc "When expr is not nil, threads it into the first form (via ->>),
-  and when that result is not nil, through the next etc"
+  and when that result is not nil, through the next etc."
    :signatures [[x & forms]]
    :added "0,1"}
   [expr & forms]
@@ -2891,7 +2891,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 (defprotocol IComparable
   (-compare [x y]
-    "Compare to objects returing 0 if the same -1 with x is logically smaller than y and 1 if x is logically larger"))
+    "Compare to objects returing 0 if the same -1 with x is logically smaller than y and 1 if x is logically larger."))
 
 (defn compare-numbers
   [x y]
