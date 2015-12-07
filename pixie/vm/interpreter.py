@@ -11,7 +11,7 @@ def get_location(ip, sp, is_continuation, bc, base_code):
     return code.BYTECODES[bc[ip]] + " in " + str(base_code._name)
 
 jitdriver = JitDriver(greens=["ip", "sp", "is_continuation", "bc", "base_code"], reds=["frame"], virtualizables=["frame"],
-                      get_printable_location=get_location)
+                      get_printable_location=get_location, is_recursive=True)
 
 
 @elidable
