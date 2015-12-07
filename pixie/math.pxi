@@ -4,20 +4,34 @@
 (i/with-config {:library "m"
                 :cxx-flags ["-lm"]
                 :includes ["math.h"]}
-  (i/defcfn acos)
-  (i/defcfn asin)
-  (i/defcfn atan)
-  (i/defcfn atan2)
-  (i/defcfn cos)
-  (i/defcfn cosh)
   (i/defcfn sin)
+  (i/defcfn cos)
+  (i/defcfn tan)
+
+  (i/defcfn asin)
+  (i/defcfn acos)
+  (i/defcfn atan)
+  (i/defcfn atan2) ; Arc tangent function of two variables.
+
   (i/defcfn sinh)
+  (i/defcfn cosh)
   (i/defcfn tanh)
+
+  (i/defcfn asinh)
+  (i/defcfn acosh)
+  (i/defcfn atanh)
+
   (i/defcfn exp)
   (i/defcfn ldexp)
+
   (i/defcfn log)
+  (i/defcfn log2)
   (i/defcfn log10)
-  ;(i/defcfn modf) ;; Needs ffi support
+  (i/defcfn log1p)
+  (i/defcfn logb)
+  (i/defcfn ilogb)
+
+  ;; (i/defcfn modf) ;; Needs ffi support
   (i/defcfn pow)
   (i/defcfn sqrt)
   (i/defcfn ceil)
