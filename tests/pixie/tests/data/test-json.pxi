@@ -16,7 +16,7 @@
                                :lists {:empty {:vector [], :list '(), :seq (take 0 (range))}
                                        :non-empty {:vector [1 2 3], :list '(1 2 3), :seq (take 3 (range))}}
                                :maps {:empty {}, :non-empty {:this "is covered, right? ;)"}}})
-           "{ \"strings\": { \"b\": \"b\", \"c\": \"\", \"a\": \"a\", \"d\": \"d\" }, \"maps\": { \"non-empty\": { \"this\": \"is covered, right? ;)\" }, \"empty\": {} }, \"lists\": { \"non-empty\": { \"seq\": [ 0, 1, 2 ], \"list\": [ 1, 2, 3 ], \"vector\": [ 1, 2, 3 ] }, \"empty\": { \"seq\": [], \"list\": [], \"vector\": [] } }, \"numbers\": { \"one\": 1, \"two\": 2.000000, \"three\": 3 } }"))
+           "{ \"numbers\": { \"three\": 3, \"two\": 2.000000, \"one\": 1 }, \"lists\": { \"empty\": { \"vector\": [], \"list\": [], \"seq\": [] }, \"non-empty\": { \"vector\": [ 1, 2, 3 ], \"list\": [ 1, 2, 3 ], \"seq\": [ 0, 1, 2 ] } }, \"maps\": { \"empty\": {}, \"non-empty\": { \"this\": \"is covered, right? ;)\" } }, \"strings\": { \"d\": \"d\", \"a\": \"a\", \"c\": \"\", \"b\": \"b\" } }"))
 
 (deftest test-round-trip
   (let [data {"foo" 1, "bar" [2 3]}]  ; won't work with keywords because the parser doesn't keywordise them (yet)

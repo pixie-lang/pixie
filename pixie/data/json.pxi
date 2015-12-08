@@ -12,16 +12,19 @@
     "{}"
     (str "{ "
          (->> m
-              (map (fn [[k v]] (string/interp "$(write-string k)$: $(write-string v)$")))
-              (string/join ", "))
+              (transduce (comp (map (fn [[k v]] (string/interp "$(write-string k)$: $(write-string v)$")))
+                               (interpose ", "))
+                         string-builder))
          " }")))
 
 (defn- write-sequential [xs]
   (if (empty? xs)
     "[]"
     (str "[ "
-         (->> (map write-string xs)
-              (string/join ", "))
+         (->> xs
+              (transduce (comp (map write-string)
+                               (interpose ", "))
+                         string-builder))
          " ]")))
 
 (defn- write-str [s]
