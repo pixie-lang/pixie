@@ -8,24 +8,20 @@
   (write-string [this]))
 
 (defn- write-map [m]
-  (if (empty? m)
-    "{}"
-    (str "{ "
-         (->> m
-              (transduce (comp (map (fn [[k v]] (string/interp "$(write-string k)$: $(write-string v)$")))
-                               (interpose ", "))
-                         string-builder))
-         " }")))
+  (str "{"
+       (->> m
+            (transduce (comp (map (fn [[k v]] (string/interp "$(write-string k)$: $(write-string v)$")))
+                             (interpose ", "))
+                       string-builder))
+       "}"))
 
 (defn- write-sequential [xs]
-  (if (empty? xs)
-    "[]"
-    (str "[ "
-         (->> xs
-              (transduce (comp (map write-string)
-                               (interpose ", "))
-                         string-builder))
-         " ]")))
+  (str "["
+       (->> xs
+            (transduce (comp (map write-string)
+                             (interpose ", "))
+                       string-builder))
+       "]"))
 
 (defn- write-str [s]
   (string/interp "\"$s$\""))
@@ -34,10 +30,12 @@
   Character (write-string [this] (write-str this))
   Cons (write-string [this] (write-sequential this))
   EmptyList (write-string [this] (write-sequential this))
+  Nil (write-string [_] "null")
   Number (write-string [this] (str this))
   Keyword (write-string [this] (write-str (name this)))
   LazySeq (write-string [this] (write-sequential this))
   IMap (write-string [this] (write-map this))
   IVector (write-string [this] (write-sequential this))
+  PersistentList (write-string [this] (write-sequential this))
   Ratio (write-string [this] (str (float this)))
   String (write-string [this] (write-str this)))
