@@ -6,3 +6,7 @@ lib
 include
 *.pxic
 test.tmp
+/libuv*
+/uv-*
+/uv.h
+/*compressed-output.*
