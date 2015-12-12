@@ -41,7 +41,7 @@
     (common/stream-reducer this f init)))
 
 (defn open-read
-  {:doc "Open a file for reading, returning a IInputStream"
+  {:doc "Opens a file for reading. Returns an IInputStream."
    :added "0.1"}
   [filename]
   (assert (string? filename) "Filename must be a string")
@@ -95,15 +95,15 @@
     (throw [::Exception "Expected a LineReader, UTF8InputStream, or BufferedInputStream"])))
 
 (defn read-line
-  "Read one line from input-stream for each invocation.
-   nil when all lines have been read. 
+  "Reads one line from input-stream for each invocation.
+   Returns nil when all lines have been read.
    Pass a BufferedInputStream for best performance."
   [input-stream]
   (-read-line (line-reader input-stream)))
 
 (defn line-seq
   "Returns the lines of text from input-stream as a lazy sequence of strings.
-   input-stream must implement IInputStream"
+   input-stream must implement IInputStream."
   [input-stream]
   (let [lr (line-reader input-stream)]
     (when-let [line (-read-line lr)]
@@ -213,7 +213,7 @@
   result)
 
 (defn open-write
-  {:doc "Open a file for writing, returning a IOutputStream"
+  {:doc "Opens a file for writing. Returns an IOutputStream."
    :added "0.1"}
   [filename]
   (assert (string? filename) "Filename must be a string")
@@ -244,8 +244,8 @@
     
     :else (throw [::Exception "Expected a string or IOutputStream"])))
 
-(defn slurp 
-  "Reads in the contents of input. Input must be a filename or an IInputStream"
+(defn slurp
+  "Reads in the contents of input. Input must be a filename or an IInputStream."
   [input]
   (let [stream (cond
                  (string? input) (open-read input)

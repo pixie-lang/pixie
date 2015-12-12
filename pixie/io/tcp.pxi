@@ -64,7 +64,7 @@
 
 
 (defn tcp-client
-  "Creates a TCP connection to the given ip (as a string) and port (an integer). Will return a TCPStream"
+  "Creates a TCP connection to the given ip (as a string) and port (an integer). Returns a TCPStream."
   [ip port]
   (let [client-addr (uv/sockaddr_in)
         uv-connect (uv/uv_connect_t)
