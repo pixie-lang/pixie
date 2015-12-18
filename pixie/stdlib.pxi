@@ -2245,6 +2245,11 @@ user => (refer 'pixie.string :exclude '(substring))"
 
 
 (defn merge-with
+  {:doc "Returns a map consisting of each map merged onto the first. If a
+         map contains a key that already exists in the result, the
+         value will be f applied to the value in the result map and
+         the value from the map being merged in."
+   :examples [["(merge-with + {:a 1 :b 2} {:a 3 :c 5} {:c 3 :d 4})" nil {:a 4, :b 2, :c 8 :d 4}]]}
   [f & maps]
   (cond
    (empty? maps) nil
@@ -2570,24 +2575,29 @@ Expands to calls to `extend-type`."
   (into () coll))
 
 (defmacro use
+  "Loads a namespace and refers all symbols from it."
   [ns]
   `(do
      (load-ns ~ns)
      (refer ~ns :refer :all)))
 
 (defn count-rf
-  "A Reducing function that counts the items reduced over"
+  "A Reducing function that counts the items reduced over."
   ([] 0)
   ([result] result)
   ([result _] (inc result)))
 
 (defn dispose!
-  "Finalizes use of the object by cleaning up resources used by the object"
+  "Finalizes use of the object by cleaning up resources used by the object."
   [x]
   (-dispose! x)
   nil)
 
-(defmacro using [bindings & body]
+(defmacro using
+  "Evaluates body with the bindings available as with let,
+  calling -dispose! on each name afterwards. Returns the value of the
+  last expression in body."
+  [bindings & body]
   (let [pairs (partition 2 bindings)
         names (map first pairs)]
     `(let [~@bindings
@@ -2653,6 +2663,8 @@ Calling this function on something that is not ISeqable returns a seq with that 
           {} m))
 
 (defn mapv
+  {:doc "Returns a vector consisting of f applied to each element in col."
+   :examples [["(mapv inc '(1 2 3))" nil [2 3 4]]]}
   ([f col]
    (transduce (map f) conj col)))
 
@@ -2687,7 +2699,10 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 (def hash-map hashmap)
 
-(defn zipmap [a b]
+(defn zipmap
+  "Returns a map with the elements of a mapped to the corresponding
+  elements of b."
+  [a b]
   (into {} (map vector a b)))
 
 (extend -str Environment
@@ -2775,6 +2790,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 
 (defn bool?
+  "Returns true if x is a Bool."
   [x]
   (instance? Bool x))
 
@@ -2891,7 +2907,8 @@ Calling this function on something that is not ISeqable returns a seq with that 
 
 (defprotocol IComparable
   (-compare [x y]
-    "Compare to objects returing 0 if the same -1 with x is logically smaller than y and 1 if x is logically larger."))
+    "Compares two objects. Returns 0 when x is equal to y, -1 when x
+    is logically smaller than y, and 1 when x is logically larger."))
 
 (defn compare-numbers
   [x y]
@@ -2981,6 +2998,9 @@ Calling this function on something that is not ISeqable returns a seq with that 
       (throw [::ComparisonError (str "Cannot compare: " x " to " y)]))))
 
 (defn compare
+  "Compares two objects. Returns 0 when x is equal to y, -1 when x is
+  logically smaller than y, and 1 when x is logically larger. x must
+  implement IComparable."
   [x y]
   (if (satisfies? IComparable x)
     (-compare x y)
