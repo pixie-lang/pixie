@@ -1,5 +1,5 @@
 *.pyc
-externals
+externals*
 pixie-vm
 .idea
 lib
