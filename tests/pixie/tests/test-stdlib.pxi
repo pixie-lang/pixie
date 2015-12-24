@@ -568,6 +568,12 @@
   (t/assert= (transduce (drop-while even?) conj [0 2] [1 4 6]) [0 2 1 4 6])
   (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))
 
+(t/deftest test-cycle
+  (t/assert= (cycle ()) ())
+  (t/assert= (cycle nil) ())
+  (t/assert= (take 5 (cycle '(1 2))) '(1 2 1 2 1))
+  (t/assert= (take 3 (cycle [nil])) '(nil nil nil)))
+
 (t/deftest test-trace
   (try
     (/ 0 0)

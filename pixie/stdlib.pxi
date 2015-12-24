@@ -1746,6 +1746,19 @@ The new value is thus `(apply f current-value-of-atom args)`."
                       s)))]
        (lazy-seq (step pred coll)))))
 
+(defn cycle
+  [coll]
+  (if (empty? coll)
+    ()
+    (let [cycle'
+          (fn cycle' [current]
+            (lazy-seq
+             (cons
+              (first current)
+              (let [rst (rest current)]
+                (cycle' (if (empty? rst) coll rst))))))]
+      (cycle' coll))))
+
 ;; TODO: use a transient map in the future
 (defn group-by
   {:doc "Groups the collection into a map keyed by the result of applying f on each element. The value at each key is a vector of elements in order of appearance."
