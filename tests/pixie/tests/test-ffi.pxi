@@ -1,6 +1,7 @@
 (ns pixie.tests.test-ffi
   (require pixie.test :as t)
-  (require pixie.math :as m))
+  (require pixie.math :as m)
+  (require pixie.ffi-infer :as i))
 
 
 
@@ -35,6 +36,17 @@
 
 (t/deftest test-ffi-infer
   (t/assert= 0.5 (m/asin (m/sin 0.5))))
+
+(t/deftest test-cdouble
+  (i/with-config {:library "m"
+                  :cxx-flags ["-lm"]
+                  :includes ["math.h"]}
+    (i/defcfn sinf)
+    (i/defcfn asinf)
+    (i/defcfn cosf)
+    (i/defcfn powf))
+  (t/assert= 0.5 (asinf (sinf 0.5)))
+  (t/assert= 1.0 (+ (powf (sinf 0.5) 2.0) (powf (cosf 0.5) 2.0))))
 
 
 (t/deftest test-ffi-callbacks
