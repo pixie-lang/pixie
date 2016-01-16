@@ -104,11 +104,14 @@ return 0;
    (= (:type of-type) :function) (callback-type of-type in-struct?)
    :else 'pixie.stdlib/CVoidP))
 
+(def float-types {32 'pixie.stdlib/CFloat
+                  64 'pixie.stdlib/CDouble})
+                  
 (defmethod edn-to-ctype :float
-  [{:keys [size]} _]
-  (cond
-   (= size 8) 'pixie.stdlib/CDouble
-   :else (assert false "unknown type")))
+  [{:keys [size] :as tp} _]
+  (let [tp-found (get float-types (* 8 size))]
+    (assert tp-found (str "No type found for " tp))
+    tp-found))
 
 (defmethod edn-to-ctype :void
   [_ _]

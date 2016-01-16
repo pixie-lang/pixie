@@ -350,6 +350,26 @@ class CInt(CType):
         return clibffi.cast_type_to_ffitype(rffi.INT)
 CInt()
 
+class CFloat(CType):
+    def __init__(self):
+        CType.__init__(self, u"pixie.stdlib.CFloat")
+
+    def ffi_get_value(self, ptr):
+        casted = rffi.cast(rffi.FLOATP, ptr)
+        return Float(rffi.cast(rffi.DOUBLE, casted[0]))
+
+    def ffi_set_value(self, ptr, val):
+        val = to_float(val)
+        casted = rffi.cast(rffi.FLOATP, ptr)
+        casted[0] = rffi.cast(rffi.FLOAT, val.float_val())
+
+    def ffi_size(self):
+        return rffi.sizeof(rffi.FLOAT)
+
+    def ffi_type(self):
+        return clibffi.cast_type_to_ffitype(rffi.FLOAT)
+CFloat()
+
 class CDouble(CType):
     def __init__(self):
         CType.__init__(self, u"pixie.stdlib.CDouble")
