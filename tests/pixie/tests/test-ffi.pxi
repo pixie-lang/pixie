@@ -49,12 +49,8 @@
   (t/assert= 1.0 (+ (powf (sinf 0.5) 2.0) (powf (cosf 0.5) 2.0))))
 
 (t/deftest test-invalid-float-argument
-  (try
-    (m/sin "nil")
-    (catch ex (t/assert= (type ex) RuntimeException)))
-  (try
-    (m/exp nil)
-    (catch ex (t/assert= (type ex) RuntimeException)))
+  (t/assert-throws? (m/sin "nil"))
+  (t/assert-throws? (m/sin nil))
   )
 
 (t/deftest test-ffi-callbacks
