@@ -2,14 +2,9 @@ sudo: false
 env:
   - JIT_OPTS='--opt=jit' TARGET_OPTS='target.py'
   - JIT_OPTS='' TARGET_OPTS='target.py'
-  #- JIT_OPTS='--opt=jit' TARGET_OPTS='target_preload.py'
-  #- JIT_OPTS='' TARGET_OPTS='target_preload.py'
 
 matrix:
   fast_finish: true 
-  allow_failures:
-    - env: JIT_OPTS='--opt=jit' TARGET_OPTS='target_preload.py'
-    - env: JIT_OPTS='' TARGET_OPTS='target_preload.py'
 
 script:
   - make PYTHON=python build
