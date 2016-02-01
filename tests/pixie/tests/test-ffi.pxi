@@ -48,6 +48,10 @@
   (t/assert= 0.5 (asinf (sinf 0.5)))
   (t/assert= 1.0 (+ (powf (sinf 0.5) 2.0) (powf (cosf 0.5) 2.0))))
 
+(t/deftest test-invalid-float-argument
+  (t/assert-throws? (m/sin "nil"))
+  (t/assert-throws? (m/sin nil))
+  )
 
 (t/deftest test-ffi-callbacks
   (let [MAX 255

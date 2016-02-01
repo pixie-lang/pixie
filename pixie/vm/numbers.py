@@ -320,7 +320,7 @@ def to_float(x):
         return rt.wrap(float(x.int_val()))
     if isinstance(x, BigInteger):
         return rt.wrap(x.bigint_val().tofloat())
-    assert False
+    object.runtime_error(u"Cannot convert %s to float" %x.type().name())
 
 def to_float_conv(c):
     if c == Float:
