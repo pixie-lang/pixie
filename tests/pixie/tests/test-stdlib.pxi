@@ -582,11 +582,6 @@
   (t/assert= ["2" "4"]
              (eduction (map inc) (filter even?) (map str) (range 5)))
   ;; materialize at the end
-  ;; TODO: For when sort is implemented
-  ;; (t/assert= [1 1 1 1 2 2 2 3 3 4]
-  ;;            (->> (range 5)
-  ;;                 (eduction (mapcat range) (map inc))
-  ;;                 sort))
   (t/assert= [1 1 2 1 2 3 1 2 3 4]
              (vec (->> (range 5)
                        (eduction (mapcat range) (map inc)))))
