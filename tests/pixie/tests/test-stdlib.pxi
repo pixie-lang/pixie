@@ -574,6 +574,34 @@
   (t/assert= (take 5 (cycle '(1 2))) '(1 2 1 2 1))
   (t/assert= (take 3 (cycle [nil])) '(nil nil nil)))
 
+(t/deftest test-eduction
+  ;; one xform
+  (t/assert= [1 2 3 4 5]
+             (eduction (map inc) (range 5)))
+  ;; multiple xforms
+  (t/assert= ["2" "4"]
+             (eduction (map inc) (filter even?) (map str) (range 5)))
+  ;; materialize at the end
+  ;; TODO: For when sort is implemented
+  ;; (t/assert= [1 1 1 1 2 2 2 3 3 4]
+  ;;            (->> (range 5)
+  ;;                 (eduction (mapcat range) (map inc))
+  ;;                 sort))
+  (t/assert= [1 1 2 1 2 3 1 2 3 4]
+             (vec (->> (range 5)
+                       (eduction (mapcat range) (map inc)))))
+  (t/assert= {1 4, 2 3, 3 2, 4 1}
+             (->> (range 5)
+                  (eduction (mapcat range) (map inc))
+                  frequencies))
+  (t/assert= ["tac" "god" "hsif" "drib" "kravdraa"]
+             (->> ["cat" "dog" "fish" "bird" "aardvark"]
+                  (eduction (map pixie.string/reverse))
+                  (seq)))
+  ;; expanding transducer with nils
+  (t/assert= '(1 2 3 nil 4 5 6 nil)
+             (eduction cat [[1 2 3 nil] [4 5 6 nil]])))
+
 (t/deftest test-trace
   (try
     (/ 0 0)

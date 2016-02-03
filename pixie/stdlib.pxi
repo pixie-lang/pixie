@@ -1884,6 +1884,35 @@ not enough elements were present."
             (when-let [s (seq coll)]
               (reductions f (f init (first s)) (rest s))))))))
 
+(defn completing
+  "Takes a reducing function f of 2 args and returns a fn suitable for
+  transduce by adding an arity-1 signature that calls cf (default -
+  identity) on the result argument."
+  ([f] (completing f identity))
+  ([f cf]
+     (fn
+       ([] (f))
+       ([x] (cf x))
+       ([x y] (f x y)))))
+
+(deftype Eduction [xform coll]
+   IReduce
+   (-reduce [self f init]
+     ;; NB (completing f) isolates completion of inner rf from outer rf
+     (transduce xform (completing f) init coll))
+
+   ISeqable
+   (-seq [self]
+       (reduce conj self)))
+
+(defn eduction
+  "Returns a reducible/iterable application of the transducers
+  to the items in coll. Transducers are applied in order as if
+  combined with comp. Note that these applications will be
+  performed every time reduce/iterator is called."
+  [& xforms]
+  (->Eduction (apply comp (butlast xforms)) (last xforms)))
+
 (defn destructure [binding expr]
   (cond
    (symbol? binding) [binding expr]
