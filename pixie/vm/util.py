@@ -78,9 +78,6 @@ import pixie.vm.rt as rt
 class HashingState(Object):
     _type = Type(u"pixie.stdlib.HashingState")
 
-    def type(self):
-        return HashingState._type
-
     def __init__(self):
         self._n = r_uint(0)
         self._hash = r_uint(1)

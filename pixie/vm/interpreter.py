@@ -159,10 +159,6 @@ class ShallowContinuation(Object):
         self._frame = frame
         self._val = val
 
-    def type(self):
-        return ShallowContinuation._type
-
-
     def is_finished(self):
         return self._frame.finished
 

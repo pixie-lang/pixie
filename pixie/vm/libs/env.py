@@ -10,9 +10,6 @@ import os
 class Environment(Object):
     _type = Type(u"pixie.stdlib.Environment")
 
-    def type(self):
-        return Environment._type
-
     def val_at(self, key, not_found):
         if not isinstance(key, String):
             runtime_error(u"Environment variables are strings ")

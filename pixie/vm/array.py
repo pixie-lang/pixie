@@ -14,8 +14,6 @@ UNROLL_IF_SMALLER_THAN = 8
 class Array(object.Object):
     _type = object.Type(u"pixie.stdlib.Array")
     _immutable_fields_ = ["_list"]
-    def type(self):
-        return Array._type
 
     def __init__(self, lst):
         self._list = lst
@@ -98,9 +96,6 @@ class ArraySeq(object.Object):
             init = f.invoke([init, rt.nth(self._w_array, rt.wrap(x))])
         return init
 
-    def type(self):
-        return self._type
-
 @extend(proto._first, ArraySeq)
 def _first(self):
     assert isinstance(self, ArraySeq)
@@ -173,9 +168,6 @@ class ByteArray(object.Object):
         self._buffer = lltype.malloc(ARRAY_OF_UCHAR, size, flavor="raw")
         for x in range(size):
             self._buffer[x] = chr(0)
-
-    def type(self):
-        return ByteArray._type
 
 
     def __del__(self):

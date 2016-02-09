@@ -65,9 +65,6 @@ class Lock(Object):
     def __init__(self, ll_lock):
         self._ll_lock = ll_lock
 
-    def type(self):
-        return Lock._type
-
 
 @as_var("-create-lock")
 def _create_lock():

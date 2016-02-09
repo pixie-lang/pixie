@@ -8,9 +8,6 @@ import os
 class Path(Object):
     _type = Type(u"pixie.path.Path")
 
-    def type(self):
-        return Path._type
-
     def __init__(self, top):
         self._path = rt.name(top)
 

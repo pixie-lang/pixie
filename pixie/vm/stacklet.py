@@ -25,9 +25,6 @@ class StackletHandle(Object):
         self._stacklet_handle = h
         self._used = False
 
-    def type(self):
-        return self._type
-
     def invoke(self, args):
         affirm(not self._used, u"Can only call a given stacklet handle once.")
         affirm(len(args) == 1, u"Only one arg should be handed to a stacklet handle")

@@ -216,8 +216,6 @@ def get_field(inst, field):
 
 class AbstractMutableCell(Object):
     _type = Type(u"pixie.stdlib.AbstractMutableCell")
-    def type(self):
-        return self._type
 
     def set_mutable_cell_value(self, ct, fields, nm, idx, value):
         pass

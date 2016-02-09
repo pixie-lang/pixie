@@ -12,9 +12,6 @@ VAR_KEY = intern_var(u"pixie.stdlib", u"key")
 class PersistentHashSet(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentHashSet")
 
-    def type(self):
-        return PersistentHashSet._type
-
     def __init__(self, meta, m):
         self._meta = meta
         self._map = m

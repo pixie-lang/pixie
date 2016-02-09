@@ -8,9 +8,6 @@ import pixie.vm.rt as rt
 class PersistentList(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentList")
 
-    def type(self):
-        return PersistentList._type
-
     def __init__(self, head, tail, cnt, meta=nil):
         self._first = head
         self._next = tail
@@ -100,8 +97,6 @@ def _with_meta(self, meta):
     
 class EmptyList(object.Object):
     _type = object.Type(u"pixie.stdlib.EmptyList")
-    def type(self):
-        return EmptyList._type
     
     def __init__(self, meta=nil):
         self._meta = meta

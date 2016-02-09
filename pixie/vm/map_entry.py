@@ -6,9 +6,6 @@ from  pixie.vm.code import extend, as_var
 class MapEntry(object.Object):
     _type = object.Type(u"pixie.stdlib.MapEntry")
 
-    def type(self):
-        return MapEntry._type
-
     def __init__(self, key, val):
         self._key = key
         self._val = val

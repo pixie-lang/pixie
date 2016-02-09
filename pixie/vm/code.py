@@ -148,9 +148,6 @@ class MultiArityFn(BaseCode):
 
     _immutable_fields_ = ["_arities[*]", "_required_arity", "_rest_fn"]
 
-    def type(self):
-        return MultiArityFn._type
-
     def __init__(self, name, arities, required_arity=0, rest_fn=None, meta=nil):
         BaseCode.__init__(self)
         self._name = name
@@ -199,9 +196,6 @@ class NativeFn(BaseCode):
     def __init__(self, doc=None):
         BaseCode.__init__(self)
 
-    def type(self):
-        return NativeFn._type
-
     def invoke(self, args):
         return self.inner_invoke(args)
 
@@ -216,9 +210,6 @@ class Code(BaseCode):
     """Interpreted code block. Contains consts and """
     _type = object.Type(u"pixie.stdlib.Code")
     _immutable_fields_ = ["_arity", "_consts[*]", "_bytecode", "_stack_size", "_meta", "_debug_points"]
-
-    def type(self):
-        return Code._type
 
     def __init__(self, name, arity, bytecode, consts, stack_size, debug_points, meta=nil):
         BaseCode.__init__(self)
@@ -277,9 +268,6 @@ class VariadicCode(BaseCode):
     _immutable_fields_ = ["_required_arity", "_code", "_meta"]
     _type = object.Type(u"pixie.stdlib.VariadicCode")
 
-    def type(self):
-        return VariadicCode._type
-
     def __init__(self, code, required_arity, meta=nil):
         BaseCode.__init__(self)
         self._required_arity = r_uint(required_arity)
@@ -319,9 +307,6 @@ class Closure(BaseCode):
     _type = object.Type(u"pixie.stdlib.Closure")
     _immutable_fields_ = ["_closed_overs[*]", "_code", "_meta"]
     
-    def type(self):
-        return Closure._type
-
     def __init__(self, code, closed_overs, meta=nil):
         BaseCode.__init__(self)
         affirm(isinstance(code, Code), u"Code argument to Closure must be an instance of Code")
@@ -373,9 +358,6 @@ class Closure(BaseCode):
 class Undefined(object.Object):
     _type = object.Type(u"pixie.stdlib.Undefined")
 
-    def type(self):
-        return Undefined._type
-
 undefined = Undefined()
 
 
@@ -412,9 +394,6 @@ class DynamicVars(py_object):
 class Var(BaseCode):
     _type = object.Type(u"pixie.stdlib.Var")
     _immutable_fields_ = ["_ns_ref"]
-
-    def type(self):
-        return Var._type
 
     def __init__(self, ns_ref, ns, name):
         BaseCode.__init__(self)
@@ -496,9 +475,6 @@ class Namespace(object.Object):
     _type = object.Type(u"pixie.stdlib.Namespace")
 
     _immutable_fields_ = ["_rev?"]
-
-    def type(self):
-        return Namespace._type
 
     def __init__(self, name):
         self._rev = 0
@@ -636,9 +612,6 @@ class Protocol(object.Object):
 
     _immutable_fields_ = ["_rev?"]
 
-    def type(self):
-        return Protocol._type
-
     def __init__(self, name):
         self._name = name
         self._polyfns = {}
@@ -662,9 +635,6 @@ class Protocol(object.Object):
 
 class PolymorphicFn(BaseCode):
     _type = object.Type(u"pixie.stdlib.PolymorphicFn")
-
-    def type(self):
-        return PolymorphicFn._type
 
     _immutable_fields_ = ["_rev?"]
 
@@ -744,9 +714,6 @@ class PolymorphicFn(BaseCode):
 class DoublePolymorphicFn(BaseCode):
     """A function that is polymorphic on the first two arguments"""
     _type = object.Type(u"pixie.stdlib.DoublePolymorphicFn")
-
-    def type(self):
-        return DefaultProtocolFn._type
 
     _immutable_fields_ = ["_rev?"]
 

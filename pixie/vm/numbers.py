@@ -13,9 +13,6 @@ import math
 class Number(object.Object):
     _type = object.Type(u"pixie.stdlib.Number")
 
-    def type(self):
-        return Number._type
-
 class Integer(Number):
     _type = object.Type(u"pixie.stdlib.Integer", Number._type)
     _immutable_fields_ = ["_int_val"]
@@ -32,9 +29,6 @@ class Integer(Number):
     def promote(self):
         return Integer(jit.promote(self._int_val))
 
-    def type(self):
-        return Integer._type
-
 zero_int = Integer(0)
 one_int = Integer(1)
 
@@ -48,9 +42,6 @@ class BigInteger(Number):
     def bigint_val(self):
         return self._bigint_val
 
-    def type(self):
-        return BigInteger._type
-
 class Float(Number):
     _type = object.Type(u"pixie.stdlib.Float", Number._type)
     _immutable_fields_ = ["_float_val"]
@@ -60,9 +51,6 @@ class Float(Number):
 
     def float_val(self):
         return self._float_val
-
-    def type(self):
-        return Float._type
 
 class Ratio(Number):
     _type = object.Type(u"pixie.stdlib.Ratio", Number._type)
@@ -78,9 +66,6 @@ class Ratio(Number):
 
     def denominator(self):
         return self._denominator
-
-    def type(self):
-        return Ratio._type
 
 @wrap_fn
 def ratio_write(obj):

@@ -9,9 +9,6 @@ import rpython.rlib.jit as jit
 class LazySeq(object.Object):
     _type = object.Type(u"pixie.stdlib.LazySeq")
 
-    def type(self):
-        return LazySeq._type
-
     def __init__(self, fn, meta=nil):
         self._fn = fn
         self._meta = meta

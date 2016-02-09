@@ -43,9 +43,6 @@ ARG_ENV.set_root(nil)
 class PlatformReader(object.Object):
     _type = object.Type(u"PlatformReader")
 
-    def type(self):
-        return PlatformReader._type
-
     def read(self):
         assert False
 
@@ -57,8 +54,6 @@ class PlatformReader(object.Object):
 
 class StringReader(PlatformReader):
     _type = object.Type(u"pixie.stdlib.StringReader")
-    def type(self):
-        return StringReader._type
 
     def __init__(self, s):
         affirm(isinstance(s, unicode), u"StringReader requires unicode")
@@ -111,8 +106,6 @@ def reader_fn(fn):
 
 class LinePromise(object.Object):
     _type = object.Type(u"pixie.stdlib.LinePromise")
-    def type(self):
-        return LinePromise._type
 
     def __init__(self):
         self._chrs = []
@@ -769,9 +762,6 @@ def read_symbol(rdr, ch):
 
 class EOF(object.Object):
     _type = object.Type(u"EOF")
-
-    def type(self):
-        return EOF._type
 
 
 eof = EOF()
