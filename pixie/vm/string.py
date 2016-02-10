@@ -11,9 +11,6 @@ from pixie.vm.libs.pxic.util import add_marshall_handlers
 class String(Object):
     _type = Type(u"pixie.stdlib.String")
 
-    def type(self):
-        return String._type
-
     def __init__(self, s):
         #assert isinstance(s, unicode)
         self._str = s
@@ -75,9 +72,6 @@ def _eq(self, v):
 class Character(Object):
     _type = Type(u"pixie.stdlib.Character")
     _immutable_fields_ = ["_char_val"]
-
-    def type(self):
-        return Character._type
 
     def __init__(self, i):
         assert isinstance(i, int)

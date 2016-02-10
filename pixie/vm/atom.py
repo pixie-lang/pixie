@@ -7,9 +7,6 @@ import pixie.vm.stdlib as proto
 class Atom(object.Object):
     _type = object.Type(u"pixie.stdlib.Atom")
 
-    def type(self):
-        return Atom._type
-
     def with_meta(self, meta):
         return Atom(self._boxed_value, meta)
 

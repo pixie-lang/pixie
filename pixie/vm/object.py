@@ -26,8 +26,12 @@ class Object(object):
     """
     _attrs_ = ()
 
+    # Initialized after Type is defined.
+    _type = None
+
     def type(self):
-        affirm(False, u".type isn't overloaded")
+        assert(isinstance(self.__class__._type, Type))
+        return self.__class__._type
 
     @jit.unroll_safe
     def invoke(self, args):
@@ -109,9 +113,6 @@ class Type(Object):
     def name(self):
         return self._name
 
-    def type(self):
-        return Type._type
-
     def parent(self):
         return self._parent
 
@@ -156,9 +157,6 @@ class RuntimeException(Object):
         self._msg = msg
         self._data = data
         self._trace = []
-
-    def type(self):
-        return RuntimeException._type
 
     def __repr__(self):
         import pixie.vm.rt as rt
@@ -211,8 +209,7 @@ def safe_invoke(f, args):
 
 class ErrorInfo(Object):
     _type = Type(u"pixie.stdlib.ErrorInfo")
-    def type(self):
-        return ErrorInfo._type
+
     def __init__(self):
         pass
 

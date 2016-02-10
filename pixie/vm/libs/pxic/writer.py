@@ -73,8 +73,6 @@ class Writer(object):
 
 class WriterBox(Object):
     _type = Type(u"pixie.stdlib.WriterBox")
-    def type(self):
-        return WriterBox._type
 
     def __init__(self, wtr):
         self._pxic_writer = wtr

@@ -19,9 +19,6 @@ class Box(py_object):
 class PersistentHashMap(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentHashMap")
 
-    def type(self):
-        return PersistentHashMap._type
-
     def __init__(self, cnt, root, meta=nil):
         self._cnt = cnt
         self._root = root
@@ -61,9 +58,6 @@ class PersistentHashMap(object.Object):
 
 class INode(object.Object):
     _type = object.Type(u"pixie.stdlib.INode")
-
-    def type(self):
-        return INode._type
 
     def assoc_inode(self, shift, hash_val, key, val, added_leaf):
         pass

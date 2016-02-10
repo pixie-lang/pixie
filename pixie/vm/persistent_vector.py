@@ -13,9 +13,6 @@ import pixie.vm.rt as rt
 class Node(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentVectorNode")
 
-    def type(self):
-        return Node._type
-
     def __init__(self, edit, array=None):
         self._edit = edit
         self._array = [None] * 32 if array is None else array
@@ -26,9 +23,6 @@ EMPTY_NODE = Node(None)
 
 class PersistentVector(object.Object):
     _type = object.Type(u"pixie.stdlib.PersistentVector")
-
-    def type(self):
-        return PersistentVector._type
 
     def __init__(self, meta, cnt, shift, root, tail):
         self._meta = meta
@@ -210,9 +204,6 @@ edited = u"edited"
 
 class TransientVector(object.Object):
     _type = object.Type(u"pixie.stdlib.TransientVector")
-
-    def type(self):
-        return TransientVector._type
 
     def __init__(self, cnt, shift, root, tail):
         self._cnt = cnt

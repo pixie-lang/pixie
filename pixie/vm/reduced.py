@@ -6,8 +6,6 @@ import pixie.vm.stdlib as proto
 
 class Reduced(object.Object):
     _type = object.Type(u"pixie.stdlib.Reduced")
-    def type(self):
-        return Reduced._type
 
     def __init__(self, boxed_value):
         self._boxed_value = boxed_value

@@ -41,9 +41,6 @@ class CType(object.Type):
 class ExternalLib(object.Object):
     _type = object.Type(u"pixie.stdlib.ExternalLib")
 
-    def type(self):
-        return ExternalLib._type
-
     def __init__(self, nm):
         assert isinstance(nm, unicode)
         self._name = nm
@@ -93,9 +90,6 @@ class ExternalLib(object.Object):
 class FFIFn(object.Object):
     _type = object.Type(u"pixie.stdlib.FFIFn")
     _immutable_fields_ = ["_name", "_f_ptr", "_c_fn_type"]
-
-    def type(self):
-        return FFIFn._type
 
     def __init__(self, name, fn_ptr, c_fn_type):
         assert isinstance(c_fn_type, CFunctionType)
@@ -218,9 +212,6 @@ class Buffer(PointerType):
     """ Defines a byte buffer with non-gc'd (therefore non-movable) contents
     """
     _type = object.Type(u"pixie.stdlib.Buffer")
-
-    def type(self):
-        return Buffer._type
 
     def __init__(self, size):
         self._size = size
@@ -502,8 +493,6 @@ cvoidp = CVoidP()
 
 class VoidP(PointerType):
     _type = cvoidp
-    def type(self):
-        return VoidP._type
 
     def __init__(self, raw_data):
         self._raw_data = raw_data
@@ -603,9 +592,6 @@ class CCallback(PointerType):
         self._raw_closure = raw_closure
         self._is_invoked = False
         self._unique_id = id
-
-    def type(self):
-        return CCallback._type
 
     def get_raw_closure(self):
         return self._raw_closure
