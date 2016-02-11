@@ -1,5 +1,6 @@
 (ns pixie.math
-  (:require [pixie.ffi-infer :as i]))
+  (:require [pixie.ffi-infer :as i]
+            [pixie.string :as s]))
 
 (i/with-config {:library "m"
                 :cxx-flags ["-lm"]
@@ -45,7 +46,8 @@
 
   (i/defcfn exp)
   (i/defcfn exp2)
-  (i/defcfn exp10)
+  (if-not (s/starts-with? pixie.platform/name "darwin")
+    (i/defcfn exp10))
   (i/defcfn expm1)
 
   (i/defcfn log)
@@ -94,3 +96,6 @@
 
   (i/defcfn erf)
   (i/defcfn erfc))
+
+(if (s/starts-with? pixie.platform/name "darwin")
+  (defn exp10 [x] (pow 10.0 x)))
