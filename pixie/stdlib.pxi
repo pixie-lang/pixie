@@ -3072,3 +3072,11 @@ ex: (vary-meta x assoc :foo 42)"
             (swap! cache assoc argsv ret)
             ret)
           val)))))
+
+(defn iterate
+  {:doc "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of
+    side-effects"
+   :signatures [[f x]]
+   :added "0.1"}
+  [f x]
+  (lazy-seq (cons x (iterate f (f x)))))

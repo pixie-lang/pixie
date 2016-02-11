@@ -761,3 +761,7 @@
 (t/deftest test-memoize
   (let [f (memoize rand)]
     (t/assert= (f) (f))))
+
+(t/deftest test-iterate
+  (t/assert= (take 5 (iterate inc 5)) '(5 6 7 8 9))
+  (t/assert= (str (type (iterate inc 1))) "<type pixie.stdlib.LazySeq>"))
