@@ -764,4 +764,5 @@
 
 (t/deftest test-iterate
   (t/assert= (take 5 (iterate inc 5)) '(5 6 7 8 9))
-  (t/assert= (str (type (iterate inc 1))) "<type pixie.stdlib.LazySeq>"))
+  (t/assert= (str (type (iterate inc 1))) "<type pixie.stdlib.LazySeq>")
+  (t/assert= (reduce (fn [a v] (if (< a 10) (+ a v) (reduced a))) (iterate (partial + 2) 1)) 16))

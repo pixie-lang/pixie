@@ -3073,6 +3073,16 @@ ex: (vary-meta x assoc :foo 42)"
             ret)
           val)))))
 
+(deftype Iterate [f x]
+  IReduce
+  (-reduce [self f init]
+    (loop [acc (f (if (nil? init)
+                (first self)
+                init))]
+      (if (reduced? acc)
+        @acc
+        (recur (f acc))))))
+
 (defn iterate
   {:doc "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of
     side-effects"
