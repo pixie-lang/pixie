@@ -2,7 +2,7 @@ all: help
 
 EXTERNALS=externals
 
-PYTHON ?= python2
+PYTHON ?= `env which -a python2 python2.7 | head -n1`
 PYTHONPATH=$$PYTHONPATH:$(EXTERNALS)/pypy
 
 
