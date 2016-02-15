@@ -3075,13 +3075,15 @@ ex: (vary-meta x assoc :foo 42)"
 
 (deftype Iterate [f x]
   IReduce
-  (-reduce [self f init]
-    (loop [acc (f (if (nil? init)
-                (first self)
-                init))]
+  (-reduce [self rf init]
+    (loop [col (rest self) 
+           acc (rf init (first self))]
       (if (reduced? acc)
         @acc
-        (recur (f acc))))))
+        (recur (rest col) (rf acc (first col))))))
+  ISeq
+  (-seq [self]
+    (cons x (lazy-seq* (fn [] (->Iterate f (f x)))))))
 
 (defn iterate
   {:doc "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of
@@ -3089,4 +3091,4 @@ ex: (vary-meta x assoc :foo 42)"
    :signatures [[f x]]
    :added "0.1"}
   [f x]
-  (lazy-seq (cons x (iterate f (f x)))))
+  (->Iterate f x))
