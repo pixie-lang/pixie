@@ -761,3 +761,9 @@
 (t/deftest test-memoize
   (let [f (memoize rand)]
     (t/assert= (f) (f))))
+
+(t/deftest test-iterate
+  (t/assert= (take 5 (iterate inc 5)) '(5 6 7 8 9))
+  (t/assert= (reduce (fn [a v] (reduced "foo")) 0 (iterate inc 1)) "foo")
+  (t/assert= (reduce (fn [a v] (if (< a 10) (+ a v) (reduced a))) 0 (iterate (partial + 2) 1)) 16))
+

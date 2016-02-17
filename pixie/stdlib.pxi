@@ -3072,3 +3072,23 @@ ex: (vary-meta x assoc :foo 42)"
             (swap! cache assoc argsv ret)
             ret)
           val)))))
+
+(deftype Iterate [f x]
+  IReduce
+  (-reduce [self rf init]
+    (loop [col (rest self) 
+           acc (rf init (first self))]
+      (if (reduced? acc)
+        @acc
+        (recur (rest col) (rf acc (first col))))))
+  ISeq
+  (-seq [self]
+    (cons x (lazy-seq* (fn [] (->Iterate f (f x)))))))
+
+(defn iterate
+  {:doc "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of
+    side-effects"
+   :signatures [[f x]]
+   :added "0.1"}
+  [f x]
+  (->Iterate f x))
