@@ -17,6 +17,7 @@
 (def srand (ffi-fn libc "srand" [CInt] CInt))
 (def fopen (ffi-fn libc "fopen" [CCharP CCharP] CVoidP))
 (def fread (ffi-fn libc "fread" [CVoidP CInt CInt CVoidP] CInt))
+(def mkdtemp (ffi-fn libc "mkdtemp" [CCharP] CCharP))
 
 (def libm (ffi-library (str "libm." pixie.platform/so-ext)))
 (def atan2 (ffi-fn libm "atan2" [CDouble CDouble] CDouble))
