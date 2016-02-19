@@ -3080,11 +3080,11 @@ ex: (vary-meta x assoc :foo 42)"
 (deftype Iterate [f x]
   IReduce
   (-reduce [self rf init]
-    (loop [col (rest self) 
-           acc (rf init (first self))]
+    (loop [next (f x) 
+           acc (rf init x)]
       (if (reduced? acc)
         @acc
-        (recur (rest col) (rf acc (first col))))))
+        (recur (f next) (rf acc next)))))
   ISeq
   (-seq [self]
     (cons x (lazy-seq* (fn [] (->Iterate f (f x)))))))
