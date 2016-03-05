@@ -117,8 +117,11 @@ class CompileFileFn(NativeFn):
 
     def inner_invoke(self, args):
         import pixie.vm.rt as rt
-
-        rt.compile_file(rt.wrap(self._filename))
+        try:
+            rt.compile_file(rt.wrap(self._filename))
+        except WrappedException as ex:
+            print "Error: ", ex._ex.__repr__()
+            os._exit(1)
 
 
 class IsPreloadFlag(object):
