@@ -2726,7 +2726,7 @@ Calling this function on something that is not ISeqable returns a seq with that 
           (= () form))
     form
     (let [[sym & args] form
-          fvar (resolve sym)]
+          fvar (resolve-in *ns* sym)]
       (if (and fvar (macro? @fvar))
         (apply @fvar args)
         form))))

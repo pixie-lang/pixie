@@ -687,7 +687,8 @@ def set_macro(f):
 
 @returns(bool)
 @as_var("macro?")
-def macro_QMARK_(f):
+def macro_QMARK_(v):
+    f = v.deref() if isinstance(v, Var) else v
     return true if isinstance(f, BaseCode) and f.is_macro() else false
 
 @returns(unicode)
