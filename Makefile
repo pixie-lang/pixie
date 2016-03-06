@@ -53,7 +53,7 @@ externals.fetched:
 $(EXTERNALS)/pypy:
 	mkdir $(EXTERNALS); \
 	cd $(EXTERNALS); \
-	curl https://bitbucket.org/pypy/pypy/get/81254.tar.bz2 >  pypy.tar.bz2; \
+	curl https://bitbucket.org/pypy/pypy/get/default.tar.bz2 >  pypy.tar.bz2; \
 	mkdir pypy; \
 	cd pypy; \
 	tar -jxf ../pypy.tar.bz2 --strip-components=1

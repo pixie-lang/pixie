@@ -1,9 +1,6 @@
-
-
-from rpython.rlib.entrypoint import entrypoint_highlevel, RPython_StartupCode
+from rpython.rlib.entrypoint import entrypoint_highlevel 
 from rpython.rtyper.lltypesystem import rffi, lltype
 from rpython.rtyper.lltypesystem.lloperation import llop
-
 
 @entrypoint_highlevel('main', [rffi.CCHARP], c_name='pixie_init')
 def pypy_execute_source(ll_progname):
