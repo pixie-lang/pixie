@@ -305,21 +305,6 @@ class QuoteReader(ReaderHandler):
         return cons(symbol(u"quote"), cons(itm))
 
 class KeywordReader(ReaderHandler):
-    def read(self, rdr):
-        acc = []
-
-        try:
-            while True:
-                ch = rdr.read()
-                if is_whitespace(ch) or is_terminating_macro(ch):
-                    rdr.unread()
-                    break
-                acc.append(ch)
-        except EOFError:
-            pass
-        sym_str = u"".join(acc)
-        return symbol(sym_str)
-
     def fqd(self, itm):
         ns_alias = rt.namespace(itm)
         current_nms = rt.ns.deref()
@@ -333,11 +318,11 @@ class KeywordReader(ReaderHandler):
     def invoke(self, rdr, ch):
         ch = rdr.read()
         if ch == u":":
-            itm = self.read(rdr)
+            ch = rdr.read()
+            itm = read_symbol(rdr, ch, False)
             return self.fqd(itm)
         else:
-            rdr.unread()
-            itm = self.read(rdr)
+            itm = read_symbol(rdr, ch, False)
 
             return keyword(rt.name(itm), rt.namespace(itm))
 
@@ -754,7 +739,7 @@ def read_number(rdr, ch):
         return parsed
     return Symbol(joined)
 
-def read_symbol(rdr, ch):
+def read_symbol(rdr, ch, convert_primitives=True):
     acc = [ch]
     try:
         while True:
@@ -767,12 +752,14 @@ def read_symbol(rdr, ch):
         pass
 
     sym_str = u"".join(acc)
-    if sym_str == u"true":
-        return true
-    if sym_str == u"false":
-        return false
-    if sym_str == u"nil":
-        return nil
+
+    if convert_primitives:
+        if sym_str == u"true":
+            return true
+        if sym_str == u"false":
+            return false
+        if sym_str == u"nil":
+            return nil
     return symbol(sym_str)
 
 class EOF(object.Object):
