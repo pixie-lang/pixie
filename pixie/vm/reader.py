@@ -10,7 +10,6 @@ from pixie.vm.symbol import symbol, Symbol
 from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
-from pixie.vm.libs.libedit import _readline
 from pixie.vm.string import Character
 from pixie.vm.code import wrap_fn
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
@@ -306,6 +305,21 @@ class QuoteReader(ReaderHandler):
         return cons(symbol(u"quote"), cons(itm))
 
 class KeywordReader(ReaderHandler):
+    def read(self, rdr):
+        acc = []
+
+        try:
+            while True:
+                ch = rdr.read()
+                if is_whitespace(ch) or is_terminating_macro(ch):
+                    rdr.unread()
+                    break
+                acc.append(ch)
+        except EOFError:
+            pass
+        sym_str = u"".join(acc)
+        return symbol(sym_str)
+
     def fqd(self, itm):
         ns_alias = rt.namespace(itm)
         current_nms = rt.ns.deref()
@@ -319,11 +333,12 @@ class KeywordReader(ReaderHandler):
     def invoke(self, rdr, ch):
         ch = rdr.read()
         if ch == u":":
-            itm = read_inner(rdr, True)
+            itm = self.read(rdr)
             return self.fqd(itm)
         else:
             rdr.unread()
-            itm = read_inner(rdr, True)
+            itm = self.read(rdr)
+
             return keyword(rt.name(itm), rt.namespace(itm))
 
 class LiteralStringReader(ReaderHandler):
