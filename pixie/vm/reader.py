@@ -10,7 +10,6 @@ from pixie.vm.symbol import symbol, Symbol
 from pixie.vm.keyword import keyword, Keyword
 import pixie.vm.rt as rt
 from pixie.vm.persistent_vector import EMPTY as EMPTY_VECTOR
-from pixie.vm.libs.libedit import _readline
 from pixie.vm.string import Character
 from pixie.vm.code import wrap_fn
 from pixie.vm.persistent_hash_map import EMPTY as EMPTY_MAP
@@ -319,11 +318,12 @@ class KeywordReader(ReaderHandler):
     def invoke(self, rdr, ch):
         ch = rdr.read()
         if ch == u":":
-            itm = read_inner(rdr, True)
+            ch = rdr.read()
+            itm = read_symbol(rdr, ch, False)
             return self.fqd(itm)
         else:
-            rdr.unread()
-            itm = read_inner(rdr, True)
+            itm = read_symbol(rdr, ch, False)
+
             return keyword(rt.name(itm), rt.namespace(itm))
 
 class LiteralStringReader(ReaderHandler):
@@ -739,7 +739,7 @@ def read_number(rdr, ch):
         return parsed
     return Symbol(joined)
 
-def read_symbol(rdr, ch):
+def read_symbol(rdr, ch, convert_primitives=True):
     acc = [ch]
     try:
         while True:
@@ -752,12 +752,14 @@ def read_symbol(rdr, ch):
         pass
 
     sym_str = u"".join(acc)
-    if sym_str == u"true":
-        return true
-    if sym_str == u"false":
-        return false
-    if sym_str == u"nil":
-        return nil
+
+    if convert_primitives:
+        if sym_str == u"true":
+            return true
+        if sym_str == u"false":
+            return false
+        if sym_str == u"nil":
+            return nil
     return symbol(sym_str)
 
 class EOF(object.Object):
