@@ -35,3 +35,39 @@
 
 (t/deftest test-deftype-mutables
   (mutate! (->Foo 0)))
+
+(t/deftest test-recur-must-tail
+  (t/assert-throws? 
+    (eval 
+      '(loop [n 0] 
+         (inc (recur n)))))
+
+  (t/assert-throws? 
+    (eval 
+      '(fn [n]
+         (if (zero? n)
+           1
+           (* n (recur (dec n)))))))
+
+(t/assert-throws? 
+    (eval 
+      '(fn [n]
+         (if (zero? n)
+           (* n (recur (dec n)))
+           1))))
+  
+  (t/assert= 
+    (eval 
+      '(loop [n 0] 
+         (if (= 10 n)
+           n
+           (recur (inc n)))))
+    10)
+
+  (t/assert= 
+    (eval 
+      '(loop [n 0] 
+         (if (not= 10 n)
+           (recur (inc n))
+           n)))
+    10))

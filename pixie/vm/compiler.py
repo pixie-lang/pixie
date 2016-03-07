@@ -539,8 +539,8 @@ def compile_fn_body(name, args, body, ctx):
         compile_form(body, new_ctx)
     else:
         while body is not nil:
-            if rt.next(body) is nil:
-                new_ctx.enable_tail_call()
+            #if rt.next(body) is nil:
+            #    new_ctx.enable_tail_call()
             compile_form(rt.first(body), new_ctx)
             body = rt.next(body)
             if body is not nil:
@@ -635,7 +635,7 @@ def compile_quote(form, ctx):
 
 def compile_recur(form, ctx):
     form = form.next()
-    #affirm(ctx.can_tail_call, u"Can't recur in non-tail position")
+    affirm(ctx.can_tail_call, u"Can't recur in non-tail position")
     ctc = ctx.can_tail_call
     ctx.disable_tail_call()
     args = 0
@@ -697,7 +697,7 @@ def compile_loop(form, ctx):
     bindings = rt.first(form)
     affirm(isinstance(bindings, PersistentVector), u"Loop bindings must be a vector")
     body = rt.next(form)
-
+    ctx.enable_tail_call()
     ctc = ctx.can_tail_call
     ctx.disable_tail_call()
 
