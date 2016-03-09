@@ -903,7 +903,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
     (if (next coll)
       (recur (next coll))
       (first coll))
-    
+
     (satisfies? ISeqable coll)
     (recur (seq coll))))
 
@@ -2106,7 +2106,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
         val
        not-found)))
   ISeq
-  (-first [this] 
+  (-first [this]
     (when (not= start stop)
       start))
   (-next  [this]
@@ -2187,6 +2187,14 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
    (filter (complement pred)))
   ([pred coll]
    (filter (complement pred) coll)))
+
+(defn sequence
+  "Returns a lazy sequence of `data`, optionally transforming it using `xform`.
+   Given an `eduction`, produces a lazy sequence of it."
+  ([eduction]
+   (lazy-seq (cons (first eduction) (sequence (rest eduction)))))
+  ([xform data]
+   (sequence (eduction xform data))))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
@@ -3080,7 +3088,7 @@ ex: (vary-meta x assoc :foo 42)"
 (deftype Iterate [f x]
   IReduce
   (-reduce [self rf init]
-    (loop [next (f x) 
+    (loop [next (f x)
            acc (rf init x)]
       (if (reduced? acc)
         @acc
