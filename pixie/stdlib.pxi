@@ -1907,7 +1907,7 @@ not enough elements were present."
 
    ISeqable
    (-seq [self]
-       (reduce conj self)))
+     (seq (reduce conj self))))
 
 (defn eduction
   "Returns a reducible/iterable application of the transducers
@@ -2192,7 +2192,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
   "Returns a lazy sequence of `data`, optionally transforming it using `xform`.
    Given an `eduction`, produces a lazy sequence of it."
   ([eduction]
-   (lazy-seq (cons (first eduction) (sequence (rest eduction)))))
+   (when (seq eduction) (lazy-seq (cons (first eduction) (sequence (rest eduction))))))
   ([xform data]
    (sequence (eduction xform data))))
 
