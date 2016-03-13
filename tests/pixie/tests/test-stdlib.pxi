@@ -28,9 +28,28 @@
   (t/assert= (keep-indexed (constantly nil) []) [])
   (t/assert= (keep-indexed (fn [i x] [i x]) [:a :b]) [[0 :a] [1 :b]])
 
-  (t/assert= (transduce (keep-indexed (constantly true)) conj []) [])
-  (t/assert= (transduce (keep-indexed (constantly nil)) conj []) [])
-  (t/assert= (transduce (keep-indexed (fn [i x] [i x])) conj [:a :b]) [[0 :a] [1 :b]]))
+  (t/assert= (transduce (keep-indexed (constantly true)) conj [:a :b]) [true true])
+  (t/assert= (transduce (keep-indexed (constantly nil)) conj [:a :b]) [])
+  (t/assert= (transduce (keep-indexed (fn [i x] [i x])) conj [:a :b]) [[0 :a] [1 :b]])
+
+  (let [even-index? (fn [i x]
+                        (when (even? i)
+                          x))]
+    (t/assert= (transduce (keep-indexed even-index?) conj [:a :b :c :d])
+               [:a :c])
+    (t/assert= (transduce (map-indexed even-index?) conj [:a :b :c :d])
+               [:a nil :c nil])
+
+    (t/assert= (transduce (comp (keep-indexed even-index?)
+                                (take 3))
+                          conj
+                          [:a :b :c :d :e :f])
+               [:a :c :e])
+    (t/assert= (transduce (comp (map-indexed even-index?)
+                                (take 3))
+                          conj
+                          [:a :b :c :d])
+               [:a nil :c])))
 
 (t/deftest test-reductions
   (t/assert= (reductions + nil)
@@ -542,7 +561,21 @@
   (t/assert= (transduce (take 0) conj [1 2 3 4]) [])
   (t/assert= (transduce (take 1) conj [1 2 3 4]) [1])
   (t/assert= (transduce (take 2) conj [1 2 3 4]) [1 2])
-  (t/assert= (transduce (take 3) conj [1 2 3 4]) [1 2 3]))
+  (t/assert= (transduce (take 3) conj [1 2 3 4]) [1 2 3])
+  (t/assert= (transduce (take 10) conj [1 2 3 4]) [1 2 3 4])
+  (t/assert= (transduce (comp (take 2) (take 1)) conj [1 2 3 4]) [1])
+  (t/assert= (transduce (comp (take 1) (take 2)) conj [1 2 3 4]) [1])
+
+  (let [call-count (atom 0)
+        inc-call-count! (fn [x]
+                          (swap! call-count inc)
+                          x)]
+    (t/assert= (transduce (comp (map inc-call-count!) (take 2)) conj (range 10))
+               [0 1])
+    (t/assert= @call-count 2)
+    (t/assert= (transduce (comp (take 2) (map inc-call-count!)) conj (range 10))
+               [0 1])
+    (t/assert= @call-count 4)))
 
 (t/deftest test-drop
   (t/assert= (drop 0 [1 2 3 4]) [1 2 3 4])
@@ -552,21 +585,26 @@
   (t/assert= (transduce (drop 0) conj [1 2 3 4]) [1 2 3 4])
   (t/assert= (transduce (drop 1) conj [1 2 3 4]) [2 3 4])
   (t/assert= (transduce (drop 2) conj [1 2 3 4]) [3 4])
-  (t/assert= (transduce (drop 3) conj [1 2 3 4]) [4]))
+  (t/assert= (transduce (drop 3) conj [1 2 3 4]) [4])
+  (t/assert= (transduce (drop 10) conj [1 2 3 4]) [])
+  (t/assert= (transduce (comp (drop 1) (take 2)) conj [1 2 3 4]) [2 3])
+  (t/assert= (transduce (comp (take 2) (drop 1)) conj [1 2 3 4]) [2]))
 
 (t/deftest test-take-while
   (t/assert= (take-while pos? [1 2 3 -1]) [1 2 3])
   (t/assert= (take-while pos? [-1 2]) ())
   (t/assert= (transduce (take-while even?) conj [2 4 6 7 8]) [2 4 6])
   (t/assert= (transduce (take-while even?) conj [0 2] [1 4 6]) [0 2])
-  (t/assert= (transduce (take-while even?) conj [1 3] [2 4 6 7 8]) [1 3 2 4 6]))
+  (t/assert= (transduce (take-while even?) conj [1 3] [2 4 6 7 8]) [1 3 2 4 6])
+  (t/assert= (transduce (comp (take-while even?) (take 2)) conj [1 3] [2 4 6 7 8]) [1 3 2 4]))
 
 (t/deftest test-drop-while
   (t/assert= (drop-while pos? [1 2 3 -1]) [-1])
   (t/assert= (drop-while pos? [-1 2]) [-1 2])
   (t/assert= (transduce (drop-while even?) conj [2 4 6 7 8]) [7 8])
   (t/assert= (transduce (drop-while even?) conj [0 2] [1 4 6]) [0 2 1 4 6])
-  (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))
+  (t/assert= (transduce (drop-while even?) conj [0 2] [2 4 6 7 8]) [0 2 7 8])
+  (t/assert= (transduce (comp (drop-while even?) (take 2)) conj [0 2] [2 4 6 7 8]) [0 2 7 8]))
 
 (t/deftest test-cycle
   (t/assert= (cycle ()) ())
