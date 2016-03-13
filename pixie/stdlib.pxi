@@ -1907,7 +1907,7 @@ not enough elements were present."
 
    ISeqable
    (-seq [self]
-     (seq (reduce conj self))))
+     (sequence xform coll)))
 
 (defn eduction
   "Returns a reducible/iterable application of the transducers
@@ -2189,12 +2189,18 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
    (filter (complement pred) coll)))
 
 (defn sequence
-  "Returns a lazy sequence of `data`, optionally transforming it using `xform`.
-   Given an `eduction`, produces a lazy sequence of it."
-  ([eduction]
-   (when (seq eduction) (lazy-seq (cons (first eduction) (sequence (rest eduction))))))
-  ([xform data]
-   (sequence (eduction xform data))))
+  "Returns a lazy sequence of `data`, optionally transforming it using `xform`"
+  ([coll]
+   (if (seq? coll) coll
+       (or (seq coll) ())))
+  ([xform coll]
+   (let [step (defn step [xform acc xs]
+                (if-let [s (seq xs)]
+                  (let [next-acc ((xform conj) acc (first s))]
+                    (if (= acc next-acc) (step xform next-acc (next s))
+                        (concat (drop (count acc) next-acc) (step xform next-acc (next s)))))
+                  nil))]
+     (lazy-seq (step xform [] coll)))))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
