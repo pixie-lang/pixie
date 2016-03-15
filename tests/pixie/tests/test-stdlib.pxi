@@ -633,7 +633,7 @@
                   (seq)))
   ;; expanding transducer with nils
   (t/assert= '(1 2 3 nil 4 5 6 nil)
-             (eduction cat [[1 2 3 nil] [4 5 6 nil]])))
+             (seq (eduction cat [[1 2 3 nil] [4 5 6 nil]]))))
 
 (t/deftest test-trace
   (try
@@ -805,3 +805,23 @@
   (t/assert= (reduce (fn [a v] (reduced "foo")) 0 (iterate inc 1)) "foo")
   (t/assert= (reduce (fn [a v] (if (< a 10) (+ a v) (reduced a))) 0 (iterate (partial + 2) 1)) 16))
 
+(t/deftest test-sequence-empty-sequences
+  (t/assert= '() (take 1 (sequence (map inc) '())))
+  (t/assert= '() (take 1 (sequence (map inc) [])))
+  (t/assert= '() (take 1 (sequence (map inc) #{})))
+  (t/assert= '() (take 1 (sequence (map inc) {}))))
+
+(t/deftest test-sequence-non-empty-sequences
+  (t/assert= '(1 3) (take 2 (sequence (comp
+                                       (filter even?)
+                                       (map inc)) (range 3))))
+  (t/assert= '(1) (take 1 (sequence (distinct) (repeat 4 1)))))
+
+(t/deftest test-sequence-early-terminating-sequences
+  (t/assert= '() (take 5 (sequence (filter (fn [x] false)) (repeat 8 8))))
+  (t/assert= '(1 2) (take 3 (sequence (map identity) [1 2])))
+  (t/assert= #{[:a 1] [:b 2]} (into #{} (take 3 (sequence (filter (fn [[k v]]
+                                                                    (keyword? k)) {:a 1
+                                                                                   :b 2
+                                                                                   "c" 3
+                                                                                   "d" 4}))))))

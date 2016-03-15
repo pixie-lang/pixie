@@ -903,7 +903,7 @@ If further arguments are passed, invokes the method named by symbol, passing the
     (if (next coll)
       (recur (next coll))
       (first coll))
-    
+
     (satisfies? ISeqable coll)
     (recur (seq coll))))
 
@@ -1907,7 +1907,7 @@ not enough elements were present."
 
    ISeqable
    (-seq [self]
-       (reduce conj self)))
+     (sequence xform coll)))
 
 (defn eduction
   "Returns a reducible/iterable application of the transducers
@@ -2106,7 +2106,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
         val
        not-found)))
   ISeq
-  (-first [this] 
+  (-first [this]
     (when (not= start stop)
       start))
   (-next  [this]
@@ -2187,6 +2187,20 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
    (filter (complement pred)))
   ([pred coll]
    (filter (complement pred) coll)))
+
+(defn sequence
+  "Returns a lazy sequence of `data`, optionally transforming it using `xform`"
+  ([coll]
+   (if (seq? coll) coll
+       (or (seq coll) ())))
+  ([xform coll]
+   (let [step (defn step [xform acc xs]
+                (if-let [s (seq xs)]
+                  (let [next-acc ((xform conj) acc (first s))]
+                    (if (= acc next-acc) (step xform next-acc (next s))
+                        (concat (drop (count acc) next-acc) (step xform next-acc (next s)))))
+                  nil))]
+     (lazy-seq (step xform [] coll)))))
 
 (defn distinct
   {:doc "Returns the distinct elements in the collection."
@@ -3080,7 +3094,7 @@ ex: (vary-meta x assoc :foo 42)"
 (deftype Iterate [f x]
   IReduce
   (-reduce [self rf init]
-    (loop [next (f x) 
+    (loop [next (f x)
            acc (rf init x)]
       (if (reduced? acc)
         @acc
