@@ -1640,21 +1640,25 @@ The new value is thus `(apply f current-value-of-atom args)`."
        (let [idx (if (neg? i) (+ i (count coll)) i)]
          (nth coll idx not-found)))))
 
+(defn ensure-reduced [x]
+  (if (reduced? x)
+    x
+    (reduced x)))
+
 (defn take
   {:doc "Takes n elements from the collection, or fewer, if not enough."
    :added "0.1"}
   ([n]
    (fn [rf]
-     (let [rrf (preserving-reduced rf)
-           seen (atom 0)]
+     (let [seen (atom 0)]
        (fn
          ([] (rf))
          ([result] (rf result))
          ([result input]
           (let [s (swap! seen inc)]
-            (if (<= s n)
-              (rrf result input)
-              (reduced result))))))))
+            (cond (< s n) (rf result input)
+                  (= s n) (ensure-reduced (rf result input))
+                  :else (reduced result))))))))
   ([n coll]
    (lazy-seq
      (when (pos? n)
@@ -1666,8 +1670,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
    :added "0.1"}
   ([n]
    (fn [rf]
-     (let [rrf (preserving-reduced rf)
-           seen (atom 0)]
+     (let [seen (atom 0)]
        (fn
          ([] (rf))
          ([result]
@@ -1675,7 +1678,7 @@ The new value is thus `(apply f current-value-of-atom args)`."
          ([result input]
           (let [s (swap! seen inc)]
             (if (> s n)
-              (rrf result input)
+              (rf result input)
               result)))))))
   ([n coll]
    (let [s (seq coll)]
@@ -1707,14 +1710,13 @@ The new value is thus `(apply f current-value-of-atom args)`."
   :added "0.1"}
   ([pred]
      (fn [rf]
-       (let [rrf (preserving-reduced rf)]
-         (fn
-           ([] (rf))
-           ([result] (rf result))
-           ([result input]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
             (if (pred input)
-              (rrf result input)
-              (reduced result)))))))
+              (rf result input)
+              (reduced result))))))
   ([pred coll]
      (lazy-seq
       (when-let [s (seq coll)]
@@ -1825,13 +1827,12 @@ not enough elements were present."
    :signatures [[f] [f coll]]}
   ([f]
    (fn [rf]
-     (let [i (atom -1)
-           rrf (preserving-reduced rf)]
+     (let [i (atom -1)]
        (fn
          ([] (rf))
          ([result] (rf result))
          ([result input]
-          (rrf result (f (swap! i inc) input)))))))
+          (rf result (f (swap! i inc) input)))))))
   ([f coll]
    (let [mapi (fn mapi [i coll]
                 (lazy-seq
@@ -1849,8 +1850,7 @@ not enough elements were present."
    :added "0.1"}
   ([f]
    (fn [rf]
-     (let [iv (atom -1)
-           rrf (preserving-reduced rf)]
+     (let [iv (atom -1)]
        (fn
          ([] (rf))
          ([result] (rf result))
@@ -1859,7 +1859,7 @@ not enough elements were present."
                 v (f i input)]
             (if (nil? v)
               result
-              (rrf result v))))))))
+              (rf result v))))))))
   ([f coll]
    (let [keepi (fn keepi [i coll]
                  (lazy-seq

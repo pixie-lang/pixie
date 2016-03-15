@@ -3,6 +3,7 @@
   (require pixie.streams :as st :refer :all)
   (require pixie.streams.utf8 :as utf8 :refer :all)
   (require pixie.io :as io)
+  (require pixie.io-blocking :as blocking)
   (require pixie.streams.zlib :as zlib))
 
 (t/deftest test-file-reduction
@@ -10,11 +11,25 @@
     (t/assert= (transduce (map identity)
                           count-rf
                           f)
-               91)))
+               91))
+  (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
+    (t/assert= (transduce (comp (map char) (take 4)) string-builder f)
+               "This"))
+  (let [f (blocking/open-read "tests/pixie/tests/test-io.txt")]
+    (t/assert= (transduce (map identity)
+                          count-rf
+                          f)
+               91))
+  (let [f (blocking/open-read "tests/pixie/tests/test-io.txt")]
+    (t/assert= (transduce (comp (map char) (take 4)) string-builder f)
+               "This")))
 
 (t/deftest test-process-reduction
   (let [f (io/run-command "ls tests/pixie/tests/test-io.txt")]
-    (t/assert= f "tests/pixie/tests/test-io.txt\n")))
+    (t/assert= f "tests/pixie/tests/test-io.txt\n"))
+  (let [pipe (blocking/popen-read "ls tests/pixie/tests/test-io.txt")]
+    (t/assert= (transduce (comp (map char) (take 6)) string-builder pipe)
+               "tests/")))
 
 (t/deftest test-read-into-buffer
   (let [f (io/open-read "tests/pixie/tests/test-io.txt")]
@@ -38,6 +53,14 @@
     (t/assert= (io/read-line f) "Second line.")
     (t/assert= (io/read-line f) nil)))
 
+(t/deftest test-line-reader
+  (let [lines (io/line-reader (io/open-read "tests/pixie/tests/test-io.txt"))]
+    (t/assert= (transduce (map count) conj [] lines)
+               [77 12]))
+  (let [lines (io/line-reader (io/open-read "tests/pixie/tests/test-io.txt"))]
+    (t/assert= (transduce (comp (map count) (take 1)) conj [] lines)
+               [77])))
+
 (t/deftest test-line-seq
   (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt"))
         s (io/line-seq f)]
@@ -58,7 +81,11 @@
     (t/assert= (char (io/read-byte f)) \T)
     (t/assert= (char (io/read-byte f)) \h)
     (t/assert= (char (io/read-byte f)) \i)
-    (t/assert= (char (io/read-byte f)) \s)))
+    (t/assert= (char (io/read-byte f)) \s)
+    (t/assert= (transduce (comp (map char) (take 5)) string-builder f)
+               " is a")
+    (t/assert= (transduce (comp (map char) (take 5)) string-builder f)
+               " test")))
 
 (t/deftest test-buffered-input-streams-throws-on-non-input-streams
   (let [f (io/buffered-input-stream (io/open-read "tests/pixie/tests/test-io.txt"))]

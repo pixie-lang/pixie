@@ -66,14 +66,13 @@
             (str string))))))
   IReduce
   (-reduce [this f init]
-    (let [rrf (preserving-reduced f)]
-      (loop [acc init]
-        (if-let [line (-read-line this)]
-          (let [result (rrf acc line)]
-            (if (not (reduced? result))
-              (recur result)
-              @result))
-          acc)))))
+    (loop [acc init]
+      (if-let [line (-read-line this)]
+        (let [result (f acc line)]
+          (if (reduced? result)
+            @result
+            (recur result)))
+        acc))))
 
 (defn line-reader
   [input-stream]
@@ -150,14 +149,13 @@
 (deftype BufferedInputStream [upstream idx buffer]
   IReduce
   (-reduce [this f init]
-    (let [rrf (preserving-reduced f)]
-      (loop [acc init]
-        (if-let [next-byte (read-byte this)]
-          (let [step (rrf acc next-byte)]
-            (if (reduced? step)
-              @step
-              (recur step)))
-          acc))))
+    (loop [acc init]
+      (if-let [next-byte (read-byte this)]
+        (let [result (f acc next-byte)]
+          (if (reduced? result)
+            @result
+            (recur result)))
+        acc)))
   IByteInputStream
   (read-byte [this]
     (when (= idx (count buffer))
