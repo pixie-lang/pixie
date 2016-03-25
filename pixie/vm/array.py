@@ -26,6 +26,8 @@ class Array(object.Object):
             init = f.invoke([init, self._list[x]])
         return init
 
+    def list(self):
+        return self._list
 
     def reduce_large(self, f, init):
         for x in range(len(self._list)):
@@ -37,14 +39,14 @@ class Array(object.Object):
 @extend(proto._count, Array)
 def _count(self):
     assert isinstance(self, Array)
-    return rt.wrap(len(self._list))
+    return rt.wrap(len(self.list()))
 
 @extend(proto._nth, Array)
 def _nth(self, idx):
     assert isinstance(self, Array)
     ival = idx.int_val()
-    if ival < len(self._list):
-        return self._list[ival]
+    if ival < len(self.list()):
+        return self.list()[ival]
     else:
         affirm(False, u"Index out of Range")
 
@@ -52,15 +54,15 @@ def _nth(self, idx):
 def _nth_not_found(self, idx, not_found):
     assert isinstance(self, Array)
     ival = idx.int_val()
-    if ival < len(self._list):
-        return self._list[ival]
+    if ival < len(self.list()):
+        return self.list()[ival]
     else:
         return not_found
 
 @extend(proto._reduce, Array)
 def reduce(self, f, init):
     assert isinstance(self, Array)
-    if len(self._list) > UNROLL_IF_SMALLER_THAN:
+    if len(self.list()) > UNROLL_IF_SMALLER_THAN:
         return self.reduce_large(f, init)
     return self.reduce_small(f, init)
 
@@ -122,34 +124,39 @@ def array(lst):
 
 @as_var("aget")
 def aget(self, idx):
-    assert isinstance(self, Array)
-    return self._list[idx.int_val()]
+    affirm(isinstance(self, Array),  u"aget expects an Array as the first argument")
+    affirm(isinstance(idx, Integer), u"aget expects an Integer as the second argument")
+    return self.list()[idx.int_val()]
 
 @as_var("aset")
 def aset(self, idx, val):
-    assert isinstance(self, Array)
-    self._list[idx.int_val()] = val
+    affirm(isinstance(self, Array),  u"aset expects an Array as the first argument")
+    affirm(isinstance(idx, Integer), u"aset expects an Integer as the second argument")
+    self.list()[idx.int_val()] = val
     return val
 
 @as_var("aslice")
 def aslice(self, offset):
-    assert isinstance(self, Array) and isinstance(offset, Integer)
+    affirm(isinstance(self, Array),     u"aset expects an Array as the first argument")
+    affirm(isinstance(offset, Integer), u"aset expects an Integer as the second argument")
 
     offset = offset.int_val()
     if offset >= 0:
-        return Array(self._list[offset:])
+        return Array(self.list()[offset:])
     else:
         rt.throw(rt.wrap(u"offset must be an Integer >= 0"))
 
 @as_var("aconcat")
 def aconcat(self, other):
-    assert isinstance(self, Array) and isinstance(other, Array)
-    return Array(self._list + other._list)
+    affirm(isinstance(self, Array) and isinstance(other, Array), 
+            u"aconcat expects 2 Arrays")
+    return Array(self.list() + other.list())
 
 @as_var("alength")
 def alength(self):
-    assert isinstance(self, Array)
-    return rt.wrap(len(self._list))
+    affirm(isinstance(self, Array), u"alength expects an Array")
+
+    return rt.wrap(len(self.list()))
 
 @as_var("make-array")
 def make_array(l):

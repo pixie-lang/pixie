@@ -8,6 +8,12 @@
     (foreach [x a]
              (t/assert= x nil))))
 
+(t/deftest test-alength
+  (let [a (make-array 10)]
+    (t/assert= (alength a) 10)
+    (t/assert-throws? RuntimeException
+                      (alength []))))
+
 (t/deftest test-aget-and-aset
   (let [a  (make-array 10)]
     (dotimes [i 10]
@@ -17,7 +23,13 @@
       (aset a i i))
 
     (dotimes [i 10]
-      (t/assert= (aget a i) i))))
+      (t/assert= (aget a i) i))
+
+    (t/assert-throws? RuntimeException
+               (aget a 1.0))
+
+    (t/assert-throws? RuntimeException
+               (aset a 1.0 :foo))))
 
 (t/deftest test-aconcat
   (let [a1 (make-array 10)
@@ -30,7 +42,13 @@
 
     (let [a3 (aconcat a1 a2)]
       (dotimes [i 20]
-        (t/assert= (aget a3 i) i)))))
+        (t/assert= (aget a3 i) i)))
+
+    (t/assert-throws? RuntimeException
+                      (t/aconcat a1 []))
+
+    (t/assert-throws? RuntimeException
+                      (t/aconcat a1 '()))))
 
 (t/deftest test-aslice
   (let [a (make-array 10)]
@@ -42,7 +60,16 @@
       (foreach [i (range 0 7)]
                (t/assert= (aget a1 i) (+ i 3)))
       (foreach [i (range 0 3)]
-               (t/assert= (aget a2 i) (+ i 7))))))
+               (t/assert= (aget a2 i) (+ i 7))))
+
+    (t/assert-throws? RuntimeException
+                      (aslice [1 2 3 4] 0 2))
+
+    (t/assert-throws? RuntimeException
+                      (aslice '() 0 2))
+
+    (t/assert-throws? RuntimeException
+                      (aslice a 1.0 2))))
 
 
 (t/deftest test-byte-array-creation
