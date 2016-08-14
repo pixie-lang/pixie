@@ -8,7 +8,6 @@ class FinalizerRegistry(object):
         self._registry = []
 
     def register(self, o):
-        print "register finalizer ", o
         self._registry.append(o)
 
     def run_finalizers(self):

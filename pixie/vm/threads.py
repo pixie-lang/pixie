@@ -6,8 +6,6 @@ import rpython.rlib.rgil as rgil
 from pixie.vm.code import as_var
 import pixie.vm.rt as rt
 
-from rpython.rlib.objectmodel import invoke_around_extcall
-
 class Bootstrapper(object):
     def __init__(self):
         self._is_inited = False
@@ -15,10 +13,9 @@ class Bootstrapper(object):
 
     def init(self):
         if not self._is_inited:
-            self._is_inited = True
             self._lock = rthread.allocate_lock()
-            rgil.gil_allocate()
-            invoke_around_extcall(before_external_call, after_external_call)
+            self._is_inited = True
+            rgil.allocate()
 
     def aquire(self, fn):
         self.init()
@@ -55,7 +52,7 @@ def new_thread(fn):
 
 @as_var("-yield-thread")
 def yield_thread():
-    do_yield_thread()
+    rgil.yield_thread()
     return nil
 
 # Locks
@@ -86,46 +83,5 @@ def _release_lock(self):
     return rt.wrap(self._ll_lock.release())
 
 
-
-## From PYPY
-
-
-after_thread_switch = lambda: None     # hook for signal.py
-
-# Fragile code below.  We have to preserve the C-level errno manually...
-
-def before_external_call():
-    # this function must not raise, in such a way that the exception
-    # transformer knows that it cannot raise!
-    rgil.gil_release()
-before_external_call._gctransformer_hint_cannot_collect_ = True
-before_external_call._dont_reach_me_in_del_ = True
-
-def after_external_call():
-    rgil.gil_acquire()
-    rthread.gc_thread_run()
-    after_thread_switch()
-after_external_call._gctransformer_hint_cannot_collect_ = True
-after_external_call._dont_reach_me_in_del_ = True
-
-# The _gctransformer_hint_cannot_collect_ hack is needed for
-# translations in which the *_external_call() functions are not inlined.
-# They tell the gctransformer not to save and restore the local GC
-# pointers in the shadow stack.  This is necessary because the GIL is
-# not held after the call to before_external_call() or before the call
-# to after_external_call().
-
-def do_yield_thread():
-    # explicitly release the gil, in a way that tries to give more
-    # priority to other threads (as opposed to continuing to run in
-    # the same thread).
-    if rgil.gil_yield_thread():
-        rthread.gc_thread_run()
-        after_thread_switch()
-do_yield_thread._gctransformer_hint_close_stack_ = True
-do_yield_thread._dont_reach_me_in_del_ = True
-do_yield_thread._dont_inline_ = True
-
-# do_yield_thread() needs a different hint: _gctransformer_hint_close_stack_.
 # The *_external_call() functions are themselves called only from the rffi
 # module from a helper function that also has this hint.
