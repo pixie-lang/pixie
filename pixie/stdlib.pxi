@@ -2194,7 +2194,7 @@ For more information, see http://clojure.org/special_forms#binding-forms"}
    (if (seq? coll) coll
        (or (seq coll) ())))
   ([xform coll]
-   (let [step (defn step [xform acc xs]
+   (let [step (fn step [xform acc xs]
                 (if-let [s (seq xs)]
                   (let [next-acc ((xform conj) acc (first s))]
                     (if (= acc next-acc) (step xform next-acc (next s))
