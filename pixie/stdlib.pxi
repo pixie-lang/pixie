@@ -2606,14 +2606,14 @@ Expands to calls to `extend-type`."
                        `(loop [res# []
                                ~c (seq ~coll)]
                           (if ~c
-                            (recur (into res#
-                                         ~(gen-loop (into coll-bindings
-                                                          [binding `(first ~c)])
-                                                    (nnext bindings)))
-                                   (next ~c))
+                            (let [~binding (first ~c)]
+                              (recur (into res#
+                                           ~(gen-loop (into coll-bindings
+                                                            [binding `(first ~c)])
+                                                      (nnext bindings)))
+                                     (next ~c)))
                             res#)))
-                     `(let ~coll-bindings
-                        [~@body])))]
+                     `[~@body]))]
     `(or (seq ~(gen-loop [] bindings)) '())))
 
 (defmacro doto

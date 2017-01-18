@@ -452,7 +452,11 @@
   (t/assert= (for [x [1 2 3] y [:a :b :c]] [x y])
              [[1 :a] [1 :b] [1 :c]
               [2 :a] [2 :b] [2 :c]
-              [3 :a] [3 :b] [3 :c]]))
+              [3 :a] [3 :b] [3 :c]])
+  (t/assert= (for [x [[1 2 3]]
+                   y x]
+               y)
+             [1 2 3]))
 
 (t/deftest test-doto
   (let [a (atom 0)]
