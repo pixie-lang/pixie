@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/pixie-lang/pixie.svg?branch=master)](https://travis-ci.org/pixie-lang/pixie)[![License: LGPL] (http://img.shields.io/badge/license-LGPL-green.svg)](http://img.shields.io/badge/license-LGPL-green.svg)
+[![Build Status](https://travis-ci.org/pixie-lang/pixie.svg?branch=master)](https://travis-ci.org/pixie-lang/pixie)
+[![License: LGPL](https://img.shields.io/badge/license-LGPL-green.svg)](https://img.shields.io/badge/license-LGPL-green.svg)
 # Pixie
 
 [![Join the chat at https://gitter.im/pixie-lang/pixie](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pixie-lang/pixie?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
