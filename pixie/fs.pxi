@@ -109,7 +109,7 @@
   (rel [this other]
     (if (satisfies? IFSPath other)
       (rel-path this other)
-      (throw "Second argument must satisfy IFSPath")))
+      (throw [::AssertionException "Second argument must satisfy IFSPath"])))
 
   (abs [this]
     (path/-abs pathz))
@@ -157,7 +157,7 @@
   (rel [this other]
     (if (satisfies? IFSPath other)
       (rel-path this other)
-      (throw "Second argument must satisfy IFSPath")))
+      (throw [::AssertionException "Second argument must satisfy IFSPath"])))
 
   (abs [this]
     (path/-abs pathz))
@@ -217,7 +217,7 @@
     (cond
       (path/-file? x)         (->File x)
       (not (path/-exists? x)) (->File x)
-      :else (throw (str "A non-file object exists at path: " x)))))
+      :else (throw [::NotAFileException (str "A non-file object exists at path: " x)]))))
 
 (defn dir
   "Returns a dir if the path is a dir or does not exist. If a different filesystem object exists at the path an error will be thrown."
@@ -226,7 +226,7 @@
     (cond
       (path/-dir? x)          (->Dir x)
       (not (path/-exists? x)) (->Dir x)
-      :else (throw (str "A non-dir object exists at path: " x)))))
+      :else (throw [::NotADirectoryException (str "A non-dir object exists at path: " x)]))))
 
 (defn fspath
   "Returns either a File or Dir if they exist at the path"
@@ -235,6 +235,6 @@
     (cond
        (path/-file? x) (->File x)
        (path/-dir? x)  (->Dir x)
-       :else (throw (str "No file or directory at path: " x)))))
+       :else (throw [::FileNotFoundException (str "No file or directory at path: " x)]))))
 
 
