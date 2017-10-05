@@ -829,3 +829,16 @@
                                                                                    :b 2
                                                                                    "c" 3
                                                                                    "d" 4}))))))
+
+(t/deftest test-letfn
+  (letfn [(hello [] "Hello")
+          (adder [x y] (+ x y))]
+    (t/assert= "Hello" (hello))
+    (dotimes [i 10]
+      (dotimes [j 20]
+        (t/assert= (+ i j) (adder i j)))))
+  (letfn [(f [x n] (vec (repeat n x)))]
+    (t/assert= (f :x 3) [:x :x :x])
+    (t/assert= (f 0 20) [0 0 0 0 0
+                         0 0 0 0 0
+                         0 0 0 0 0])))
