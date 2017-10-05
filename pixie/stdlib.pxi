@@ -482,6 +482,19 @@
   (let [nm (with-meta nm (assoc (meta nm) :private true))]
     (cons `defn (cons nm rest))))
 
+(defmacro letfn
+  "fnspec ==> (fname [params*] exprs) or (fname ([params*] exprs)+)
+
+  Takes a vector of function specs and a body, and generates a set of
+  bindings of functions to their names. All of the names are available
+  in all of the definitions of the functions, as well as the body."
+  {:added "0.2" 
+   :forms '[(letfn [fnspecs*] exprs*)]}
+  [fnspecs & body]
+  `(letfn* ~(vec (interleave (map first fnspecs)
+                             (map #(cons `fn %) fnspecs)))
+           ~@body))
+               
 (defn not
   {:doc "Inverts the input, if a truthy value is supplied, returns false, otherwise
 returns true."
